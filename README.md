@@ -1,13 +1,13 @@
-# This is Rosie v0.88
+# This is Rosie Pattern Language v0.88
 
-### Rosie will tidy up raw data (text), recognize key items, and create structured output
+### Rosie will tidy up raw data (text), recognize key pieces of data, and create JSON structured output
 
 #### Better than regex
 
 Like a supercharged version of Regular Expressions (regex), Rosie matches input text
 against predefined patterns.
 
-Unlike most regex tools, Rosie will also generate structured JSON output, and
+Unlike most regex tools, Rosie will also generate structured (JSON) output, and
 will soon do all kinds of other things to the input data as it is being parsed.
 
 #### Docs
@@ -29,7 +29,36 @@ In most cases, there is just one step, which is to run `make <platform>` where
 `<platform>` is, e.g. `macosx` or `linux`.  The `makefile` will download the
 needed prerequisites and compile them.  Then a quick test of the Rosie Pattern
 Engine is invoked, just to make sure it runs and prints the correct version
-number. 
+number.
+
+You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
+
+### A quick test
+
+For a quick test of Rosie's capabilities, use the Rosie Pattern Engine to look
+for a basic set of patterns in any text file on your system.  Good candidates
+may be `/etc/resolv.conf` or `/var/log/system.log`.  Use the pattern
+`basic.matchall` for this, e.g.
+
+![Screen capture](doc/images/system.log-example.jpg "Rosie processing a MacOS system log")
+
+*Note:* In order to show just a few lines of output, the output of Rosie is piped
+into the Unix utility `head`, which will print (in this case) the first 5
+lines.  Try removing `head` to see the entire log file, i.e. `./run basic.matchall /var/log/system.log`.
+
+
+Rosie is parsing the log file into fields that are printed in various colors.
+Unparsed data is shown in black text.  To see which colors correspond to which
+RPL patterns, type `./run -patterns` to see all defined and loaded patterns and
+the color (if any) that is assigned to them for output at the terminal.
+
+To see the JSON version of this output, try adding the JSON flag (and perhaps
+displaying just one line of output, as in this example):
+
+```
+./run -json basic.matchall /var/log/system.log | head -1
+```
+
 
 ## Useful tips
 
@@ -104,5 +133,7 @@ lpeg	| Lua Parse Expression Grammars library
 cjson 	| JSON encoding/decoding library
 
 Like Lua, the native libraries must be built for your particular
-platform. 
+platform.  The `makefile` included with Rosie should download and compile the
+prerequisites, all within the Rosie install directory.
+
 
