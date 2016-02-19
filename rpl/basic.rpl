@@ -1,0 +1,52 @@
+--  -*- Mode: rpl; -*- 
+-- 
+--  basic.rpl    A set of basic patterns that can be used to look for interesting things when the
+--               input structure is unknown.  
+--
+-- 
+--  (c) 2015, Jamie A. Jennings
+-- 
+
+-- requires common, datetime, network
+
+
+alias basic.element = common.number / common.maybe_identifier / common.identifier_not_word /
+                      common.word / common.path
+
+alias basic.element_quoted = "\"" basic.element "\""
+alias basic.element_bracketed = "[" basic.element "]"
+
+basic.unmatched = {![:space:] any}+
+
+basic.datetime_patterns =
+   datetime.datetime_RFC3339 / 
+   datetime.slash_datetime /
+   datetime.simple_slash_date /
+   datetime.shortdate /
+   datetime.ordinary_date /
+   datetime.simple_date /
+   datetime.full_date_RFC3339 /
+   datetime.date_RFC2822 /
+   datetime.time_RFC2822 /
+   datetime.full_time_RFC3339 /
+   datetime.simple_time /
+   datetime.funny_time
+
+basic.network_patterns = 
+   network.http_command / 
+   network.url / 
+   network.http_version / 
+   network.ip_address / 
+   network.fqdn / 
+   network.email_address
+
+basic.punctuation = [:punct:]
+
+
+basic.matchall = { basic.datetime_patterns / basic.network_patterns /
+                   basic.element / basic.element_quoted / basic.element_bracketed /
+                   [:space:]+ /
+		   basic.punctuation / 
+		   basic.unmatched
+		 }+
+

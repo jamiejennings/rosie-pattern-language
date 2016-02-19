@@ -1,0 +1,59 @@
+-- -*- Mode: rpl; -*- 
+--
+-- common.rpl   Common patterns in Rosie Pattern Language
+--
+-- (c) 2015, Jamie A. Jennings
+--
+
+alias any = [:print:]
+alias whitespace = [:space:]
+alias digit = [:digit:]
+alias letter = [:alpha:]
+
+common.int = { [+-]? digit+ }			    -- at least one digit
+common.float = { [+-]? digit+ "." digit+ }	    -- float with digits on either side of radix
+alias hex_only = { [a-f] / [A-F] }
+alias hex_digits = { digit / [a-f] / [A-F] }
+alias common.hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
+common.hex = hex_digits+		     --  use with care! will match words and decimal numbers
+common.denoted_hex = { "0x" common.hex }
+common.number =  common.denoted_hex /  common.float / common.hex / common.int
+
+common.word = letter+
+
+-- This definition is essentially what grok uses, which isn't great:
+-- common.unix_path = { "/" ([:alnum:]/[_%!$@:.,~-])+ / ".." / "." }+
+
+alias common.unix_path = { {".." / "."}? {"/" {[:alnum:]/[_%!$@:.,~-]}+ }+  }
+alias common.windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] any}* }+ }
+common.path = common.unix_path / common.windows_path
+
+alias dash_under = [-_]
+
+alias identifier_char = letter / digit / "_"
+alias identifier_plus_char = letter / digit / dash_under / "$"
+
+common.identifier = {letter identifier_char*}
+common.identifier_plus = {letter identifier_plus_char*}
+
+alias identifier_plus_plus1 = { { {letter / dash_under / "$"} identifier_plus_char+} }
+alias identifier_plus_plus2 = {digit+ identifier_plus_char+} -- FIXME: I match integers!
+common.identifier_plus_plus = identifier_plus_plus1 / identifier_plus_plus2
+
+common.dotted_identifier = { common.identifier_plus_plus { "." common.identifier_plus_plus}+ }
+
+-- starts with a letter and contains a digit, or starts with a letter
+--and contains a dash/under (otherwise, all the identifier_plus
+--characters are allowed) 
+common.identifier_not_word = { {letter {letter / dash_under}* [:digit:] identifier_plus_char*}
+                               / {letter {letter / digit}* dash_under identifier_plus_char*} }
+
+-- Upper case words which may also contain digits, dashes,
+-- underlines. Note that we explicitly fail if the first upper case
+-- letter is followed by a lower case one, since most sentences and
+-- proper names start that way.
+common.maybe_identifier = { [:upper:] ![:lower:] {[:upper:] / [:digit:] / dash_under}* }
+
+
+
+

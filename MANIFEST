@@ -1,0 +1,17 @@
+--  -*- Mode: rpl; -*- 
+-- 
+--  MANIFEST    This is the default list of rpl files, in order, that Rosie will
+--              compile and load.  These should be considered SAMPLE patterns.
+-- 
+--  (c) 2015, Jamie A. Jennings
+-- 
+
+-- Of general utility:
+
+rpl/common.rpl			-- commonly used patterns like float, word
+rpl/datetime.rpl		-- various dates, times
+rpl/network.rpl			-- ip address, hostname, http commands, email
+
+rpl/basic.rpl			-- for matching full lines of input against a
+                                -- variety of "basic" patterns of semantic interest
+

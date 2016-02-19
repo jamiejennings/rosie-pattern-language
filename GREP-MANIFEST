@@ -1,0 +1,16 @@
+--  -*- Mode: rpl; -*- 
+-- 
+--  grep-manifest    loads patterns that make Rosie act more like grep on the command line
+-- 
+--  (c) 2015, Jamie A. Jennings
+-- 
+
+rpl/grep.rpl					    -- commonly used patterns like float, word
+rpl/common.rpl
+rpl/datetime.rpl
+rpl/network.rpl
+rpl/basic.rpl
+
+
+
+
