@@ -42,9 +42,10 @@ may be `/etc/resolv.conf` or `/var/log/system.log`.  Use the pattern
 
 ![Screen capture](doc/images/system.log-example.jpg "Rosie processing a MacOS system log")
 
-*Note:* In order to show just a few lines of output, the output of Rosie is piped
-into the Unix utility `head`, which will print (in this case) the first 5
-lines.  Try removing `head` to see the entire log file, i.e. `./run basic.matchall /var/log/system.log`.
+*Note:* In order to show just a few lines, the output of Rosie in the example
+above is piped into the Unix utility `head`, which will print (in this case) the
+first 5 lines.  Try removing `head` to see the entire log file, i.e. `./run
+basic.matchall /var/log/system.log`.
 
 
 Rosie is parsing the log file into fields that are printed in various colors.
