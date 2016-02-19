@@ -21,8 +21,15 @@ The [interactive read-eval-print loop (repl)](doc/repl.md) is documented separat
 
 ### How to build and run
 
-*Forthcoming*
+After cloning or downloading the Rosie Pattern Language code repository, run
+`make` in the download directory.  The `makefile` will print instructions for
+how to build Rosie for your platform.
 
+In most cases, there is just one step, which is to run `make <platform>` where
+`<platform>` is, e.g. `macosx` or `linux`.  The `makefile` will download the
+needed prerequisites and compile them.  Then a quick test of the Rosie Pattern
+Engine is invoked, just to make sure it runs and prints the correct version
+number. 
 
 ## Useful tips
 
