@@ -15,3 +15,6 @@ rpl/network.rpl			-- ip address, hostname, http commands, email
 rpl/basic.rpl			-- for matching full lines of input against a
                                 -- variety of "basic" patterns of semantic interest
 
+-- Sample patterns for processing log files:
+
+rpl/spark.rpl   	        -- spark logs with python and java entries
