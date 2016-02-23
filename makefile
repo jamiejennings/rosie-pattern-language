@@ -53,10 +53,13 @@ none:
 	@echo "Or 'make download' to download the pre-requisites"
 
 
-CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 USE_INTERNAL_FPCONV=true CC="gcc -std=gnu99"
+CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 USE_INTERNAL_FPCONV=true
+CJSON_MAKE_ARGS += "$(CC) -std=gnu99"
 CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
 
 macosx: PLATFORM=macosx
+# Change the next line to CC=gcc if you prefer to use gcc on MacOSX
+macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
 macosx: bin/lua lib/lpeg.so lib/cjson.so test
 
@@ -70,7 +73,7 @@ bin/lua: $(LUA_DIR)
 	cp $(LUA_DIR)/src/lua bin
 
 lib/lpeg.so: $(LPEG_DIR)
-	cd $(LPEG_DIR); $(MAKE) $(PLATFORM)
+	cd $(LPEG_DIR); $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p lib
 	cp $(LPEG_DIR)/lpeg.so lib
 
