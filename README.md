@@ -118,7 +118,32 @@ pattern file to the end of the manifest, so that Rosie will load them.
 (Currently, this is the only way to add new patterns.)
 
 
-### Rosie Pattern Engine pre-requisites
+## Rosie Pattern Engine pre-requisites
+
+### Tools needed to compile and install
+
+The tools needed to compile and install Rosie are commonly available on most
+systems.
+
+The build instructions for Rosie are in its `makefile`, which uses `cc` (MacOSX)
+or `gcc` (Linux) to compile the components needed by the Rosie Pattern Engine.
+Those components (see below) are downloaded automatically using `curl`.
+
+tool | description
+-----|------------
+make | processes makefile to build Rosie
+cc   | on MacOSX, the compiler that is part of Apple's developer tools
+gcc  | on Linux, the GNU C compiler that is most prevalent
+curl | a utility used here to download files
+
+Note: You can override the choice of compiler on the command line, if (for
+example) you want to use `gcc` on MacOSX:
+
+```
+make CC=gcc macosx
+```
+
+### Components needed by the Rosie Pattern Engine
 
 The Rosie Pattern Engine's installation script looks for the pre-requisites
 within the Rosie install directory, so that Rosie has its own copy of, e.g. Lua

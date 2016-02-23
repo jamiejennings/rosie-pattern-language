@@ -19,6 +19,9 @@ download: $(LUA_DIR) $(LPEG_DIR) $(JSON_DIR)
 
 $(LUA_DIR): $(LUA_DIR).tar.gz
 	tar -xf $(LUA_DIR).tar.gz
+	cd $(LUA_DIR)/src && sed -e 's/CC=cc/CC=$$(CC)/' Makefile > Makefile2
+	echo 'macosx: CC=cc' >$(LUA_DIR)/src/extra
+	cd $(LUA_DIR)/src && cat Makefile2 extra > Makefile
 
 $(LPEG_DIR): $(LPEG_DIR).tar.gz
 	tar -xf $(LPEG_DIR).tar.gz
@@ -39,9 +42,9 @@ $(JSON_DIR).tar.gz:
 
 clean:
 	rm -f bin/* lib/*
-	cd $(LUA_DIR); make clean
-	cd $(LPEG_DIR); make clean
-	cd $(JSON_DIR); make clean
+	-cd $(LUA_DIR) && make clean
+	-cd $(LPEG_DIR) && make clean
+	-cd $(JSON_DIR) && make clean
 	@echo "Use 'make superclean' to remove local copies of prerequisites"
 
 superclean: clean
@@ -54,7 +57,7 @@ none:
 
 
 CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 USE_INTERNAL_FPCONV=true
-CJSON_MAKE_ARGS += "$(CC) -std=gnu99"
+#CJSON_MAKE_ARGS += "$(CC) -std=gnu99"
 CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
 
 macosx: PLATFORM=macosx
@@ -68,17 +71,17 @@ linux: CJSON_MAKE_ARGS += CJSON_LDFLAGS=-shared
 linux: bin/lua lib/lpeg.so lib/cjson.so test
 
 bin/lua: $(LUA_DIR)
-	cd $(LUA_DIR); $(MAKE) $(PLATFORM)
+	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p bin
 	cp $(LUA_DIR)/src/lua bin
 
 lib/lpeg.so: $(LPEG_DIR)
-	cd $(LPEG_DIR); $(MAKE) CC=$(CC) $(PLATFORM)
+	cd $(LPEG_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p lib
 	cp $(LPEG_DIR)/lpeg.so lib
 
 lib/cjson.so: $(JSON_DIR)
-	cd $(JSON_DIR); $(MAKE) $(CJSON_MAKE_ARGS)
+	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
