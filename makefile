@@ -22,6 +22,7 @@ $(LUA_DIR): $(LUA_DIR).tar.gz
 	cd $(LUA_DIR)/src && sed -e 's/CC=cc/CC=$$(CC)/' Makefile > Makefile2
 	echo 'macosx: CC=cc' >$(LUA_DIR)/src/extra
 	cd $(LUA_DIR)/src && cat Makefile2 extra > Makefile
+	cd $(LUA_DIR) && ln -s src include	    # Needed for lpeg to compile
 
 $(LPEG_DIR): $(LPEG_DIR).tar.gz
 	tar -xf $(LPEG_DIR).tar.gz
@@ -57,7 +58,6 @@ none:
 
 
 CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 USE_INTERNAL_FPCONV=true
-#CJSON_MAKE_ARGS += "$(CC) -std=gnu99"
 CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
 
 macosx: PLATFORM=macosx
@@ -76,7 +76,7 @@ bin/lua: $(LUA_DIR)
 	cp $(LUA_DIR)/src/lua bin
 
 lib/lpeg.so: $(LPEG_DIR)
-	cd $(LPEG_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
+	cd $(LPEG_DIR) && $(MAKE) CC=$(CC) LUADIR=../lua-5.3.2/src $(PLATFORM)
 	mkdir -p lib
 	cp $(LPEG_DIR)/lpeg.so lib
 
