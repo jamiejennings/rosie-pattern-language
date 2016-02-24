@@ -22,7 +22,7 @@ $(LUA_DIR): $(LUA_DIR).tar.gz
 	cd $(LUA_DIR)/src && sed -e 's/CC=cc/CC=$$(CC)/' Makefile > Makefile2
 	echo 'macosx: CC=cc' >$(LUA_DIR)/src/extra
 	cd $(LUA_DIR)/src && cat Makefile2 extra > Makefile
-	cd $(LUA_DIR) && ln -s src include	    # Needed for lpeg to compile
+	cd $(LUA_DIR) && ln -sf src include	    # Needed for lpeg to compile
 
 $(LPEG_DIR): $(LPEG_DIR).tar.gz
 	tar -xf $(LPEG_DIR).tar.gz
@@ -46,6 +46,7 @@ clean:
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR) && make clean
 	-cd $(JSON_DIR) && make clean
+	-cd $(LUA_DIR) && ln -sf src include	    # Needed for lpeg to compile
 	@echo "Use 'make superclean' to remove local copies of prerequisites"
 
 superclean: clean
@@ -57,8 +58,9 @@ none:
 	@echo "Or 'make download' to download the pre-requisites"
 
 
-CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 USE_INTERNAL_FPCONV=true
-CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
+CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 
+CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-fpic
+CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV 
 
 macosx: PLATFORM=macosx
 # Change the next line to CC=gcc if you prefer to use gcc on MacOSX
@@ -67,7 +69,9 @@ macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
 macosx: bin/lua lib/lpeg.so lib/cjson.so test
 
 linux: PLATFORM=linux
-linux: CJSON_MAKE_ARGS += CJSON_LDFLAGS=-shared
+linux: CC=gcc
+linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
+linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
 linux: bin/lua lib/lpeg.so lib/cjson.so test
 
 bin/lua: $(LUA_DIR)
