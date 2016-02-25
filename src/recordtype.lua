@@ -205,7 +205,7 @@ local recordtype = {}
 
 recordtype.ABOUT= 
 {
-    author= "Jamie A. Jennings <jj27700@gmail.com>",
+    author= "Jamie A. Jennings",
     description= "Provides records implemented as tables with a fixed set of keys",
     license= "MIT/X11",
     copyright= "Copyright (c) 2010, 2015 Jamie A. Jennings",

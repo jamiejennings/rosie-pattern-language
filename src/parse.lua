@@ -5,9 +5,6 @@
 ---- (c) 2015, Jamie A. Jennings
 ----
 
--- TO DO:
---
-
 local common = require "common"
 require "utils"
 

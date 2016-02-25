@@ -6,7 +6,6 @@ common.lua		   ; code common to many parts of Rosie
 compile.lua		   ; rpl compiler
 dev.lua			   ; loads Rosie into a dev environment (interactive Lua session)
 engine.lua		   ; abstraction for an rpl engine/interpreter
-instructions.lua	   ; rpl engine instruction definitions
 manifest.lua		   ; processes the rpl manifest file
 parse.lua		   ; parser for the core of rpl, written in Lua
 repl.lua		   ; the read-eval-print-loop for interactive Rosie
@@ -21,7 +20,8 @@ utils.lua		   ; misc utilities
 
 Notes:
 
-(1) At the command line, run.lua handles the command line input.
+(1) When invoking Rosie at the command line, run.lua handles the
+command line input.
 
 (2) In a development environment (an interactive lua session, with
 lpeg and cjson available), use dev.lua as follows:
