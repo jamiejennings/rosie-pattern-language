@@ -19,17 +19,11 @@ For an introduction to Rosie and explanations of the key concepts, see
 
 The [interactive read-eval-print loop (repl)](doc/repl.md) is documented separately.
 
-### How to build and run
+### How to build: clone the repo, and type 'make'
 
-After cloning or downloading the Rosie Pattern Language code repository, run
-`make` in the download directory.  The `makefile` will print instructions for
-how to build Rosie for your platform.
-
-In most cases, there is just one step, which is to run `make <platform>` where
+After cloning the repository, there is just one step: `make <platform>` where
 `<platform>` is, e.g. `macosx` or `linux`.  The `makefile` will download the
-needed prerequisites and compile them.  Then a quick test of the Rosie Pattern
-Engine is invoked, just to make sure it runs and prints the correct version
-number.
+needed prerequisites and compile them.
 
 You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
 
@@ -47,7 +41,6 @@ above is piped into the Unix utility `head`, which will print (in this case) the
 first 5 lines.  Try removing `head` to see the entire log file, i.e. `./run
 basic.matchall /var/log/system.log`.
 
-
 Rosie is parsing the log file into fields that are printed in various colors.
 Unparsed data is shown in black text.  To see which colors correspond to which
 RPL patterns, type `./run -patterns` to see all defined and loaded patterns and
@@ -62,6 +55,12 @@ displaying just one line of output, as in this example):
 
 
 ## Useful tips
+
+### Sample patterns are in the rpl directory
+
+The file `./MANIFEST` lists the Rosie Pattern Language files that Rosie compiles
+on startup.  These files are typically in the `rpl` directory, but could be
+anywhere.  Browse the `rpl` directory to see how patterns are written.
 
 ### Write patterns on the command line
 
@@ -82,7 +81,7 @@ bash-3.2$ ./run -json 'network.ip_address common.word' /etc/hosts
 {"*":{"1":{"network.ip_address":{"text":"255.255.255.255","pos":1}},"2":{"common.word":{"text":"broadcasthost","pos":17}},"text":"255.255.255.255\tbroadcasthost","pos":1}}
 ``` 
 
-### The "-grep" option that looks for your pattern anywhere in the input
+### The "-grep" option looks for your pattern anywhere in the input
 
 By default, Rosie matches your pattern against an entire line.  But what if you
 want grep-like functionality, where a pattern may be found anywhere in the
@@ -109,25 +108,42 @@ The `-debug` command line option generates verbose output about every step of
 matching.  It is best to use this option with only **one line of input** because
 so much output is generated.
 
-
-## Adding new patterns for Rosie to load on start-up
+### Adding new patterns for Rosie to load on start-up
 
 When Rosie starts, all the Rosie Pattern Language (rpl) files listed in
-```./MANIFEST ``` are loaded.  You can write your own patterns and add your
+`./MANIFEST ` are loaded.  You can write your own patterns and add your
 pattern file to the end of the manifest, so that Rosie will load them.
 (Currently, this is the only way to add new patterns.)
 
 
 ## Rosie Pattern Engine pre-requisites
 
+### Components needed by the Rosie Pattern Engine
+
+The Rosie Pattern Engine's installation script looks for the pre-requisites
+within the Rosie install directory, so that Rosie has its own copy of the
+pre-requisite software, such as Lua and lpeg.
+
+The pre-requisites are:
+
+pre-req | description
+--------|----------------------------------
+lua     | Lua binary (command line driver)
+lpeg	| Lua Parse Expression Grammars library
+cjson 	| JSON encoding/decoding library
+
+Like Lua, the native libraries must be built for your particular
+platform.  The `makefile` included with Rosie will download and compile the
+prerequisites, all within the Rosie install directory.
+
 ### Tools needed to compile and install
 
-The tools needed to compile and install Rosie are commonly available on most
-systems.
+The tools needed to compile and install Rosie and its pre-requisites are
+commonly available on most systems.
 
 The build instructions for Rosie are in its `makefile`, which uses `cc` (MacOSX)
 or `gcc` (Linux) to compile the components needed by the Rosie Pattern Engine.
-Those components (see below) are downloaded automatically using `curl`.
+Those components (see table above) are downloaded automatically using `curl`.
 
 tool | description
 -----|------------
@@ -142,24 +158,5 @@ example) you want to use `gcc` on MacOSX:
 ```
 make CC=gcc macosx
 ```
-
-### Components needed by the Rosie Pattern Engine
-
-The Rosie Pattern Engine's installation script looks for the pre-requisites
-within the Rosie install directory, so that Rosie has its own copy of, e.g. Lua
-and lpeg.
-
-In addition to the Lua binary, the Rosie Pattern Engine uses some native
-libraries written for Lua.
-
-pre-req | description
---------|----------------------------------
-lua     | Lua binary (command line driver)
-lpeg	| Lua Parse Expression Grammars library
-cjson 	| JSON encoding/decoding library
-
-Like Lua, the native libraries must be built for your particular
-platform.  The `makefile` included with Rosie should download and compile the
-prerequisites, all within the Rosie install directory.
 
 
