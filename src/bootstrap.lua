@@ -51,7 +51,7 @@ function parse_and_explain(source)
    local astlist, errlist = rosie_parse(source)
    if #errlist~=0 then
 --      io.write("Syntax errors:\n\n")
-      io.write("REPORTING NOT FULLY IMPLEMENTED!\n")
+      io.write("(Note: Syntax error reporting is currently rather coarse.)\n")
       for _,e in ipairs(errlist) do
 	 compile.explain_syntax_error(e, source)
 	 io.write("\n")

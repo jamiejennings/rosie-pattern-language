@@ -33,7 +33,6 @@ assert(pattern.is(manifest_engine.env.line))
 manifest_engine.program = {compile.compile_command_line_expression('line', manifest_engine.env)}
 
 function process_manifest_line(en, line, dry_run)
---   local m = match('line', line, 1, manifest_engine)
    local m = manifest_engine:run(line)
    assert(type(m)=="table", "Uncaught error processing manifest file!")
    local name, pos, text, subs, subidx = common.decode_match(m)

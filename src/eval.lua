@@ -24,8 +24,7 @@ local locale = lpeg.locale()
 -- Eval (debugging capability for matching)
 ----------------------------------------------------------------------------------------
 
--- Wednesday, January 27, 2016
--- NEW APPROACH:
+-- APPROACH:
 -- Each AST node should (where appropriate) be evaluated using its PEG first.  If it matches and
 -- we're doing the full eval, we then descend into the definition of the node and try to match
 -- each piece.  If it matches and we're doing fail_output_only, then we simply move on without
@@ -54,21 +53,7 @@ local eval_exp;					    -- forward reference
 local function eval_report(m, pos, a, input, start, indent, fail_output_only, step)
    start = start or 1
    local maxlen = 60
-   -- a lot of processing just so that we can show a grammar in a nice way
    local aname, apos, atext, asubs, asubidx, grammar_name, rule1, _
-
---   if type(a)=="table" then
---      aname, apos, atext, asubs, asubidx = common.decode_match(a)
---      if aname=="grammar_" and asubs and asubs[asubidx] then
---         _, rule1 = next(asubs[asubidx])
---         grammar_name = rule1 and rule1[1] and rule1[1].identifier and rule1[1].identifier.text
---      end
---   end
-
---   local evaluating = (type(a)=="string" and a)
---                      or (aname=="grammar_" and "grammar "..grammar_name)
---                      or parse.reveal_ast(a);
-
    if m then
       local fmt = "Matched %q (against input %q"
       if (start+maxlen) < #input then fmt = fmt .. " ..."; end
