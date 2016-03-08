@@ -13,6 +13,8 @@ LUA_ARCHIVE = 'http://www.lua.org/ftp/lua-5.3.2.tar.gz'
 LPEG_ARCHIVE = 'http://www.inf.puc-rio.br/~roberto/lpeg/lpeg-1.0.0.tar.gz'
 JSON_ARCHIVE = 'http://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.tar.gz'
 
+## ----------------------------------------------------------------------------- ##
+
 default: $(PLATFORM)
 
 download: $(LUA_DIR) $(LPEG_DIR) $(JSON_DIR)
@@ -94,6 +96,7 @@ test:
 	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
             echo "Rosie Pattern Engine installed successfully!"; \
+            echo "\nTry this as a test: ./run basic.matchall /etc/resolv.conf\n"; \
         else \
             echo "Rosie Pattern Engine test failed."; \
         fi
