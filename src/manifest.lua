@@ -51,28 +51,15 @@ function process_manifest(en, manifest_filename, dry_run)
    local success, nextline = pcall(io.lines, manifest_filename)
    if not success then
       io.stderr:write("Error: Cannot open manifest file '", manifest_filename, "'\n")
-      os.exit(-1)
+   else
+      if not QUIET then
+	 io.stderr:write("Reading manifest file: ", manifest_filename, "\n")
+      end
+      local line = nextline()
+      while line do
+	 process_manifest_line(en, line, dry_run)
+	 line = nextline()
+      end
    end
-   if not QUIET then
-      io.stderr:write("Reading manifest file: ", manifest_filename, "\n")
-   end
-   local line = nextline()
-   while line do
-      process_manifest_line(en, line, dry_run)
-      line = nextline()
-   end
-end
-
--- process the manifest file, then build a sorted list of all the patterns in the environment.
-function do_manifest(en, manifest_file)
-   process_manifest(en, manifest_file)
-   local pattern_list = {}
-   local n = next(en.env)
-   while n do
-      table.insert(pattern_list, n)
-      n = next(en.env, n);
-   end
-   table.sort(pattern_list)
-   return pattern_list
 end
 

@@ -49,21 +49,43 @@ function compile.new_env(base_env)
    return env
 end
 
-function compile.print_env(env)
-   local s;
-   local format = function(name, val)
-      return string.format("%-28s  %s", name, val)
+function compile.print_env(env, skip_header, total)
+   -- build a list of patterns that we can sort by name
+   local pattern_list = {}
+   local n = next(env)
+   while n do
+      table.insert(pattern_list, n)
+      n = next(env, n);
    end
-   for k,v in pairs(env) do
-      if s then s = s.."\n"..format(k,v)
-      else s = format(k,v)
-      end
-   end;
-   io.write(s or "<empty>", "\n")
+   table.sort(pattern_list)
+   local patterns_loaded = #pattern_list
+   total = (total or 0) + patterns_loaded
+
+   local fmt = "%-30s %-15s %-8s"
+
+   if not skip_header then
+      print();
+      print(string.format(fmt, "Pattern", "Kind", "Color"))
+      print("------------------------------ --------------- --------")
+   end
+
+   local kind, color;
+   for _,v in ipairs(pattern_list) do 
+      local kind = (v.alias and "alias") or "definition";
+      if colormap then color = colormap[v] or ""; else color = ""; end;
+      print(string.format(fmt, v, kind, color))
+   end
+
+   if patterns_loaded==0 then
+      print("<empty>");
+   end
    local mt = getmetatable(env)
    if mt and mt.__index then
-      io.write("--------- Parent environment: ---------\n")
-      compile.print_env(mt.__index)
+      print("\n----------- Parent environment: -----------\n")
+      compile.print_env(mt.__index, true, total)
+   else
+      print()
+      print(total .. " patterns loaded")
    end
 end
 
