@@ -9,10 +9,18 @@ cd `dirname ${SCRIPT_PATH}` > /dev/null
 SCRIPT_PATH=`pwd`;
 popd  > /dev/null
 
-#echo "This script resides in $SCRIPT_PATH"
+I=""
+
+#
+# -D is an undocumented command line option that launches Rosie in development mode
+#
+if [[ "$1" = "-D" ]]; then
+   I="-i"
+   shift
+fi
 
 if ([ -x $SCRIPT_PATH/bin/lua ]) then
-   $SCRIPT_PATH/bin/lua -e "ROSIE_HOME=\"$SCRIPT_PATH\"; SCRIPTNAME=\"$0\"" $SCRIPT_PATH/src/run.lua "$@"
+   $SCRIPT_PATH/bin/lua $I -e "ROSIE_HOME=\"$SCRIPT_PATH\"; SCRIPTNAME=\"$0\"" $SCRIPT_PATH/src/run.lua "$@"
    else
        echo "$SCRIPT_PATH/bin/lua not found.  Probably need to build Rosie."
 fi

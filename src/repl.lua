@@ -90,7 +90,8 @@ function repl(en)
 		  compile.compile_file(filename, en.env)
 		  io.write("Loaded ", filename, "\n")
 	       else
-		  do_manifest(en, filename)
+		  process_manifest(en, filename)
+--		  compile.print_env(en.env)
 	       end
 	    elseif cname=="debug" then
 	       if csubs then

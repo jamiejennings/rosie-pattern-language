@@ -8,8 +8,8 @@
 require "dev"
 local compile = require "compile"
 
-local n = #do_manifest(ENGINE, ROSIE_HOME.."/MANIFEST")
-print(n .. " patterns loaded into matching engine named '" .. ENGINE.name .. "'")
+process_manifest(ENGINE, ROSIE_HOME.."/MANIFEST")
+--print(n .. " patterns loaded into matching engine named '" .. ENGINE.name .. "'")
 
 function test()
    test_compiling_stuff()
