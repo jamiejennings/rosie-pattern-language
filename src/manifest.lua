@@ -22,8 +22,9 @@ local mpats = [==[
       -- These patterns define the contents of the Rosie MANIFEST file
       alias blank = ""
       alias comment = "--" .*
-      alias validchars = { [:alnum:] / [_%!$@:.,~-] }
-      path = { validchars+ {"/" validchars+}* }
+      alias unix_path = { {"../" / "./" / "/"}? {{[:alnum:]/[_%!$@:.,~-/] / "\\ "}+ }+  }
+      alias windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] .}* }+ }
+      path = unix_path / windows_path
       line = comment / (path comment?) / blank
    ]==]
 
@@ -39,7 +40,15 @@ function process_manifest_line(en, line, dry_run)
    if subidx then
       -- the only sub-match of "line" is "path", because "comment" is an alias
       local name, pos, path = common.decode_match(subs[subidx])
-      local filename = ROSIE_HOME .. "/" .. path
+      local filename
+      if path:sub(1,1)=="." or path:sub(1,1)=="/" then
+	 -- absolute path
+	 filename = path
+      else
+	 -- path relative to ROSIE_HOME
+	 filename = ROSIE_HOME .. "/" .. path
+      end
+      filename = filename:gsub("\\ ", " ")	    -- unescape a space in the name
       if not QUIET then 
 	 io.stderr:write("Compiling ", filename, "\n")
       end

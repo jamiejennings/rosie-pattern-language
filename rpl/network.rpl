@@ -59,7 +59,7 @@ network.email_address = { email_alias_part "@" fqdn }
 
 -- URI syntax highly simplified here (e.g. no query parms)
 
-alias protocol = {{letter+} ":--"}
+alias protocol = {{letter+} "://"}
 network.protocol = protocol
 
 alias url = {protocol {fqdn / ip_address} common.path?} / {protocol? {fqdn / ip_address}? common.path}

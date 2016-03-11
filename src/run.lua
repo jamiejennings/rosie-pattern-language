@@ -96,8 +96,8 @@ function process_command_line_options()
       end -- if manifest arg
    end -- for each command line arg
 
-   manifest = OPTION["-manifest"] or (OPTION["-grep"] and (ROSIE_HOME.."/GREP-MANIFEST")) or ROSIE_HOME.."/MANIFEST"
-   if manifest=="-" then manifest=nil; end
+   opt_manifest = OPTION["-manifest"] or (OPTION["-grep"] and (ROSIE_HOME.."/GREP-MANIFEST")) or ROSIE_HOME.."/MANIFEST"
+   if opt_manifest=="-" then opt_manifest=nil; end
 
    if last_option==#arg-2 then
       opt_pattern = arg[#arg-1]
@@ -144,7 +144,7 @@ function process_pattern_against_file()
    end
    local debug = OPTION["-debug"]
    -- (1) Manifest
-   if manifest then process_manifest(ENGINE, manifest); end
+   if opt_manifest then process_manifest(ENGINE, opt_manifest); end
 
    -- (2) Compile.  If we fail to get a peg, we can exit because the errors will already have been
    -- displayed.
@@ -265,7 +265,7 @@ end
 if OPTION["-patterns"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if manifest then process_manifest(ENGINE, manifest); end
+   if opt_manifest then process_manifest(ENGINE, opt_manifest); end
    compile.print_env(ENGINE.env)
    os.exit()
 end
@@ -273,20 +273,17 @@ end
 if OPTION["-repl"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if manifest then process_manifest(ENGINE, manifest); end
+   if opt_manifest then process_manifest(ENGINE, opt_manifest); end
    repl()
    os.exit()
 end
 
--- Say Hello
-if not QUIET then 
-   greeting();
-end
-
 if (not opt_pattern) then
+   greeting()
    print("Missing pattern and/or filename arguments")
    print(usage_message)
 else
+   if not QUIET then greeting(); end
    process_pattern_against_file()
 end
 
