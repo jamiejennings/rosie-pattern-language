@@ -10,14 +10,14 @@ alias whitespace = [:space:]
 alias digit = [:digit:]
 alias letter = [:alpha:]
 
-common.int = { [+-]? digit+ }			    -- at least one digit
-common.float = { [+-]? digit+ "." digit+ }	    -- float with digits on either side of radix
 alias hex_only = { [a-f] / [A-F] }
 alias hex_digits = { digit / [a-f] / [A-F] }
-alias common.hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
+--alias common.hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
+common.int = { [+-]? digit+ !hex_only}	     -- at least one digit, and not a hex number
+common.float = { [+-]? digit+ "." digit+ }   -- float with digits on either side of radix
 common.hex = hex_digits+		     --  use with care! will match words and decimal numbers
 common.denoted_hex = { "0x" common.hex }
-common.number =  common.denoted_hex /  common.float / common.hex / common.int
+common.number =  common.denoted_hex /  common.float / common.int / common.hex
 
 common.word = letter+
 

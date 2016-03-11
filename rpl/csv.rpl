@@ -28,8 +28,8 @@ alias csv.sq = {csv.squote csv.squoted_field csv.squote}
 csv.quoted_field = csv.dq / csv.sq
 
 -- These match any unquoted field:
-csv.unquoted_comma = common.number / {!"," .}*
-csv.unquoted_semicolon = common.number / {!";" .}*
+csv.unquoted_comma = common.number / {!"," .}*	    -- common.number has no comma in it
+csv.unquoted_semicolon = common.number / {!";" .}*  -- nor any semicolon in it
 
 -- Look for quoted fields first, then anything else
 alias csv.field_comma = csv.quoted_field / csv.unquoted_comma

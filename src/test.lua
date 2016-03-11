@@ -5,7 +5,8 @@
 ---- (c) 2015, Jamie A. Jennings
 ----
 
-require "dev"
+-- Rosie must already be loaded into the Lua environment, e.g. via run.lua
+
 local compile = require "compile"
 
 process_manifest(ENGINE, ROSIE_HOME.."/MANIFEST")
