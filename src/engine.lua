@@ -224,9 +224,6 @@ function grep_match(exp_source, input, first_only)
    end
 end
 
--- Do this before using grep_match, in order to get add in the grep patterns:
---    process_manifest(ENGINE, ROSIE_HOME.."/grep-manifest")
-
 -- return a list of strings
 function grep_match_strings(exp_source, input, first_only)
    local results = grep_match(exp_source, input, first_only)

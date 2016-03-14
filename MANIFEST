@@ -6,6 +6,9 @@
 --  (c) 2015, Jamie A. Jennings
 -- 
 
+-- Note: Relative paths are relative to the Rosie install directory.  A path starting with "." is
+-- relative to the current directory.
+
 -- Of general utility:
 
 rpl/common.rpl			-- commonly used patterns like float, word
@@ -16,6 +19,10 @@ rpl/basic.rpl			-- for matching full lines of input against a
                                 -- variety of "basic" patterns of semantic interest
 
 rpl/csv.rpl                     -- CSV file formats
+
+-- Some definitions that are familiar to grep users:
+      
+rpl/grep.rpl
 
 -- Sample patterns for processing log files:
 

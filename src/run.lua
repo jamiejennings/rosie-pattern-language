@@ -96,7 +96,7 @@ function process_command_line_options()
       end -- if manifest arg
    end -- for each command line arg
 
-   opt_manifest = OPTION["-manifest"] or (OPTION["-grep"] and (ROSIE_HOME.."/GREP-MANIFEST")) or ROSIE_HOME.."/MANIFEST"
+   opt_manifest = OPTION["-manifest"] or ROSIE_HOME.."/MANIFEST"
    if opt_manifest=="-" then opt_manifest=nil; end
 
    if last_option==#arg-2 then
