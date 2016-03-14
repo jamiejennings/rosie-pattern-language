@@ -5,7 +5,7 @@
 -->
 
 
-# Rosie Pattern Language v0.88
+# Rosie Pattern Language v0.90
 
 ## How to install new patterns
 
@@ -22,6 +22,7 @@ Usually, the default manifest loads these rpl files: (your distribution may diff
 | rpl/network.rpl	| ip address, hostname, http commands, email addresses |
 | rpl/syslog.rpl	| patterns for the kind of syslog entries produced by Service Exchange |
 | rpl/basic.rpl		| patterns for finding a variety of "basic" patterns of semantic interest in arbitrary input |
+| rpl/grep.rpl		| patterns familiar to users of the unix grep utility |
 
 A good first experiment when using Rosie is to match the pattern `basic.matchall` against an arbitrary input file.
 
