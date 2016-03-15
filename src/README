@@ -1,10 +1,9 @@
 Source files:
 
 bootstrap.lua              ; uses a parser coded in lua to read rosie-core.rpl
-color-output.lua	   ; generates color text output for terminals
+color-output.lua	   ; generates color text output for terminals (this is a hack at the moment)
 common.lua		   ; code common to many parts of Rosie
 compile.lua		   ; rpl compiler
-dev.lua			   ; loads Rosie into a dev environment (interactive Lua session)
 engine.lua		   ; abstraction for an rpl engine/interpreter
 manifest.lua		   ; processes the rpl manifest file
 parse.lua		   ; parser for the core of rpl, written in Lua
@@ -23,13 +22,10 @@ Notes:
 (1) When invoking Rosie at the command line, run.lua handles the
 command line input.
 
-(2) In a development environment (an interactive lua session, with
-lpeg and cjson available), use dev.lua as follows:
+(2) To start a Rosie development environment (an interactive lua session, with
+lpeg and cjson available), use the "undocumented" command line option "-D":
 
-  require "dev"
+  ./run -D
 
-Note that dev.lua sets some variables, like "ROSIE_HOME", that would
-normally be set by the shell script that calls run.lua.  Since an
-interactive lua session cannot know where ROSIE_HOME is, a location is
-hard-coded.  So edit dev.lua to suit your development environment.
+
 
