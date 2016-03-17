@@ -13,7 +13,7 @@ spark.using_message = "Using" .*
 spark.ignore = "="* $   
 
 spark.message = .*
-spark.typical = datetime.simple_slash_date datetime.simple_time common.word common.identifier_plus_plus ":" spark.message
+spark.typical = datetime.simple_slash_date datetime.simple_time common.maybe_identifier common.identifier_plus_plus ":" spark.message
 
 spark.py_identifier = {![:space:] .}*
 
