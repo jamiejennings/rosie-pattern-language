@@ -1,5 +1,7 @@
 Major work items:
 
+* Consolidate the Rosie API
+
 * Use syntax transformation (on ASTs) instead of current code for:
     - quantified expressions
     - tokenization ("cooked" expressions)

@@ -338,7 +338,8 @@ end
 local function reveal_choice(a)
    assert(a, "did not get ast in reveal_choice")
    local name, pos, text, subs, subidx = common.decode_match(a)
-   return "(" .. parse.reveal_exp(subs[subidx]) .. " / " .. parse.reveal_exp(subs[subidx+1]) .. ")";
+--   return "(" .. parse.reveal_exp(subs[subidx]) .. " / " .. parse.reveal_exp(subs[subidx+1]) .. ")";
+   return parse.reveal_exp(subs[subidx]) .. " / " .. parse.reveal_exp(subs[subidx+1]);
 end
 
 local function reveal_group(a)

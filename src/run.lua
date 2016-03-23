@@ -86,7 +86,7 @@ function process_command_line_options()
 	       last_option = i+1;	      -- only this option takes an arg
 	       skip_arg = true;		      -- skip the next arg, which is the arg to this arg
 	    end
-	 elseif v:sub(1,1)=="-" then
+	 elseif v:sub(1,1)=="-" and i~=#arg then    -- filename, which is always last, can be "-"
 	    -- arg starts with a dash but is not a valid option
 	    greeting()
 	    io.write("Rosie: invalid command line option ", v, "\n")
@@ -110,6 +110,7 @@ end
 
 function help()
    greeting()
+   print("The Rosie install directory is: " .. ROSIE_HOME)
    print("Rosie help:")
    print(usage_message)
    print()
@@ -125,10 +126,10 @@ function help()
    print("  -debug          output a detailed listing of how the pattern matched the input;")
    print("                  this feature generates LOTS of output, so best to use it on ONE LINE OF INPUT;")
    print("  -grep           emulate grep, but with RPL, by searching for all occurrences of <pattern> (interpreted in RAW mode) in the input")
-   print("  -manifest <fn>  load the manifest file <fn> instead of the default " .. (ROSIE_HOME.."/MANIFEST"))
+   print("  -manifest <fn>  load the manifest file <fn> instead of MANIFEST from the Rosie install directory")
    print()
    print("  <pattern>       RPL expression, which may be the name of a defined pattern, against which each line will be matched")
-   print("  <fn>            (filename) name of the file of text input to be processed line by line")
+   print("  <fn>            (filename) name of the file of text input, or a dash \"-\" to read from standard input")
    print()
    print("Notes: ")
    print("(1) lines from the input file for which the pattern does NOT match are written to stderr so they can be redirected, e.g. to /dev/null")
@@ -217,6 +218,7 @@ function process_pattern_against_file()
    end
 
    -- (4) Iterate through the lines in the input file
+   if opt_filename=="-" then opt_filename = nil; end -- read from stdin
    local nextline = io.lines(opt_filename);
    local lines = 0;
    local l = nextline(); 
