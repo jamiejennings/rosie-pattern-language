@@ -69,3 +69,4 @@ But RPL macros are also transformations of parse trees (specifically, RPL parse 
 E.g. changing the input delimeter?
 E.g. changing the pattern being matched in mid-stream (for the multi-line situation)?
 
+Streaming (like the unix "tail" utility) versus file-based processing.  Streaming requires flushing the output after each write, among other accomodations. 
