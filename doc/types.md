@@ -41,8 +41,7 @@ a{m,n}   | m to n repetitions  | matches at least m but no more than n consecuti
 
 Notes:
 1. Predicates consume no input.
-2. The predicates that look backward match text immediately before the current
-input position.  These predicates must match text of fixed length.
+2. The predicates that look backward match text immediately before the current input position.  These predicates must match text of fixed length.
 3. RPL has a language feature called _inline tokenization_, which is enabled by default and is in essence another built-in combinator.  It is discussed in its own section, below.
 
 
