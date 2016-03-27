@@ -27,7 +27,7 @@ local repl_patterns = [==[
       clear = ".clear"
       help = ".help"
       command = load / manifest / match / eval / debug / patterns / clear / help
-      input = command / statement / (!"." identifier)
+      input = command / statement / identifier
 ]==]
 
 repl_engine = engine("repl", {}, compile.new_env())
@@ -74,7 +74,11 @@ function repl(en)
 	    local id = text
 	    local p = en.env[id]
 	    if p then
-	       io.write((p.alias and "alias ") or "", id, " = ", parse.reveal_ast(p.ast), "\n")
+	       io.write((p.alias and "alias ") or "",
+			id,
+			" = ",
+			(p.ast and parse.reveal_ast(p.ast)) or "a built-in RPL pattern",
+			"\n")
 	    else
 	       io.write("Repl: undefined identifier ", id, "\n")
 	       if id=="help" then

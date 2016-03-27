@@ -33,7 +33,7 @@ local ignore = (locale.space + (P"--" * ((P(1) - (P"\n"))^0)))^0
 
 local id_char = locale.alnum + S"_"
 local id = locale.alpha * id_char^0
-local identifier = token_capture("identifier", (id * ("." * id)^0 * (- id_char)) + "." + "$")
+local identifier = token_capture("identifier", (id * ("." * id)^0 * (- id_char)) + S".$")
 local literal_string = special_token("string", (P'"' * (C(((1 - S'"\\') + (P'\\' * 1))^0)) * P'"'))
 local top_level_syntax_error = token("syntax_error", Ct(Cg(ignore*(C(1)-locale.space)^1, "top_level")))
 
