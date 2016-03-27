@@ -6,7 +6,6 @@
 ----
 
 local common = require "common"			    -- AST functions
-<<<<<<< cb95397849351065999992fc06d4bc060c1ae601
 --local compile = require "compile"
 --local cinternals = compile.cinternals
 
