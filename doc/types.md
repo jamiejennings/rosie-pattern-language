@@ -10,9 +10,7 @@
 
 ## Parser combinators
 
-Rosie Pattern Language is a language of parsers and parser combinators.  If a
-parser maps input text to a parse tree, then a parser combinator maps parsers
-(as input) to a new parser.
+Rosie Pattern Language is a language of parsers and parser combinators.  If a parser maps input text to a parse tree, then a parser combinator maps parsers (as input) to a new parser.
 
 Let
 * `P` be the set of parsers;
@@ -27,8 +25,7 @@ Let
 
 ### Built-in combinators
 
-The set of combinators that are built into RPL are the ones from the Parsing
-Expression Grammar formulation, namely for a, b in P:
+The set of combinators that are built into RPL are the ones from the Parsing Expression Grammar formulation, namely for a, b in P:
 
 Syntax   | Combinator          | Description
 ---------|---------------------|------------
@@ -46,22 +43,29 @@ Notes:
 1. Predicates consume no input.
 2. The predicates that look backward match text immediately before the current
 input position.  These predicates must match text of fixed length.
+3. RPL has a language feature called _inline tokenization_, which is enabled by default and is in essence another built-in combinator.  It is discussed in its own section, below.
+
 
 ### Custom combinators
 
-To the set of built-in combinators, RPL adds a limited capability for building
-custom combinators...
+To the set of built-in combinators, RPL adds a limited capability for building custom combinators...
 * alias (simple macro substitution)
 * real macros ???
+
 
 ### Inline tokenizing
 
 Another form of built-in combinator....
 
 
-## Transformations
+## Data transformations
 
-RPL also supports transformations of the resulting parse trees...
+RPL also supports transformations of the parse output data, i.e. the parse trees...
+But RPL macros are also transformations of parse trees (specifically, RPL parse trees).  So we can implement data transformations using exactly the same machinery that we built for RPL macros.  Or rather, it's the opposite way around!
 
 
 ## Input processing directives
+
+E.g. changing the input delimeter?
+E.g. changing the pattern being matched in mid-stream (for the multi-line situation)?
+
