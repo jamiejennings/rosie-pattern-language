@@ -48,6 +48,7 @@ compile.boundary = boundary
 -- Base environment, which can be extended with new_env, but not written to directly,
 -- because it is shared between match engines.
 ----------------------------------------------------------------------------------------
+
 local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};  -- any single character
              ["$"] = pattern{name="$"; peg=P(-1); alias=true}; -- end of input
              [b_id] = pattern{name=b_id; peg=boundary; alias=true, ast=false}; -- token boundary
