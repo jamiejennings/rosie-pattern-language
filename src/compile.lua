@@ -27,8 +27,11 @@ local locale = lpeg.locale()
 -- Base environment, which can be extended with new_env, but not written to directly,
 -- because it is shared between match engines.
 ----------------------------------------------------------------------------------------
-local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};	-- any single character
-       ["$"] = pattern{name="$"; peg=P(-1); alias=true}; -- end of input
+local b_id = common.boundary_identifier
+local b_ast = common.create_match("identifier", 1, b_id)
+local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};		  -- any single character
+             ["$"] = pattern{name="$"; peg=P(-1); alias=true};		  -- end of input
+             [b_id] = pattern{name=b_id; peg=P(-1); alias=true, ast=b_ast}; -- token boundary
        }
 setmetatable(ENV, {__tostring = function(env)
 				   return "<base environment>"
@@ -38,6 +41,8 @@ setmetatable(ENV, {__tostring = function(env)
 					 .. 'cannot assign "' .. key .. '"')
 				end;
 		})
+
+cinternals.ENV = ENV
 
 function compile.new_env(base_env)
    local env = {}
