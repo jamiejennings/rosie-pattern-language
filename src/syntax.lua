@@ -6,8 +6,8 @@
 ----
 
 local common = require "common"			    -- AST functions
-local compile = require "compile"
-local cinternals = compile.cinternals
+--local compile = require "compile"
+--local cinternals = compile.cinternals
 
 -- !@# Eliminate subidx because it's always 1!
 
@@ -16,8 +16,8 @@ local cinternals = compile.cinternals
 -- Add a field to pattern record for "original_ast" where we can store the pre-transformation ast.
 
 
---local
-   boundary_ast = cinternals.ENV[common.boundary_identifier].ast
+--local boundary_ast = cinternals.ENV[common.boundary_identifier].ast
+local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
 
 function cooked_to_raw(a)
    local name, pos, text, subs, subidx = common.decode_match(a)
@@ -29,17 +29,23 @@ function cooked_to_raw(a)
       assert((#subs - subidx + 1) == 2)		    -- two branches in a sequence
       local type1 = next(subs[subidx])
       if type1=="negation" or type1=="lookat" then
-	 return a				    -- nothing to do
+	 return a				    -- copy of?
       else
 	 -- make the new tree here
 	 -- !@# What to do with pos and text fields???
 	 return common.create_match("raw",
-				    pos,
-				    text,
-				    subs[1],
-				    boundary_ast,
-				    subs[2]
-				 )
+				    0,		    -- pos
+				    "",		    -- text
+				    common.create_match("sequence",
+							0,
+							"",
+							subs[1], -- copy of?
+							common.create_match("sequence",
+									    0,
+									    "",
+									    boundary_ast,   -- copy of?
+									    subs[2]	    -- copy of?
+									 )))
       end
 --   elseif next(exp)== ... then -- what else needs transformation?
    end			       -- switch on type of a

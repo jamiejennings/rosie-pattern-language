@@ -18,6 +18,7 @@ alias id = { [:alpha:] id_char* }
 identifier = { id {[.]id}* }			    -- hierarchical identifier name
 	     / [.]				    -- a single dot
 	     / [$]				    -- a single dollar sign
+	     / [~]				    -- a single tilde
 
 alias dquote = [\"]
 alias esc = [\\]
