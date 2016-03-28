@@ -10,14 +10,11 @@ against predefined patterns.
 Unlike most regex tools, Rosie will also generate structured (JSON) output, and
 will soon do all kinds of other things to the input data as it is being parsed.
 
-#### Docs
+#### Small and fast
 
-To write patterns in Rosie Pattern Language, see [the RPL documentation](doc/rpl.md).
-
-For an introduction to Rosie and explanations of the key concepts, see
-[Rosie's _raison d'etre_](doc/raisondetre.md).
-
-The [interactive read-eval-print loop (repl)](doc/repl.md) is documented separately.
+The Rosie Pattern Engine takes less than 400KB (yes, *kilobytes*) of disk space, and around 2MB of
+memory.  Typical log files are parsed at around 50,000 lines/second on my 4-year
+old MacBook Pro, where similar solutions do not achieve 10,000 lines/second.
 
 For the PL and comp sci geeks among us, some technical notes are [here](doc/geek.md).
 
@@ -28,6 +25,15 @@ After cloning the repository, there is just one step: `make <platform>` where
 needed prerequisites and compile them.
 
 You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
+
+#### Docs
+
+To write patterns in Rosie Pattern Language, see [the RPL documentation](doc/rpl.md).
+
+For an introduction to Rosie and explanations of the key concepts, see
+[Rosie's _raison d'etre_](doc/raisondetre.md).
+
+The [interactive read-eval-print loop (repl)](doc/repl.md) is documented separately.
 
 ### A quick test
 
