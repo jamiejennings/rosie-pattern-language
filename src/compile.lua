@@ -6,7 +6,11 @@
 ----
 
 -- TO DO:
---
+-- Clean up the loading of parse_and_explain
+
+require "rpl-parse"				    -- for parse_and_explain
+
+-- 
 
 local compile = {}				    -- exported top level interface
 local cinternals = {}				    -- exported interface to compiler internals

@@ -5,14 +5,13 @@
 ---- (c) 2015, Jamie A. Jennings
 ----
 
-require "bootstrap"
 local common = require "common"
 local compile = require "compile"
+require "engine"
+require "manifest"
 
 -- Absolute path, e.g. ROSIE_HOME="/Users/jjennings/Work/Dev/rosie-dev"
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
-
-
 
 local repl_patterns = [==[
       alias validchars = { [:alnum:] / [_%!$@:.,~-] }

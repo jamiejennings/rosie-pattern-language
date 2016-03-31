@@ -14,7 +14,6 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 -- ROSIE_HOME and ROSIE_VERSION are set by dev.lua
 
-require "bootstrap"
 local common = require "common"
 local compile = require "compile"
 

@@ -30,20 +30,12 @@ end
 package.path = ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
-local vfile = io.open(ROSIE_HOME.."/VERSION")
-if not vfile then
-   io.stderr:write("Installation error: File ROSIE_HOME/VERSION does not exist or is not readable\n")
-   os.exit(-3)
-end
-
-ROSIE_VERSION = vfile:read("l"); vfile:close();
+dofile(ROSIE_HOME.."/src/bootstrap.lua")
+bootstrap()
 
 common = require "common"
 compile = require "compile"
 eval = require "eval"
-require "bootstrap"
-bootstrap()
-
 require "manifest"
 require "color-output"
 local json = require "cjson"

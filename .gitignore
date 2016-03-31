@@ -2,4 +2,8 @@
 **/*.o
 **/*.so
 **/*~
-
+*.tar.gz
+bin
+lpeg-1.0.0
+lua-5.3.2
+lua-cjson-2.1.0
