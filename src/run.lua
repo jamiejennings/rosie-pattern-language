@@ -27,9 +27,6 @@ if not SCRIPTNAME then
    os.exit(-2)
 end
 
-package.path = ROSIE_HOME .. "/src/?.lua"
-package.cpath = ROSIE_HOME .. "/lib/?.so"
-
 dofile(ROSIE_HOME.."/src/bootstrap.lua")
 bootstrap()
 
