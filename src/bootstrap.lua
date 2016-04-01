@@ -5,6 +5,10 @@
 ---- (c) 2015, Jamie A. Jennings
 ----
 
+-- Restrict Lua's search for modules and shared objects to just the Rosie install directory
+package.path = ROSIE_HOME .. "/src/?.lua"
+package.cpath = ROSIE_HOME .. "/lib/?.so"
+
 local compile = require "compile"
 local common = require "common"
 require "engine"
