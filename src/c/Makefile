@@ -74,7 +74,7 @@ linux:
 macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS= CC=$(CC)
 
-macosx: CC=cc					    # override on command line for gcc
+macosx: CC=cc			    # override on the command line for gcc
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none
