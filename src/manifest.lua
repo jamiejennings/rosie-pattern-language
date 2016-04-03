@@ -5,17 +5,12 @@
 ---- (c) 2015, Jamie A. Jennings
 ----
 
--- This lua script must be called with the variable ROSIE_HOME set to be the full directory of the
--- rosie installation (not a relative path such as one starting with . or ..)
---
--- E.g. ROSIE_HOME="/Users/jjennings/Work/Dev/rosie-dev"
-
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
-
--- ROSIE_HOME and ROSIE_VERSION are set by dev.lua
 
 local common = require "common"
 local compile = require "compile"
+
+local manifest = {}
 
 local mpats = [==[
       -- These patterns define the contents of the Rosie MANIFEST file
@@ -32,7 +27,7 @@ compile.compile(mpats, manifest_engine.env)
 assert(pattern.is(manifest_engine.env.line))
 manifest_engine.program = {compile.compile_command_line_expression('line', manifest_engine.env)}
 
-function process_manifest_line(en, line, dry_run)
+local function process_manifest_line(en, line, dry_run)
    local m = manifest_engine:run(line)
    assert(type(m)=="table", "Uncaught error processing manifest file!")
    local name, pos, text, subs, subidx = common.decode_match(m)
@@ -55,7 +50,7 @@ function process_manifest_line(en, line, dry_run)
    end
 end
 
-function process_manifest(en, manifest_filename, dry_run)
+function manifest.process_manifest(en, manifest_filename, dry_run)
    local success, nextline = pcall(io.lines, manifest_filename)
    if not success then
       io.stderr:write("Error: Cannot open manifest file '", manifest_filename, "'\n")
@@ -71,3 +66,4 @@ function process_manifest(en, manifest_filename, dry_run)
    end
 end
 
+return manifest

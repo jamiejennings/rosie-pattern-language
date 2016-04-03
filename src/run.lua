@@ -30,10 +30,10 @@ end
 dofile(ROSIE_HOME.."/src/bootstrap.lua")
 bootstrap()
 
-common = require "common"
-compile = require "compile"
-eval = require "eval"
-require "manifest"
+local common = require "common"
+local compile = require "compile"
+local eval = require "eval"
+local manifest = require "manifest"
 require "color-output"
 local json = require "cjson"
 require("repl")
@@ -136,7 +136,7 @@ function process_pattern_against_file()
    end
    local debug = OPTION["-debug"]
    -- (1) Manifest
-   if opt_manifest then process_manifest(CL_ENGINE, opt_manifest); end
+   if opt_manifest then manifest.process_manifest(CL_ENGINE, opt_manifest); end
 
    -- (2) Compile.  If we fail to get a peg, we can exit because the errors will already have been
    -- displayed.
@@ -258,7 +258,7 @@ end
 if OPTION["-patterns"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if opt_manifest then process_manifest(CL_ENGINE, opt_manifest); end
+   if opt_manifest then manifest.process_manifest(CL_ENGINE, opt_manifest); end
    compile.print_env(CL_ENGINE.env)
    os.exit()
 end
@@ -266,7 +266,7 @@ end
 if OPTION["-repl"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if opt_manifest then process_manifest(CL_ENGINE, opt_manifest); end
+   if opt_manifest then manifest.process_manifest(CL_ENGINE, opt_manifest); end
    repl(CL_ENGINE)
    os.exit()
 end

@@ -52,8 +52,7 @@ local compile = require "compile"
 --    * when the engine reaches a break operation, it returns a breakpoint continuation.
 --    Continuation := type, PC (index into pattern), position (index into input), captures
 
-require "compile"
-
+local compile = require "compile"
 local recordtype = require("recordtype")
 local unspecified = recordtype.unspecified;
 

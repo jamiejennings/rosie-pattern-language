@@ -8,10 +8,11 @@
 -- Rosie must already be loaded into the Lua environment, e.g. via run.lua
 
 local compile = require "compile"
+local manifest = require "manifest"
 
 TEST_ENGINE = engine("default engine", {}, compile.new_env())
 
-process_manifest(TEST_ENGINE, ROSIE_HOME.."/MANIFEST")
+manifest.process_manifest(TEST_ENGINE, ROSIE_HOME.."/MANIFEST")
 --print(n .. " patterns loaded into matching engine named '" .. TEST_ENGINE.name .. "'")
 
 function test()
@@ -25,7 +26,7 @@ end
 ----------------------------------------------------------------------------------------
 
 function test_compiling_stuff()
-   process_manifest(TEST_ENGINE, ROSIE_HOME .. "/MANIFEST")
+   manifest.process_manifest(TEST_ENGINE, ROSIE_HOME .. "/MANIFEST")
    print();
    print("Environment in default engine:")
    compile.print_env(TEST_ENGINE.env)

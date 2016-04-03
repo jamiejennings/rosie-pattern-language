@@ -7,8 +7,9 @@
 
 local common = require "common"
 local compile = require "compile"
+local eval = require "eval"
+local manifest = require "manifest"
 require "engine"
-require "manifest"
 
 -- Absolute path, e.g. ROSIE_HOME="/Users/jjennings/Work/Dev/rosie-dev"
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
@@ -53,7 +54,7 @@ local function print_match(m, p, len, eval_p)
 end
 
 function repl(en)
-   en = en or engine("engine for repl", {}, compile.new_env())
+--   en = en or engine("engine for repl", {}, compile.new_env())
    io.write(repl_prompt)
    local s = io.stdin:read("l")
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
@@ -93,8 +94,7 @@ function repl(en)
 		  compile.compile_file(filename, en.env)
 		  io.write("Loaded ", filename, "\n")
 	       else
-		  process_manifest(en, filename)
---		  compile.print_env(en.env)
+		  manifest.process_manifest(en, filename)
 	       end
 	    elseif cname=="debug" then
 	       if csubs then
