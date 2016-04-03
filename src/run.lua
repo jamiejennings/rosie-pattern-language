@@ -38,6 +38,8 @@ require "color-output"
 local json = require "cjson"
 require("repl")
 
+local CL_ENGINE = engine("command line engine", {}, compile.new_env())
+
 local function greeting()
    io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")
 end
@@ -134,7 +136,7 @@ function process_pattern_against_file()
    end
    local debug = OPTION["-debug"]
    -- (1) Manifest
-   if opt_manifest then process_manifest(ENGINE, opt_manifest); end
+   if opt_manifest then process_manifest(CL_ENGINE, opt_manifest); end
 
    -- (2) Compile.  If we fail to get a peg, we can exit because the errors will already have been
    -- displayed.
@@ -142,9 +144,9 @@ function process_pattern_against_file()
    if debug then
       peg = true				    -- any non-nil value
    elseif OPTION["-grep"] then
-      peg = grep_match_compile_to_peg(opt_pattern, ENGINE.env)
+      peg = grep_match_compile_to_peg(opt_pattern, CL_ENGINE.env)
    else
-      pat = compile.compile_command_line_expression(opt_pattern, ENGINE.env) -- returns a pattern object
+      pat = compile.compile_command_line_expression(opt_pattern, CL_ENGINE.env) -- returns a pattern object
       peg = pat and pat.peg
    end
    if not peg then os.exit(-1); end		    -- compilation errors were already printed
@@ -214,7 +216,7 @@ function process_pattern_against_file()
    local t;
    while l do
       if debug then
-	 local m = eval.eval(opt_pattern, l, 1, ENGINE.env)
+	 local m = eval.eval(opt_pattern, l, 1, CL_ENGINE.env)
       else
 	 t = match_function(peg, l);
 	 if t then
@@ -256,16 +258,16 @@ end
 if OPTION["-patterns"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if opt_manifest then process_manifest(ENGINE, opt_manifest); end
-   compile.print_env(ENGINE.env)
+   if opt_manifest then process_manifest(CL_ENGINE, opt_manifest); end
+   compile.print_env(CL_ENGINE.env)
    os.exit()
 end
 
 if OPTION["-repl"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if opt_manifest then process_manifest(ENGINE, opt_manifest); end
-   repl()
+   if opt_manifest then process_manifest(CL_ENGINE, opt_manifest); end
+   repl(CL_ENGINE)
    os.exit()
 end
 

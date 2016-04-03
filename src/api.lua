@@ -7,6 +7,8 @@
 
 local common = require "common"
 local compile = require "compile"
+require "engine"
+require "manifest"
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 

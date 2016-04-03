@@ -53,7 +53,7 @@ local function print_match(m, p, len, eval_p)
 end
 
 function repl(en)
-   en = en or ENGINE
+   en = en or engine("engine for repl", {}, compile.new_env())
    io.write(repl_prompt)
    local s = io.stdin:read("l")
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal

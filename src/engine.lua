@@ -147,16 +147,11 @@ engine.create_function =
       return _new{name=name, program=program, PC=1, env=initial_env, run=run_engine}
    end
 
--- Create a default matching engine to use in the repl and via the command line
-
-ENGINE = engine("default engine", {}, compile.new_env())
-
 ----------------------------------------------------------------------------------------
 -- Matching functions using engines
 ----------------------------------------------------------------------------------------
 
 function match(expression_source, input, start, en)
-   en = en or ENGINE
    assert(type(expression_source)=="string", "Pattern expression is not a string: "..tostring(expression_source))
    assert(engine.is(en))
    local pat = compile.compile_command_line_expression(expression_source, en.env)
@@ -168,7 +163,7 @@ end
 
 
 ----------------------------------------------------------------------------------------
---- OLD STUFF TO BE REPLACED BY AN ENGINE IMPLEMENTATION
+-- The functions below are used in run.lua to process input files
 ----------------------------------------------------------------------------------------
 
 -- return a flat list of matches
@@ -212,27 +207,5 @@ function grep_match_compile_to_peg(exp_source, env)
    else
       return nil
    end
-end
-
--- return a list of matches
-function grep_match(exp_source, input, first_only)
-   local peg = grep_match_compile_to_peg(exp_source)
-   if not peg then
-      error("Grep match: pattern did not compile: " .. exp_source)
-   else
-      return grep_match_peg(peg, input, first_only)
-   end
-end
-
--- return a list of strings
-function grep_match_strings(exp_source, input, first_only)
-   local results = grep_match(exp_source, input, first_only)
-   if not results then return nil; end       -- could have been an error earlier, or no results
-   local strings = {}
-   for _,v in ipairs(results) do
-      local name, pos, text = decode_match(v)
-      table.insert(strings, text);
-   end
-   return strings
 end
 
