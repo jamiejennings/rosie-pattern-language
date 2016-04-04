@@ -53,7 +53,60 @@ function compile.new_env(base_env)
    return env
 end
 
+function compile.flatten_env(env, output_table)
+   output_table = output_table or {}
+   local kind, color
+   for item, value in pairs(env) do
+      if not output_table[item] then
+	 kind = (value.alias and "alias") or "definition"
+	 if colormap then color = colormap[item] or ""; else color = ""; end;
+	 output_table[item] = {type=kind, color=color}
+      end
+   end
+   local mt = getmetatable(env)
+   if mt and mt.__index then
+      -- there is a parent environment
+      return compile.flatten_env(mt.__index, output_table)
+   else
+      return output_table
+   end
+end
+
 function compile.print_env(env, skip_header, total)
+   -- build a list of patterns that we can sort by name
+   local pattern_list = {}
+   env = compile.flatten_env(env)
+   local n = next(env)
+   while n do
+      table.insert(pattern_list, n)
+      n = next(env, n);
+   end
+   table.sort(pattern_list)
+   local patterns_loaded = #pattern_list
+   total = (total or 0) + patterns_loaded
+
+   local fmt = "%-30s %-15s %-8s"
+
+   if not skip_header then
+      print();
+      print(string.format(fmt, "Pattern", "Type", "Color"))
+      print("------------------------------ --------------- --------")
+   end
+   local kind, color;
+   for _,v in ipairs(pattern_list) do 
+      print(string.format(fmt, v, env[v].type, env[v].color))
+   end
+   if patterns_loaded==0 then
+      print("<empty>");
+   end
+   if not skip_header then
+      print()
+      print(total .. " patterns loaded")
+   end
+end
+
+-- use this print function to see the nested environments
+function compile.print_env_internal(env, skip_header, total)
    -- build a list of patterns that we can sort by name
    local pattern_list = {}
    local n = next(env)
@@ -138,7 +191,8 @@ local function explain_quantified_limitation(a, source, maybe_rule)
    io.write(string.format("%s\n", line))
    io.write(string.rep(" ", pos).."^".."\n")
 
-   error(magic_string)				    -- throw
+   coroutine.yield(false)			    -- throw
+--   error(magic_string)				    -- throw
 
 end
 
@@ -156,7 +210,7 @@ local function explain_repetition_error(a, source)
    io.write(string.format("%s\n", line))
    io.write(string.rep(" ", pos-1).."^".."\n")
 
-   error(magic_string)				    -- throw
+   coroutine.yield(false)			    -- throw
 end
 
 local function explain_undefined_identifier(a, source)
@@ -168,7 +222,7 @@ local function explain_undefined_identifier(a, source)
    io.write(string.format("%s\n", line))
    io.write(string.rep(" ", pos-1).."^".."\n")
 
-   error(magic_string)				    -- throw
+   coroutine.yield(false)				    -- throw
 end
 
 local function explain_undefined_charset(a, source)
@@ -180,7 +234,7 @@ local function explain_undefined_charset(a, source)
    io.write(string.format("%s\n", line))
    io.write(string.rep(" ", pos-1).."^".."\n")
 
-   error(magic_string)				    -- throw
+   coroutine.yield(false)				    -- throw
 end
 
 local function explain_unknown_quantifier(a, source)
@@ -193,7 +247,7 @@ local function explain_unknown_quantifier(a, source)
    io.write(string.format("%s\n", line))
    io.write(string.rep(" ", pos-1).."^".."\n")
 
-   error(magic_string)				    -- throw
+   coroutine.yield(false)				    -- throw
 end
 
 
@@ -689,7 +743,7 @@ function cinternals.compile_astlist(astlist, raw, gmr, source, env)
    for _,ast in ipairs(astlist) do
       table.insert(results, (cinternals.compile_ast(ast, raw, gmr, source, env)))
    end
-   return table.unpack(results)
+   return results
 end
 
 ----------------------------------------------------------------------------------------
@@ -717,16 +771,19 @@ function compile.compile(source, env, raw, gmr, parser)
    local astlist = parser(source)
    if not astlist then return nil; end		    -- errors have been explained already
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local results = { pcall(cinternals.compile_astlist, astlist, raw, gmr, source, env) }
-   local success = results[1]
-   if (not success) then
-      local msg = results[2]
-      if string.sub(msg,-(#magic_string))~=magic_string then
-	 error("Error in compiler: " .. msg)
-      end
-   else -- success
-      return table.unpack(results, 2)
-   end
+   local c = coroutine.create(cinternals.compile_astlist)
+   local success, results = coroutine.resume(c, astlist, raw, gmr, source, env)
+--   local success = results[1]
+--   if (not success) then
+--      local msg = results[2]
+--      -- was there an error in the implementation of the compiler itself?
+--      if string.sub(msg,-(#magic_string))~=magic_string then
+--         return false, "Error in compiler: " .. msg
+--      end
+--   else -- success or rpl compilation error
+--      return false, table.unpack(results, 2)
+--   end
+   return success, results
 end
 
 function compile.compile_command_line_expression(source, env, raw, gmr, parser)
@@ -744,20 +801,17 @@ function compile.compile_command_line_expression(source, env, raw, gmr, parser)
       io.write("Error: only expressions can be matched (not statements): ", source, "\n")
       return nil
    end
-   local results = { pcall(cinternals.compile_astlist, astlist, raw, gmr, source, env) }
-   local success = results[1]
+   local c = coroutine.create(cinternals.compile_astlist)
+   local success, results = coroutine.resume(c, astlist, raw, gmr, source, env)
    if (not success) then
-      local msg = results[2]
-      if string.sub(msg,-(#magic_string))~=magic_string then
-	 error("Error in compiler: " .. msg)
-      end
+      return success, results
    else -- success
       -- one ast will compile to one pattern
-      local result_pattern = results[2]
+      local result_pattern = results[1]
       if not pattern.is(result_pattern) then
 	 -- E.g. an assignment or alias statement won't produce a pattern
 	 io.write("Error: expression did not compile to a pattern: ", source, "\n")
-	 return nil
+	 return false
       end
       -- now we check to see if the expression we are evaluating is an identifier
       local kind, pos, id = common.decode_match(astlist[1])
@@ -787,11 +841,13 @@ end
 function compile.compile_file(filename, env, raw, gmr)
    local f = io.open(filename);
    if (not f) then
-      io.write('Compiler: cannot open file "'..filename..'"\n')
+      local msg = 'Compiler: cannot open file "'..filename..'"\n'
+      io.write(msg)
+      return nil, msg
    else
       local source = f:read("a")
       f:close()
-      compile.compile(source, env, raw, gmr)
+      return compile.compile(source, env, raw, gmr)
    end
 end
 

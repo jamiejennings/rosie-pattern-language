@@ -70,9 +70,12 @@ engine =
       --
       run=function(...) error("Engine not initialized"); end;
       state="NOINPUT";				    -- "FAIL", "MATCH", "RUNNABLE", "NOINPUT"
+      id=unspecified;
   },
    "engine"
 )
+
+engine.tostring_function = function(orig, e) return '<engine: '..tostring(e.name)..'>'; end
 
 local locale = lpeg.locale()
 
@@ -143,7 +146,10 @@ end
 
 engine.create_function =
    function(_new, name, initial_env)
-      return _new{name=name, program={}, PC=1, env=initial_env, run=run_engine}
+      initial_env = initial_env or compile.new_env()
+      -- assigning a unique instance id should be part of the recordtype module
+      local id = tostring({}):match("0x(.*)")
+      return _new{name=name, program={}, PC=1, env=initial_env, run=run_engine, id=id}
    end
 
 ----------------------------------------------------------------------------------------

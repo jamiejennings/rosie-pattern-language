@@ -51,9 +51,12 @@ local function process_manifest_line(en, line, dry_run)
 end
 
 function manifest.process_manifest(en, manifest_filename, dry_run)
+   assert(engine.is(en))
    local success, nextline = pcall(io.lines, manifest_filename)
    if not success then
-      io.stderr:write("Error: Cannot open manifest file '", manifest_filename, "'\n")
+      local msg = "Error: Cannot open manifest file '", manifest_filename, "'\n"
+      io.stderr:write(msg)
+      return nil, msg
    else
       if not QUIET then
 	 io.stderr:write("Reading manifest file: ", manifest_filename, "\n")
@@ -63,6 +66,7 @@ function manifest.process_manifest(en, manifest_filename, dry_run)
 	 process_manifest_line(en, line, dry_run)
 	 line = nextline()
       end
+      return true
    end
 end
 
