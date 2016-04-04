@@ -8,7 +8,7 @@
 local common = require "common"
 local compile = require "compile"
 require "engine"
-require "manifest"
+local manifest = require "manifest"
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
@@ -38,6 +38,22 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --          - help?
 --          - debug?
 
+local api = {}
+
+local engine_list = {}
+
+local function arg_error(msg)
+   return nil, "Argument error: " .. msg
+end
+
+function api.new_engine(optional_name)		    -- optional manifest? file list? code string?
+   if optional_name and (not type(optional_name)=="string") then
+      return arg_error("optional engine name not a string")
+   end
+   local en = engine(optional_name, compile.new_env())
+   table.insert(engine_list, en.id, en)
+   return en.id
+end
 
 
 

@@ -22,7 +22,7 @@ local mpats = [==[
       line = comment / (path comment?) / blank
    ]==]
 
-local manifest_engine = engine("manifest", {}, compile.new_env())
+local manifest_engine = engine("manifest", compile.new_env())
 compile.compile(mpats, manifest_engine.env)
 assert(pattern.is(manifest_engine.env.line))
 manifest_engine.program = {compile.compile_command_line_expression('line', manifest_engine.env)}

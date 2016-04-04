@@ -10,7 +10,7 @@
 local compile = require "compile"
 local manifest = require "manifest"
 
-TEST_ENGINE = engine("default engine", {}, compile.new_env())
+TEST_ENGINE = engine("default engine", compile.new_env())
 
 manifest.process_manifest(TEST_ENGINE, ROSIE_HOME.."/MANIFEST")
 --print(n .. " patterns loaded into matching engine named '" .. TEST_ENGINE.name .. "'")

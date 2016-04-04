@@ -30,7 +30,7 @@ local repl_patterns = [==[
       input = command / statement / identifier
 ]==]
 
-repl_engine = engine("repl", {}, compile.new_env())
+repl_engine = engine("repl", compile.new_env())
 compile.compile_file(ROSIE_HOME.."/src/rosie-core.rpl", repl_engine.env)
 compile.compile(repl_patterns, repl_engine.env)
 repl_engine.program = {compile.compile_command_line_expression('input', repl_engine.env)}
@@ -54,7 +54,6 @@ local function print_match(m, p, len, eval_p)
 end
 
 function repl(en)
---   en = en or engine("engine for repl", {}, compile.new_env())
    io.write(repl_prompt)
    local s = io.stdin:read("l")
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal

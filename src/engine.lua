@@ -142,8 +142,8 @@ local function run_engine(e, new_input, new_pos, new_source, new_line)
 end
 
 engine.create_function =
-   function(_new, name, program, initial_env)
-      return _new{name=name, program=program, PC=1, env=initial_env, run=run_engine}
+   function(_new, name, initial_env)
+      return _new{name=name, program={}, PC=1, env=initial_env, run=run_engine}
    end
 
 ----------------------------------------------------------------------------------------

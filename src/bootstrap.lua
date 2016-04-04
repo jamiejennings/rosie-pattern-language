@@ -18,7 +18,7 @@ require "os"
 if not ROSIE_HOME then error("ROSIE_HOME not set.  Exiting..."); os.exit(-1); end
 
 -- Create a matching engine for processing Rosie Pattern Language files
-ROSIE_ENGINE = engine("RPL engine", {}, compile.new_env())
+ROSIE_ENGINE = engine("RPL engine", compile.new_env())
 
 BOOTSTRAP_COMPLETE = false;
 

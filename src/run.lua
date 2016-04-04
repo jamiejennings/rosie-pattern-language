@@ -38,7 +38,7 @@ require "color-output"
 local json = require "cjson"
 require("repl")
 
-local CL_ENGINE = engine("command line engine", {}, compile.new_env())
+local CL_ENGINE = engine("command line engine", compile.new_env())
 
 local function greeting()
    io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")
