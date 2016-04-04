@@ -8,6 +8,7 @@
 -- Rosie must already be loaded into the Lua environment, e.g. via run.lua
 
 local compile = require "compile"
+require "rpl-parse"				    -- !@#
 local manifest = require "manifest"
 
 TEST_ENGINE = engine("default engine", compile.new_env())

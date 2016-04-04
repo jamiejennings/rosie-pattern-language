@@ -18,6 +18,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --
 --      - Managing the environment
 --        - Obtain/destroy/ping a Rosie engine
+--        - Get a copy of the engine environment
 --
 --      - Rosie engine functions
 --        - RPL related
@@ -109,15 +110,10 @@ api.get_env = pcall_wrap(get_env)
 
 local function load_manifest(id, manifest_file)
    local en = engine_from_id(id)
-   local ok, msg = manifest.process_manifest(en, manifest_file)
-   if not ok then
-      return msg
-   else
-      return nil
-   end
+   return manifest.process_manifest(en, manifest_file)
 end
 
-api.load_manifest = pcall_wrap(load_manifest)
+api.load_manifest = load_manifest
 
 local function load_file(id, path, relative_to_rosie_home)
    -- default is relative to rosie home directory for paths not starting with "." or "/"
@@ -136,10 +132,20 @@ local function load_file(id, path, relative_to_rosie_home)
       end
       full_path = full_path:gsub("\\ ", " ")	    -- unescape a space in the name
    end
-   compile.compile_file(full_path, en.env)
+   local result, msg = compile.compile_file(full_path, en.env)
+   return (not (not result)), msg
 end
 
-api.load_file = pcall_wrap(load_file)
+api.load_file = load_file
+
+local function load_string(id, input)
+   local en = engine_from_id(id)
+   local result, msg = compile.compile(input, en.env)
+   return (not (not result)), msg
+end
+
+api.load_string = load_string
+
 
 
 return api

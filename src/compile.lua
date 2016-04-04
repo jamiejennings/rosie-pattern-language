@@ -6,14 +6,17 @@
 ----
 
 -- TO DO:
--- Clean up the loading of parse_and_explain
-
-require "rpl-parse"				    -- for parse_and_explain
+-- Clean up the loading of parse_and_explain (right now via rpl-parse)
 
 -- 
 
 local compile = {}				    -- exported top level interface
 local cinternals = {}				    -- exported interface to compiler internals
+
+-- forward reference
+parse_and_explain = function(...)
+		       error("Self-hosted parser not loaded")
+		    end
 
 local common = require "common"
 local parse = require "parse"			    -- RPL parser and AST functions
@@ -769,21 +772,15 @@ end
 function compile.compile(source, env, raw, gmr, parser)
    if not parser then parser = parse_and_explain; end
    local astlist = parser(source)
-   if not astlist then return nil; end		    -- errors have been explained already
+   if not astlist then return false; end	    -- errors have been explained already
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local c = coroutine.create(cinternals.compile_astlist)
-   local success, results = coroutine.resume(c, astlist, raw, gmr, source, env)
---   local success = results[1]
---   if (not success) then
---      local msg = results[2]
---      -- was there an error in the implementation of the compiler itself?
---      if string.sub(msg,-(#magic_string))~=magic_string then
---         return false, "Error in compiler: " .. msg
---      end
---   else -- success or rpl compilation error
---      return false, table.unpack(results, 2)
---   end
-   return success, results
+   local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, raw, gmr, source, env)
+   if no_lua_error then
+      return results_or_error, error_msg
+   else
+      error("Error in compiler: " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
+   end
 end
 
 function compile.compile_command_line_expression(source, env, raw, gmr, parser)
@@ -841,9 +838,9 @@ end
 function compile.compile_file(filename, env, raw, gmr)
    local f = io.open(filename);
    if (not f) then
-      local msg = 'Compiler: cannot open file "'..filename..'"\n'
-      io.write(msg)
-      return nil, msg
+      local msg = 'Compiler: cannot open file "'..filename..'"'
+      io.write(msg, "\n")
+      return false, msg
    else
       local source = f:read("a")
       f:close()
@@ -873,7 +870,6 @@ end
 function compile.match_peg(peg, input, start)
    return (peg * Cp()):match(input, start)
 end
-
 
 compile.cinternals = cinternals
 return compile

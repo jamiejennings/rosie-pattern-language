@@ -10,6 +10,7 @@ package.path = ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 local compile = require "compile"
+require "rpl-parse"				    --!@#
 local common = require "common"
 require "engine"
 require "os"

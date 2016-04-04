@@ -27,7 +27,7 @@ compile.compile(mpats, manifest_engine.env)
 assert(pattern.is(manifest_engine.env.line))
 manifest_engine.program = {compile.compile_command_line_expression('line', manifest_engine.env)}
 
-local function process_manifest_line(en, line, dry_run)
+local function process_manifest_line(en, line)
    local m = manifest_engine:run(line)
    assert(type(m)=="table", "Uncaught error processing manifest file!")
    local name, pos, text, subs, subidx = common.decode_match(m)
@@ -46,27 +46,35 @@ local function process_manifest_line(en, line, dry_run)
       if not QUIET then 
 	 io.stderr:write("Compiling ", filename, "\n")
       end
-      if not dry_run then compile.compile_file(filename, en.env); end
+      local result, msg = compile.compile_file(filename, en.env)
+      return (not (not result)), msg
+   else
+      return true
    end
 end
 
-function manifest.process_manifest(en, manifest_filename, dry_run)
+function manifest.process_manifest(en, manifest_filename)
    assert(engine.is(en))
    local success, nextline = pcall(io.lines, manifest_filename)
    if not success then
-      local msg = "Error: Cannot open manifest file '", manifest_filename, "'\n"
-      io.stderr:write(msg)
-      return nil, msg
+      local msg = "Error: Cannot open manifest file '" .. manifest_filename
+      io.stderr:write(msg, "\n")
+      return false, msg
    else
       if not QUIET then
 	 io.stderr:write("Reading manifest file: ", manifest_filename, "\n")
       end
-      local line = nextline()
-      while line do
-	 process_manifest_line(en, line, dry_run)
-	 line = nextline()
+      local line, success
+      success, line = pcall(nextline)
+      if not success then
+	 return false, line			    -- e.g. error if a directory
+      else
+	 while line and success do
+	    success, msg = process_manifest_line(en, line)
+	    line = nextline()
+	 end
+	 return success, msg
       end
-      return true
    end
 end
 

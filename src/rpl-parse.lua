@@ -9,6 +9,7 @@
 
 parse = require "parse"
 common = require "common"
+compile = require "compile"
 
 function rosie_parse_without_error_check(str, pos, tokens)
    pos = pos or 1

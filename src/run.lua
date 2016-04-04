@@ -32,6 +32,7 @@ bootstrap()
 
 local common = require "common"
 local compile = require "compile"
+require "rpl-parse"				    -- !@#
 local eval = require "eval"
 local manifest = require "manifest"
 require "color-output"
