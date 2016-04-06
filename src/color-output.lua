@@ -129,3 +129,11 @@ function color_print_leaf_nodes(t)
       end -- for all sub-matches
    end
 end
+
+function color_write(channel, color, ...)
+   channel:write(shell_color_table[color])
+   for _,v in ipairs({...}) do
+      channel:write(v)
+   end
+   channel:write(reset_color_attributes)
+end
