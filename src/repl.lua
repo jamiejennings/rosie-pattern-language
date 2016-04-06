@@ -91,10 +91,14 @@ function repl(en)
 	    local cname, cpos, ctext, csubs, csubidx = common.decode_match(subs[subidx])
 	    if cname=="load" or cname=="manifest" then
 	       local pname, ppos, path = common.decode_match(csubs[csubidx])
-	       local filename = ((pname:sub(1,1)=="/" and "") or (ROSIE_HOME .. "/")) .. path
+	       local filename = ((path:sub(1,1)=="/" and "") or (ROSIE_HOME .. "/")) .. path
 	       if cname=="load" then
-		  compile.compile_file(filename, en.env)
-		  io.write("Loaded ", filename, "\n")
+		  local results, msg = compile.compile_file(filename, en.env)
+		  if results then
+		     io.write("Loaded ", filename, "\n")
+		  else
+		     io.write(msg)
+		  end
 	       else
 		  manifest.process_manifest(en, filename)
 	       end
@@ -142,7 +146,8 @@ function repl(en)
 	       io.write("Repl: unimplemented command\n")
 	    end -- switch on command
 	 elseif name=="alias_" or name=="assignment_" or name=="grammar_" then
-	    compile.compile(text, en.env);
+	    local result, msg = compile.compile(text, en.env);
+	    if not result then io.write(msg); end
 	 else
 	    io.write("Repl: internal error\n")
 	 end -- switch on type of input received

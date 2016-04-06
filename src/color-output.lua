@@ -6,6 +6,23 @@
 ---- (c) 2015, Jamie A. Jennings
 ----
 
+-- Rewrite notes
+--
+-- (1) Write node_to_color_text
+--
+-- To convert a node to text using a colormap, do this:
+--   If the colormap is empty:
+--     Return the text field of the node
+--   ElseIf the node name has a color entry in the colormap:
+--     Return the color encoding string .. text field of the node .. color reset string
+--   Else, return concatenation of the node-to-text of each child of node (breadth first)
+--
+-- (2) Change the color encoding to use the rgb approach instead (TEST it first!)
+--
+-- (3) Move the color encoding functions to a common place, like utils
+
+
+
 local common = require "common"
 
 local function csi(rest)

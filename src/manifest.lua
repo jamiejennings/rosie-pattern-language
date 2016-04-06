@@ -57,8 +57,7 @@ function manifest.process_manifest(en, manifest_filename)
    assert(engine.is(en))
    local success, nextline = pcall(io.lines, manifest_filename)
    if not success then
-      local msg = "Error: Cannot open manifest file '" .. manifest_filename
-      io.stderr:write(msg, "\n")
+      local msg = 'Error: Cannot open manifest file "' .. manifest_filename .. '"'
       return false, msg
    else
       if not QUIET then

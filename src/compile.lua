@@ -159,22 +159,22 @@ function compile.explain_syntax_error(a, source)
    local name, pos, text, subs, subidx = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, pos)
 
-   io.write(string.format("Syntax error at line %d: %s\n", lnum, text))
-   io.write(string.format("%s\n", line))
+   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
 
    local err = parse.syntax_error_check(a)
    local ename, errpos, etext, esubs, esubidx = common.decode_match(err)
-   io.write(string.rep(" ", errpos-1).."^".."\n")
+   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
 
    if esubs then
       -- We only examine the first sub, assuming there are no others.  Is that right?
       local etname, etpos, ettext, etsubs, etsubidx = common.decode_match(esubs[esubidx])
       if etname=="statement_prefix" then
-	 io.write("Found start of a new statement inside an expression.\n")
+	 msg = msg .. "Found start of a new statement inside an expression.\n"
       else
-	 io.write("No additional information is available.\n")
+	 msg = msg .. "No additional information is available.\n"
       end
    end -- if esubs
+   return msg
 end
 
 ----------------------------------------------------------------------------------------
@@ -188,13 +188,12 @@ local function explain_quantified_limitation(a, source, maybe_rule)
    local name, errpos, text = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
    local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
-   io.write("Compile error: pattern with quantifier can match the empty string: ",
-	    rule_explanation, "\n", parse.reveal_ast(a), "\n")
-   io.write(string.format("At line %d:\n", lnum))
-   io.write(string.format("%s\n", line))
-   io.write(string.rep(" ", pos).."^".."\n")
-
-   coroutine.yield(false)			    -- throw
+   local msg = "Compile error: pattern with quantifier can match the empty string: " ..
+      rule_explanation .. "\n" .. parse.reveal_ast(a) .. "\n" ..
+      string.format("At line %d:\n", lnum) ..
+      string.format("%s\n", line) ..
+      string.rep(" ", pos) .. "^"
+   coroutine.yield(false, msg)			    -- throw
 --   error(magic_string)				    -- throw
 
 end
@@ -207,37 +206,37 @@ local function explain_repetition_error(a, source)
    local min = tonumber(rep_args[1]) or 0
    local max = tonumber(rep_args[2])
 
-   io.write("Compile error: integer quantifiers must be positive, and min <= max \n")
-   io.write("Error is in expression: " .. parse.reveal(a) .. "\n")
-   io.write(string.format("At line %d:\n", lnum))
-   io.write(string.format("%s\n", line))
-   io.write(string.rep(" ", pos-1).."^".."\n")
+   local msg = "Compile error: integer quantifiers must be positive, and min <= max \n" ..
+      "Error is in expression: " .. parse.reveal(a) .. "\n" ..
+      string.format("At line %d:\n", lnum) ..
+      string.format("%s\n", line) ..
+      string.rep(" ", pos-1) .. "^"
 
-   coroutine.yield(false)			    -- throw
+   coroutine.yield(false, msg)			    -- throw
 end
 
 local function explain_undefined_identifier(a, source)
    assert(a, "did not get ast in explain_undefined_identifier")
    local name, errpos, text = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
-   io.write("Compile error: reference to undefined identifier " .. text .. "\n")
-   io.write(string.format("At line %d:\n", lnum))
-   io.write(string.format("%s\n", line))
-   io.write(string.rep(" ", pos-1).."^".."\n")
+   local msg = "Compile error: reference to undefined identifier " .. text .. "\n" ..
+      string.format("At line %d:\n", lnum) ..
+      string.format("%s\n", line) ..
+      string.rep(" ", pos-1) .. "^"
 
-   coroutine.yield(false)				    -- throw
+   coroutine.yield(false, msg)				    -- throw
 end
 
 local function explain_undefined_charset(a, source)
    assert(a, "did not get ast in explain_undefined_charset")
    local _, errpos, name, subs, subidx = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
-   io.write("Compile error: named charset not defined " .. name .. "\n")
-   io.write(string.format("At line %d:\n", lnum))
-   io.write(string.format("%s\n", line))
-   io.write(string.rep(" ", pos-1).."^".."\n")
+   local msg = "Compile error: named charset not defined " .. name .. "\n" ..
+      string.format("At line %d:\n", lnum) ..
+      string.format("%s\n", line) ..
+      string.rep(" ", pos-1) .. "^"
 
-   coroutine.yield(false)				    -- throw
+   coroutine.yield(false, msg)				    -- throw
 end
 
 local function explain_unknown_quantifier(a, source)
@@ -245,12 +244,12 @@ local function explain_unknown_quantifier(a, source)
    local name, errpos, text, subs, subidx = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
    local q = subs[subidx+1]			    -- IS THIS RIGHT?
-   io.write("Compile error: unknown quantifier " .. q .. "\n")
-   io.write(string.format("At line %d:\n", lnum))
-   io.write(string.format("%s\n", line))
-   io.write(string.rep(" ", pos-1).."^".."\n")
+   local msg = "Compile error: unknown quantifier " .. q .. "\n" ..
+      string.format("At line %d:\n", lnum) ..
+      string.format("%s\n", line) ..
+      string.rep(" ", pos-1) .. "^"
 
-   coroutine.yield(false)				    -- throw
+   coroutine.yield(false, msg)				    -- throw
 end
 
 
@@ -758,12 +757,12 @@ local function core_parse_and_explain(source)
    assert(type(source)=="string", "Compiler: source argument is not a string: "..tostring(source))
    local astlist, errlist = parse.parse(source)
    if #errlist~=0 then
-      io.write("Core parser reports syntax errors:\n\n")
-      for _,e in ipairs(errlist) do
-	 compile.explain_syntax_error(e, source)
-	 io.write("\n")
-	 return nil
-      end
+      local msg = "Core parser reports syntax errors:\n"
+--      for _,e in ipairs(errlist) do
+         local _,e = next(errlist)		    -- explain only FIRST error for now
+	 msg = msg .. "\n" .. compile.explain_syntax_error(e, source)
+--      end
+	 return false, msg
    else -- successful parse
       return astlist
    end
@@ -771,8 +770,8 @@ end
 
 function compile.compile(source, env, raw, gmr, parser)
    if not parser then parser = parse_and_explain; end
-   local astlist = parser(source)
-   if not astlist then return false; end	    -- errors have been explained already
+   local astlist, msg = parser(source)
+   if not astlist then return false, msg; end	    -- errors are explained in msg
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local c = coroutine.create(cinternals.compile_astlist)
    local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, raw, gmr, source, env)
@@ -790,13 +789,15 @@ function compile.compile_command_line_expression(source, env, raw, gmr, parser)
    if not astlist then return nil; end		    -- syntax errors were already explained
    assert(type(astlist)=="table", "Parser returned other than astlist: " .. tostring(astlist))
    if (#astlist~=1) then
-      io.write("Error: source did not compile to a single pattern: ", source, "\n")
-      for i, a in ipairs(astlist) do io.write("Pattern ", i, ": ", parse.reveal_ast(a), "\n"); end
-      return nil
+      local msg = "Error: source did not compile to a single pattern: " .. source
+      for i, a in ipairs(astlist) do
+	 msg = msg .. "\nPattern " .. i .. ": " .. parse.reveal_ast(a)
+      end
+      return false, msg
    elseif not compile.expression_p(astlist[1]) then
       -- Statements, e.g. assignments, won't produce a pattern
-      io.write("Error: only expressions can be matched (not statements): ", source, "\n")
-      return nil
+      local msg = "Error: only expressions can be matched (not statements): " .. source
+      return false, msg
    end
    local c = coroutine.create(cinternals.compile_astlist)
    local success, results = coroutine.resume(c, astlist, raw, gmr, source, env)
@@ -807,8 +808,7 @@ function compile.compile_command_line_expression(source, env, raw, gmr, parser)
       local result_pattern = results[1]
       if not pattern.is(result_pattern) then
 	 -- E.g. an assignment or alias statement won't produce a pattern
-	 io.write("Error: expression did not compile to a pattern: ", source, "\n")
-	 return false
+	 return false, "Error: expression did not compile to a pattern: " .. source
       end
       -- now we check to see if the expression we are evaluating is an identifier
       local kind, pos, id = common.decode_match(astlist[1])
@@ -839,7 +839,6 @@ function compile.compile_file(filename, env, raw, gmr)
    local f = io.open(filename);
    if (not f) then
       local msg = 'Compiler: cannot open file "'..filename..'"'
-      io.write(msg, "\n")
       return false, msg
    else
       local source = f:read("a")
@@ -852,7 +851,7 @@ function compile.compile_core(filename, env)
    local source
    local f = io.open(filename);
    if (not f) then
-      io.write('Compiler: cannot open file of core definitions "'..filename..'"\nExiting...\n')
+      return false, 'Compiler: cannot open file of core definitions "'..filename..'"\nExiting...\n'
    else
       source = f:read("a")
       f:close()

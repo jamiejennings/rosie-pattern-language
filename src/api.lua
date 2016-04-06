@@ -40,7 +40,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --          - help?
 --          - debug?
 
-local api = {VERSION="0x01"}
+local api = {VERSION="0.9 alpha"}
 
 local engine_list = {}
 
@@ -108,17 +108,17 @@ end
 
 api.get_env = pcall_wrap(get_env)
 
-local function load_manifest(id, manifest_file)
-   local en = engine_from_id(id)
+function api.load_manifest(id, manifest_file)
+   local ok, en = pcall(engine_from_id, id)
+   if not ok then return false, en; end
    return manifest.process_manifest(en, manifest_file)
 end
 
-api.load_manifest = load_manifest
-
-local function load_file(id, path, relative_to_rosie_home)
+function api.load_file(id, path, relative_to_rosie_home)
    -- default is relative to rosie home directory for paths not starting with "." or "/"
    relative_to_rosie_home = (relative_to_rosie_home==nil) or relative_to_rosie_home
-   local en = engine_from_id(id)
+   local ok, en = pcall(engine_from_id, id)
+   if not ok then return false, en; end
    local full_path
    if path:sub(1,1)=="." or path:sub(1,1)=="/" then -- WILL BREAK ON WINDOWS
       -- absolute path
@@ -136,15 +136,12 @@ local function load_file(id, path, relative_to_rosie_home)
    return (not (not result)), msg
 end
 
-api.load_file = load_file
-
-local function load_string(id, input)
-   local en = engine_from_id(id)
+function api.load_string(id, input)
+   local ok, en = pcall(engine_from_id, id)
+   if not ok then return false, en; end
    local result, msg = compile.compile(input, en.env)
    return (not (not result)), msg
 end
-
-api.load_string = load_string
 
 
 
