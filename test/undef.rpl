@@ -1,0 +1,13 @@
+-- -*- Mode: rpl; -*- 
+--
+-- undef.rpl   Rosie Pattern Language tests that fail
+--
+-- (c) 2016, Jamie A. Jennings
+--
+
+undef = "foobar"				    -- this will end up in the env
+badword = [:alpha:] spaces			    -- 'spaces' not defined
+undef2 = "baz"					    -- this won't end up in the env
+
+
+
