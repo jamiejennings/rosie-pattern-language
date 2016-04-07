@@ -60,6 +60,10 @@ local function pcall_wrap(f)
 	  end
 end
 
+----------------------------------------------------------------------------------------
+-- Managing the environment (engine functions)
+----------------------------------------------------------------------------------------
+
 local function delete_engine(id)
    if type(id)~="string" then
       arg_error("engine id not a string")
@@ -117,6 +121,10 @@ end
 
 api.get_env = pcall_wrap(get_env)
 
+----------------------------------------------------------------------------------------
+-- Loading manifests, files, strings
+----------------------------------------------------------------------------------------
+
 function api.load_manifest(id, manifest_file)
    local ok, en = pcall(engine_from_id, id)
    if not ok then return false, en; end		    -- en is a message in this case
@@ -163,6 +171,45 @@ end
 
 api.get_definition = pcall_wrap(get_definition)
 
+----------------------------------------------------------------------------------------
+-- Matching
+----------------------------------------------------------------------------------------
+
+function api.match_exp(id, pattern_exp, input_text)
+   -- returns sucess flag, json match results, and number of unmatched chars at end
+   local ok, en = pcall(engine_from_id, id)
+   if not ok then return false, en; end
+   local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
+   if not pat then return false, msg; end
+   local result, nextpos = compile.match_peg(pat.peg, input_text)
+   if result then
+      return true, json.encode(result), (#input_text - nextpos + 1)
+   else
+      return false, "", 0
+   end
+end
+   
+function api.match_set_exp(id, pattern_exp)
+   local ok, en = pcall(engine_from_id, id)
+   if not ok then return false, en; end
+   local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
+   if not pat then return false, msg; end
+   en.program = { pat }
+   return true, ""
+end
+
+function api.match(id, input_text)
+   local ok, en = pcall(engine_from_id, id)
+   if not ok then return false, en; end
+   local result, nextpos = en:run(input_text)
+   if result then
+      return true, json.encode(result), (#input_text - nextpos + 1)
+   else
+      return false, "", 0
+   end
+end
+
+   
 return api
 
 

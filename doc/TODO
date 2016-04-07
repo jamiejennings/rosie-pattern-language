@@ -1,10 +1,16 @@
 Major work items:
 
+* Streamline the engine implementation
+
 * Consolidate the Rosie API
-  - RPL related:
-    - RPL statement (incremental compilation)
-    - RPL file compilation
-    - RPL manifest processing
+  + Engine related:
+    + new engine
+    + delete engine
+    + ping engine
+  + RPL related:
+    + RPL statement (incremental compilation)
+    + RPL file compilation
+    + RPL manifest processing
   - Match related:
     - match pattern against string
     - match pattern against file
@@ -12,7 +18,7 @@ Major work items:
   - Post-processing transformations:
     - ???
   - Human interaction / debugging:
-    - list patterns
+    + list env
     - CRUD on color assignments for color output?
     - help?
     - debug?

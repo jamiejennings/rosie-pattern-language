@@ -161,7 +161,7 @@ function process_pattern_against_file()
       local success, msg = compile.compile_command_line_expression(opt_pattern, CL_ENGINE.env)
       if not success then
 	 io.stdout:write(msg)
-	 os.exit(-5)
+	 os.exit(-1)
       end
       pat = success
       peg = pat and pat.peg

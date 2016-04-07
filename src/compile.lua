@@ -826,7 +826,6 @@ function compile.compile_command_line_expression(source, env, raw, gmr, parser)
 	 -- if the user entered an expression other than an identifier, we should treat it like it
 	 -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
 	 -- since that can't be an identifier name 
---	 result_pattern.peg = common.match_node_wrap(C(result_pattern.peg), "*")
 	 result_pattern.peg = C(result_pattern.peg)
 	 result_pattern.peg = cinternals.wrap_peg(result_pattern, "*", raw)
 	 result_pattern.ast = astlist[1]

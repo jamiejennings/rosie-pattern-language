@@ -287,6 +287,25 @@ check(1==msg:find("Compiler: unreadable file"))
 ----------------------------------------------------------------------------------------
 heading("Match")
 ----------------------------------------------------------------------------------------
+subheading("match_exp")
+check(type(api.match_exp)=="function")
+ok, msg = api.match_exp()
+check(not ok)
+check(msg=="Argument error: engine id not a string")
+
+
+subheading("match_set_exp")
+check(type(api.match_set_exp)=="function")
+ok, msg = api.match_set_exp()
+check(not ok)
+check(msg=="Argument error: engine id not a string")
+
+
+subheading("match")
+check(type(api.match)=="function")
+ok, msg = api.match()
+check(not ok)
+check(msg=="Argument error: engine id not a string")
 
 
 
