@@ -217,7 +217,8 @@ function process_pattern_against_file()
    local t;
    while l do
       if debug then
-	 local m = eval.eval(opt_pattern, l, 1, CL_ENGINE.env)
+	 local m, p, msg = eval.eval(opt_pattern, l, 1, CL_ENGINE.env)
+	 io.stdout:write(msg)
       else
 	 t = match_function(peg, l);
 	 if t then

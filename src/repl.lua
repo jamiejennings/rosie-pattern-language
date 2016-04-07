@@ -132,11 +132,13 @@ function repl(en)
 		  local m, pos = en:run(input_text)
 		  if cname=="match" then
 		     if debug and (not m) then
-			eval.eval(exp, input_text, 1, en.env, true)
+			local _, _, msg = eval.eval(exp, input_text, 1, en.env, true)
+			io.stdout:write(msg)
 		     end
 		  else
 		     -- must be eval
-		     eval.eval(exp, input_text, 1, en.env)
+		     local _, _, msg = eval.eval(exp, input_text, 1, en.env)
+		     io.stdout:write(msg)
 		  end
 		  print_match(m, pos, #input_text, (cname=="eval"))
 	       end -- if pat

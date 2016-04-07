@@ -32,25 +32,23 @@ local locale = lpeg.locale()
 
 local delta = 3
 
-local function write(...)
-   io.write(...)
+local function indent_(n)
+   return string.rep(" ", n)
 end
 
-local function write_indent(n)
-   write(string.rep(" ", n))
-end
-
-local function write_step(indent, step, ...)
-   write(string.format("%3d.", step[1]))
+local function step_(indent, step, ...)
+   local msg = string.format("%3d.", step[1])
    step[1] = step[1] + 1;
-   write(string.rep(".", indent-4))		    -- allow room for step
-   write(...)
-   write("\n")
+   msg = msg .. string.rep(".", indent-4)	    -- allow room for step #
+   for _,v in ipairs({...}) do
+      msg = msg .. v
+   end
+   return msg .. "\n"
 end
 
 local eval_exp;					    -- forward reference
 
-local function eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+local function report_(m, pos, a, input, start, indent, fail_output_only, step)
    start = start or 1
    local maxlen = 60
    local aname, apos, atext, asubs, asubidx, grammar_name, rule1, _
@@ -59,42 +57,37 @@ local function eval_report(m, pos, a, input, start, indent, fail_output_only, st
       if (start+maxlen) < #input then fmt = fmt .. " ..."; end
       fmt = fmt .. ")\n"
 
-      write_indent(indent)
-      write(string.format(fmt,
-			  input:sub(start,pos-1),
-			  input:sub(start, start+maxlen)))
+      return indent_(indent) .. string.format(fmt,
+					      input:sub(start,pos-1),
+					      input:sub(start, start+maxlen))
    else
       local fmt = "FAILED to match against input %q"
       if (start+maxlen) < #input then fmt = fmt .. " ..."; end
       fmt = fmt .. "\n"
 
-      write_indent(indent)
-      write(string.format(fmt, input:sub(start, start+maxlen)))
+      return indent_(indent) .. string.format(fmt, input:sub(start, start+maxlen))
    end
 end
 
-local function eval_group(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
+local function eval_group(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    local name, pos, text, subs, subidx = common.decode_match(a)
    if name=="raw" then raw=true;
    elseif name=="cooked" then raw=false;
    end
    assert(subs[subidx] and not subs[subidx+1])	    -- always one sub
-   local msg = (raw and "RAW") or ""
-   write_indent(indent)
-   write("GROUP: ", parse.reveal_ast(a), "\n");
+   msg = msg .. indent_(indent) .. "GROUP: " .. parse.reveal_ast(a) .. "\n"
 
    local pat = cinternals.compile_group(a, raw, gmr, source, env)
    local m, pos = compile.match_peg(Ct(pat.peg), input, start) 
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not (m and fail_output_only) then
-      write_indent(indent)
-      write("Explanation:\n")
-      local m, pos = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
-      fail_output_only, step)
+      msg = msg .. indent_(indent) .. "Explanation:\n"
+      m, pos, msg = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
+			     fail_output_only, step, msg)
    end
 
-   return m, pos
+   return m, pos, msg
 end
 
 local function reveal_ast_indented(a, indent)
@@ -104,74 +97,75 @@ local function reveal_ast_indented(a, indent)
    return s:gsub("\n", "\n"..string.rep(" ", indent))
 end
 
-local function eval_identifier(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_indent(indent)
-   write("IDENTIFIER: ", parse.reveal_ast(a), "\n")
+local function eval_identifier(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. indent_(indent) .. "IDENTIFIER: " .. parse.reveal_ast(a) .. "\n"
    local pat = cinternals.compile_identifier(a, raw, gmr, source, env)
    local m, pos = compile.match_peg(Ct(pat.peg), input, start) 
 
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then
       -- descend into identifier's definition...
       if type(pat.ast)~="table" then
 	 -- built-in identifier with no ast
-	 write_indent(indent)
-	 write("This identifier is a built-in RPL pattern\n")
+	 msg = msg .. indent_(indent) .. "This identifier is a built-in RPL pattern\n"
       else
 	 -- identifier defined by user, so has an ast
-	 write_indent(indent)
-	 write("Explanation (identifier's definition): ", reveal_ast_indented(pat.ast, indent), "\n")
-	 local dm, dpos = eval_exp(pat.ast, input, start, raw, gmr, source, env, indent+delta,
-				   fail_output_only, step)
+	 msg = msg .. indent_(indent) .. "Explanation (identifier's definition): " .. reveal_ast_indented(pat.ast, indent) .. "\n"
+	 local dm, dpos
+	 dm, dpos, msg = eval_exp(pat.ast, input, start, raw, gmr, source, env, indent+delta,
+				  fail_output_only, step, msg)
       end
    end
-   return m, pos
+   return m, pos, msg
 end
 
-local function eval_boundary(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_step(indent, step, "BOUNDARY")
+local function eval_boundary(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. step_(indent, step, "BOUNDARY")
    local pos = compile.boundary:match(input, start)
    local m = pos 				    -- set m to non-nil if pos is non-nil
-   eval_report(m, pos, "token boundary", input, start, indent, fail_output_only, step)
-   return m, pos
+   msg = msg .. report_(m, pos, "token boundary", input, start, indent, fail_output_only, step)
+   return m, pos, msg
 end
 
-local function eval_sequence(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_indent(indent)
-   write("SEQUENCE: ", parse.reveal_ast(a), "\n")
+local function eval_sequence(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. indent_(indent) .. "SEQUENCE: " .. parse.reveal_ast(a) .. "\n"
    
    local pat = cinternals.compile_sequence(a, raw, gmr, source, env)
    local m, pos = compile.match_peg(Ct(pat.peg), input, start) 
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then
-      write_indent(indent)
-      write("Explanation:\n")
+      msg = msg .. indent_(indent) .. "Explanation:\n"
 
       local name, pos, text, subs, subidx = common.decode_match(a)
       -- sequences from the parser are always binary, i.e. there are exactly two subs.
       -- Regarding debugging... the failure of sub1 is fatal for a.
-      local m, pos = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta, fail_output_only, step)
+      local m, pos
+      m, pos, msg =
+	 eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
+		  fail_output_only, step, msg)
 
-      if not m then return nil; end		    -- Found the match error, so done.
+      if not m then return false, false, msg; end   -- Found the match error, so done.
 
       local name1, pos1, text1 = common.decode_match(subs[subidx])
       if not (raw or name1=="negation" or name1=="lookat") then
-	 m, pos = eval_boundary(subs[subidx], input, pos, raw, gmr, source, env, indent+delta, fail_output_only, step)
+	 m, pos, msg =
+	    eval_boundary(subs[subidx], input, pos, raw, gmr, source, env, indent+delta,
+			  fail_output_only, step, msg)
       end
       if (not m) then
-	 return nil;				    -- Found the match error, so done.
+	 return false, false, msg;		    -- Found the match error, so done.
       else
-	 return eval_exp(subs[subidx+1], input, pos, raw, gmr, source, env, indent+delta, fail_output_only, step)
+	 return eval_exp(subs[subidx+1], input, pos, raw, gmr, source, env, indent+delta,
+			 fail_output_only, step, msg)
       end
    end
-   return m, pos
+   return m, pos, msg
 end
 
-local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_indent(indent)
-   write("CHOICE: ", parse.reveal_ast(a), "\n")
+local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. indent_(indent) .. "CHOICE: " .. parse.reveal_ast(a) .. "\n"
    
    local pat = cinternals.compile_choice(a, raw, gmr, source, env)
    local m, pos
@@ -180,154 +174,154 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
    else
       m, pos = compile.match_peg(Ct(pat.peg * compile.boundary), input, start)
    end
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then 
-      write_indent(indent)
-      write("Explanation:\n")
+      msg = msg .. indent_(indent) .. "Explanation:\n"
 
       -- The parser returns only binary choice tokens, i.e. there are exactly two subs.
       -- Regarding debugging...
       -- if sub1 and sub2 fail, then a fails.
       indent = indent + delta;
       local name, pos, text, subs, subidx = common.decode_match(a)
-      local m, pos = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent,
-			      fail_output_only, step)
+      local m, pos
+      m, pos, msg = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent,
+			     fail_output_only, step, msg)
 
       if m then
 	 -- First alternative succeeded...
 	 if raw then
 	    -- ... and do NOT need to look for boundary
-	    return m, pos;
+	    return m, pos, msg;
 	 else
-	    local m2, pos2 =
-	       eval_boundary(subs[subidx], input, pos, raw, gmr, source, env, indent, fail_output_only, step)
+	    local m2, pos2
+	    m2, pos2, msg = eval_boundary(subs[subidx], input, pos, raw, gmr, source, env, indent,
+					  fail_output_only, step, msg)
 	    if (not m2) then
-	       return nil;				    -- Found the match error, so done.
+	       return false, false, msg;	    -- Found the match error, so done.
 	    end
 	 end -- if raw
       else
 	 -- First alternative failed.  Trying second alternative:
-	 write_indent(indent)
-	 write("First option failed.  Proceeding to alternative.\n")
-	 m, pos = eval_exp(subs[subidx+1], input, pos, raw, gmr, source, env, indent, fail_output_only, step)
+	 msg = msg .. indent_(indent) .. "First option failed.  Proceeding to alternative.\n"
+	 m, pos, msg = eval_exp(subs[subidx+1], input, pos, raw, gmr, source, env, indent,
+				fail_output_only, step, msg)
 	 if m then
 	    -- Second alternative succeeded...
 	    if raw then
 	       -- ... and do NOT need to look for boundary
-	       return m, pos;
+	       return m, pos, msg;
 	    else
-	       local m2, pos2 =
-		  eval_boundary(subs[subidx+1], input, pos, raw, gmr, source, env, indent+delta, fail_output_only, step)
+	       local m2, pos2
+	       m2, pos2, msg =
+		  eval_boundary(subs[subidx+1], input, pos, raw, gmr, source, env, indent+delta,
+				fail_output_only, step, msg)
 	       if (not m2) then
-		  return nil;			    -- Found the match error, so done.
+		  return false, false, msg;	    -- Found the match error, so done.
 	       end
 	    end -- if raw
 	 end -- if m (second alternative)
       end -- if m (first alternative)
    end
-   return m, pos
+   return m, pos, msg
 end
 
-local function eval_quantified_exp(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
+local function eval_quantified_exp(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, raw, gmr, source, env)
-   write_step(indent, step,
-	      "QUANTIFIED EXP (",
-	      (append_boundary and "tokenized/cooked): ") or "raw): ",
-	      parse.reveal_ast(a))
+   msg = msg .. step_(indent, step,
+		      "QUANTIFIED EXP (",
+		      (append_boundary and "tokenized/cooked): ") or "raw): ",
+		      parse.reveal_ast(a))
 
    local m, pos = compile.match_peg(Ct(qpeg), input, start) 
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
 --   descend into quantified exp's structure here?
 --   write_indent(indent+delta)
 --   write("(EXPLANATION) BASE EXP: ", parse.reveal_ast(a[3]), "\n")
 --   ...
 
-   return m, pos
+   return m, pos, msg
 end
 
-local function eval_string(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_step(indent, step, "LITERAL STRING: ", parse.reveal_ast(a))
+local function eval_string(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. step_(indent, step, "LITERAL STRING: ", parse.reveal_ast(a))
    local name, pos, text, subs, subidx = common.decode_match(a)
    local m, pos = compile.match_peg(Ct(compile.unescape_string(text)), input, start)
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
-   return m, pos
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+   return m, pos, msg
 end
 
-local function eval_charset(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
+local function eval_charset(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    local name, pos, text, subs, subidx = common.decode_match(a)
-   write_step(indent, step,
-	      "CHARACTER SET: ",
-	      parse.reveal_ast(a),
-	      (name=="range" and " (a character range)") or (" (a set of " .. #subs .. " characters)"))
+   msg = msg .. step_(indent, step,
+		      "CHARACTER SET: ",
+		      parse.reveal_ast(a),
+		      (name=="range" and " (a character range)") or (" (a set of " .. #subs .. " characters)"))
    local pat = cinternals.compile_charset(a, raw, gmr, source, env)
    local m, pos = compile.match_peg(Ct(pat.peg), input, start) 
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
-   return m, pos
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+   return m, pos, msg
 end
 
-local function eval_named_charset(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_step(indent, step, "NAMED CHARSET: ", parse.reveal_ast(a))
+local function eval_named_charset(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. step_(indent, step, "NAMED CHARSET: ", parse.reveal_ast(a))
    local pat = cinternals.compile_named_charset(a, raw, gmr, source, env)
    local m, pos = compile.match_peg(C(pat.peg), input, start)
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
-   return m, pos
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+   return m, pos, msg
 end
 
-local function eval_negation(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_step(indent, step, "NEGATION (NEGATIVE LOOK-AHEAD): ", parse.reveal_ast(a))
+local function eval_negation(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. step_(indent, step, "NEGATION (NEGATIVE LOOK-AHEAD): ", parse.reveal_ast(a))
    
    local pat = cinternals.compile_negation(a, raw, gmr, source, env)
    local m, pos = compile.match_peg(C(pat.peg), input, start)
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then
       -- descend into negated exp
       local name, pos, text, subs, subidx = common.decode_match(a)
-      write_indent(indent)
-      write("Explanation: NEGATED EXPRESSION: ", parse.reveal_ast(subs[subidx]), "\n")
-      local dm, dpos = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
-   fail_output_only, step)
+      msg = msg .. indent_(indent) .. "Explanation: NEGATED EXPRESSION: " .. parse.reveal_ast(subs[subidx]) ..  "\n"
+      local dm, dpos
+      dm, dpos, msg = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
+				 fail_output_only, step, msg)
    end
       -- We return the start position to indicate that the negation exp did not consume any
       -- input. 
-   return m, start
+   return m, start, msg
 end
 
-local function eval_lookat(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_indent(indent)
-   write("LOOKAT (LOOK-AHEAD): ", parse.reveal_ast(a), "\n")
+local function eval_lookat(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. indent_(indent) .. "LOOKAT (LOOK-AHEAD): " .. parse.reveal_ast(a) .. "\n"
    
    local pat = cinternals.compile_lookat(a, raw, gmr, source, env)
    local m, pos = compile.match_peg(C(pat.peg), input, start)
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    
    if not(m and fail_output_only) then
       -- descend into negated exp
       local name, pos, text, subs, subidx = common.decode_match(a)
-      write_indent(indent)
-      write("Explanation: LOOKAT EXPRESSION: ", parse.reveal_ast(subs[subidx]), "\n")
-      local dm, dpos = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
-				fail_output_only, step)
+      msg = msg .. indent_(indent) .. "Explanation: LOOKAT EXPRESSION: " .. parse.reveal_ast(subs[subidx]) .. "\n"
+      local dm, dpos
+      dm, dpos, msg = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
+			       fail_output_only, step, msg)
    end
    -- We return the start position to indicate that the lookat exp did not consume any
    -- input. 
-   return m, start
+   return m, start, msg
 end
 
-local function eval_grammar(a, input, start, raw, gmr, source, env, indent, fail_output_only, step)
-   write_step(indent, step, "GRAMMAR:")
-   write_indent(indent)
-   write(reveal_ast_indented(a, indent), "\n")
+local function eval_grammar(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
+   msg = msg .. step_(indent, step, "GRAMMAR:") .. indent_(indent) .. reveal_ast_indented(a, indent) .. "\n"
    local name, pat = cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
    local m, pos = compile.match_peg(Ct(pat.peg), input, start)
-   eval_report(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    -- How to descend into the definition of a grammar?
-   return m, pos
+   return m, pos, msg
 end
 
-eval_exp = function(ast, input, start, raw, gmr, source, env, indent, fail_output_only, step)
+eval_exp = function(ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
       local functions = {"eval_exp";
                       raw=eval_group;
                       cooked=eval_group;
@@ -343,7 +337,7 @@ eval_exp = function(ast, input, start, raw, gmr, source, env, indent, fail_outpu
 		      grammar_=eval_grammar;
 		   }
    return common.walk_ast(ast, functions, input, start, raw, gmr, source, env, indent,
-      fail_output_only, step)
+      fail_output_only, step, msg)
 end
 
 function eval.eval(source, input, start, env, fail_output_only)
@@ -355,9 +349,9 @@ function eval.eval(source, input, start, env, fail_output_only)
    local raw = false;
    local step = {1};
 
-   local pat = compile.compile_command_line_expression(source, env, raw)
-   if not pat then return nil; end		    -- errors were already explained
-   return eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step)
+   local pat, errmsg = compile.compile_command_line_expression(source, env, raw)
+   if not pat then return false, false, errmsg; end -- errors will be in errmsg
+   return eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
 end
 
 return eval
