@@ -6,6 +6,7 @@
 ----
 
 json = require "cjson"
+package.loaded.api = false			    -- force re-load of api.lua
 
 if not color_write then
    color_write = function(channel, ignore_color, ...)
@@ -73,15 +74,17 @@ function ending()
 end
 
 ----------------------------------------------------------------------------------------
-
 heading("Require api")
+----------------------------------------------------------------------------------------
 api = require "api"
 
 check(type(api)=="table")
 check(api.VERSION)
 check(type(api.VERSION=="string"))
 
+----------------------------------------------------------------------------------------
 heading("Engine")
+----------------------------------------------------------------------------------------
 subheading("new_engine")
 check(type(api.new_engine)=="function")
 ok, eid = api.new_engine("hello")
@@ -106,10 +109,12 @@ check(msg=="Argument error: invalid engine id")
 
 subheading("delete_engine")
 check(type(api.delete_engine)=="function")
-ok = api.delete_engine(eid2)
+ok, msg = api.delete_engine(eid2)
 check(ok)
-ok = api.delete_engine(eid2)
+check(msg=="")
+ok, msg = api.delete_engine(eid2)
 check(ok, "idempotent delete function")
+check(msg=="")
 
 ok, msg = api.ping_engine(eid2)
 check(not ok)
@@ -134,22 +139,140 @@ check(msg=="Argument error: invalid engine id")
 
 subheading("get_definition")
 check(type(api.get_definition)=="function")
+ok, msg = api.get_definition()
+check(not ok)
+check(msg=="Argument error: engine id not a string")
+ok, msg = api.get_definition("hello")
+check(not ok)
+check(msg=="Argument error: invalid engine id")
 ok, def = api.get_definition(eid, "$")
 check(ok, "can get a definition for '$'")
 check(def=="alias $ = // built-in RPL pattern //")
 
+----------------------------------------------------------------------------------------
 heading("Load")
+----------------------------------------------------------------------------------------
 subheading("load_string")
 check(type(api.load_string)=="function")
+ok, msg = api.load_string()
+check(not ok)
+check(msg=="Argument error: engine id not a string")
+ok, msg = api.load_string("hello")
+check(not ok)
+check(msg=="Argument error: invalid engine id")
+ok, msg = api.load_string(eid, "foo")
+check(not ok)
+check(1==msg:find("Compile error: reference to undefined identifier foo"))
+ok, msg = api.load_string(eid, 'foo = "a"')
+check(ok)
+check(msg=="")
+ok, env = api.get_env(eid)
+check(ok)
+j = json.decode(env)
+check(j["foo"].type=="definition", "env contains newly defined identifier")
+ok, msg = api.load_string(eid, 'bar = foo / "1" $')
+check(ok)
+check(msg=="")
+ok, env = api.get_env(eid)
+check(ok)
+j = json.decode(env)
+check(j["bar"].type=="definition", "env contains newly defined identifier")
+ok, def = api.get_definition(eid, "bar")
+check(def=='bar = foo / "1" $')
+ok, msg = api.load_string(eid, 'x = //', "syntax error")
+check(not ok)
+check(2==msg:find("(Note: Syntax error reporting is currently rather coarse.)"))
+check(60==msg:find("Syntax error at line 1: x = //"))
+ok, env = api.get_env(eid)
+check(ok)
+j = json.decode(env)
+check(not j["x"])
+
+ok, msg = api.load_string(eid, '-- comments and \n -- whitespace\t\n\n',
+   "an empty list of ast's is the result of parsing comments and whitespace")
+check(ok)
+check(msg=="")
+
+g = [[grammar
+  S = {"a" B} / {"b" A} / "" 
+  A = {"a" S} / {"b" A A}
+  B = {"b" S} / {"a" B B}
+end]]
+
+ok, msg = api.load_string(eid, g)
+check(ok)
+check(msg=="")
+
+ok, def = api.get_definition(eid, "S")
+check(ok)
+check(1==def:find("S = grammar"))
+
+ok, env = api.get_env(eid)
+check(ok)
+check(type(env)=="string", "environment is returned as a JSON string")
+j = json.decode(env)
+check(j["S"].type=="definition")
 
 
 subheading("load_file")
 check(type(api.load_file)=="function")
+ok, msg = api.load_file()
+check(not ok)
+check(msg=="Argument error: engine id not a string")
+ok, msg = api.load_file("hello")
+check(not ok)
+check(msg=="Argument error: invalid engine id")
+
+ok, msg = api.load_file(eid, "test/ok.rpl")
+check(ok)
+check(msg=="")
+ok, env = api.get_env(eid)
+check(ok)
+j = json.decode(env)
+check(j["num"].type=="definition")
+check(j["S"].type=="alias")
+ok, def = api.get_definition(eid, "W")
+check(ok)
+check(def=="alias W = !w any")
+ok, msg = api.load_file(eid, "test/undef.rpl")
+check(not ok)
+check(1==msg:find("Compile error: reference to undefined identifier spaces\nAt line 9:"))
+ok, env = api.get_env(eid)
+check(ok)
+j = json.decode(env)
+check(not j["badword"], "an identifier that didn't compile should not end up in the environment")
+check(j["undef"], "definitions in a file prior to an error will end up in the environment... (sigh)")
+check(not j["undef2"], "definitions in a file after to an error will NOT end up in the environment")
+ok, msg = api.load_file(eid, "test/synerr.rpl")
+check(not ok)
+check(2==msg:find("(Note: Syntax error reporting is currently rather coarse.)"))
+check(msg:find('Syntax error at line 8: // "abc"'))
+check(msg:find('foo = "foobar" // "abc"'))
+
+ok, msg = api.load_file(eid, "test/doesnotexist")
+check(not ok)
+check(msg:find("cannot open file"))
+check(msg:find("test/doesnotexist"))
+
+ok, msg = api.load_file(eid, "/etc")
+check(not ok)
+check(msg:find("unreadable file"))
+check(msg:find("/etc"))
 
 subheading("load_manifest")
 check(type(api.load_manifest)=="function")
+ok, msg = api.get_definition()
+check(not ok)
+check(msg=="Argument error: engine id not a string")
+ok, msg = api.get_definition("hello")
+check(not ok)
+check(msg=="Argument error: invalid engine id")
+ok, msg = api.load_manifest(eid, "test/manifest")
+check(ok)
 
+----------------------------------------------------------------------------------------
 heading("Match")
+----------------------------------------------------------------------------------------
 
 
 

@@ -738,7 +738,7 @@ function cinternals.compile_ast(ast, raw, gmr, source, env)
 end
 
 function cinternals.compile_astlist(astlist, raw, gmr, source, env)
-   assert(type(astlist)=="table", "Compiler: first argument not an ast: "..tostring(a))
+   assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
    assert(type(astlist[1])=="table", "Compiler: first argument not list of ast's: "..tostring(a))
    assert(type(source)=="string")
    local results = {}
@@ -772,6 +772,8 @@ function compile.compile(source, env, raw, gmr, parser)
    if not parser then parser = parse_and_explain; end
    local astlist, msg = parser(source)
    if not astlist then return false, msg; end	    -- errors are explained in msg
+   assert(type(astlist)=="table")
+   if not next(astlist) then return true, ""; end   -- empty astlist, e.g. from whitespace, comments
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local c = coroutine.create(cinternals.compile_astlist)
    local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, raw, gmr, source, env)
@@ -838,13 +840,14 @@ end
 function compile.compile_file(filename, env, raw, gmr)
    local f = io.open(filename);
    if (not f) then
-      local msg = 'Compiler: cannot open file "'..filename..'"'
-      return false, msg
-   else
-      local source = f:read("a")
-      f:close()
-      return compile.compile(source, env, raw, gmr)
+      return false, 'Compiler: cannot open file "'..filename..'"'
    end
+   local source = f:read("a")
+   f:close()
+   if type(source)~="string" then
+      return false, 'Compiler: unreadable file "'..filename..'"'
+   end
+   return compile.compile(source, env, raw, gmr)
 end
 
 function compile.compile_core(filename, env)

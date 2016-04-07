@@ -65,6 +65,7 @@ local function delete_engine(id)
       arg_error("engine id not a string")
    end
    engine_list[id] = nil;
+   return ""
 end
 
 api.delete_engine = pcall_wrap(delete_engine)
@@ -118,7 +119,7 @@ api.get_env = pcall_wrap(get_env)
 
 function api.load_manifest(id, manifest_file)
    local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end
+   if not ok then return false, en; end		    -- en is a message in this case
    return manifest.process_manifest(en, manifest_file)
 end
 
@@ -126,7 +127,7 @@ function api.load_file(id, path, relative_to_rosie_home)
    -- default is relative to rosie home directory for paths not starting with "." or "/"
    relative_to_rosie_home = (relative_to_rosie_home==nil) or relative_to_rosie_home
    local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end
+   if not ok then return false, en; end		    -- en is a message in this case
    local full_path
    if path:sub(1,1)=="." or path:sub(1,1)=="/" then -- WILL BREAK ON WINDOWS
       -- absolute path
@@ -141,14 +142,14 @@ function api.load_file(id, path, relative_to_rosie_home)
       full_path = full_path:gsub("\\ ", " ")	    -- unescape a space in the name
    end
    local result, msg = compile.compile_file(full_path, en.env)
-   return (not (not result)), msg
+   return (not (not result)), msg or ""
 end
 
 function api.load_string(id, input)
    local ok, en = pcall(engine_from_id, id)
    if not ok then return false, en; end
    local result, msg = compile.compile(input, en.env)
-   return (not (not result)), msg
+   return (not (not result)), msg or ""
 end
 
 -- get a human-readable definition of identifier (reconstituted from its ast)
