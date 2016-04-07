@@ -175,40 +175,45 @@ api.get_definition = pcall_wrap(get_definition)
 -- Matching
 ----------------------------------------------------------------------------------------
 
-function api.match_exp(id, pattern_exp, input_text)
+local function match_using_exp(id, pattern_exp, input_text)
    -- returns sucess flag, json match results, and number of unmatched chars at end
-   local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end
+   local en = engine_from_id(id)
+   if not pattern_exp then arg_error("missing pattern expression"); end
+   if not input_text then arg_error("missing input text"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
-   if not pat then return false, msg; end
+   if not pat then error(msg); end
    local result, nextpos = compile.match_peg(pat.peg, input_text)
    if result then
-      return true, json.encode(result), (#input_text - nextpos + 1)
+      return json.encode(result), (#input_text - nextpos + 1)
    else
-      return false, "", 0
+      error("", 0)
    end
 end
    
-function api.match_set_exp(id, pattern_exp)
-   local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end
+api.match_using_exp = pcall_wrap(match_using_exp)
+
+local function match_set_exp(id, pattern_exp)
+   local en = engine_from_id(id)
+   if not pattern_exp then arg_error("missing pattern expression"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
-   if not pat then return false, msg; end
+   if not pat then error(msg); end
    en.program = { pat }
-   return true, ""
+   return ""
 end
 
-function api.match(id, input_text)
-   local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end
+api.match_set_exp = pcall_wrap(match_set_exp)
+
+local function match(id, input_text)
+   local en = engine_from_id(id)
    local result, nextpos = en:run(input_text)
    if result then
-      return true, json.encode(result), (#input_text - nextpos + 1)
+      return json.encode(result), (#input_text - nextpos + 1)
    else
-      return false, "", 0
+      error("",0)
    end
 end
 
+api.match = pcall_wrap(match)
    
 return api
 

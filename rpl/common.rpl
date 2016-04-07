@@ -36,8 +36,8 @@ alias identifier_plus_char = letter / digit / dash_under / "$"
 common.identifier = {letter identifier_char*}
 common.identifier_plus = {letter identifier_plus_char*}
 
-alias identifier_plus_plus1 = { { {letter / dash_under / "$"} identifier_plus_char+} }
-alias identifier_plus_plus2 = {digit+ identifier_plus_char+} -- FIXME: I match integers!
+alias identifier_plus_plus1 = { { {letter / dash_under / "$"} identifier_plus_char*} }
+alias identifier_plus_plus2 = {digit+ identifier_plus_char*} -- FIXME: I match integers!
 common.identifier_plus_plus = identifier_plus_plus1 / identifier_plus_plus2
 
 common.dotted_identifier = { common.identifier_plus_plus { "." common.identifier_plus_plus}+ }

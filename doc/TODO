@@ -12,7 +12,7 @@ Major work items:
     + RPL file compilation
     + RPL manifest processing
   - Match related:
-    - match pattern against string
+    + match pattern against string
     - match pattern against file
     - eval pattern against string
   - Post-processing transformations:
