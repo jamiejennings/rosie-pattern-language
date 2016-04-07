@@ -18,13 +18,17 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --
 --      - Managing the environment
 --        - Obtain/destroy/ping a Rosie engine
---        - Get a copy of the engine environment
+--        - Enable/disable informational logging and warnings to stderr
+--            (Need to change QUIET to logging level, and make it a thread-local
+--            variable that can be set per invocation of the parser/compiler/etc.)
 --
 --      - Rosie engine functions
 --        - RPL related
 --          - RPL statement (incremental compilation)
 --          - RPL file compilation
 --          - RPL manifest processing
+--          - Get a copy of the engine environment
+--          - Get identifier definition (human readable, reconstituted)
 --
 --        - Match related
 --          - match pattern against string
@@ -40,7 +44,9 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --          - help?
 --          - debug?
 
+----------------------------------------------------------------------------------------
 local api = {VERSION="0.9 alpha"}
+----------------------------------------------------------------------------------------
 
 local engine_list = {}
 
@@ -55,7 +61,7 @@ local function pcall_wrap(f)
 end
 
 local function delete_engine(id)
-   if (not type(id)=="string") then
+   if type(id)~="string" then
       arg_error("engine id not a string")
    end
    engine_list[id] = nil;
@@ -64,7 +70,7 @@ end
 api.delete_engine = pcall_wrap(delete_engine)
 
 local function ping_engine(id)
-   if (not type(id)=="string") then
+   if type(id)~="string" then
       arg_error("engine id not a string")
    end
    local en = engine_list[id]
@@ -78,19 +84,21 @@ end
 api.ping_engine = pcall_wrap(ping_engine)
 
 local function new_engine(optional_name)	    -- optional manifest? file list? code string?
-   if optional_name and (not type(optional_name)=="string") then
+   if optional_name and (type(optional_name)~="string") then
       arg_error("optional engine name not a string")
    end
    local en = engine(optional_name, compile.new_env())
+   if engine_list[en.id] then
+      error("Internal error: duplicate engine ids: " .. en.id)
+   end
    engine_list[en.id] = en
-   -- !@# more to do !@#
    return en.id
 end
 
 api.new_engine = pcall_wrap(new_engine)
 
 local function engine_from_id(id)
-   if (not type(id)=="string") then
+   if type(id)~="string" then
       arg_error("engine id not a string")
    end
    local en = engine_list[id]
@@ -143,7 +151,25 @@ function api.load_string(id, input)
    return (not (not result)), msg
 end
 
+-- get a human-readable definition of identifier (reconstituted from its ast)
+local function get_definition(engine_id, identifier)
+   local en = engine_from_id(engine_id)
+   if type(identifier)~="string" then
+      arg_error("identifier argument not a string")
+   end
+   local val = en.env[identifier]
+   if not val then
+      error("undefined identifier", 0)
+   else
+      if pattern.is(val) then
+	 return common.reconstitute_pattern_definition(identifier, val)
+      else
+	 error("Internal error: object in environment not a pattern: " .. tostring(val))
+      end
+   end
+end
 
+api.get_definition = pcall_wrap(get_definition)
 
 return api
 

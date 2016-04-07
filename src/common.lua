@@ -157,4 +157,14 @@ pattern =
    "pattern"
 )
 
+function common.reconstitute_pattern_definition(id, p)
+   if p then
+      return ((p.alias and "alias ") or "") .. id .. " = " .. ((p.ast and
+								parse.reveal_ast(p.ast)) or
+							    "// built-in RPL pattern //") 
+   else
+      return "undefined identifier: " .. id
+   end
+end
+
 return common
