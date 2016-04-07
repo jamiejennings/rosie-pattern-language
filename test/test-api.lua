@@ -249,10 +249,10 @@ check(2==msg:find("(Note: Syntax error reporting is currently rather coarse.)"))
 check(msg:find('Syntax error at line 8: // "abc"'))
 check(msg:find('foo = "foobar" // "abc"'))
 
-ok, msg = api.load_file(eid, "test/doesnotexist")
+ok, msg = api.load_file(eid, "./thisfile/doesnotexist")
 check(not ok)
 check(msg:find("cannot open file"))
-check(msg:find("test/doesnotexist"))
+check(msg:find("./thisfile/doesnotexist"))
 
 ok, msg = api.load_file(eid, "/etc")
 check(not ok)
@@ -269,6 +269,20 @@ check(not ok)
 check(msg=="Argument error: invalid engine id")
 ok, msg = api.load_manifest(eid, "test/manifest")
 check(ok)
+check(msg=="")
+ok, env = api.get_env(eid)
+check(ok)
+j = json.decode(env)
+check(j["manifest_ok"].type=="definition")
+
+ok, msg = api.load_manifest(eid, "test/manifest.err")
+check(not ok)
+check(1==msg:find("Compiler: cannot open file"))
+
+ok, msg = api.load_manifest(eid, "test/manifest.synerr") -- contains a //
+check(not ok)
+check(1==msg:find("Compiler: unreadable file"))
+
 
 ----------------------------------------------------------------------------------------
 heading("Match")

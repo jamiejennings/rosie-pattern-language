@@ -25,7 +25,9 @@ local mpats = [==[
 local manifest_engine = engine("manifest", compile.new_env())
 compile.compile(mpats, manifest_engine.env)
 assert(pattern.is(manifest_engine.env.line))
-manifest_engine.program = {compile.compile_command_line_expression('line', manifest_engine.env)}
+local result, msg = compile.compile_command_line_expression('line', manifest_engine.env)
+if not result then error("Internal error: can't compile manifest rpl: " .. tostring(msg)); end
+manifest_engine.program = { result }
 
 local function process_manifest_line(en, line)
    local m = manifest_engine:run(line)
@@ -34,15 +36,7 @@ local function process_manifest_line(en, line)
    if subidx then
       -- the only sub-match of "line" is "path", because "comment" is an alias
       local name, pos, path = common.decode_match(subs[subidx])
-      local filename
-      if path:sub(1,1)=="." or path:sub(1,1)=="/" then
-	 -- absolute path
-	 filename = path
-      else
-	 -- path relative to ROSIE_HOME
-	 filename = ROSIE_HOME .. "/" .. path
-      end
-      filename = filename:gsub("\\ ", " ")	    -- unescape a space in the name
+      local filename = common.compute_full_path(path)
       if not QUIET then 
 	 io.stderr:write("Compiling ", filename, "\n")
       end
@@ -55,18 +49,21 @@ end
 
 function manifest.process_manifest(en, manifest_filename)
    assert(engine.is(en))
-   local success, nextline = pcall(io.lines, manifest_filename)
+   local full_path = common.compute_full_path(manifest_filename)
+   local success, nextline = pcall(io.lines, full_path)
    if not success then
-      local msg = 'Error: Cannot open manifest file "' .. manifest_filename .. '"'
+      local msg = 'Error: Cannot open manifest file "' .. full_path .. '"'
       return false, msg
    else
       if not QUIET then
-	 io.stderr:write("Reading manifest file: ", manifest_filename, "\n")
+	 io.stderr:write("Reading manifest file: ", full_path, "\n")
       end
       local line, success
       success, line = pcall(nextline)
       if not success then
-	 return false, line			    -- e.g. error if a directory
+	 -- e.g. error if a directory
+	 local msg = 'Error: Cannot read manifest file "' .. full_path .. '": ' .. line	
+	 return false, msg
       else
 	 while line and success do
 	    success, msg = process_manifest_line(en, line)

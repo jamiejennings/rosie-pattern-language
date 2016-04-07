@@ -22,10 +22,10 @@ if not ROSIE_HOME then
    io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
    os.exit(-2)
 end
-if not SCRIPTNAME then
-   io.stderr:write("Installation error: Lua variable SCRIPTNAME is not defined\n")
-   os.exit(-2)
-end
+-- if not SCRIPTNAME then
+--    io.stderr:write("Installation error: Lua variable SCRIPTNAME is not defined\n")
+--    os.exit(-2)
+-- end
 
 dofile(ROSIE_HOME.."/src/bootstrap.lua")
 bootstrap()
@@ -88,8 +88,14 @@ function process_command_line_options()
       end -- if manifest arg
    end -- for each command line arg
 
-   opt_manifest = OPTION["-manifest"] or ROSIE_HOME.."/MANIFEST"
-   if opt_manifest=="-" then opt_manifest=nil; end
+   opt_manifest = OPTION["-manifest"] or "MANIFEST"
+   if opt_manifest==true then
+      io.write("Rosie: the manifest command line option requires a filename or - \n")
+      io.write(usage_message, "\n")
+      os.exit(-1)
+   elseif opt_manifest=="-" then
+      opt_manifest=nil
+   end
 
    if last_option==#arg-2 then
       opt_pattern = arg[#arg-1]
@@ -137,8 +143,13 @@ function process_pattern_against_file()
    end
    local debug = OPTION["-debug"]
    -- (1) Manifest
-   if opt_manifest then manifest.process_manifest(CL_ENGINE, opt_manifest); end
-
+   if opt_manifest then
+      local success, msg = manifest.process_manifest(CL_ENGINE, opt_manifest)
+      if not success then
+	 io.stdout:write(msg, "\n")
+	 os.exit(-4)
+      end
+   end
    -- (2) Compile.  If we fail to get a peg, we can exit because the errors will already have been
    -- displayed.
    local peg, pat
@@ -147,7 +158,12 @@ function process_pattern_against_file()
    elseif OPTION["-grep"] then
       peg = grep_match_compile_to_peg(opt_pattern, CL_ENGINE.env)
    else
-      pat = compile.compile_command_line_expression(opt_pattern, CL_ENGINE.env) -- returns a pattern object
+      local success, msg = compile.compile_command_line_expression(opt_pattern, CL_ENGINE.env)
+      if not success then
+	 io.stdout:write(msg)
+	 os.exit(-5)
+      end
+      pat = success
       peg = pat and pat.peg
    end
    if not peg then os.exit(-1); end		    -- compilation errors were already printed
@@ -260,7 +276,13 @@ end
 if OPTION["-patterns"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if opt_manifest then manifest.process_manifest(CL_ENGINE, opt_manifest); end
+   if opt_manifest then
+      local success, msg = manifest.process_manifest(CL_ENGINE, opt_manifest)
+      if not success then
+	 io.stdout:write(msg)
+	 os.exit(-4)
+      end
+   end
    compile.print_env(CL_ENGINE.env)
    os.exit()
 end

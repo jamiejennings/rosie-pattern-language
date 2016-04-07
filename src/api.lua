@@ -120,27 +120,18 @@ api.get_env = pcall_wrap(get_env)
 function api.load_manifest(id, manifest_file)
    local ok, en = pcall(engine_from_id, id)
    if not ok then return false, en; end		    -- en is a message in this case
-   return manifest.process_manifest(en, manifest_file)
+   local ok, full_path = pcall(common.compute_full_path, manifest_file)
+   if not ok then return false, full_path; end	    -- full_path is a message
+   local result, msg = manifest.process_manifest(en, full_path)
+   return result, msg or ""
 end
 
-function api.load_file(id, path, relative_to_rosie_home)
-   -- default is relative to rosie home directory for paths not starting with "." or "/"
-   relative_to_rosie_home = (relative_to_rosie_home==nil) or relative_to_rosie_home
+function api.load_file(id, path)
+   -- paths not starting with "." or "/" are interpreted as relative to rosie home directory
    local ok, en = pcall(engine_from_id, id)
    if not ok then return false, en; end		    -- en is a message in this case
-   local full_path
-   if path:sub(1,1)=="." or path:sub(1,1)=="/" then -- WILL BREAK ON WINDOWS
-      -- absolute path
-      full_path = path
-   else
-      if relative_to_rosie_home then
-	 -- construct a path relative to ROSIE_HOME
-	 full_path = ROSIE_HOME .. "/" .. path
-      else
-	 full_path = path
-      end
-      full_path = full_path:gsub("\\ ", " ")	    -- unescape a space in the name
-   end
+   local ok, full_path = pcall(common.compute_full_path, path)
+   if not ok then return false, full_path; end	    -- full_path is a message
    local result, msg = compile.compile_file(full_path, en.env)
    return (not (not result)), msg or ""
 end

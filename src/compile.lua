@@ -802,12 +802,14 @@ function compile.compile_command_line_expression(source, env, raw, gmr, parser)
       return false, msg
    end
    local c = coroutine.create(cinternals.compile_astlist)
-   local success, results = coroutine.resume(c, astlist, raw, gmr, source, env)
-   if (not success) then
-      return success, results
-   else -- success
+   local lua_success, results_or_error, error_msg = coroutine.resume(c, astlist, raw, gmr, source, env)
+   if not lua_success then
+      error("Error in compiler: " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
+   elseif (not results_or_error) then		 -- no lua errors, but maybe RPL compilation error
+      return false, error_msg
+   else
       -- one ast will compile to one pattern
-      local result_pattern = results[1]
+      local result_pattern = results_or_error[1]
       if not pattern.is(result_pattern) then
 	 -- E.g. an assignment or alias statement won't produce a pattern
 	 return false, "Error: expression did not compile to a pattern: " .. source

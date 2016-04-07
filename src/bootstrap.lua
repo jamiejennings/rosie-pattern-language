@@ -32,7 +32,9 @@ function bootstrap()
    
    ROSIE_VERSION = vfile:read("l"); vfile:close();
    compile.compile_core(ROSIE_HOME.."/src/rosie-core.rpl", ROSIE_ENGINE.env)
-   ROSIE_ENGINE.program = { compile.core_compile_command_line_expression('rpl', ROSIE_ENGINE.env) }
+   local success, result = compile.core_compile_command_line_expression('rpl', ROSIE_ENGINE.env)
+   if not success then error("Bootstrap error: could not compile rosie core rpl: " .. tostring(result)); end
+   ROSIE_ENGINE.program = { success }
    BOOTSTRAP_COMPLETE = true
 end
 
