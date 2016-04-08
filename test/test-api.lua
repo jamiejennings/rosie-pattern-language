@@ -467,5 +467,44 @@ if ok then
    check_output_file()
 end
 
+subheading("eval_using_exp")
+check(type(api.eval_using_exp)=="function")
+ok, msg = api.eval_using_exp()
+check(not ok)
+check(msg==arg_err_engine_id)
+ok, msg = api.eval_using_exp(eid)
+check(not ok)
+check(msg=="Argument error: missing pattern expression")
+ok, msg = api.eval_using_exp(eid, ".*")
+check(not ok)
+check(msg=="Argument error: missing input text")
+
+ok, match, leftover, msg = api.eval_using_exp(eid, ".*", "foo")
+check(ok)
+check(match)
+check(leftover==0)
+check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+
+ok, match, leftover, msg = api.eval_using_exp(eid, "[:digit:]", "foo")
+check(ok)
+check(not match)
+check(leftover==0)
+check(msg:find('FAILED to match against input "foo"')) -- % is esc char
+
+ok, match, leftover, msg = api.eval_using_exp(eid, "[:alpha:]*", "foo56789")
+check(ok)
+check(match)
+check(leftover==5)
+check(msg:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
+
+ok, match, leftover, msg = api.eval_using_exp(eid, "common.number", "abc.x")
+check(ok)
+check(match)
+j = json.decode(match)
+check(j["common.hex"])
+check(j["common.hex"].text=="abc")
+check(leftover==2)
+check(msg:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
+
 
 ending()

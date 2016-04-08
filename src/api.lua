@@ -10,6 +10,7 @@ local compile = require "compile"
 require "engine"
 local manifest = require "manifest"
 local json = require "cjson"
+local eval = require "eval"
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
@@ -17,29 +18,28 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --    Consolidated Rosie API
 --
 --      - Managing the environment
---        - Obtain/destroy/ping a Rosie engine
+--        + Obtain/destroy/ping a Rosie engine
 --        - Enable/disable informational logging and warnings to stderr
 --            (Need to change QUIET to logging level, and make it a thread-local
 --            variable that can be set per invocation of the parser/compiler/etc.)
 --
---      - Rosie engine functions
---        - RPL related
---          - RPL statement (incremental compilation)
---          - RPL file compilation
---          - RPL manifest processing
---          - Get a copy of the engine environment
---          - Get identifier definition (human readable, reconstituted)
+--      + Rosie engine functions
+--        + RPL related
+--          + RPL statement (incremental compilation)
+--          + RPL file compilation
+--          + RPL manifest processing
+--          + Get a copy of the engine environment
+--          + Get identifier definition (human readable, reconstituted)
 --
 --        - Match related
---          - match pattern against string
---          - match pattern against file
+--          + match pattern against string
+--          + match pattern against file
 --          - eval pattern against string
 --
 --        - Post-processing transformations
 --          - ???
 --
 --        - Human interaction / debugging
---          - list patterns
 --          - CRUD on color assignments for color output?
 --          - help?
 --          - debug?
@@ -176,7 +176,7 @@ api.get_definition = pcall_wrap(get_definition)
 ----------------------------------------------------------------------------------------
 
 local function match_using_exp(id, pattern_exp, input_text)
-   -- returns sucess flag, json match results, and number of unmatched chars at end
+   -- returns success flag, json match results, and number of unmatched chars at end
    local en = engine_from_id(id)
    if not pattern_exp then arg_error("missing pattern expression"); end
    if not input_text then arg_error("missing input text"); end
@@ -263,6 +263,21 @@ local function match_file(id, infilename, outfilename, errfilename)
 end
 
 api.match_file = pcall_wrap(match_file)
+
+local function eval_using_exp(id, pattern_exp, input_text)
+   -- returns json match results (or false), number of unmatched chars at end, and eval trace
+   local en = engine_from_id(id)
+   if not pattern_exp then arg_error("missing pattern expression"); end
+   if not input_text then arg_error("missing input text"); end
+
+   local matches, nextpos, msg = eval.eval(pattern_exp, input_text, 1, en.env)
+   local leftover = 0;
+   if nextpos then leftover = (#input_text - nextpos + 1); end
+   assert((not matches) or (#matches==1 or #matches==0), "eval should return exactly 0 or 1 match")
+   return (not (not matches)) and json.encode(matches[1]), leftover, msg
+end
+
+api.eval_using_exp = pcall_wrap(eval_using_exp)
 
 return api
 

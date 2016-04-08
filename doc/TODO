@@ -11,14 +11,14 @@ Major work items:
     + RPL statement (incremental compilation)
     + RPL file compilation
     + RPL manifest processing
-  - Match related:
+  + Match related:
     + match pattern against string
-    - match pattern against file
-    - eval pattern against string
+    + match pattern against file
+    + eval pattern against string
   - Post-processing transformations:
     - ???
   - Human interaction / debugging:
-    + list env
+    + get env contents in json format
     - CRUD on color assignments for color output?
     - help?
     - debug?

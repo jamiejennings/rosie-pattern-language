@@ -91,16 +91,17 @@ function repl(en)
 	    local cname, cpos, ctext, csubs, csubidx = common.decode_match(subs[subidx])
 	    if cname=="load" or cname=="manifest" then
 	       local pname, ppos, path = common.decode_match(csubs[csubidx])
-	       local filename = ((path:sub(1,1)=="/" and "") or (ROSIE_HOME .. "/")) .. path
-	       if cname=="load" then
-		  local results, msg = compile.compile_file(filename, en.env)
-		  if results then
-		     io.write("Loaded ", filename, "\n")
-		  else
-		     io.write(msg)
-		  end
+	       local filename = common.compute_full_path(path)
+	       local results, msg
+	       if cname=="load" then 
+		  results, msg = compile.compile_file(filename, en.env)
+	       else -- manifest command
+		  results, msg = manifest.process_manifest(en, filename)
+	       end
+	       if results then
+		  io.write("Loaded ", filename, "\n")
 	       else
-		  manifest.process_manifest(en, filename)
+		  io.write(msg, "\n")
 	       end
 	    elseif cname=="debug" then
 	       if csubs then
