@@ -160,7 +160,7 @@ function process_pattern_against_file()
    else
       local success, msg = compile.compile_command_line_expression(opt_pattern, CL_ENGINE.env)
       if not success then
-	 io.stdout:write(msg)
+	 io.write(msg, "\n")
 	 os.exit(-1)
       end
       pat = success
@@ -234,7 +234,7 @@ function process_pattern_against_file()
    while l do
       if debug then
 	 local m, p, msg = eval.eval(opt_pattern, l, 1, CL_ENGINE.env)
-	 io.stdout:write(msg)
+	 io.write(msg, "\n")
       else
 	 t = match_function(peg, l);
 	 if t then
@@ -279,7 +279,7 @@ if OPTION["-patterns"] then
    if opt_manifest then
       local success, msg = manifest.process_manifest(CL_ENGINE, opt_manifest)
       if not success then
-	 io.stdout:write(msg)
+	 io.stdout:write(msg, "\n")
 	 os.exit(-4)
       end
    end
