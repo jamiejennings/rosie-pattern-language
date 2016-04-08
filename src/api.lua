@@ -215,6 +215,55 @@ end
 
 api.match = pcall_wrap(match)
    
+local function match_file(id, infilename, outfilename, errfilename)
+   local en = engine_from_id(id)
+   if type(infilename)~="string" then arg_error("bad input file name"); end
+   if type(outfilename)~="string" then arg_error("bad output file name"); end
+   if type(errfilename)~="string" then arg_error("bad error file name"); end
+   if outfilename=="" then outfilename = false; end
+   if errfilename=="" then errfilename = false; end
+   local infile, outfile, errfile, msg
+   infile, msg = io.open(infilename, "r")
+   if not infile then error(msg, 0); end
+   if outfilename then
+      outfile, msg = io.open(outfilename, "w")
+      if not outfile then error(msg, 0); end
+   end
+   if errfilename then
+      errfile, msg = io.open(errfilename, "w")
+      if not errfile then error(msg, 0); end
+   end
+   local nextline = infile:lines()
+   local inlines, outlines, errlines = 0, 0, 0;
+   local result, nextpos;
+   local l = nextline(); 
+   while l do
+      result, nextpos = en:run(l);
+      if result then
+	 if outfilename then
+	    outfile:write(json.encode(result), "\n")
+	    outlines = outlines + 1
+	 end
+      else
+	 if errfilename then
+	    errfile:write(l, "\n")
+	    errlines = errlines + 1
+	 end
+      end
+      inlines = inlines + 1
+      l = nextline(); 
+   end -- while
+
+   -- !@# What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
+
+   infile:close()
+   if outfilename then outfile:close(); end
+   if errfilename then errfile:close(); end
+   return inlines, outlines, errlines
+end
+
+api.match_file = pcall_wrap(match_file)
+
 return api
 
 

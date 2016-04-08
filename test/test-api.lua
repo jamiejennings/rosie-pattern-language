@@ -43,8 +43,9 @@ function check(thing, message)
 			      c=count,
 			      m=message or ""})
       fail_count = fail_count + 1
+   else
+      io.stdout:write(".")
    end
-   io.stdout:write(".")
 end
 
 function heading(label)
@@ -372,12 +373,99 @@ ok, match, left = api.match(eid, "x.y.z")
 check(ok, "verifying that the engine exp has NOT been reset by match_set_exp")
 check(left==0)
 
+subheading("match_file")
+check(type(api.match_file)=="function")
+ok, msg = api.match_file()
+check(not ok)
+check(msg==arg_err_engine_id)
+ok, msg = api.match_file(eid)
+check(not ok)
+check(msg=="Argument error: bad input file name")
+
+ok, msg = api.match_file(eid, ROSIE_HOME.."/test/test-input")
+check(not ok)
+check(msg=="Argument error: bad output file name")
+
+ok, msg = api.match_file(eid, "thisfiledoesnotexist", "", "")
+check(not ok, "can't match against nonexistent file")
+check(msg:find("No such file or directory"))
+
+macosx_log1 = [[
+      basic.datetime_patterns{2,2}
+      common.identifier_plus_plus
+      common.dotted_identifier
+      "[" [:digit:]+ "]"
+      "(" common.dotted_identifier {"["[:digit:]+"]"}? "):" .*
+      ]]
+ok, msg = api.match_set_exp(eid, macosx_log1)
+check(ok)			    
+ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "")
+check(ok, "the macosx log pattern in the test file works on some log lines")
+check(c_in==4 and c_out==2 and c_err==0, "ensure processing of first lines of test-input")
+
+local function check_output_file()
+   -- check the structure of the output file
+   nextline = io.lines("/tmp/out")
+   for i=1,c_out do
+      local l = nextline()
+      local j = json.decode(l)
+      check(j["*"], "the json match in the output file is tagged with a star")
+      check(j["*"].text:find("apple"), "the match in the output file is probably ok")
+      local c=0
+      for k,v in pairs(j["*"].subs) do c=c+1; end
+      check(c==5, "the match in the output file has 5 submatches as expected")
+   end   
+   check(not nextline(), "only two lines of json in output file")
+end
+
+if ok then check_output_file(); end
+
+ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/tmp/err")
+check(ok)
+check(c_in==4 and c_out==2 and c_err==2, "ensure processing of error lines of test-input")
+
+local function check_error_file()
+   -- check the structure of the error file
+   nextline = io.lines("/tmp/err")
+   for i=1,c_err do
+      local l = nextline()
+      check(l:find("MUpdate"), "reading contents of error file")
+   end   
+   check(not nextline(), "only two lines in error file")
+end
+
+if ok then check_error_file(); check_output_file(); end
+
+local function clear_output_and_error_files()
+   local f=io.open("/tmp/out", "w")
+   f:close()
+   local f=io.open("/tmp/err", "w")
+   f:close()
+end
+
+clear_output_and_error_files()
+ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "", "/tmp/err")
+check(ok)
+check(c_in==4 and c_out==0 and c_err==2, "ensure processing of ONLY error lines of test-input")
+
+if ok then
+   -- check that output file remains untouched
+   nextline = io.lines("/tmp/out")
+   check(not nextline(), "ensure output file still empty")
+   check_error_file()
+end
+
+clear_output_and_error_files()
+ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "")
+check(ok)
+check(c_in==4 and c_out==2 and c_err==0, "ensure processing of ONLY matching lines of test-input")
+
+if ok then
+   -- check that error file remains untouched
+   nextline = io.lines("/tmp/err")
+   check(not nextline(), "ensure error file still empty")
+   check_output_file()
+end
 
 
 ending()
-
-
-
-
-       
-
