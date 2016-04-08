@@ -228,7 +228,7 @@ check(msg=="Argument error: invalid engine id")
 
 ok, msg = api.load_file(eid, "test/ok.rpl")
 check(ok)
-check(msg=="")
+check(msg:sub(-11)=="test/ok.rpl")
 ok, env = api.get_env(eid)
 check(ok)
 j = json.decode(env)
@@ -272,7 +272,7 @@ check(not ok)
 check(msg=="Argument error: invalid engine id")
 ok, msg = api.load_manifest(eid, "test/manifest")
 check(ok)
-check(msg=="")
+check(msg:sub(-13)=="test/manifest")
 ok, env = api.get_env(eid)
 check(ok)
 j = json.decode(env)
@@ -333,17 +333,17 @@ check(j["*"].subs[1]["common.number"])
 check(j["*"].subs[1]["common.number"].pos==4)
 
 
-subheading("match_set_exp")
-check(type(api.match_set_exp)=="function")
-ok, msg = api.match_set_exp()
+subheading("set_match_exp")
+check(type(api.set_match_exp)=="function")
+ok, msg = api.set_match_exp()
 check(not ok)
 check(msg==arg_err_engine_id)
 
-ok, msg = api.match_set_exp(eid)
+ok, msg = api.set_match_exp(eid)
 check(not ok)
 check(msg:find("missing pattern"))
 
-ok, msg = api.match_set_exp(eid, "common.dotted_identifier")
+ok, msg = api.set_match_exp(eid, "common.dotted_identifier")
 check(ok)
 check(msg=="")
 
@@ -366,11 +366,11 @@ check(j["common.dotted_identifier"].text=="x.y.z")
 check(j["common.dotted_identifier"].subs[2]["common.identifier_plus_plus"].text=="y")
 
 ok, match, left = api.match_using_exp(eid, 'common.number', "1FACE x y")
-check(ok, "checking that match_using_exp still works after a call to match_set_exp")
+check(ok, "checking that match_using_exp still works after a call to set_match_exp")
 check(left==3)
 
 ok, match, left = api.match(eid, "x.y.z")
-check(ok, "verifying that the engine exp has NOT been reset by match_set_exp")
+check(ok, "verifying that the engine exp has NOT been reset by set_match_exp")
 check(left==0)
 
 subheading("match_file")
@@ -397,7 +397,7 @@ macosx_log1 = [[
       "[" [:digit:]+ "]"
       "(" common.dotted_identifier {"["[:digit:]+"]"}? "):" .*
       ]]
-ok, msg = api.match_set_exp(eid, macosx_log1)
+ok, msg = api.set_match_exp(eid, macosx_log1)
 check(ok)			    
 ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "")
 check(ok, "the macosx log pattern in the test file works on some log lines")

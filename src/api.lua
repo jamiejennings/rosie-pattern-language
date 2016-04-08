@@ -131,7 +131,11 @@ function api.load_manifest(id, manifest_file)
    local ok, full_path = pcall(common.compute_full_path, manifest_file)
    if not ok then return false, full_path; end	    -- full_path is a message
    local result, msg = manifest.process_manifest(en, full_path)
-   return result, msg or ""
+   if result then
+      return true, full_path
+   else
+      return false, msg
+   end
 end
 
 function api.load_file(id, path)
@@ -141,14 +145,22 @@ function api.load_file(id, path)
    local ok, full_path = pcall(common.compute_full_path, path)
    if not ok then return false, full_path; end	    -- full_path is a message
    local result, msg = compile.compile_file(full_path, en.env)
-   return (not (not result)), msg or ""
+   if result then
+      return true, full_path
+   else
+      return false, msg
+   end
 end
 
 function api.load_string(id, input)
    local ok, en = pcall(engine_from_id, id)
    if not ok then return false, en; end
-   local result, msg = compile.compile(input, en.env)
-   return (not (not result)), msg or ""
+   local ok, msg = compile.compile(input, en.env)
+   if ok then
+      return true, ""
+   else 
+      return false, msg
+   end
 end
 
 -- get a human-readable definition of identifier (reconstituted from its ast)
@@ -181,7 +193,7 @@ local function match_using_exp(id, pattern_exp, input_text)
    if not pattern_exp then arg_error("missing pattern expression"); end
    if not input_text then arg_error("missing input text"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
-   if not pat then error(msg); end
+   if not pat then error("This should NOT be nil: "..tostring(msg)); end
    local result, nextpos = compile.match_peg(pat.peg, input_text)
    if result then
       return json.encode(result), (#input_text - nextpos + 1)
@@ -192,7 +204,7 @@ end
    
 api.match_using_exp = pcall_wrap(match_using_exp)
 
-local function match_set_exp(id, pattern_exp)
+local function set_match_exp(id, pattern_exp)
    local en = engine_from_id(id)
    if not pattern_exp then arg_error("missing pattern expression"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
@@ -201,7 +213,7 @@ local function match_set_exp(id, pattern_exp)
    return ""
 end
 
-api.match_set_exp = pcall_wrap(match_set_exp)
+api.set_match_exp = pcall_wrap(set_match_exp)
 
 local function match(id, input_text)
    local en = engine_from_id(id)

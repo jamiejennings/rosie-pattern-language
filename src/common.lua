@@ -33,6 +33,29 @@ function common.compute_full_path(path)
    return full_path
 end
 
+local escape_substitutions =			    -- characters that change when escaped are:
+   setmetatable(
+   { a = "\a";					    -- bell
+     b = "\b";					    -- backspace
+     f = "\f";					    -- formfeed
+     n = "\n";					    -- newline
+     r = "\r";					    -- return
+     t = "\t";					    -- tab
+     v = "\v"; 					    -- vertical tab
+     ['\\'] = '\\';				    -- backslash
+     ['"'] = '"';				    -- double quote
+     ["'"] = "'";				    -- single quote
+  },
+   -- any other escaped characters just return themselves:
+   {__index = function(self, key) return key end})
+
+function common.unescape_string(s)
+   -- the only escape character is \
+   -- a literal backslash is obtained using \\
+   return (string.gsub(s, '\\(.)', escape_substitutions))
+end
+
+
 ----------------------------------------------------------------------------------------
 -- AST functions
 ----------------------------------------------------------------------------------------

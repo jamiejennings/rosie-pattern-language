@@ -394,32 +394,10 @@ function cinternals.compile_quantified_exp(a, raw, gmr, source, env)
    return pattern{name=qname, peg=qpeg};
 end
 
-local escape_subidxtitutions =			    -- characters that change when escaped are:
-   setmetatable(
-   { a = "\a";					    -- bell
-     b = "\b";					    -- backspace
-     f = "\f";					    -- formfeed
-     n = "\n";					    -- newline
-     r = "\r";					    -- return
-     t = "\t";					    -- tab
-     v = "\v"; 					    -- vertical tab
-     ['\\'] = '\\';				    -- backslash
-     ['"'] = '"';				    -- double quote
-     ["'"] = "'";				    -- single quote
-  },
-   -- any other escaped characters just return themselves:
-   {__index = function(self, key) return key end})
-
-function compile.unescape_string(s)
-   -- the only escape character is \
-   -- a literal backslash is obtained using \\
-   return (string.gsub(s, '\\(.)', escape_subidxtitutions))
-end
-
 function cinternals.compile_string(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_string")
    local name, pos, text = common.decode_match(a)
-   local str = compile.unescape_string(text)
+   local str = common.unescape_string(text)
    if (not raw) and (locale.space:match(str) or locale.space:match(str, -1)) then
       warn('Literal string begins or ends with whitespace, outside of raw mode: "'
 	   .. text .. '"')
@@ -524,7 +502,7 @@ function cinternals.compile_charset(a, raw, gmr, source, env)
       assert(next(rsubs[rsubidx+1])=="character")
       local cname1, cpos1, ctext1 = common.decode_match(rsubs[rsubidx])
       local cname2, cpos2, ctext2 = common.decode_match(rsubs[rsubidx+1])
-      return pattern{name=name, peg=R(compile.unescape_string(ctext1)..compile.unescape_string(ctext2))}
+      return pattern{name=name, peg=R(common.unescape_string(ctext1)..common.unescape_string(ctext2))}
    elseif next(subs[subidx])=="charlist" then
       local exps = "";
       assert(subs[subidx], "did not get charlist sub in compile_charset")
@@ -533,7 +511,7 @@ function cinternals.compile_charset(a, raw, gmr, source, env)
 	 local v = clsubs[i]
 	 assert(next(v)=="character", "did not get character sub in compile_charset")
 	 local cname, cpos, ctext = common.decode_match(v)
-	 exps = exps .. compile.unescape_string(ctext)
+	 exps = exps .. common.unescape_string(ctext)
       end
       return pattern{name=name, peg=S(exps)}
    else

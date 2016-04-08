@@ -13,6 +13,7 @@
 
 local compile = require "compile"
 local cinternals = compile.cinternals
+local common = require "common"
 local eval = {}
 
 local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt =
@@ -247,7 +248,7 @@ end
 local function eval_string(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "LITERAL STRING: ", parse.reveal_ast(a))
    local name, pos, text, subs, subidx = common.decode_match(a)
-   local m, pos = compile.match_peg(Ct(compile.unescape_string(text)), input, start)
+   local m, pos = compile.match_peg(Ct(common.unescape_string(text)), input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end

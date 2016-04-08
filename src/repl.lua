@@ -2,17 +2,11 @@
 ----
 ---- repl.lua     Rosie interactive pattern development repl
 ----
----- (c) 2015, Jamie A. Jennings
+---- (c) 2016, Jamie A. Jennings
 ----
 
-local common = require "common"
-local compile = require "compile"
-local eval = require "eval"
-local manifest = require "manifest"
-require "engine"
-
--- Absolute path, e.g. ROSIE_HOME="/Users/jjennings/Work/Dev/rosie-dev"
-assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
+api = require "api"
+common = require "common"
 
 local repl_patterns = [==[
       alias validchars = { [:alnum:] / [_%!$@:.,~-] }
@@ -30,10 +24,10 @@ local repl_patterns = [==[
       input = command / statement / identifier
 ]==]
 
-repl_engine = engine("repl", compile.new_env())
-compile.compile_file(ROSIE_HOME.."/src/rosie-core.rpl", repl_engine.env)
-compile.compile(repl_patterns, repl_engine.env)
-repl_engine.program = {compile.compile_command_line_expression('input', repl_engine.env)}
+repl_engine = api.new_engine("repl")
+api.load_file(repl_engine, "src/rosie-core.rpl")
+api.load_string(repl_engine, repl_patterns)
+api.set_match_exp(repl_engine, "input")
 
 repl_prompt = "Rosie> "
 
@@ -53,34 +47,30 @@ local function print_match(m, p, len, eval_p)
    end
 end
 
-function repl(en)
-   if (not engine.is(en)) then
-      error("Argument to repl not an engine: " .. tostring(en))
+function repl(eid)
+   local ok, en = api.ping_engine(eid)
+   if (not ok) then
+      error("Argument to repl not an engine id: " .. tostring(eid))
    end
    io.write(repl_prompt)
    local s = io.stdin:read("l")
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
-      local m, pos = repl_engine:run(s)
+      local ok, m, left = api.match(repl_engine, s)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
       else
 	 -- valid input to repl
-	 if pos <= #s then
+	 if left > 0 then
 	    -- not all input consumed
-	    io.write('Warning: ignoring extraneous input "', s:sub(pos), '"\n')
+	    io.write('Warning: ignoring extraneous input "', s:sub(-left), '"\n')
 	 end
 	 local _, _, _, subs, subidx = common.decode_match(m)
-	 local name, pos, text, subs, subidx = common.decode_match(subs[subidx])
+	 local name, pos, id, subs, subidx = common.decode_match(subs[subidx])
 	 if name=="identifier" then
-	    local id = text
-	    local p = en.env[id]
-	    if p then
-	       io.write((p.alias and "alias ") or "",
-			id,
-			" = ",
-			(p.ast and parse.reveal_ast(p.ast)) or "a built-in RPL pattern",
-			"\n")
+	    local ok, def = api.get_definition(eid, id)
+	    if ok then 
+	       io.write(def, "\n")
 	    else
 	       io.write("Repl: undefined identifier ", id, "\n")
 	       if id=="help" then
@@ -91,33 +81,32 @@ function repl(en)
 	    local cname, cpos, ctext, csubs, csubidx = common.decode_match(subs[subidx])
 	    if cname=="load" or cname=="manifest" then
 	       local pname, ppos, path = common.decode_match(csubs[csubidx])
-	       local filename = common.compute_full_path(path)
 	       local results, msg
 	       if cname=="load" then 
-		  results, msg = compile.compile_file(filename, en.env)
+		  results, msg = api.load_file(eid, path)
 	       else -- manifest command
-		  results, msg = manifest.process_manifest(en, filename)
+		  results, msg = api.load_manifest(eid, path)
 	       end
 	       if results then
-		  io.write("Loaded ", filename, "\n")
+		  io.write("Loaded ", msg, "\n")
 	       else
 		  io.write(msg, "\n")
 	       end
 	    elseif cname=="debug" then
 	       if csubs then
 		  local _, _, arg = common.decode_match(csubs[csubidx])
-		  if arg=="on" then
-		     debug = true;
-		  else
-		     debug = false;
-		  end
+		  debug = (arg=="on")
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
 	    elseif cname=="patterns" then
-	       compile.print_env(en.env)
+	       local ok, env = api.get_env(eid)
+	       if ok then
+		  io.write(json.decode(env))	    -- !@# temporary
+	       else
+		  io.write("Repl: error accessing pattern environment\n")
+	       end
 	    elseif cname=="clear" then
-	       en.env = compile.new_env();
-	       io.write("Environment cleared\n")
+	       io.write("UNIMPLEMENTED!\n")	    -- !@# temporary
 	    elseif cname=="match" or cname =="eval" then
 	       local ename, epos, exp = common.decode_match(csubs[csubidx])
 	       -- parsing strips the quotes off when exp is only a literal string, but compiler
