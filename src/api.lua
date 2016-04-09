@@ -193,6 +193,7 @@ local function match_using_exp(id, pattern_exp, input_text)
    if not pattern_exp then arg_error("missing pattern expression"); end
    if not input_text then arg_error("missing input text"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
+--!@#
    if not pat then error("This should NOT be nil: "..tostring(msg)); end
    local result, nextpos = compile.match_peg(pat.peg, input_text)
    if result then
