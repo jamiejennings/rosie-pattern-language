@@ -1,0 +1,40 @@
+"Some people, when confronted with a problem, think “I know,
+I'll use regular expressions.”  Now they have two problems."
+Jamie Zawinski, in a Usenet post quoted with this attribution
+"<jwz@netscape.com> wrote on Tue, 12 Aug 1997 13:16:22 -0700:"
+(http://regex.info/blog/2006-09-15/247)
+
+"the worst-case exponential-time backtracking strategy [is] used almost everywhere
+else, including ed, sed, Perl, PCRE, and Python."
+Russ Cox (https://swtch.com/~rsc/regexp/regexp2.html)
+
+"I spent the summer of 2006 building Code Search, which lets programmers search
+for source code using regular expressions. That is, it lets you grep through the
+world's public source code. We originally planned to use PCRE for the regular
+expression search, until we realized that it used a backtracking algorithm,
+meaning it is easy to make searches take exponential time or arbitrary stack
+depth. Since Code Search accepts regular expressions from anyone on the
+Internet, using PCRE would have left it open to easy denial of service attacks."
+Russ Cox (https://swtch.com/~rsc/regexp/regexp3.html)
+
+"The plan had been to switch to a “real” regexp library, namely PCRE, probably
+behind a newly written, code reviewed parser, since PCRE's parser was a
+well-known source of security bugs. The only problem was my then-recent
+discovery that none of the popular regexp implementations - not Perl, not
+Python, not PCRE - used real automata."
+Russ Cox (https://swtch.com/~rsc/regexp/regexp4.html)
+
+"People with little regex experience have surprising skill at coming up with
+exponentially complex regular expressions."
+Jan Goyvaerts (http://www.regular-expressions.info/catastrophic.html)
+
+
+"A major advance toward demystify the patterns previously referred to as
+“regular expressions” is Perl’s /x regex flag — sometimes written (?x) when
+embedded — that allows whitespace (line breaking, indenting) and comments. This
+seriously improves readability and therefore maintainability. The white space
+allow for cognitive chunking, so you can see what groups with what.
+
+Modern patterns also now support both relatively numbered and named
+backreferences now."
+(http://stackoverflow.com/questions/764247/why-are-regular-expressions-so-controversial)
