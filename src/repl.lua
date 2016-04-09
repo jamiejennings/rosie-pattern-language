@@ -113,17 +113,15 @@ function repl(eid)
 	       -- needs them there.  this is inelegant.  sigh.
 	       if ename=="string" then exp = '"'..exp..'"'; end
 	       local tname, tpos, input_text = common.decode_match(csubs[csubidx+1])
-	       input_text = compile.unescape_string(input_text)
-	       local pat, msg = compile.compile_command_line_expression(exp, en.env)
-	       if not pat then io.write(msg);
+	       input_text = common.unescape_string(input_text)
+	       local ok, m, left, msg = api.match_using_exp(eid, exp, input_text)
+	       if not ok then
+ --!@# LEFT OFF HERE
+		  io.write(msg, "\n")
 	       else
-		  -- if compile failed, pat will be nil and errors will already have been
-		  -- explained. 
-		  en.program = {pat}
-		  local m, pos = en:run(input_text)
 		  if cname=="match" then
 		     if debug and (not m) then
-			local _, _, msg = eval.eval(exp, input_text, 1, en.env, true)
+			local ok, _,  _, msg = api.eval_using_exp(eid, exp, input_text)
 			io.write(msg)
 		     end
 		  else
