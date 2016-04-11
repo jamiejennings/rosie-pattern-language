@@ -31,15 +31,17 @@ dofile(ROSIE_HOME.."/src/bootstrap.lua")
 bootstrap()
 
 local common = require "common"
-local compile = require "compile"
-require "rpl-parse"				    -- !@#
-local eval = require "eval"
-local manifest = require "manifest"
+local api = require "api"
+--local compile = require "compile"
+--require "rpl-parse"                                 -- !@#
+--local eval = require "eval"
+--local manifest = require "manifest"
 require "color-output"
 local json = require "cjson"
 require("repl")
 
-local CL_ENGINE = engine("command line engine", compile.new_env())
+local ok, CL_ENGINE = api.new_engine("command line engine")
+if not ok then error(CL_ENGINE); end
 
 local function greeting()
    io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")
@@ -142,40 +144,35 @@ function process_pattern_against_file()
       os.exit(-1)
    end
    local debug = OPTION["-debug"]
-   -- (1) Manifest
+   -- (1) Load the manifest
    if opt_manifest then
-      local success, msg = manifest.process_manifest(CL_ENGINE, opt_manifest)
+      local success, msg = api.load_manifest(CL_ENGINE, opt_manifest)
       if not success then
 	 io.stdout:write(msg, "\n")
 	 os.exit(-4)
       end
    end
-   -- (2) Compile.  If we fail to get a peg, we can exit because the errors will already have been
-   -- displayed.
-   local peg, pat
-   if debug then
-      peg = true				    -- any non-nil value
-   elseif OPTION["-grep"] then
-      peg = grep_match_compile_to_peg(opt_pattern, CL_ENGINE.env)
+   -- (2) Compile the expression
+   if OPTION["-grep"] then
+--      peg = grep_match_compile_to_peg(opt_pattern, CL_ENGINE.env) -- !@#
+--      if not peg then os.exit(-1); end		    -- compilation errors were already printed
+      error("Grep not implemented, TEMPORARILY")
    else
-      local success, msg = compile.compile_command_line_expression(opt_pattern, CL_ENGINE.env)
+      local success, msg = api.set_match_exp(CL_ENGINE, opt_pattern)
       if not success then
 	 io.write(msg, "\n")
 	 os.exit(-1)
       end
-      pat = success
-      peg = pat and pat.peg
    end
-   if not peg then os.exit(-1); end		    -- compilation errors were already printed
-
    -- (3) Set up the match and output functions
    local match_function, default_output_function;
    if OPTION["-grep"] then
-      match_function = grep_match_peg
+--      match_function = grep_match_peg
+      error("Grep not implemented, TEMPORARILY")
    elseif debug then
-      match_function = nil
+      match_function = api.eval			    --!@#
    else
-      match_function = peg.match
+      match_function = api.match
    end
    -- Note: match returns [entire_match, [named sub matches]] whereas grep_match_peg returns a
    -- list of matches.
@@ -230,15 +227,18 @@ function process_pattern_against_file()
    local nextline = io.lines(opt_filename);
    local lines = 0;
    local l = nextline(); 
-   local t;
+   local ok, t;
    while l do
       if debug then
-	 local m, p, msg = eval.eval(opt_pattern, l, 1, CL_ENGINE.env)
+	 -- write api.eval and then change this to use that api instead
+	 local ok, msg, match, left = api.eval_using_exp(CL_ENGINE, opt_pattern, l)
+	 if not ok then io.write(msg, "\n"); os.exit(-9); end
 	 io.write(msg, "\n")
       else
-	 t = match_function(peg, l);
+	 ok, t = match_function(CL_ENGINE, l);
+	 if not ok then error(t); end		    -- api call failed, t is message
 	 if t then
-	    output_function(t)
+	    output_function(json.decode(t))	    -- inefficient FIXME!
 	 else
 	    -- pattern did not match
 	    if not QUIET then
@@ -277,20 +277,25 @@ if OPTION["-patterns"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
    if opt_manifest then
-      local success, msg = manifest.process_manifest(CL_ENGINE, opt_manifest)
+      local success, msg = api.load_manifest(CL_ENGINE, opt_manifest)
       if not success then
 	 io.stdout:write(msg, "\n")
 	 os.exit(-4)
       end
    end
-   compile.print_env(CL_ENGINE.env)
+   local ok, env = api.get_env(CL_ENGINE)
+   if not ok then error(env); end		    -- api call failed, env is message
+   common.print_env(json.decode(env))		    -- inefficient FIXME!
    os.exit()
 end
 
 if OPTION["-repl"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if opt_manifest then manifest.process_manifest(CL_ENGINE, opt_manifest); end
+   if opt_manifest then
+      local ok, msg = api.load_manifest(CL_ENGINE, opt_manifest)
+      if not ok then io.write(msg, "\n"); os.exit(-4); end
+   end
    repl(CL_ENGINE)
    os.exit()
 end

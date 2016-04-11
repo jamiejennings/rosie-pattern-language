@@ -198,8 +198,8 @@ api.get_definition = pcall_wrap(get_definition)
 local function match_using_exp(id, pattern_exp, input_text)
    -- returns success flag, json match results, and number of unmatched chars at end
    local en = engine_from_id(id)
-   if not pattern_exp then arg_error("missing pattern expression"); end
-   if not input_text then arg_error("missing input text"); end
+   if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
+   if type(input_text)~="string" then arg_error("input text not a string"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
    if not pat then error(msg,0); end
    local result, nextpos = compile.match_peg(pat.peg, input_text)
@@ -214,7 +214,7 @@ api.match_using_exp = pcall_wrap(match_using_exp)
 
 local function set_match_exp(id, pattern_exp)
    local en = engine_from_id(id)
-   if not pattern_exp then arg_error("missing pattern expression"); end
+   if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
    if not pat then error(msg,0); end
    en.program = { pat }

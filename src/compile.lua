@@ -75,39 +75,6 @@ function compile.flatten_env(env, output_table)
    end
 end
 
---function compile.print_env(env, skip_header, total)
---   -- build a list of patterns that we can sort by name
---   local pattern_list = {}
---   env = compile.flatten_env(env)
---   local n = next(env)
---   while n do
---      table.insert(pattern_list, n)
---      n = next(env, n);
---   end
---   table.sort(pattern_list)
---   local patterns_loaded = #pattern_list
---   total = (total or 0) + patterns_loaded
---
---   local fmt = "%-30s %-15s %-8s"
---
---   if not skip_header then
---      print();
---      print(string.format(fmt, "Pattern", "Type", "Color"))
---      print("------------------------------ --------------- --------")
---   end
---   local kind, color;
---   for _,v in ipairs(pattern_list) do 
---      print(string.format(fmt, v, env[v].type, env[v].color))
---   end
---   if patterns_loaded==0 then
---      print("<empty>");
---   end
---   if not skip_header then
---      print()
---      print(total .. " patterns loaded")
---   end
---end
-
 -- use this print function to see the nested environments
 function compile.print_env_internal(env, skip_header, total)
    -- build a list of patterns that we can sort by name
