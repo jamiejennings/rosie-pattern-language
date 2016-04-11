@@ -75,38 +75,38 @@ function compile.flatten_env(env, output_table)
    end
 end
 
-function compile.print_env(env, skip_header, total)
-   -- build a list of patterns that we can sort by name
-   local pattern_list = {}
-   env = compile.flatten_env(env)
-   local n = next(env)
-   while n do
-      table.insert(pattern_list, n)
-      n = next(env, n);
-   end
-   table.sort(pattern_list)
-   local patterns_loaded = #pattern_list
-   total = (total or 0) + patterns_loaded
-
-   local fmt = "%-30s %-15s %-8s"
-
-   if not skip_header then
-      print();
-      print(string.format(fmt, "Pattern", "Type", "Color"))
-      print("------------------------------ --------------- --------")
-   end
-   local kind, color;
-   for _,v in ipairs(pattern_list) do 
-      print(string.format(fmt, v, env[v].type, env[v].color))
-   end
-   if patterns_loaded==0 then
-      print("<empty>");
-   end
-   if not skip_header then
-      print()
-      print(total .. " patterns loaded")
-   end
-end
+--function compile.print_env(env, skip_header, total)
+--   -- build a list of patterns that we can sort by name
+--   local pattern_list = {}
+--   env = compile.flatten_env(env)
+--   local n = next(env)
+--   while n do
+--      table.insert(pattern_list, n)
+--      n = next(env, n);
+--   end
+--   table.sort(pattern_list)
+--   local patterns_loaded = #pattern_list
+--   total = (total or 0) + patterns_loaded
+--
+--   local fmt = "%-30s %-15s %-8s"
+--
+--   if not skip_header then
+--      print();
+--      print(string.format(fmt, "Pattern", "Type", "Color"))
+--      print("------------------------------ --------------- --------")
+--   end
+--   local kind, color;
+--   for _,v in ipairs(pattern_list) do 
+--      print(string.format(fmt, v, env[v].type, env[v].color))
+--   end
+--   if patterns_loaded==0 then
+--      print("<empty>");
+--   end
+--   if not skip_header then
+--      print()
+--      print(total .. " patterns loaded")
+--   end
+--end
 
 -- use this print function to see the nested environments
 function compile.print_env_internal(env, skip_header, total)
@@ -142,7 +142,7 @@ function compile.print_env_internal(env, skip_header, total)
    local mt = getmetatable(env)
    if mt and mt.__index then
       print("\n----------- Parent environment: -----------\n")
-      compile.print_env(mt.__index, true, total)
+      compile.print_env_internal(mt.__index, true, total)
    else
       print()
       print(total .. " patterns loaded")
@@ -756,7 +756,8 @@ function compile.compile(source, env, raw, gmr, parser)
    local c = coroutine.create(cinternals.compile_astlist)
    local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, raw, gmr, source, env)
    if no_lua_error then
-      return results_or_error, error_msg
+      -- the last return value, astlist, is only used in compile_command_line_expression
+      return results_or_error, error_msg, astlist
    else
       error("Error in compiler: " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
    end
@@ -764,10 +765,8 @@ end
 
 function compile.compile_command_line_expression(source, env, raw, gmr, parser)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   if not parser then parser = parse_and_explain; end
-   local astlist = parser(source)
-   if not astlist then return nil; end		    -- syntax errors were already explained
-   assert(type(astlist)=="table", "Parser returned other than astlist: " .. tostring(astlist))
+   local result, msg, astlist = compile.compile(source, env, raw, gmr, parser)
+   if not result then return result, msg; end
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
       for i, a in ipairs(astlist) do
@@ -779,36 +778,28 @@ function compile.compile_command_line_expression(source, env, raw, gmr, parser)
       local msg = "Error: only expressions can be matched (not statements): " .. source
       return false, msg
    end
-   local c = coroutine.create(cinternals.compile_astlist)
-   local lua_success, results_or_error, error_msg = coroutine.resume(c, astlist, raw, gmr, source, env)
-   if not lua_success then
-      error("Error in compiler: " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
-   elseif (not results_or_error) then		 -- no lua errors, but maybe RPL compilation error
-      return false, error_msg
+   -- one ast will compile to one pattern
+   if not (result and result[1] and pattern.is(result[1])) then
+      -- E.g. an assignment or alias statement won't produce a pattern
+      return false, "Error: expression did not compile to a pattern: " .. source
+   end
+   -- now we check to see if the expression we are evaluating is an identifier, and therefore does
+   -- not have to be anonymous
+   local kind, pos, id = common.decode_match(astlist[1])
+   local pat = env[id]
+   if kind=="identifier" and pattern.is(pat) and (not pat.alias) then
+      -- if the user entered an identifier, then we are all set, unless it is an alias, which
+      -- by itself may capture nothing and thus should be handled like any other kind of
+      -- expression
+      return result[1]
    else
-      -- one ast will compile to one pattern
-      local result_pattern = results_or_error[1]
-      if not pattern.is(result_pattern) then
-	 -- E.g. an assignment or alias statement won't produce a pattern
-	 return false, "Error: expression did not compile to a pattern: " .. source
-      end
-      -- now we check to see if the expression we are evaluating is an identifier
-      local kind, pos, id = common.decode_match(astlist[1])
-      local pat = env[id]
-      if kind=="identifier" and pattern.is(pat) and (not pat.alias) then
-	 -- if the user entered an identifier, then we are all set, unless it is an alias, which
-	 -- by itself may capture nothing and thus should be handled like any other kind of
-	 -- expression
-	 return result_pattern
-      else
-	 -- if the user entered an expression other than an identifier, we should treat it like it
-	 -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
-	 -- since that can't be an identifier name 
-	 result_pattern.peg = C(result_pattern.peg)
-	 result_pattern.peg = cinternals.wrap_peg(result_pattern, "*", raw)
-	 result_pattern.ast = astlist[1]
-	 return result_pattern
-      end
+      -- if the user entered an expression other than an identifier, we should treat it like it
+      -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
+      -- since that can't be an identifier name 
+      result[1].peg = C(result[1].peg)
+      result[1].peg = cinternals.wrap_peg(result[1], "*", raw)
+      result[1].ast = astlist[1]
+      return result[1]
    end
 end
 

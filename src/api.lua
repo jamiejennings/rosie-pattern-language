@@ -121,6 +121,14 @@ end
 
 api.get_env = pcall_wrap(get_env)
 
+local function clear_env(id)
+   local en = engine_from_id(id)
+   en.env = compile.new_env()
+   return ""
+end
+
+api.clear_env = pcall_wrap(clear_env)
+
 ----------------------------------------------------------------------------------------
 -- Loading manifests, files, strings
 ----------------------------------------------------------------------------------------
@@ -193,13 +201,12 @@ local function match_using_exp(id, pattern_exp, input_text)
    if not pattern_exp then arg_error("missing pattern expression"); end
    if not input_text then arg_error("missing input text"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
---!@#
-   if not pat then error("This should NOT be nil: "..tostring(msg)); end
+   if not pat then error(msg,0); end
    local result, nextpos = compile.match_peg(pat.peg, input_text)
    if result then
       return json.encode(result), (#input_text - nextpos + 1)
    else
-      error("", 0)
+      return false, 0
    end
 end
    
@@ -209,7 +216,7 @@ local function set_match_exp(id, pattern_exp)
    local en = engine_from_id(id)
    if not pattern_exp then arg_error("missing pattern expression"); end
    local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
-   if not pat then error(msg); end
+   if not pat then error(msg,0); end
    en.program = { pat }
    return ""
 end
@@ -222,7 +229,7 @@ local function match(id, input_text)
    if result then
       return json.encode(result), (#input_text - nextpos + 1)
    else
-      error("",0)
+      return false, 0
    end
 end
 
@@ -278,7 +285,7 @@ end
 api.match_file = pcall_wrap(match_file)
 
 local function eval_using_exp(id, pattern_exp, input_text)
-   -- returns json match results (or false), number of unmatched chars at end, and eval trace
+   -- returns eval trace, json match results, number of unmatched chars at end
    local en = engine_from_id(id)
    if not pattern_exp then arg_error("missing pattern expression"); end
    if not input_text then arg_error("missing input text"); end
@@ -287,7 +294,11 @@ local function eval_using_exp(id, pattern_exp, input_text)
    local leftover = 0;
    if nextpos then leftover = (#input_text - nextpos + 1); end
    assert((not matches) or (#matches==1 or #matches==0), "eval should return exactly 0 or 1 match")
-   return (not (not matches)) and json.encode(matches[1]), leftover, msg
+   if matches then 
+      return msg, json.encode(matches[1]), leftover
+   else
+      error(msg,0)
+   end
 end
 
 api.eval_using_exp = pcall_wrap(eval_using_exp)
