@@ -19,6 +19,8 @@ For an introduction to Rosie and explanations of the key concepts, see
 
 The [interactive read-eval-print loop (repl)](doc/repl.md) is documented separately.
 
+For the PL and comp sci geeks among us, some technical notes are [here](doc/geek.md).
+
 ### How to build: clone the repo, and type 'make'
 
 After cloning the repository, there is just one step: `make <platform>` where
