@@ -46,14 +46,24 @@ One advantage to in-line tokenization is the ability to choose between matching 
 
 ## Self-hosting
 
-It is a milestone in compiler development when a compiler can compile itself, which is called "self-hosting".  Future versions of the compiler can then be written in the language it compiles.  RPL is not a general purpose programming language; it is a domain-specific language for parsing that is not Turing-complete.  But of course it is possible to write a parser for RPL in [(about 63 lines of) RPL](../src/rosie-core.rpl).
+It is a milestone in compiler development when a compiler can compile itself, which is called "self-hosting".  Future versions of the compiler can then be written in the language it compiles.  RPL is not a general purpose programming language; it is a domain-specific language for parsing that is not Turing-complete.  But of course it is possible to write a parser for RPL in [(about 60 lines of) RPL](../src/rosie-core.rpl).
 
 The Rosie Pattern Engine was made self-hosting when the original hand-coded RPL parser (in Lua, using the LPEG library) was relegated to parsing only the definition of RPL written in RPL.  This definition is the core of RPL, in the sense that RPL syntax can now be extended or modified by writing or changing the RPL definition of the language.  Of course, to extend the language (beyond the syntax), one must also modify the RPL compiler.  I have a future goal of writing an interface through which the RPL compiler can be easily extended.  The literature on extensible compilers is rich, and the domain of Rosie (parsing data) is such that user-written compiler extensions would be fruitful.
 
 
 ## DWIM
 
-Forthcoming
+DWIM stands for "do what I mean" and was originally used to describe user interfaces that tolerated user errors.  Later, in the context of the development of Emacs, DWIM came to mean "do the right thing" in the context in which the user of the editor is working.  For example, the TAB key will simply insert a tab into a text document in Emacs, but will compute the right amount of spaces to indent code when editing most programming languages (and other file formats).
+
+The Rosie Pattern Language has some quirks for which I can only apologize and appeal to the DWIM philosophy.  A prime example is that RPL expressions are *mostly* (but not always) meant to match tokens.  RPL automatically tokenizes input so that the user does not have to write a token boundary symbol (like the regex `\\b`) between patterns.  But RPL lets one put an expression in curly braces `{...}` to disable tokenization -- the default mode being tokenized.  When it comes to quantified expressions like `x*` or `x+`, however, RPL treats `x` in this expression as **not tokenized**.  I.e. `"a"+` matches "aaa", while `("a")+` matches "a a a".
+
+The choice to force the user to write `("a")+` to mean "a series of *a*'s as separate tokens" is, very loosely speaking, a DWIM choice, but only because we are so familiar with regular expression syntax and conventions.
+
+In making this choice, I am hypothesizing that most people will write `[:alnum:]+` when they want to match a sequence of alphanumeric characters with no intertoken space, and similarly `"a"*` to mean a possibly-empty sequence of *a*'s like "aaaa".
+
+This one area of RPL, quantified expressions, therefore has a special interpretation regarding tokenization, which is that the matching will be attempted in "raw mode", i.e. untokenized mode.
+
+Good languages have very few "special" rules, or exceptions to general rules.  For a wonderful example of language regularity, look at the Scheme language specifications from the 1990's, e.g. [R4RS](https://people.csail.mit.edu/jaffer/r4rs.pdf).  (Scheme has since grown some, though at this rate it will be many decades before it resembles Common Lisp.)  So why have this "special rule" in RPL regarding quantified expressions and tokenization?  Only because I think it's easier in this specific instance for Rosie to do what the user meant when they used that `*` or `+`.  DWIM.
 
 
 ## Performance
