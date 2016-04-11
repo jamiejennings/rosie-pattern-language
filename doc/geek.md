@@ -16,9 +16,11 @@ Parsers specified with combinators (parsing functions) are generally considered 
 
 One goal of the Rosie Pattern Language is to make PEG parsers/patterns [*(terminology note)*](#terminology) easier to write than their equivalent regex.  I do not expect to be able to measure progress towards this goal, however, as regex are so profoundly entrenched in programming culture as to be instantly familiar.  Indeed, at least one programming language, Perl, can be viewed as a decades-long accretion of features around regex.  (Contrast with the simplicity of the awk language.)
 
+> "In my experience the hardest part is to get the regular expressions for parsing the log files right" says the author of [Grok Constructor](http://grokconstructor.appspot.com).
+
 In any event, it is my hope that RPL will be relatively easy to write when compared to regex.  And I have confidence it will be easier to read and maintain than would a collection of regular expressions.  In this narrow sense, perhaps, I hope RPL brings the expressiveness of parser combinators to the masses.
 
-At the same time, general programming with parser combinators can be challenging, in large part due to the large class of languages that can be recognized by recursive descent parsers (of which parser combinators are an example).  Left recursion, grammar ambiguities, and possible exponential parsing time (due to unrestricted backtracking) are some of the challenges.  But we can avoid these with PEGs.  Specifically, a PEG cannot contain left recursion (and it is possible to detect it); a PEG cannot be ambiguous; and PEGs admit linear time parsing (using "packrat parsers").
+At the same time, general programming with parser combinators can be challenging, in large part due to the large class of languages that can be recognized by recursive descent parsers (of which parser combinators are an example).  Left recursion, grammar ambiguities, and possible exponential parsing time (due to unrestricted backtracking) are some of the challenges.  But we can avoid these with PEGs.  Specifically, a PEG cannot contain left recursion (and it is possible to detect it); a PEG cannot be ambiguous; and PEGs admit linear time parsing (using "packrat parsers" or a "parsing virtual machine").
 
 So we have a grammar formalism (PEG) that recognizes a useful subset of the Context-Free Languages (judging by the PEG literature) and a modular, structured way to read, write, and maintain parsers (via parser combinators).  The Rosie Pattern Language is an attempt to combine PEGs and parser combinators, reify the result in a somewhat elegant language, and add some support for parser/pattern development.  (The latter is represented by the read-eval-print loop of the Rosie Pattern Engine, as well as features like packages with their own namespaces.)
 
@@ -55,7 +57,7 @@ The Rosie Pattern Engine was made self-hosting when the original hand-coded RPL 
 
 DWIM stands for "do what I mean" and was originally used to describe user interfaces that tolerated user errors.  Later, in the context of the development of Emacs, DWIM came to mean "do the right thing" in the context in which the user is working.  For example, the TAB key will simply insert a tab into a text document in Emacs, but TAB will automatically compute the right amount of spaces to indent code when editing most programming languages (and other file formats).
 
-The Rosie Pattern Language has some quirks for which I can only apologize and appeal to the DWIM philosophy.  A prime example is that RPL expressions are *mostly* (but not always) meant to match tokens.  RPL automatically tokenizes input so that the user does not have to write a token boundary symbol (like the regex `\b`) between pattern components.  But RPL lets one put an expression in curly braces `{...}` to disable tokenization -- the default mode being tokenized.  When it comes to quantified expressions like `x*` or `x+`, however, RPL treats `x` in this expression as **not tokenized**.  I.e. `"a"+` matches "aaa", while `("a")+` matches "a a a".
+The Rosie Pattern Language has some quirks for which I can only apologize and appeal to the DWIM philosophy.  A prime example is that RPL expressions are *mostly* (but not always) meant to match tokens.  RPL automatically tokenizes input so that the user does not have to write a token boundary symbol (like the regex `\b`) between pattern components.  But RPL lets one put an expression in curly braces `{...}` to disable tokenization -- the default mode being tokenized.  When it comes to quantified expressions like `x*` or `x+`, however, RPL treats `x` in this expression as **not tokenized**.  I.e. `"a"+` matches "aaa", while `("a")+` matches "a a a".  (Recall that parentheses `(...)` create a tokenized group in RPL.)
 
 The choice to force the user to write `("a")+` to mean "a series of *a*'s as separate tokens" is, very loosely speaking, a DWIM choice, but only because we are so familiar with regular expression syntax and conventions.
 
@@ -63,12 +65,35 @@ In making this choice, I am hypothesizing that most people will write `[:alnum:]
 
 This one area of RPL, quantified expressions, therefore has a special interpretation regarding tokenization, which is that the matching will be attempted in "raw mode", i.e. untokenized mode.
 
-Good languages have very few "special" rules, or exceptions to general rules.  For a wonderful example of language regularity, look at the Scheme language specifications from the 1990's, e.g. [R4RS](https://people.csail.mit.edu/jaffer/r4rs.pdf).  (Scheme has since grown some, though at this rate it will be many decades before it resembles Common Lisp.)  So why have this "special rule" in RPL regarding quantified expressions and tokenization?  Only because I think it's better in this specific instance for Rosie to do what the user meant when they used that `*` or `+`, even at the cost of a "special rule" to remember.  In other words, DWIM.
+Good languages have very few "special" rules, or exceptions to general rules.  For a wonderful example of programming language "regularity" (consistency, orthogonality), look at a Scheme language specification from the 1990's, e.g. [R4RS](https://people.csail.mit.edu/jaffer/r4rs.pdf).  (Scheme has since grown some, though at this rate it will be many decades before it resembles Common Lisp.)  So why have this "special rule" in RPL regarding quantified expressions and tokenization?  Only because I think it's better in this specific instance for Rosie to do what the user *meant* when they used that `*` or `+`, even at the cost of a "special rule" to remember.  In other words, DWIM.
 
 
 ## Performance
 
-Forthcoming
+To process large quantities of text input, a parser must be reasonably fast.  In theory, regular expressions match or fail in time linear in the size of the input text.  In practice, though, modern regex engines have relatively naive implementations.  This includes those in Perl, PCRE, Java, Python, and many other languages and libraries.  Instead of the linear-time approach of simulating an NFA, they use a backtracking algorithm which can require time *exponential* in the size of the input.  The edge cases that require exponential time are not esoteric; they can be seen in practice, e.g. when parsing CSV files.
+
+Now, maybe only naively written regex will require exponential time.  Such regex make heavy use of `(.*)` and can be (should be) re-written.  However, these kinds of regex (requiring exponential time) are seen with striking frequency "in the wild".  
+
+> "People with little regex experience have surprising skill at coming up with exponentially complex regular expressions."
+> [Jan Goyvaerts](http://www.regular-expressions.info/catastrophic.html)
+
+For example, the fragment `(.*?,)` appears in many regex solutions for parsing CSV files, such as this one `^((.*?,)+)(.*)$` to match a variable number of fields.  A truly naive (and unsuccessful) attempt would probably use `^(.*,)+(.*)$` instead, in which `.*` is greedy, as opposed to a successful solution using `.*?`, in which the question mark modifies the `.*` to prefer short alternatives.  Even this not-so-naive approach can require exponential time when searching for field data that does not appear in the CSV line, as shown in [this example](http://www.regular-expressions.info/catastrophic.html).  In another example, Russ Cox graphs the exponential run-time and observes:
+
+> "Notice that Perl requires over sixty seconds to match a 29-character string" says Russ Cox, researcher at Google, Bell Labs.
+> (https://swtch.com/~rsc/regexp/regexp1.html)
+
+So we have a language, regex, in which users often write patterns that occasionally require exponential time, depending on the input data.  When processing large and diverse data sets, the probability of encountering "pathological" input data surely increases unacceptably.  In a data processing pipeline in which each stage consumes microseconds per line of input, can you afford one stage to take 10's of seconds on certain kinds of input?
+
+I prefer the predictability of a linear time matching algorithim.  For this and other reasons (which are explained elsewhere), I chose the PEG formalism over the regex one.  But what if my linear time PEG algorithm runs really slowly, albeit linearly?
+
+The PEG implementation I chose is [LPEG](http://www.inf.puc-rio.br/~roberto/lpeg/).  In this [paper on LPEG](http://www.inf.puc-rio.br/~roberto/docs/peg.pdf), Ierusalimschy describes an elegant virtual machine for parsing using PEGs.  The approach yields a linear time matching algorithm that, due to optimizations, often requires only constant space (rather than linear space).  Moreover, he notes that the implementation does very well in benchmarks.
+
+(Interestingly, the paper makes a case against parser combinators, because as functions, they are opaque and difficult to analyze.  RPL attempts to overcome that limitation by providing helpful pattern development tools (e.g. the repl, the `eval` capability) as well as by leveraging the LPEG implementation under the covers.)
+
+Ok... we have a linear time implementation of PEG-based matching with a low enough constant to be practical.  Now, what about the rest of the Rosie Pattern Engine?  The RPL compiler produces LPEG expressions, and the loop that processes data spends a lot of time in the LPEG library.  This should lend Rosie a respectable performance profile, although no formal benchmarks have been run (yet).
+
+The RPL compiler is admittedly quite slow, sometimes requiring almost a quarter of a second on my MacBook Pro.  However, the compiler has had no optimizations applied.  There are many assertions (which in Lua are expensive); there are many table references to frequently used functions; the compiler does not save compiled RPL between sessions (yet); I have not tried LuaJIT.  These and other optimizations should bring the compile time for a few hundred pattern definitions down considerably.  Compiler performance is not a high priority at this stage in Rosie development.
+
 
 
 
