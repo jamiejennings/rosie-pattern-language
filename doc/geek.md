@@ -63,7 +63,7 @@ In making this choice, I am hypothesizing that most people will write `[:alnum:]
 
 This one area of RPL, quantified expressions, therefore has a special interpretation regarding tokenization, which is that the matching will be attempted in "raw mode", i.e. untokenized mode.
 
-Good languages have very few "special" rules, or exceptions to general rules.  For a wonderful example of language regularity, look at the Scheme language specifications from the 1990's, e.g. [R4RS](https://people.csail.mit.edu/jaffer/r4rs.pdf).  (Scheme has since grown some, though at this rate it will be many decades before it resembles Common Lisp.)  So why have this "special rule" in RPL regarding quantified expressions and tokenization?  Only because I think it's easier in this specific instance for Rosie to do what the user meant when they used that `*` or `+`.  DWIM.
+Good languages have very few "special" rules, or exceptions to general rules.  For a wonderful example of language regularity, look at the Scheme language specifications from the 1990's, e.g. [R4RS](https://people.csail.mit.edu/jaffer/r4rs.pdf).  (Scheme has since grown some, though at this rate it will be many decades before it resembles Common Lisp.)  So why have this "special rule" in RPL regarding quantified expressions and tokenization?  Only because I think it's better in this specific instance for Rosie to do what the user meant when they used that `*` or `+`, even at the cost of a "special rule" to remember.  In other words, DWIM.
 
 
 ## Performance
