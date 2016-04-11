@@ -25,7 +25,8 @@ So we have a grammar formalism (PEG) that recognizes a useful subset of the Cont
 Maybe with RPL, more parsing power will in the hands of the masses of people who need parsers/patterns to extract useful information from textual data.
 
 > <a name="terminology"></a>
-> *A note on terminology*
+> *A note on terminology:*
+
 > Obviously, I chose to describe RPL expressions as *patterns* and not *parsers*, following the established regex terminology.  Partly this is because patterns sound easier to write than do parsers, at least for many programmers.  But the term is also an allusion to the 1977 architecture book, *A Pattern Language*.  Writing about the design of buildings and homes, the authors say of their work:
 
 > > "Each solution is stated in such a way that it gives the essential field of relationships needed to solve the problem, but in a very general and abstract way -- so that you can solve the problem for yourself, in your own way, by adapting it to your preferences, and the local conditions at the place where you are making it."
@@ -45,7 +46,10 @@ One advantage to in-line tokenization is the ability to choose between matching 
 
 ## Self-hosting
 
-Forthcoming
+It is a milestone in compiler development when a compiler can compile itself, which is called "self-hosting".  Future versions of the compiler can then be written in the language it compiles.  RPL is not a general purpose programming language; it is a domain-specific language for parsing that is not Turing-complete.  But of course it is possible to write a parser for RPL in [(about 63 lines of) RPL](../src/rosie-core.rpl).
+
+The Rosie Pattern Engine was made self-hosting when the original hand-coded RPL parser (in Lua, using the LPEG library) was relegated to parsing only the definition of RPL written in RPL.  This definition is the core of RPL, in the sense that RPL syntax can now be extended or modified by writing or changing the RPL definition of the language.  Of course, to extend the language (beyond the syntax), one must also modify the RPL compiler.  I have a future goal of writing an interface through which the RPL compiler can be easily extended.  The literature on extensible compilers is rich, and the domain of Rosie (parsing data) is such that user-written compiler extensions would be fruitful.
+
 
 ## DWIM
 
