@@ -53,7 +53,7 @@ The Rosie Pattern Engine was made self-hosting when the original hand-coded RPL 
 
 ## DWIM
 
-DWIM stands for "do what I mean" and was originally used to describe user interfaces that tolerated user errors.  Later, in the context of the development of Emacs, DWIM came to mean "do the right thing" in the context in which the user of the editor is working.  For example, the TAB key will simply insert a tab into a text document in Emacs, but will compute the right amount of spaces to indent code when editing most programming languages (and other file formats).
+DWIM stands for "do what I mean" and was originally used to describe user interfaces that tolerated user errors.  Later, in the context of the development of Emacs, DWIM came to mean "do the right thing" in the context in which the user is working.  For example, the TAB key will simply insert a tab into a text document in Emacs, but TAB will automatically compute the right amount of spaces to indent code when editing most programming languages (and other file formats).
 
 The Rosie Pattern Language has some quirks for which I can only apologize and appeal to the DWIM philosophy.  A prime example is that RPL expressions are *mostly* (but not always) meant to match tokens.  RPL automatically tokenizes input so that the user does not have to write a token boundary symbol (like the regex `\\b`) between patterns.  But RPL lets one put an expression in curly braces `{...}` to disable tokenization -- the default mode being tokenized.  When it comes to quantified expressions like `x*` or `x+`, however, RPL treats `x` in this expression as **not tokenized**.  I.e. `"a"+` matches "aaa", while `("a")+` matches "a a a".
 
