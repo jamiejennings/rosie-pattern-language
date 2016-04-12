@@ -1,10 +1,12 @@
----- -*- Mode: Lua; -*- 
+---- -*- Mode: Lua; -*-                                                                           
 ----
 ---- color-output.lua    Takes json from Rosie, reconstructs the input text while
 ----                     highlighting recognized items in color.
 ----
----- (c) 2015, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
 
 -- Rewrite notes
 --

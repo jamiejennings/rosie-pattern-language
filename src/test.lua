@@ -1,9 +1,12 @@
----- -*- Mode: Lua; -*- 
+---- -*- Mode: Lua; -*-                                                                           
 ----
 ---- test.lua    These little tests need to grow into a full test suite
 ----
----- (c) 2015, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+
 
 -- Rosie must already be loaded into the Lua environment, e.g. via run.lua
 

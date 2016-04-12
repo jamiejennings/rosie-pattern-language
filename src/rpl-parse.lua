@@ -1,9 +1,11 @@
----- -*- Mode: Lua; -*- 
+---- -*- Mode: Lua; -*-                                                                           
 ----
 ---- rpl-parse.lua    driver functions for RPL parser written in RPL
 ----
----- (c) 2016, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
 
 -- For user-written RPL:
 

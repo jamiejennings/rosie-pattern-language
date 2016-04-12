@@ -1,9 +1,11 @@
----- -*- Mode: Lua; -*- 
+---- -*- Mode: Lua; -*-                                                                           
 ----
 ---- manifest.lua     Read a manifest file that tells Rosie which rpl files to compile/load
 ----
----- (c) 2015, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 

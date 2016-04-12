@@ -1,9 +1,11 @@
----- -*- Mode: Lua; -*- 
+---- -*- Mode: Lua; -*-                                                                           
 ----
 ---- compile.lua   Compile Rosie Pattern Language to LPEG
 ----
----- (c) 2015, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
 
 -- TO DO:
 -- Clean up the loading of parse_and_explain (right now via rpl-parse)

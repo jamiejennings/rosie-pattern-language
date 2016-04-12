@@ -1,9 +1,11 @@
-----  -*- Mode: rpl; -*- 
+---- -*- Mode: rpl; -*-                                                                             
 ----
 ---- rosie.rpl       Rosie Pattern Language definition for Rosie Pattern Language
 ----
----- (c) 2015, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
 
 alias newline = {"\n"}				    -- raw mode just to suppress compiler warning 
 

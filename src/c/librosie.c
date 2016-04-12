@@ -1,12 +1,16 @@
-/*  -*- Mode: C/l; -*-  
- *
- * librosie.c      Create a Lua state, load Rosie, expose the Rosie API
- *
+/*  -*- Mode: C/l; -*-                                                       */
+/*                                                                           */
+/* librosie.c      Create a Lua state, load Rosie, expose the Rosie API      */
+/*                                                                           */
+/*  © Copyright IBM Corporation 2016.                                        */
+/*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
+/*  AUTHOR: Jamie A. Jennings                                                */
+
+
+/* 
  * Based on src/lua.c from the open source Lua 5.3.2 distribution under MIT license
- *
- * (c) 2016, Jamie A. Jennings
- *
  */
+
 
 #define librosie_c
 

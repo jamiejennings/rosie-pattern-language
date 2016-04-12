@@ -1,9 +1,11 @@
----- -*- Mode: Lua; -*- 
+---- -*- Mode: Lua; -*-                                                                           
 ----
 ---- bootstrap.lua      Bootstrap Rosie by using the native Lua parser to parse rosie-core.rpl
 ----
----- (c) 2015, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
 
 -- Restrict Lua's search for modules and shared objects to just the Rosie install directory
 package.path = ROSIE_HOME .. "/src/?.lua"

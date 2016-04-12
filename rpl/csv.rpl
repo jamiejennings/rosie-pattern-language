@@ -1,9 +1,10 @@
----- -*- Mode: rpl; -*- 
+---- -*- Mode: rpl; -*-                                                                             
 ----
 ---- csv.rpl     RPL patterns for CSV files
 ----
----- (c) 2016, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
 
 -- Strings are always in quotes, so this pattern matches a quote, then stuff, then another quote.
 -- The stuff in the string can be single characters or escaped quotation mark.  Note that it's

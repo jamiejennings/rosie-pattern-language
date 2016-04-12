@@ -1,9 +1,11 @@
----- -*- Mode: Lua; -*- 
+---- -*- Mode: Lua; -*-                                                                           
 ----
 ---- eval.lua        Step by step evaluation of Rosie patterns
 ----
----- (c) 2016, Jamie A. Jennings
-----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
 
 -- N.B.  The evaluation functions utilize both the compiled lpeg patterns that the 'match'
 -- function uses (when an engine runs) and also the AST that created those compiled lpeg

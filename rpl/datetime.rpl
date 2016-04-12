@@ -1,9 +1,11 @@
---  -*- Mode: rpl; -*- 
--- 
---  datetime.rpl    Common date/time patterns in Rosie Pattern Language
--- 
---  (c) 2015, Jamie A. Jennings
--- 
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- datetime.rpl    Common date/time patterns in Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
 
 -- [1] RFC3339 Internet Date/Time Format (http:--tools.ietf.org/html/rfc3339)
 -- 

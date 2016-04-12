@@ -1,9 +1,10 @@
-;; -*- Mode: Emacs-Lisp; -*- 
+;; -*- Mode: Emacs-Lisp; -*-                                          
 ;;
 ;; rpl-mode.el --- a major-mode for editing Rosie Pattern Language files
 ;;
-;; (c) 2015, Jamie A. Jennings
-;;
+;; © Copyright IBM Corporation 2016.
+;; LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+;; AUTHOR: Jamie A. Jennings
 
 ;; This file is NOT part of Emacs.
 

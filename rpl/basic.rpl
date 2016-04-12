@@ -1,11 +1,13 @@
---  -*- Mode: rpl; -*- 
--- 
---  basic.rpl    A set of basic patterns that can be used to look for interesting things when the
---               input structure is unknown.  
---
--- 
---  (c) 2015, Jamie A. Jennings
--- 
+---- -*- Mode: rpl; -*-                                                                             
+----
+----  basic.rpl    A set of basic patterns that can be used to look for interesting things when the
+----               input structure is unknown.  
+----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+
 
 -- requires common, datetime, network
 

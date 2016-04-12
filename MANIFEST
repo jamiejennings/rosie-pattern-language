@@ -3,8 +3,9 @@
 --  MANIFEST    This is the default list of rpl files, in order, that Rosie will
 --              compile and load.  These should be considered SAMPLE patterns.
 -- 
---  (c) 2015, Jamie A. Jennings
--- 
+-- © Copyright IBM Corporation 2015, 2016.
+-- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+-- AUTHOR: Jamie A. Jennings
 
 -- Note: Relative paths are relative to the Rosie install directory.  A path starting with "." is
 -- relative to the current directory.
