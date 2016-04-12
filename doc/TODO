@@ -15,13 +15,9 @@ Major work items:
     + match pattern against string
     + match pattern against file
     + eval pattern against string
-  - Post-processing transformations:
-    - ???
   - Human interaction / debugging:
     + get env contents in json format
     - CRUD on color assignments for color output?
-    - help?
-    - debug?
 
 * Use syntax transformation (on ASTs) instead of current code for:
     - quantified expressions
