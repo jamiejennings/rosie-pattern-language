@@ -297,11 +297,13 @@ local function eval_using_exp(id, pattern_exp, input_text)
    if matches then 
       return msg, json.encode(matches[1]), leftover
    else
-      error(msg,0)
+      return msg, "", 0
    end
 end
 
 api.eval_using_exp = pcall_wrap(eval_using_exp)
+
+
 
 return api
 

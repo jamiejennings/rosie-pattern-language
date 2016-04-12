@@ -32,10 +32,6 @@ bootstrap()
 
 local common = require "common"
 local api = require "api"
---local compile = require "compile"
---require "rpl-parse"                                 -- !@#
---local eval = require "eval"
---local manifest = require "manifest"
 require "color-output"
 local json = require "cjson"
 require("repl")

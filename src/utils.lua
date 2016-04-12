@@ -21,6 +21,10 @@ function string_nextline(str)
 	  end
 end
 
+----------------------------------------------------------------------------------------
+-- Table stuff
+----------------------------------------------------------------------------------------
+
 -- Copy all entries in src table to dest table.  If no dest table passed in, create a new one. 
 function copy_table(src, dest)
    dest = dest or {}
@@ -37,9 +41,97 @@ function table_append(...)
    return result
 end
 
---
+function pretty_print_table(t, max_item_length, js_style)
+   if not t then
+      io.stderr:write("Error: pretty_print_table called with nil table\n");
+      return;
+   end
+   io.write(table_to_pretty_string(t, max_item_length, js_style), "\n")
+end
+   
+local function limit(s, max_length)
+   if #s > max_length then
+      return s:sub(1,max_length).."..."
+   else
+      return s
+   end
+end
+
+local function keys_are_numbers(t)
+   for k,_ in pairs(t) do
+      if type(k)~="number" then return false; end
+   end
+   return true
+end
+
+function table_to_pretty_string(t, max_item_length, js_style)
+   if not t then
+      error("Nil table")
+      return;
+   end
+   local max = max_item_length or 30
+   local delta = 2
+   local sep, open, close, key_value_sep = ", ", "{", "}", ": "
+   local js_array_open, js_array_close = "[", "]"
+   local pretty_print;
+   local key = function(k, tbl, array_p, sep, indent)
+		  local fmt = (js_style and "%q") or "%s"
+		  if array_p then
+		     return "", 0
+		  else 
+		     if type(k)=="number" then
+			return tostring(k) .. key_value_sep, #tostring(k) + #key_value_sep + 1
+		     else
+			return string.format(fmt, k) .. key_value_sep ..
+			((tbl and ("\n" .. string.rep(" ", indent+delta))) or ""), delta+1
+		  end
+	       end
+	    end
+   pretty_print = 
+      function(t, indent, output)
+	 local js_array = js_style and keys_are_numbers(t)
+	 if js_array then output = output .. js_array_open
+	 else output = output .. open; end
+	 local offset
+	 for k,v in pairs(t) do
+	    local pretty_k
+	    if k~=next(t) then output = output .. string.rep(" ", indent); end
+	    pretty_k, offset = key(k, (type(v)=="table") and next(v), js_array, key_value_sep, indent)
+	    output = output .. pretty_k
+	    if type(v)=="table" then
+	       output = output .. pretty_print(v, indent + offset, "")
+            elseif type(v)=="string" then
+	       output = output .. string.format("%q", limit(v,max))
+	    else
+	       output = output .. limit(tostring(v),max)
+	    end -- switch on type(v)
+	    if next(t, k) then output = output .. sep .. "\n"; end
+	 end -- for pairs
+	 if js_array then output = output .. js_array_close
+	 else output = output .. close; end
+	 return output
+      end -- function pretty_print
+   return pretty_print(t, 0, "")
+end
+
+if table then
+   table.print = pretty_print_table;
+   table.tostring = table_to_pretty_string;
+end
+
+----------------------------------------------------------------------------------------
+-- JSON printing
+----------------------------------------------------------------------------------------
+
+function prettify_json(s)
+   local t = json.decode(s)
+   return table_to_pretty_string(t, nil, true)
+end
+
+
+----------------------------------------------------------------------------------------
 -- Date/time stuff
---
+----------------------------------------------------------------------------------------
 
 local function leap_years_through(year)
    local idiv = function(n, d) return n//d; end;
@@ -136,68 +228,8 @@ function test_time_since_epoch()
    print("Done.")
 end
 
-function pretty_print_table(t, max_item_length)
-   if not t then
-      io.stderr:write("Error: pretty_print_table called with nil table\n");
-      return;
-   end
-   io.write(table_to_pretty_string(t, max_item_length), "\n")
-end
-   
-function table_to_pretty_string(t, max_item_length)
-   if not t then
-      error("Nil table")
-      return;
-   end
-   max_item_length = max_item_length or 30
-   local limit =
-      function(s)
-	 if #s > max_item_length then
-	    return s:sub(1,max_item_length).."..."
-	 else
-	    return s
-	 end
-      end
-   local sep, open, close, key_value_sep = ", ", "[", "]", ": "
-   local pretty_print;
-   pretty_print = 
-      function(t, indent, output)
-	 output = output .. open
-	 local offset
-	 for k,v in pairs(t) do
-	    if k~=next(t) then output = output .. string.rep(" ", indent); end
-	    if type(v)=="table" then
-	       -- v is a table
-	       output = output .. limit(tostring(k)) .. key_value_sep
-	       if type(k)~="number" then
-		  output = output .. "\n"
-		  output = output .. string.rep(" ", indent+1)
-		  offset = 2
-	       else
-		  offset = #tostring(k) + #key_value_sep +1
-	       end
-	       output = output .. pretty_print(v, indent + offset, "")
-	    else
-	       -- v is not a table
-	       output = output .. limit(tostring(k)) .. key_value_sep
-	       if type(v)=="string" then
-		  output = output .. string.format("%q", limit(v))
-	       else
-		  output = output .. limit(tostring(v))
-	       end
-	    end -- if table
-	    if next(t, k) then output = output .. sep .. "\n"; end
-	 end -- for pairs
-	 return output .. close
-      end -- function pretty_print
-   return pretty_print(t, 0, "")
-end
-
-if table then
-   table.print = pretty_print_table;
-   table.tostring = table_to_pretty_string;
-end
-
+---------------------------------------------------------------------------------------------------
+-- Misc
 ---------------------------------------------------------------------------------------------------
 
 function uuid()

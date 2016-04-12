@@ -147,7 +147,7 @@ local function eval_sequence(a, input, start, raw, gmr, source, env, indent, fai
 	 eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
 		  fail_output_only, step, msg)
 
-      if not m then return false, false, msg; end   -- Found the match error, so done.
+      if not m then return false, 0, msg; end	    -- Found the match error, so done.
 
       local name1, pos1, text1 = common.decode_match(subs[subidx])
       if not (raw or name1=="negation" or name1=="lookat") then
@@ -156,7 +156,7 @@ local function eval_sequence(a, input, start, raw, gmr, source, env, indent, fai
 			  fail_output_only, step, msg)
       end
       if (not m) then
-	 return false, false, msg;		    -- Found the match error, so done.
+	 return false, 0, msg;			    -- Found the match error, so done.
       else
 	 return eval_exp(subs[subidx+1], input, pos, raw, gmr, source, env, indent+delta,
 			 fail_output_only, step, msg)
@@ -199,7 +199,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
 	    m2, pos2, msg = eval_boundary(subs[subidx], input, pos, raw, gmr, source, env, indent,
 					  fail_output_only, step, msg)
 	    if (not m2) then
-	       return false, false, msg;	    -- Found the match error, so done.
+	       return false, 0, msg;		    -- Found the match error, so done.
 	    end
 	 end -- if raw
       else
@@ -218,7 +218,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
 		  eval_boundary(subs[subidx+1], input, pos, raw, gmr, source, env, indent+delta,
 				fail_output_only, step, msg)
 	       if (not m2) then
-		  return false, false, msg;	    -- Found the match error, so done.
+		  return false, 0, msg;		    -- Found the match error, so done.
 	       end
 	    end -- if raw
 	 end -- if m (second alternative)
@@ -351,7 +351,7 @@ function eval.eval(source, input, start, env, fail_output_only)
    local step = {1};
 
    local pat, errmsg = compile.compile_command_line_expression(source, env, raw)
-   if not pat then return false, false, errmsg; end -- errors will be in errmsg
+   if not pat then return false, 0, errmsg; end -- errors will be in errmsg
    return eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
 end
 
