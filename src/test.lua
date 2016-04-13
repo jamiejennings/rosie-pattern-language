@@ -259,3 +259,62 @@ function test_eval()
    assert(pcall(eval, 'a{3,3} b', 'aaa b'))
    print("Done.")
 end
+
+-- Test the table pretty printer in "json style"
+
+t0 = {}
+t0_s = "[]"
+
+t1 = {"a", "b", "c"}
+t1_s = [[
+["a", 
+ "b", 
+ "c"]
+]]   
+
+t2 = {["a list of letters"] = t1}
+t2_s = [[
+{"a list of letters": 
+   ["a", 
+    "b", 
+    "c"]}
+]]
+
+t3 = {t2, t2}
+t3_s = [[
+[{"a list of letters": 
+   ["a", 
+    "b", 
+    "c"]}, 
+ {"a list of letters": 
+   ["a", 
+    "b", 
+    "c"]}]
+]]
+
+t4 = {["two arrays"] = {t1, t1}, ["ones"]=11111}
+t4_s = [=[
+{"ones": 11111, 
+ "two arrays": 
+   [["a", 
+    "b", 
+    "c"], 
+    ["a", 
+    "b", 
+    "c"]]}
+]=]
+
+function test_json_printer()
+   local pp = function(t)
+		 local s = table.tostring(t, nil, true);
+		 print(s, "\n")
+		 return s
+	      end
+   assert(pp(t0) == t0_s)
+   assert((pp(t1).."\n") == t1_s)   
+   assert((pp(t2).."\n") == t2_s)
+   assert((pp(t3).."\n") == t3_s)
+   assert((pp(t4).."\n") == t4_s)
+end
+
+   

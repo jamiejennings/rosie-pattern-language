@@ -61,7 +61,7 @@ function repl(eid)
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
       local ok, m, left = api.match(repl_engine, s)
-      -- if not ok then io.write("Internal error: ", tostring(m), "\n") ... now throw!
+      if not ok then error("Repl internal error: ", tostring(m), "\n"); end
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
       else
