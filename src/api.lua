@@ -226,6 +226,7 @@ api.set_match_exp = pcall_wrap(set_match_exp)
 
 local function match(id, input_text)
    local en = engine_from_id(id)
+   if type(input_text)~="string" then arg_error("input text not a string"); end
    local result, nextpos = en:run(input_text)
    if result then
       return json.encode(result), (#input_text - nextpos + 1)
@@ -291,15 +292,19 @@ local function eval_using_exp(id, pattern_exp, input_text)
    if not pattern_exp then arg_error("missing pattern expression"); end
    if not input_text then arg_error("missing input text"); end
 
-   local matches, nextpos, msg = eval.eval(pattern_exp, input_text, 1, en.env)
+   local ok, matches, nextpos, msg = eval.eval(pattern_exp, input_text, 1, en.env)
+   if not ok then error(msg, 0); end
    local leftover = 0;
    if nextpos then leftover = (#input_text - nextpos + 1); end
-   assert((not matches) or (#matches==1 or #matches==0), "eval should return exactly 0 or 1 match")
-   if matches then 
-      return msg, json.encode(matches[1]), leftover
+   local match_results
+   if matches then
+      assert(type(matches)=="table", "eval should return a table of matches if matching succeeded")
+      match_results = json.encode(matches[1])	    -- null, or a match structure
+      assert((not matches[1]) or (not matches[0]), "eval should return exactly 0 or 1 match")
    else
-      return msg, "", 0
+      match_results = false			    -- indicating no matches
    end
+   return msg, match_results, leftover
 end
 
 api.eval_using_exp = pcall_wrap(eval_using_exp)

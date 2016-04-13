@@ -85,7 +85,7 @@ function common.print_env(env, skip_header, total)
    end
    if not skip_header then
       print()
-      print(total .. " patterns loaded")
+      print(total .. " patterns")
    end
 end
 

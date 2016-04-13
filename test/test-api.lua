@@ -296,7 +296,7 @@ check(msg==arg_err_engine_id)
 
 ok, msg = api.match_using_exp(eid)
 check(not ok)
-check(msg:find("missing pattern"))
+check(msg:find("pattern expression not a string"))
 
 ok, match, left = api.match_using_exp(eid, ".", "A")
 check(ok)
@@ -339,7 +339,7 @@ check(msg==arg_err_engine_id)
 
 ok, msg = api.set_match_exp(eid)
 check(not ok)
-check(msg:find("missing pattern"))
+check(msg:find("pattern expression not a string"))
 
 ok, msg = api.set_match_exp(eid, "common.dotted_identifier")
 check(ok)
@@ -354,7 +354,7 @@ check(msg==arg_err_engine_id)
 
 ok, msg = api.match(eid)
 check(not ok)
-check(msg:find("without any input"))		    -- throws an engine error.  fix!
+check(msg:find("input text not a string"))
 
 ok, match, left = api.match(eid, "x.y.z")
 check(ok)
@@ -477,25 +477,30 @@ ok, msg = api.eval_using_exp(eid, ".*")
 check(not ok)
 check(msg=="Argument error: missing input text")
 
-ok, match, leftover, msg = api.eval_using_exp(eid, ".*", "foo")
+ok, msg, match, leftover = api.eval_using_exp(eid, ".*//", "foo")
+check(not ok)
+check(not match)
+check(msg:find('Syntax error at line 1:'))
+
+ok, msg, match, leftover = api.eval_using_exp(eid, ".*", "foo")
 check(ok)
 check(match)
 check(leftover==0)
 check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 
-ok, match, leftover, msg = api.eval_using_exp(eid, "[:digit:]", "foo")
+ok, msg, match, leftover = api.eval_using_exp(eid, "[:digit:]", "foo")
 check(ok)
 check(not match)
 check(leftover==0)
 check(msg:find('FAILED to match against input "foo"')) -- % is esc char
 
-ok, match, leftover, msg = api.eval_using_exp(eid, "[:alpha:]*", "foo56789")
+ok, msg, match, leftover = api.eval_using_exp(eid, "[:alpha:]*", "foo56789")
 check(ok)
 check(match)
 check(leftover==5)
 check(msg:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
 
-ok, match, leftover, msg = api.eval_using_exp(eid, "common.number", "abc.x")
+ok, msg, match, leftover = api.eval_using_exp(eid, "common.number", "abc.x")
 check(ok)
 check(match)
 j = json.decode(match)

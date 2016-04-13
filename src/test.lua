@@ -33,7 +33,7 @@ function test_compiling_stuff()
    manifest.process_manifest(TEST_ENGINE, ROSIE_HOME .. "/MANIFEST")
    print();
    print("Environment in default engine:")
-   compile.print_env(TEST_ENGINE.env)
+   common.print_env(compile.flatten_env(TEST_ENGINE.env))
    local count=0
    for k,v in pairs(TEST_ENGINE.env) do count = count+1; end
    print(count .. " patterns defined in environment (including aliases)")

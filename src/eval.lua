@@ -353,8 +353,8 @@ function eval.eval(source, input, start, env, fail_output_only)
    local step = {1};
 
    local pat, errmsg = compile.compile_command_line_expression(source, env, raw)
-   if not pat then return false, 0, errmsg; end -- errors will be in errmsg
-   return eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
+   if not pat then return false, false, false, errmsg; end -- errors will be in errmsg
+   return true, eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
 end
 
 return eval
