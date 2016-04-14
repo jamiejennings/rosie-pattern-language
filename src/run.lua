@@ -193,6 +193,16 @@ function process_pattern_against_file()
       output_function = default_output_function;
    end
    
+-- THIS IS THE FAST VERSION:
+--
+--   do
+--      print("Temporarily using api.match_file")
+--      local ok, msg = api.match_file(CL_ENGINE, opt_filename, "/tmp/outfile", "/dev/null")
+--      if not ok then error("TEMP: " .. msg); end
+--      print("End");
+--      os.exit(0)
+--   end
+
    -- (4) Iterate through the lines in the input file
    if opt_filename=="-" then opt_filename = nil; end -- read from stdin
    local nextline = io.lines(opt_filename);

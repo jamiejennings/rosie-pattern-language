@@ -15,6 +15,8 @@ local eval = require "eval"
 
 -- temporary:
 require "grep"
+lpeg = require "lpeg"
+Cp = lpeg.Cp
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
@@ -236,28 +238,40 @@ api.match = pcall_wrap(match)
    
 local function match_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
+
+   -- Do this checking once.  Should create engine.match_file() to do this.
+   if not en.program then
+      error(string.format("Engine %s (%s): no program", en.name, en.id))
+   end
+   local instruction = en.program[1]
+   local peg = (instruction.peg * Cp())
+
    if type(infilename)~="string" then arg_error("bad input file name"); end
    if type(outfilename)~="string" then arg_error("bad output file name"); end
    if type(errfilename)~="string" then arg_error("bad error file name"); end
-   if outfilename=="" then outfilename = false; end
-   if errfilename=="" then errfilename = false; end
+--   if outfilename=="" then outfilename = false; end
+--   if errfilename=="" then errfilename = false; end
    local infile, outfile, errfile, msg
    infile, msg = io.open(infilename, "r")
    if not infile then error(msg, 0); end
-   if outfilename then
-      outfile, msg = io.open(outfilename, "w")
-      if not outfile then error(msg, 0); end
+   outfile, msg = io.open(outfilename, "w")
+   if not outfile then
+      if #outfilename==0 then outfile = io.stdout;
+      else error(msg, 0); end
    end
-   if errfilename then
-      errfile, msg = io.open(errfilename, "w")
-      if not errfile then error(msg, 0); end
+   errfile, msg = io.open(errfilename, "w")
+   if not errfile then
+      if #errfilename==0 then errfile = io.stderr;
+      else error(msg, 0); end
    end
    local nextline = infile:lines()
    local inlines, outlines, errlines = 0, 0, 0;
    local result, nextpos;
    local l = nextline(); 
    while l do
-      result, nextpos = en:match(l);
+      -- This was originally written to use en:match(...) but that's way too slow. 
+      result, nextpos = peg:match(l)
+
       if result then
 	 if outfilename then
 	    outfile:write(json.encode(result), "\n")
