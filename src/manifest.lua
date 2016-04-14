@@ -25,14 +25,15 @@ local mpats = [==[
    ]==]
 
 local manifest_engine = engine("manifest", compile.new_env())
-compile.compile(mpats, manifest_engine.env)
+local ok, msg = compile.compile(mpats, manifest_engine.env)
+if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
 assert(pattern.is(manifest_engine.env.line))
 local result, msg = compile.compile_command_line_expression('line', manifest_engine.env)
-if not result then error("Internal error: can't compile manifest rpl: " .. tostring(msg)); end
+if not result then error("Internal error: can't compile manifest top level defn: " .. tostring(msg)); end
 manifest_engine.program = { result }
 
 local function process_manifest_line(en, line)
-   local m = manifest_engine:run(line)
+   local m = manifest_engine:match(line)
    assert(type(m)=="table", "Uncaught error processing manifest file!")
    local name, pos, text, subs, subidx = common.decode_match(m)
    if subidx then

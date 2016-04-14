@@ -137,7 +137,7 @@ local reset_color_attributes = shell_color_table["none"]
 function color_print_leaf_nodes(t)
    -- t is a match
    local name, pos, text, subs, subidx = common.decode_match(t)
-   if not subs then
+   if (not subs) or (#subs==0) then
       -- already at a leaf node
       local cname, ccode = color(name)
       text = tostring(text);			    -- just in case!

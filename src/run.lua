@@ -151,12 +151,13 @@ function process_pattern_against_file()
       end
    end
    -- (2) Compile the expression
-   if OPTION["-grep"] then
---      peg = grep_match_compile_to_peg(opt_pattern, CL_ENGINE.env) -- !@#
---      if not peg then os.exit(-1); end		    -- compilation errors were already printed
-      error("Grep not implemented, TEMPORARILY")
-   else
-      local success, msg = api.set_match_exp(CL_ENGINE, opt_pattern)
+   do 
+      local success, msg
+      if OPTION["-grep"] then
+	 success, msg = api.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern)
+      else
+	 success, msg = api.set_match_exp(CL_ENGINE, opt_pattern)
+      end
       if not success then
 	 io.write(msg, "\n")
 	 os.exit(-1)
@@ -164,62 +165,32 @@ function process_pattern_against_file()
    end
    -- (3) Set up the match and output functions
    local match_function, default_output_function;
-   if OPTION["-grep"] then
---      match_function = grep_match_peg
-      error("Grep not implemented, TEMPORARILY")
-   elseif debug then
+   if debug then
       match_function = api.eval			    --!@#
    else
       match_function = api.match
    end
-   -- Note: match returns [entire_match, [named sub matches]] whereas grep_match_peg returns a
-   -- list of matches.
-   if OPTION["-grep"] then
-      default_output_function = 
-	 function(t) 
-	    if t[1] then
-	       for _,v in ipairs(t) do
-		  color_print_leaf_nodes(v)
-	       end
-	       io.write("\n")
-	    end
-	 end
-   else
-      default_output_function =
-	 function(t)
-	    color_print_leaf_nodes(t)
-	    io.write("\n")
-	 end
-   end
-
+   default_output_function =
+      function(t)
+	 color_print_leaf_nodes(json.decode(t))	    -- inefficient
+	 io.write("\n")
+      end
    if OPTION["-nooutput"] or debug then
       output_function = function(t) return; end;
    elseif OPTION["-json"] then
-      output_function = function(t) io.write(json.encode(t), "\n"); end;
+      output_function = function(t) io.write(t, "\n"); end;
    elseif OPTION["-nocolor"] then
-      if OPTION["-grep"] then
-	 output_function =
-	    function(t)
-	       if t[1] then
-		  for i,v in ipairs(t) do
-		     local name, pos, text, subs, subidx = common.decode_match(v);
-		     io.write(text);
-		  end;
-		  io.write("\n");
-	       end  -- if anything to print
-	    end -- output_function
-      else
-	 -- not OPTION["-grep"]
-	 output_function =
-	    function(t)
-	       local name, pos, text, subs, subidx = common.decode_match(t);
-	       io.write(text, "\n")
-	    end
-      end -- if OPTION["-grep"] or not
+      output_function =
+	 function(t)
+	    -- the json.decode here is inefficient because t was json encoded by the api just
+	    -- before it was returned to us
+	    local name, pos, text, subs, subidx = common.decode_match(json.decode(t));
+	    io.write(text, "\n")
+	 end
    else
       output_function = default_output_function;
    end
-
+   
    -- (4) Iterate through the lines in the input file
    if opt_filename=="-" then opt_filename = nil; end -- read from stdin
    local nextline = io.lines(opt_filename);
@@ -236,7 +207,7 @@ function process_pattern_against_file()
 	 ok, t = match_function(CL_ENGINE, l);
 	 if not ok then error(t); end		    -- api call failed, t is message
 	 if t then
-	    output_function(json.decode(t))	    -- inefficient FIXME!
+	    output_function(t)
 	 else
 	    -- pattern did not match
 	    if not QUIET then

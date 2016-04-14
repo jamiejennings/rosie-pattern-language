@@ -16,7 +16,7 @@ compile = require "compile"
 function rosie_parse_without_error_check(str, pos, tokens)
    pos = pos or 1
    tokens = tokens or {}
-   local nt, nextpos, state = ROSIE_ENGINE:run(str, pos)
+   local nt, nextpos, state = ROSIE_ENGINE:match(str, pos)
    if (not nt) then return tokens; end
    local name, pos, text, subs, subidx = common.decode_match(nt)
    table.move(subs, subidx, #subs, #tokens+1, tokens)	    -- strip the 'rpl' off the top

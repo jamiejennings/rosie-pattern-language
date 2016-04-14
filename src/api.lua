@@ -13,6 +13,9 @@ local manifest = require "manifest"
 local json = require "cjson"
 local eval = require "eval"
 
+-- temporary:
+require "grep"
+
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 --
@@ -35,18 +38,14 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --        - Match related
 --          + match pattern against string
 --          + match pattern against file
---          - eval pattern against string
---
---        - Post-processing transformations
---          - ???
+--          + eval pattern against string
 --
 --        - Human interaction / debugging
 --          - CRUD on color assignments for color output?
---          - help?
---          - debug?
+-- 
 
 ----------------------------------------------------------------------------------------
-local api = {VERSION="0.9 alpha"}
+local api = {VERSION="0.94 alpha"}
 ----------------------------------------------------------------------------------------
 
 local engine_list = {}
@@ -201,9 +200,7 @@ local function match_using_exp(id, pattern_exp, input_text)
    local en = engine_from_id(id)
    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
    if type(input_text)~="string" then arg_error("input text not a string"); end
-   local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
-   if not pat then error(msg,0); end
-   local result, nextpos = compile.match_peg(pat.peg, input_text)
+   local result, nextpos = en:match_using_exp(pattern_exp, input_text)
    if result then
       return json.encode(result), (#input_text - nextpos + 1)
    else
@@ -227,7 +224,7 @@ api.set_match_exp = pcall_wrap(set_match_exp)
 local function match(id, input_text)
    local en = engine_from_id(id)
    if type(input_text)~="string" then arg_error("input text not a string"); end
-   local result, nextpos = en:run(input_text)
+   local result, nextpos = en:match(input_text)
    if result then
       return json.encode(result), (#input_text - nextpos + 1)
    else
@@ -260,7 +257,7 @@ local function match_file(id, infilename, outfilename, errfilename)
    local result, nextpos;
    local l = nextline(); 
    while l do
-      result, nextpos = en:run(l);
+      result, nextpos = en:match(l);
       if result then
 	 if outfilename then
 	    outfile:write(json.encode(result), "\n")
@@ -309,7 +306,14 @@ end
 
 api.eval_using_exp = pcall_wrap(eval_using_exp)
 
+local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
+   local en = engine_from_id(id)
+   if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
+   en.program = { pattern_EXP_to_grep_pattern(pattern_exp, en.env) }
+   return ""
+end   
 
+api.set_match_exp_grep_TEMPORARY = pcall_wrap(set_match_exp_grep_TEMPORARY)
 
 return api
 

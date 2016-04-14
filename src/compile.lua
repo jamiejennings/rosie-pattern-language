@@ -484,7 +484,7 @@ function cinternals.compile_charset(a, raw, gmr, source, env)
       end
       return pattern{name=name, peg=S(exps)}
    else
-      error("Error in compiler: Unknown charset type: "..next(subs[subidx]))
+      error("Internal error (compiler): Unknown charset type: "..next(subs[subidx]))
    end
 end
 
@@ -686,7 +686,7 @@ end
 
 function cinternals.compile_astlist(astlist, raw, gmr, source, env)
    assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
-   assert(type(astlist[1])=="table", "Compiler: first argument not list of ast's: "..tostring(a))
+--   assert(type(astlist[1])=="table", "Compiler: first argument not list of ast's: "..tostring(a))
    assert(type(source)=="string")
    local results = {}
    for _,ast in ipairs(astlist) do
@@ -720,7 +720,7 @@ function compile.compile(source, env, raw, gmr, parser)
    local astlist, msg = parser(source)
    if not astlist then return false, msg; end	    -- errors are explained in msg
    assert(type(astlist)=="table")
-   if not next(astlist) then return true, ""; end   -- empty astlist, e.g. from whitespace, comments
+--   if not next(astlist) then return true, ""; end   -- empty astlist, e.g. from whitespace, comments
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local c = coroutine.create(cinternals.compile_astlist)
    local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, raw, gmr, source, env)
@@ -728,7 +728,7 @@ function compile.compile(source, env, raw, gmr, parser)
       -- the last return value, astlist, is only used in compile_command_line_expression
       return results_or_error, error_msg, astlist
    else
-      error("Error in compiler: " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
+      error("Internal error (compiler): " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
    end
 end
 
