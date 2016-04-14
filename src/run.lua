@@ -137,10 +137,10 @@ function help()
 end
 
 function process_pattern_against_file()
-   --   if OPTION["-grep"] and OPTION["-debug"] then
-   --      print("Error: currently, the -grep option and the -debug option are incompatible.  Use one or the other.")
-   --      os.exit(-1)
-   --   end
+   if OPTION["-grep"] and OPTION["-debug"] then
+      print("Error: currently, the -grep option and the -debug option are incompatible.  Use one or the other.")
+      os.exit(-1)
+   end
    local debug = OPTION["-debug"]
    -- (1) Load the manifest
    if opt_manifest then
