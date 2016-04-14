@@ -283,13 +283,42 @@ end
 
 api.match_file = pcall_wrap(match_file)
 
+local function eval_(id, input_text)
+   local en = engine_from_id(id)
+   if type(input_text)~="string" then arg_error("input text not a string"); end
+
+   -- abstraction breakage follows:  !@#
+   if not en.program then
+      error(string.format("Engine %s (%s): no program", en.name, en.id))
+   end
+   local pattern = en.program[1]
+
+   local ok, matches, nextpos, msg = eval.eval(pattern, input_text, 1, en.env)
+   if not ok then error(msg, 0); end
+   local leftover = 0;
+   if nextpos then leftover = (#input_text - nextpos + 1); end
+   local match_results
+   if matches then
+      assert(type(matches)=="table", "eval should return a table of matches if matching succeeded")
+      match_results = json.encode(matches[1])	    -- null, or a match structure
+      assert((not matches[1]) or (not matches[0]), "eval should return exactly 0 or 1 match")
+   else
+      match_results = false			    -- indicating no matches
+   end
+   return msg, match_results, leftover
+
+end
+
+api.eval = pcall_wrap(eval_)
+
 local function eval_using_exp(id, pattern_exp, input_text)
    -- returns eval trace, json match results, number of unmatched chars at end
    local en = engine_from_id(id)
    if not pattern_exp then arg_error("missing pattern expression"); end
    if not input_text then arg_error("missing input text"); end
 
-   local ok, matches, nextpos, msg = eval.eval(pattern_exp, input_text, 1, en.env)
+   local ok, matches, nextpos, msg =
+      eval.eval_command_line_expression(pattern_exp, input_text, 1, en.env)
    if not ok then error(msg, 0); end
    local leftover = 0;
    if nextpos then leftover = (#input_text - nextpos + 1); end

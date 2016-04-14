@@ -137,10 +137,10 @@ function help()
 end
 
 function process_pattern_against_file()
-   if OPTION["-grep"] and OPTION["-debug"] then
-      print("Error: currently, the -grep option and the -debug option are incompatible.  Use one or the other.")
-      os.exit(-1)
-   end
+   --   if OPTION["-grep"] and OPTION["-debug"] then
+   --      print("Error: currently, the -grep option and the -debug option are incompatible.  Use one or the other.")
+   --      os.exit(-1)
+   --   end
    local debug = OPTION["-debug"]
    -- (1) Load the manifest
    if opt_manifest then
@@ -166,7 +166,7 @@ function process_pattern_against_file()
    -- (3) Set up the match and output functions
    local match_function, default_output_function;
    if debug then
-      match_function = api.eval			    --!@#
+      match_function = api.eval
    else
       match_function = api.match
    end
@@ -175,8 +175,10 @@ function process_pattern_against_file()
 	 color_print_leaf_nodes(json.decode(t))	    -- inefficient
 	 io.write("\n")
       end
-   if OPTION["-nooutput"] or debug then
+   if OPTION["-nooutput"] then
       output_function = function(t) return; end;
+   elseif OPTION["-debug"] then
+      output_function = print
    elseif OPTION["-json"] then
       output_function = function(t) io.write(t, "\n"); end;
    elseif OPTION["-nocolor"] then
@@ -198,21 +200,14 @@ function process_pattern_against_file()
    local l = nextline(); 
    local ok, t;
    while l do
-      if debug then
-	 -- write api.eval and then change this to use that api instead
-	 local ok, msg, match, left = api.eval_using_exp(CL_ENGINE, opt_pattern, l)
-	 if not ok then io.write(msg, "\n"); os.exit(-9); end
-	 io.write(msg, "\n")
+      ok, t = match_function(CL_ENGINE, l);
+      if not ok then error(t); end		    -- api call failed, t is message
+      if t then
+	 output_function(t)
       else
-	 ok, t = match_function(CL_ENGINE, l);
-	 if not ok then error(t); end		    -- api call failed, t is message
-	 if t then
-	    output_function(t)
-	 else
-	    -- pattern did not match
-	    if not QUIET then
-	       io.stderr:write("Pattern did not match: ", l, "\n");
-	    end
+	 -- pattern did not match
+	 if not QUIET then
+	    io.stderr:write("Pattern did not match: ", l, "\n");
 	 end
       end
       lines = lines + 1;

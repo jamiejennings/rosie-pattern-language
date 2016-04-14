@@ -343,7 +343,7 @@ eval_exp = function(ast, input, start, raw, gmr, source, env, indent, fail_outpu
       fail_output_only, step, msg)
 end
 
-function eval.eval(source, input, start, env, fail_output_only)
+function eval.eval_command_line_expression(source, input, start, env, fail_output_only)
    -- if fail_output_only is true, then we are using "eval" to explain a syntax error, not to dump
    -- a full trace of the entire matching process
    assert(type(source)=="string" and type(input)=="string" and (not env or type(env)=="table"))
@@ -356,5 +356,24 @@ function eval.eval(source, input, start, env, fail_output_only)
    if not pat then return false, false, false, errmsg; end -- errors will be in errmsg
    return true, eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
 end
+
+function eval.eval(pat, input, start, env, fail_output_only)
+   -- if fail_output_only is true, then we are using "eval" to explain a syntax error, not to dump
+   -- a full trace of the entire matching process
+   assert(type(input)=="string" and (not env or type(env)=="table"))
+   start = start or 1
+   local indent = 5				  -- need to leave room for the step number "%3d."
+   local raw = false;
+   local step = {1};
+
+   -- !@# source is nil (below), so the compiler and parser cannot explain errors.
+   -- and they think there are errors... probably because the pattern_EXP_to_grep_pattern
+   -- function uses a temporary environment to define p and q...
+   -- sigh.
+
+   assert(pattern.is(pat), "Internal error: eval.eval was not passed a compiled pattern: " .. tostring(pat))
+   return true, eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
+end
+
 
 return eval

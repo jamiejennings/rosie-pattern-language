@@ -231,7 +231,7 @@ function test_eval()
    compile.compile(ex, TEST_ENGINE.env)
 
    eval = function(source, input)
-	     return eval.eval(source, input, 1, TEST_ENGINE.env)
+	     return eval.eval_command_line_expression(source, input, 1, TEST_ENGINE.env)
 	  end
    print('Eval literal string')
    assert(pcall(eval, '"a"', 'abc 123'))
