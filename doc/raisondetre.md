@@ -6,36 +6,17 @@
 
 # Why Rosie Pattern Language?
 
-Analytics depends on good data, but also on *tidy data*, i.e. data that is
-structured, annotated, normalized, and correlated.  It is generally estimated
-that 80% of data analysis effort is spent pre-processing the data, i.e. to "tidy
-it up" [1].  Virtually all systems designed to handle unstructured and
-semi-structured data (e.g. log files) are based on heavy use of regular
-expressions.
+*Disclaimer:* In these notes, as in other posted material, I speak for myself, and not on behalf of IBM.
+
+Analytics depends on good data, but also on *tidy data*, i.e. data that is structured, annotated, normalized, and correlated.  It is generally estimated that 80% of data analysis effort is spent pre-processing the data, i.e. to "tidy it up" [1].  Virtually all systems designed to handle unstructured and semi-structured data (e.g. log files) are based on heavy use of regular expressions.
  
-Yet, regular expressions are limited in what kinds of patterns they can
-recognize, and they are notoriously difficult to understand and maintain [2].
-Data tidying systems that depend on collections of regular expressions are
-fragile.  A big data analytics solution that depends on pre-processing with
-regular expressions is subject to the high cost of getting the regular
-expressions right in the first place, and then extending and maintaining the
-collection of expressions.
+Yet, regular expressions are limited in what kinds of patterns they can recognize, and they are notoriously difficult to understand and maintain [2].  Data tidying systems that depend on collections of regular expressions are fragile.  A big data analytics solution that depends on pre-processing with regular expressions is subject to the high cost of getting the regular expressions right in the first place, and then extending and maintaining the collection of expressions.
  
-There are also run-time issues with regular expressions.  "Regex"
-implementations have highly variable performance characteristics that depend on
-the input data.  Most will consume exponential time on some input, taking
-seconds instead of microseconds to process a single line [3].
+There are also run-time issues with regular expressions.  "Regex" implementations have highly variable performance characteristics that depend on the input data.  Most will consume exponential time on some input, taking seconds instead of microseconds to process a single line [3].
  
-Parsing Expression Grammars (PEGs) do not have these limitations [4].  PEGs have
-many similarities to regular expressions, and use many of the same operators
-(like * and +), and features (like character classes, e.g. [a-z] and [:punct:]).
-PEGs are more powerful than regular expressions, though, and can recognize
-recursive structures like XML and JSON.  PEGs also permit linear-time
-implementations (in the size of the input).
+Parsing Expression Grammars (PEGs) do not have these limitations [4].  PEGs have many similarities to regular expressions, and use many of the same operators (like * and +), and features (like character classes, e.g. [a-z] and [:punct:]).  PEGs are more powerful than regular expressions, though, and can recognize recursive structures like XML and JSON.  PEGs also permit linear-time implementations (in the size of the input).
  
-Tools for using PEGs have been scarce.  Rosie is a tool for tidying up data that
-is easy to use, powerful, and efficient.  The Rosie Pattern Language (RPL) is a
-pattern programming language providing:
+Tools for using PEGs have been scarce.  Rosie is a tool for tidying up data that is easy to use, powerful, and efficient.  The Rosie Pattern Language (RPL) is a pattern programming language providing:
 
 *	A readable pattern syntax which can contain whitespace and comments;
 *	Pattern composition, for building patterns out of other patterns; 
@@ -45,14 +26,9 @@ pattern programming language providing:
 *	A translator that can convert many existing “regex” into RPL;
 *	A compact, efficient run-time for data tidying.
  
-Rosie leverages a compact and efficient PEG implementation written in C [5] that
-includes an interpreter for the Lua language [6].  The RPL compiler and related
-tools are written in Lua, and the RPL extension language (in which users can add
-features) is Lua.
+Rosie leverages a compact and efficient PEG implementation written in C [5] that includes an interpreter for the Lua language [6].  The RPL compiler and related tools are written in Lua, and the RPL extension language (in which users can add features) is Lua.
  
-Rosie and RPL are being used in IBM in several projects to parse, annotate,
-normalize, and correlate raw data prior to use in analytics implemented in
-Spark.
+Rosie and RPL are being used in IBM in several projects to parse, annotate, normalize, and correlate raw data prior to use in analytics implemented in Spark.
  
 ### References
  
@@ -69,67 +45,43 @@ Spark.
 [6] Lua (http://www.lua.org)
 
 
-### Notes on additional topics
+<!--     ### Notes for future topics                            -->
+<!--                                                            -->
+<!--     What makes RPL a language?                             -->
+<!--                                                            -->
+<!--     *   More words, less syntax                            -->
+<!--     *   Composability                                      -->
+<!--     *   Packages, namespaces                               -->
+<!--     *   Aliases                                            -->
+<!--     *   Statements that instruct Rosie on what to do       -->
 
-What makes RPL a language?
-
-*	More words, less syntax
-*	Composability
-*	Packages, namespaces
-*	Aliases
-*	Statements that instruct Rosie on what to do
-
-# Overview of Rosie
+# Overview of Rosie Pattern Language
 
 ## Patterns transform unstructured input into structured output
 
-Rosie uses patterns (written in Rosie Pattern Language, or RPL) to transform
-unstructured or semi-structured text input into structured output.  Currently,
-the output is in JSON format, although additional output formats are planned.
+Rosie uses patterns (written in Rosie Pattern Language, or RPL) to transform unstructured or semi-structured text input into structured output.  Currently, the output is in JSON format, although additional output formats are planned.
 
-Many useful patterns are supplied in the Rosie distribution.  You may write
-additional patterns, or modify the ones supplied.  If there is already a
-machine-readable description of the input format (e.g. a log format
-configuration), then it may be possible to automatically generate Rosie patterns
-from such a description.
+Many useful patterns are supplied in the Rosie distribution.  You may write additional patterns, or modify the ones supplied.  If there is already a machine-readable description of the input format (e.g. a log format configuration), then it may be possible to automatically generate Rosie patterns from such a description.
 
-A pattern in Rosie Pattern Language may be specified using literal strings and
-characters and character sets, or it may be built out of other patterns.  The
-ability to compose patterns is one of the strengths of RPL.
+A pattern in Rosie Pattern Language may be specified using literal strings and characters and character sets, or it may be built out of other patterns.  The ability to compose patterns is one of the strengths of RPL.
 
-On start-up, Rosie loads a set of files containing Rosie Pattern Language,
-i.e. pattern definitions.  One of the patterns defined in these files can then
-be used to match lines of input; this is the match pattern.  When running, Rosie
-is applying the match pattern to each line of input.
+On start-up, Rosie loads a set of files containing Rosie Pattern Language, i.e. pattern definitions.  One of the patterns defined in these files can then be used to match lines of input; this is the match pattern.  When running, Rosie is applying the match pattern to each line of input.
 
-By default, Rosie processes input one line at a time, where the marker that
-separates lines is a single newline character.  Rosie generates one JSON
-structure (output) for each line of input.  The output structure contains an
-entry for each named component of the match pattern.  Every important field
-within a pattern has a name, and Rosie’s output pairs each name with the
-corresponding value parsed out of the input line.
+By default, Rosie processes input one line at a time, where the marker that separates lines is a single newline character.  Rosie generates one JSON structure (output) for each line of input.  The output structure contains an entry for each named component of the match pattern.  Every important field within a pattern has a name, and Rosie’s output pairs each name with the corresponding value parsed out of the input line.
 
-Whatever stage comes after Rosie in the data pipeline can then see every
-important value in each line of input.  For example, we can use a pattern like
-this one to parse a simple log entry:
+Whatever stage comes after Rosie in the data pipeline can then see every important value in each line of input.  For example, we can use a pattern like this one to parse a simple log entry:
 
 ``
 syslog = datetime_RFC3339 ip_address {process ":"} message
 ``
 
-The line above defines the pattern named `syslog` to be a datetime, followed by an
-ip address, a string that is a process followed by a colon (“:”), and a message.
-Each of the identifiers used to define `syslog` (`datetime_RFC3339`, etc.) are
-defined separately.  For example, `process` is defined as:
+The line above defines the pattern named `syslog` to be a datetime, followed by an ip address, a string that is a process followed by a colon (“:”), and a message.  Each of the identifiers used to define `syslog` (`datetime_RFC3339`, etc.) are defined separately.  For example, `process` is defined as:
 
 ``
 process = { word {"["int"]"}? }
 ``
 
-... and matches strings like "sshd[16537]" and "syslogd".  For now, note that
-pattern elements inside braces `{...}` are elements that are glued
-together with no whitespace separating them, e.g. "[16537]" and not
-"[ 16537 ]".
+... and matches strings like "sshd[16537]" and "syslogd".  For now, note that pattern elements inside braces `{...}` are elements that are glued together with no whitespace separating them, e.g. "[16537]" and not "[ 16537 ]".
 
 Suppose Rosie is asked to match the `syslog` pattern against a raw line of input data like this one:
 
@@ -158,142 +110,61 @@ From this output, we can see that:
 *	The `message` pattern must be an alias for some other patterns, because instead of seeing "message" as a label in the output, we see instead `NO_ID`.
 *	The definition of the `NO_ID` pattern includes an ip address, we can infer, because Rosie parsed an `ip_address` out of the message and labeled it.
 
-With structured output such as that above, the raw data has been transformed
-into something structured, with semantic tags.  It is now possible to work with
-the data, such as in an analytics process.
+With structured output such as that above, the raw data has been transformed into something structured, with semantic tags.  It is now possible to work with the data, such as in an analytics process.
 
 **NOTE:**
 
-There are several output formats; JSON is shown.  Also, the entire original line
-of input (which matches the `syslog` pattern as a whole) can optionally be
-included in the output, but is omitted along with some other output for clarity.
+There are several output formats; JSON is shown.  Also, the entire original line of input (which matches the `syslog` pattern as a whole) can optionally be included in the output, but is omitted along with some other output for clarity.
 
-## Rosie is meant to be used early in a pipeline
+## The Rosie Pattern Engine is meant to be used early in a pipeline
 
-As a stand-alone executable, Rosie is suitable for processing files containing
-lines of input.  Rosie may also be used to process streaming input, or
-"micro-batches".  Rosie’s small executable size and quick start-up time make it
-possible to invoke Rosie as part of a data processing pipeline.
+As a stand-alone executable, Rosie is suitable for processing files containing lines of input.  Rosie may also be used to process streaming input, or "micro-batches".  Rosie’s small executable size and quick start-up time make it possible to invoke Rosie as part of a data processing pipeline.
 
-In addition to simply recognizing items of interest in the input, Rosie can be
-instructed to transform values, enumerate values, and perform other operations
-while processing each line.  Normalization is one kind of transformation,
-e.g. timestamps in various formats may be normalized to an integer number of
-milliseconds since the epoch.  Sanitizing, such as encryption of sensitive
-fields, is another kind of transformation.
+In addition to simply recognizing items of interest in the input, Rosie can be instructed to transform values, enumerate values, and perform other operations while processing each line.  Normalization is one kind of transformation, e.g. timestamps in various formats may be normalized to an integer number of milliseconds since the epoch.  Sanitizing, such as encryption of sensitive fields, is another kind of transformation.
 
-Enumeration, on the other hand, is a meta-data calculation.  If Rosie is
-instructed to enumerate a particular field, then all values for that field that
-appear in the input will be collected into a table.  For example, which host
-names were seen in the input?  Or, which queue names?  An enumeration table is
-one piece of meta-data, and is saved so it can be used by subsequent stages in
-the data processing pipeline.
+Enumeration, on the other hand, is a meta-data calculation.  If Rosie is instructed to enumerate a particular field, then all values for that field that appear in the input will be collected into a table.  For example, which host names were seen in the input?  Or, which queue names?  An enumeration table is one piece of meta-data, and is saved so it can be used by subsequent stages in the data processing pipeline.
 
-Another piece of meta-data is the range of values that a particular field has in
-the given input.  When a field has values that can be compared in the sense of
-"value x precedes value y", Rosie can be instructed to save the range of a field
-seen in the input.  When processing a file of log entries, for example, the
-range of the timestamp field tells you the time period spanned by those entries.
+Another piece of meta-data is the range of values that a particular field has in the given input.  When a field has values that can be compared in the sense of "value x precedes value y", Rosie can be instructed to save the range of a field seen in the input.  When processing a file of log entries, for example, the range of the timestamp field tells you the time period spanned by those entries.
 
-Since Rosie’s extension language is Lua, a full language, real-time processing
-such as transformations and enumerations can have side effects and access stored
-state.  As a result, some interesting new uses of Rosie are possible.  One
-example is to instruct Rosie to parse particular values out of an input stream
-and take action (send a message, run a script) as the values change in a
-specified way.
+Since Rosie’s extension language is Lua, a full language, real-time processing such as transformations and enumerations can have side effects and access stored state.  As a result, some interesting new uses of Rosie are possible.  One example is to instruct Rosie to parse particular values out of an input stream and take action (send a message, run a script) as the values change in a specified way.
 
 ## Rosie Pattern Language is similar to Regular Expressions
 
-Rosie patterns are Parsing Expression Grammars (PEGs), not Regular Expressions
-(regex), although the two have much in common.  If you know regex, you know most of
-the important features of PEGs, and the rest are easy to learn.
-[See below](#regex_and_rpl) for more.
+Rosie patterns are Parsing Expression Grammars (PEGs), not Regular Expressions (regex), although the two have much in common.  If you know regex, you know most of the important features of PEGs, and the rest are easy to learn.  [See below](#regex_and_rpl) for more.
 
-Rosie's pattern language, RPL, inverts the usual regex concept that characters
-match themselves except when they are _special_, like "." and "?" and so many
-more.  In RPL, to match a literal string of characters, you quote them.  Within
-a quoted string, the only special character is the backslash, which is used as
-the escape character.
+Rosie's pattern language, RPL, inverts the usual regex concept that characters match themselves except when they are _special_, like "." and "?" and so many more.  In RPL, to match a literal string of characters, you quote them.  Within a quoted string, the only special character is the backslash, which is used as the escape character.
 
-A string of characters outside of quotes, like `word` or `syslog` is an
-identifier that refers to a previously defined pattern.  In this way, RPL is
-like a programming language: you can give names to patterns, and build new
-patterns out of old ones.
+A string of characters outside of quotes, like `word` or `syslog` is an identifier that refers to a previously defined pattern.  In this way, RPL is like a programming language: you can give names to patterns, and build new patterns out of old ones.
 
-Outside of a quoted string, there are familiar operators that have the same
-meanings as they do in regex, such as ".", "*", "?", etc.  There's never any
-confusion about when these characters are operators and when they are literal
-characters to be matched.  If a character appears in a character set `[...]` or a
-literal string `"..."`, then it's a literal character to be matched. 
+Outside of a quoted string, there are familiar operators that have the same meanings as they do in regex, such as ".", "*", "?", etc.  There's never any confusion about when these characters are operators and when they are literal characters to be matched.  If a character appears in a character set `[...]` or a literal string `"..."`, then it's a literal character to be matched.
 
 ### Grouping
 
-In regex syntax, parentheses create both a group and a capture, except when they
-don't.  (There are many rules and many cryptic syntaxes to remember when writing
-regex.)  In RPL, parentheses `(...)` and curly braces `{...}` are always used
-for grouping, just like parentheses are used in mathematical and other
-expressions in most programming languages.  Parentheses group expressions in _normal
-mode_, and curly braces group expressions in _raw mode_.
+In regex syntax, parentheses create both a group and a capture, except when they don't.  (There are many rules and many cryptic syntaxes to remember when writing regex.)  In RPL, parentheses `(...)` and curly braces `{...}` are always used for grouping, just like parentheses are used in mathematical and other expressions in most programming languages.  Parentheses group expressions in _normal mode_, and curly braces group expressions in _raw mode_.
 
-In the normal mode, Rosie tokenizes the input, using punctuation and (any amount
-or kind of) whitespace as token boundaries.  This is kind of like the "word
-boundary" `\b` concept from regex.  Normally, Rosie behaves as if there is a
-regex word boundary between each element in a pattern.
+In the normal mode, Rosie tokenizes the input, using punctuation and (any amount or kind of) whitespace as token boundaries.  This is kind of like the "word boundary" `\b` concept from regex.  Normally, Rosie behaves as if there is a regex word boundary between each element in a pattern.
 
-In raw mode, Rosie does no tokenizing.  Patterns are matched character by
-character, as is common for regex matching.
+In raw mode, Rosie does no tokenizing.  Patterns are matched character by character, as is common for regex matching.
 
-Having both modes makes it easy to switch back and forth between low-level
-syntax specifications (in raw mode) and higher level patterns composed of other
-patterns. 
+Having both modes makes it easy to switch back and forth between low-level syntax specifications (in raw mode) and higher level patterns composed of other patterns.
 
-We don't worry about captures when writing RPL expressions.  Everything that has
-a name (an identifier) is captured automatically.  And there are ways to
-instruct Rosie definition which parts of a pattern to keep and which to discard,
-_outside of the pattern definition_.  This makes it possible to write a pattern
-once, and use it in multiple ways, sometimes keeping most or all of the captures (which
-we call matches) and other times keeping very little.  Sharing patterns and
-maintaining patterns are both easier when you can declare outside of the pattern
-definition itself how you want the matches handled.  Read on for more about how
-RPL is a small language in ways that regex are not.
+We don't worry about captures when writing RPL expressions.  Everything that has a name (an identifier) is captured automatically.  And there are ways to instruct Rosie definition which parts of a pattern to keep and which to discard, _outside of the pattern definition_.  This makes it possible to write a pattern once, and use it in multiple ways, sometimes keeping most or all of the captures (which we call matches) and other times keeping very little.  Sharing patterns and maintaining patterns are both easier when you can declare outside of the pattern definition itself how you want the matches handled.  Read on for more about how RPL is a small language in ways that regex are not.
 
 ### RPL is a small language
 
-The Rosie pattern language intentionally resembles a programming language and
-not the cryptic syntax-laden regex form.  Recall that, in RPL, literal strings must be appear in double quotes, as
-in most programming languages.  Also, in RPL, whitespace and comments can appear
-in pattern definitions _without changing the definition_.  This makes RPL very
-readable when compared to regex. 
+The Rosie pattern language intentionally resembles a programming language and not the cryptic syntax-laden regex form.  Recall that, in RPL, literal strings must be appear in double quotes, as in most programming languages.  Also, in RPL, whitespace and comments can appear in pattern definitions _without changing the definition_.  This makes RPL very readable when compared to regex.
 
-RPL statements are typically definitions, where a pattern is assigned a name,
-just like an assignment statement in programming.  There are also aliases, which
-are very simple today but will grow into a macro facility.  Pattern names and
-aliases live in set of namespaces that form a package system, which helps
-organize patterns, prevent name conflicts, and encourage pattern sharing.
-Finally, there are statements in RPL that are instructions which tell Rosie how
-to handle matches.  For any given pattern, you can tell Rosie to keep certain
-sub-matches (which are like regex captures) and discard others.  You can tell
-Rosie to transform a match on the fly, e.g. to convert timestamps into a
-canonical format such as microseconds since the epoch.  You can tell Rosie to
-collect meta-data, such as the range of values seen.
+RPL statements are typically definitions, where a pattern is assigned a name, just like an assignment statement in programming.  There are also aliases, which are very simple today but will grow into a macro facility.  Pattern names and aliases live in set of namespaces that form a package system, which helps organize patterns, prevent name conflicts, and encourage pattern sharing.  Finally, there are statements in RPL that are instructions which tell Rosie how to handle matches.  For any given pattern, you can tell Rosie to keep certain sub-matches (which are like regex captures) and discard others.  You can tell Rosie to transform a match on the fly, e.g. to convert timestamps into a canonical format such as microseconds since the epoch.  You can tell Rosie to collect meta-data, such as the range of values seen.
 
-An RPL expression may not be as compact as its regex equivalent (where such
-equivalent exists), but RPL is easier to write, understand, use, and maintain.
+An RPL expression may not be as compact as its regex equivalent (where such equivalent exists), but RPL is easier to write, understand, use, and maintain.
 
 See [below](#regex_and_rpl) for additional information on the differences between RPL and regexes.
 
 ### Why doesn't Rosie use regex?
 
-Rosie’s patterns are not regular expressions, though they share with regular
-expressions the ability to “recognize a language”.  That is a formal way of
-saying that a Rosie pattern expression, like a regular expression, can be used
-to recognize certain input strings and reject others.  Which strings are
-recognized and which are rejected depends, of course, on the pattern itself.
+Rosie’s patterns are not regular expressions, though they share with regular expressions the ability to “recognize a language”.  That is a formal way of saying that a Rosie pattern expression, like a regular expression, can be used to recognize certain input strings and reject others.  Which strings are recognized and which are rejected depends, of course, on the pattern itself.
 
-True regular expressions come from computing theory: they are
-expressions that recognize exactly the same sets of strings that can be
-recognized using a simple finite state machine.  Two important properties of
-regular expressions are:
+True regular expressions come from computing theory: they are expressions that recognize exactly the same sets of strings that can be recognized using a simple finite state machine.  Two important properties of regular expressions are:
 
 1. Because they are based on a formal system, many important properties of regular expressions can be proved; and
 2. The complexity of recognizing or rejecting an input string is linear in the length of the input.
@@ -317,13 +188,7 @@ In ordinary use, the regex technology works well.  Small regex patterns embedded
 
 When regex patterns become long, they become unreadable, even by the person who wrote them.  A collection of non-trivial regexes is not maintainable in the way that, say, Python or Java code is.  In this sense, regex is a poor basis for anything but the most trivial pattern matching tasks, because the regex approach does not scale as the patterns become more numerous and more complex.
 
-Some examples comparing regex-based tools like Grok to Rosie are in the table
-below.  Note the similarity of syntax where the concept is the same, such as the
-`*`, `+`, and `?` to specify repetition.  And note how the relative lack of
-special characters in RPL means that the list of allowed characters in a Unix
-path can be written simply as `[_%!$@:.,~-]`.  All of the characters inside the
-square brackets simply represent themselves.  None are special operators.  (The lone
-exception in character sets is the dash that separates two characters in a range such as `[a-z]`.)
+Some examples comparing regex-based tools like Grok to Rosie are in the table below.  Note the similarity of syntax where the concept is the same, such as the `*`, `+`, and `?` to specify repetition.  And note how the relative lack of special characters in RPL means that the list of allowed characters in a Unix path can be written simply as `[_%!$@:.,~-]`.  All of the characters inside the square brackets simply represent themselves.  None are special operators.  (The lone exception in character sets is the dash that separates two characters in a range such as `[a-z]`.)
 
 <!-- Vertical bars cannot be escaped in markdown, so we have to use the -->
 <!-- character syntax &#124; which does not work in backticks, hence the need -->
@@ -412,41 +277,25 @@ When Rosie matches the pattern `http_command`, the resulting output is a data st
                    {"url":["http://ibm.com/index.html"]}]}
 ``` 
 				   
-This is default behavior, and it allows the consumer of Rosie's output to see
-all of the important "fields" (like `url`) and their values (like
-http://ibm.com/index.html).
+This is default behavior, and it allows the consumer of Rosie's output to see all of the important "fields" (like `url`) and their values (like http://ibm.com/index.html).
 
-Rosie provides additional controls over what is captured and what is discarded.
-For instance, you may not have any need for the entire original input (i.e. the
-string that matched http_command above), so you can tell Rosie to discard it.
-And you may want to annotate this particular `http_command` with additional
-information based on where it occurred in the input. Finally, you may want to
-transform some matched values, or enumerate the values seen, etc.
+Rosie provides additional controls over what is captured and what is discarded.  For instance, you may not have any need for the entire original input (i.e. the string that matched http_command above), so you can tell Rosie to discard it.  And you may want to annotate this particular `http_command` with additional information based on where it occurred in the input. Finally, you may want to transform some matched values, or enumerate the values seen, etc.
 
-RPL provides statements that serve as instructions for Rosie to do all of these
-things.
+RPL provides statements that serve as instructions for Rosie to do all of these things.
 
 **NOTE:** Documentation of these features is forthcoming and will appear here as
   the syntax for those features is finalized.
 
 ### Aliases
 
-In RPL, patterns are often built from other patterns.  But sometimes you know
-that there’s no need to keep all the little parts that make up a match.  An
-alias in RPL is a pattern definition that is meant to be reused in another
-pattern, but which does not save the sub-matches of its components.  For
-example, integers may be defined this way, using two definitions:
+In RPL, patterns are often built from other patterns.  But sometimes you know that there’s no need to keep all the little parts that make up a match.  An alias in RPL is a pattern definition that is meant to be reused in another pattern, but which does not save the sub-matches of its components.  For example, integers may be defined this way, using two definitions:
 
-```
+``` 
 d = [:digit:]
 common.int = { [+-]? d+ }
 ``` 
 
-The curly braces that surround the expression on the right hand side of
-`common.int` are a _raw group_, which Rosie will process character by character
-instead of separating the input into tokens first.  The definition of `common.int`
-reads this way: an optional sign, followed by one or more digits. In this example, `d` is a shorthand to avoid
-writing `[:digit:]`.  Matching `common.int` against "421" produces:
+The curly braces that surround the expression on the right hand side of `common.int` are a _raw group_, which Rosie will process character by character instead of separating the input into tokens first.  The definition of `common.int` reads this way: an optional sign, followed by one or more digits. In this example, `d` is a shorthand to avoid writing `[:digit:]`.  Matching `common.int` against "421" produces:
 
 ``` 
 {"common.int":["421",{"d":["4"]},{"d":["2"]},{"d":["1"]}]}
@@ -468,4 +317,7 @@ Matching against "421" now gives:
 ## If you know regex, this is Rosie
 <a name="regex_and_rpl"></a>
 
-Forthcoming summary of the differences will go here...
+Forthcoming summary of the differences will go here.
+
+---
+*Disclaimer:* In these notes, as in other posted material, I speak for myself, and not on behalf of IBM.

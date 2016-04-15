@@ -5,6 +5,8 @@
 
 # Notes for PL folk
 
+*Disclaimer:* In these informal notes, as well as in other posted material, I speak for myself, and not on behalf of IBM.
+
 ## Parser combinators for the masses?
 
 Rosie Pattern Language (RPL) is a language of parser combinators.  The operators in RPL allow the construction of Parsing Expression Grammars (PEGs).  While  PEGs have been around for a few decades, and parser combinators much longer than that, neither seems to have been widely adopted.  Together, though, they are a good foundation for textual pattern matching.
@@ -94,7 +96,5 @@ Ok... we have a linear time implementation of PEG-based matching with a low enou
 
 The RPL compiler is admittedly quite slow, sometimes requiring almost a quarter of a second on my MacBook Pro.  However, the compiler has had no optimizations applied.  There are many assertions (which in Lua are expensive); there are many table references to frequently used functions; the compiler does not save compiled RPL between sessions (yet); I have not tried LuaJIT.  These and other optimizations should bring the compile time for a few hundred pattern definitions down considerably.  Compiler performance is not a high priority at this stage in Rosie development.
 
-
-
-
-
+---
+*Disclaimer:* In these informal notes, as well as in other posted material, I speak for myself, and not on behalf of IBM.

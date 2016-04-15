@@ -6,7 +6,7 @@
 
 
 
-# Rosie Pattern Language v0.90
+# Rosie Pattern Language v0.91
 
 ## How to install new patterns
 
