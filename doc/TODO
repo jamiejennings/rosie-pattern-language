@@ -1,7 +1,5 @@
 Major work items:
 
-* Streamline the engine implementation
-
 * Consolidate the Rosie API
   + Engine related:
     + new engine

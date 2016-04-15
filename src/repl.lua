@@ -154,8 +154,28 @@ function repl(eid)
    repl(eid)
 end
 
+local help_text = [[
+Help
+At the prompt, you may enter a command, an identifier name (to see its definition),
+or an RPL statement.  Commands start with a dot (".") as follows:
+
+    .load path                      load RPL file (see note below)
+    .manifest path                  load manifest file (see note below)
+    .match exp, quoted_string       match RPL expression against (quoted) input data
+    .eval exp, quoted_string        show full evaluation (trace)
+    .debug {on|off}                 show debug state; with an argument, set it
+    .patterns                       list patterns in the environment
+    .clear                          clear the pattern environment
+    .help                           print this message
+
+    Note on paths to RPL and manifest files:  A path is relative to the Rosie install
+    directory unless it starts with a dot "." (relative to current directory) or a
+    slash "/" (absolute path).    
+
+    EOF (^D) will exit the read/eval/print loop.
+]]      
+
 function repl_help()
-   io.write("Commands are: \n")
-   io.write(" Help text will go here (sorry) \n")
+   io.write(help_text)
 end
 
