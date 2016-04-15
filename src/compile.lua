@@ -334,8 +334,7 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       if (not max) then
 	 if (min == 0) then
 	    -- same as star
---	    if append_boundary then qpeg = (epeg^1 * boundary)^-1    -- !@# NEED A TEST CASE FOR THIS!
-	    if append_boundary then qpeg = ((epeg * boundary)^1)^-1
+	    if append_boundary then qpeg = (epeg^1 * boundary)^-1 -- !@# NEED A TEST CASE FOR THIS!
 	    else qpeg = epeg^0
 	    end
 	 else
