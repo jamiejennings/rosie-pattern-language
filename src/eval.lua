@@ -54,7 +54,7 @@ local eval_exp;					    -- forward reference
 local function report_(m, pos, a, input, start, indent, fail_output_only, step)
    start = start or 1
    local maxlen = 60
-   local aname, apos, atext, asubs, asubidx, grammar_name, rule1, _
+   local aname, apos, atext, asubs, grammar_name, rule1, _
    if m then
       local fmt = "Matched %q (against input %q"
       if (start+maxlen) < #input then fmt = fmt .. " ..."; end
@@ -73,11 +73,11 @@ local function report_(m, pos, a, input, start, indent, fail_output_only, step)
 end
 
 local function eval_group(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    if name=="raw" then raw=true;
    elseif name=="cooked" then raw=false;
    end
-   assert(subs[subidx] and not subs[subidx+1])	    -- always one sub
+   assert(subs[1] and not subs[2])		    -- always one sub
    msg = msg .. indent_(indent) .. "GROUP: " .. parse.reveal_ast(a) .. "\n"
 
    local pat = cinternals.compile_group(a, raw, gmr, source, env)
@@ -86,7 +86,7 @@ local function eval_group(a, input, start, raw, gmr, source, env, indent, fail_o
 
    if not (m and fail_output_only) then
       msg = msg .. indent_(indent) .. "Explanation:\n"
-      m, pos, msg = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
+      m, pos, msg = eval_exp(subs[1], input, start, raw, gmr, source, env, indent+delta,
 			     fail_output_only, step, msg)
    end
 
@@ -141,26 +141,26 @@ local function eval_sequence(a, input, start, raw, gmr, source, env, indent, fai
    if not(m and fail_output_only) then
       msg = msg .. indent_(indent) .. "Explanation:\n"
 
-      local name, pos, text, subs, subidx = common.decode_match(a)
+      local name, pos, text, subs = common.decode_match(a)
       -- sequences from the parser are always binary, i.e. there are exactly two subs.
       -- Regarding debugging... the failure of sub1 is fatal for a.
       local m, pos
       m, pos, msg =
-	 eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
+	 eval_exp(subs[1], input, start, raw, gmr, source, env, indent+delta,
 		  fail_output_only, step, msg)
 
       if not m then return false, 0, msg; end	    -- Found the match error, so done.
 
-      local name1, pos1, text1 = common.decode_match(subs[subidx])
+      local name1, pos1, text1 = common.decode_match(subs[1])
       if not (raw or name1=="negation" or name1=="lookat") then
 	 m, pos, msg =
-	    eval_boundary(subs[subidx], input, pos, raw, gmr, source, env, indent+delta,
+	    eval_boundary(subs[1], input, pos, raw, gmr, source, env, indent+delta,
 			  fail_output_only, step, msg)
       end
       if (not m) then
 	 return false, 0, msg;			    -- Found the match error, so done.
       else
-	 return eval_exp(subs[subidx+1], input, pos, raw, gmr, source, env, indent+delta,
+	 return eval_exp(subs[2], input, pos, raw, gmr, source, env, indent+delta,
 			 fail_output_only, step, msg)
       end
    end
@@ -186,9 +186,9 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
       -- Regarding debugging...
       -- if sub1 and sub2 fail, then a fails.
       indent = indent + delta;
-      local name, pos, text, subs, subidx = common.decode_match(a)
+      local name, pos, text, subs = common.decode_match(a)
       local m, pos
-      m, pos, msg = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent,
+      m, pos, msg = eval_exp(subs[1], input, start, raw, gmr, source, env, indent,
 			     fail_output_only, step, msg)
 
       if m then
@@ -198,7 +198,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
 	    return m, pos, msg;
 	 else
 	    local m2, pos2
-	    m2, pos2, msg = eval_boundary(subs[subidx], input, pos, raw, gmr, source, env, indent,
+	    m2, pos2, msg = eval_boundary(subs[1], input, pos, raw, gmr, source, env, indent,
 					  fail_output_only, step, msg)
 	    if (not m2) then
 	       return false, 0, msg;		    -- Found the match error, so done.
@@ -207,7 +207,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
       else
 	 -- First alternative failed.  Trying second alternative:
 	 msg = msg .. indent_(indent) .. "First option failed.  Proceeding to alternative.\n"
-	 m, pos, msg = eval_exp(subs[subidx+1], input, pos, raw, gmr, source, env, indent,
+	 m, pos, msg = eval_exp(subs[2], input, pos, raw, gmr, source, env, indent,
 				fail_output_only, step, msg)
 	 if m then
 	    -- Second alternative succeeded...
@@ -217,7 +217,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
 	    else
 	       local m2, pos2
 	       m2, pos2, msg =
-		  eval_boundary(subs[subidx+1], input, pos, raw, gmr, source, env, indent+delta,
+		  eval_boundary(subs[2], input, pos, raw, gmr, source, env, indent+delta,
 				fail_output_only, step, msg)
 	       if (not m2) then
 		  return false, 0, msg;		    -- Found the match error, so done.
@@ -249,14 +249,14 @@ end
 
 local function eval_string(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "LITERAL STRING: ", parse.reveal_ast(a))
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    local m, pos = compile.match_peg(Ct(common.unescape_string(text)), input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
 
 local function eval_charset(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    msg = msg .. step_(indent, step,
 		      "CHARACTER SET: ",
 		      parse.reveal_ast(a),
@@ -284,10 +284,10 @@ local function eval_negation(a, input, start, raw, gmr, source, env, indent, fai
 
    if not(m and fail_output_only) then
       -- descend into negated exp
-      local name, pos, text, subs, subidx = common.decode_match(a)
-      msg = msg .. indent_(indent) .. "Explanation: NEGATED EXPRESSION: " .. parse.reveal_ast(subs[subidx]) ..  "\n"
+      local name, pos, text, subs = common.decode_match(a)
+      msg = msg .. indent_(indent) .. "Explanation: NEGATED EXPRESSION: " .. parse.reveal_ast(subs[1]) ..  "\n"
       local dm, dpos
-      dm, dpos, msg = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
+      dm, dpos, msg = eval_exp(subs[1], input, start, raw, gmr, source, env, indent+delta,
 				 fail_output_only, step, msg)
    end
       -- We return the start position to indicate that the negation exp did not consume any
@@ -304,10 +304,10 @@ local function eval_lookat(a, input, start, raw, gmr, source, env, indent, fail_
    
    if not(m and fail_output_only) then
       -- descend into negated exp
-      local name, pos, text, subs, subidx = common.decode_match(a)
-      msg = msg .. indent_(indent) .. "Explanation: LOOKAT EXPRESSION: " .. parse.reveal_ast(subs[subidx]) .. "\n"
+      local name, pos, text, subs = common.decode_match(a)
+      msg = msg .. indent_(indent) .. "Explanation: LOOKAT EXPRESSION: " .. parse.reveal_ast(subs[1]) .. "\n"
       local dm, dpos
-      dm, dpos, msg = eval_exp(subs[subidx], input, start, raw, gmr, source, env, indent+delta,
+      dm, dpos, msg = eval_exp(subs[1], input, start, raw, gmr, source, env, indent+delta,
 			       fail_output_only, step, msg)
    end
    -- We return the start position to indicate that the lookat exp did not consume any
@@ -366,7 +366,7 @@ function eval.eval(pat, input, start, env, fail_output_only)
    local raw = false;
    local step = {1};
 
-   -- !@# source is nil (below) when pattern_EXP_to_grep_pattern is used, so the compiler and
+   -- N.B. source will be nil (below) when pattern_EXP_to_grep_pattern is used, so the compiler and
    -- parser cannot explain errors. and it will think there are errors... probably because the
    -- pattern_EXP_to_grep_pattern function uses a temporary environment to define p and q...
    -- sigh.  time to implement real closures.

@@ -136,14 +136,14 @@ local reset_color_attributes = shell_color_table["none"]
 
 function color_print_leaf_nodes(t)
    -- t is a match
-   local name, pos, text, subs, subidx = common.decode_match(t)
+   local name, pos, text, subs = common.decode_match(t)
    if (not subs) or (#subs==0) then
       -- already at a leaf node
       local cname, ccode = color(name)
       text = tostring(text);			    -- just in case!
       io.write(ccode, text, reset_color_attributes, " ");
    else
-      for i = subidx, #subs do
+      for i = 1, #subs do
 	 color_print_leaf_nodes(subs[i]);
       end -- for all sub-matches
    end

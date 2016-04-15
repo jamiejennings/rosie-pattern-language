@@ -186,7 +186,7 @@ function process_pattern_against_file()
 	 function(t)
 	    -- the json.decode here is inefficient because t was json encoded by the api just
 	    -- before it was returned to us
-	    local name, pos, text, subs, subidx = common.decode_match(json.decode(t));
+	    local name, pos, text, subs = common.decode_match(json.decode(t));
 	    io.write(text, "\n")
 	 end
    else

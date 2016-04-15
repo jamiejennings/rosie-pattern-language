@@ -71,8 +71,8 @@ function repl(eid)
 	    io.write('Warning: ignoring extraneous input "', s:sub(-left), '"\n')
 	 end
 	 m = json.decode(m)			    -- inefficient, but let's not worry right now
-	 local _, _, _, subs, subidx = common.decode_match(m)
-	 local name, pos, text, subs, subidx = common.decode_match(subs[subidx])
+	 local _, _, _, subs = common.decode_match(m)
+	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
 	    local ok, def = api.get_definition(eid, text)
 	    if ok then 
@@ -84,9 +84,9 @@ function repl(eid)
 	       end
 	    end
 	 elseif name=="command" then
-	    local cname, cpos, ctext, csubs, csubidx = common.decode_match(subs[subidx])
+	    local cname, cpos, ctext, csubs = common.decode_match(subs[1])
 	    if cname=="load" or cname=="manifest" then
-	       local pname, ppos, path = common.decode_match(csubs[csubidx])
+	       local pname, ppos, path = common.decode_match(csubs[1])
 	       local results, msg
 	       if cname=="load" then 
 		  results, msg = api.load_file(eid, path)
@@ -100,7 +100,7 @@ function repl(eid)
 	       end
 	    elseif cname=="debug" then
 	       if csubs then
-		  local _, _, arg = common.decode_match(csubs[csubidx])
+		  local _, _, arg = common.decode_match(csubs[1])
 		  debug = (arg=="on")
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
@@ -116,11 +116,11 @@ function repl(eid)
 	       ok = api.clear_env(eid)
 	       io.write("Pattern environment cleared\n")
 	    elseif cname=="match" or cname =="eval" then
-	       local ename, epos, exp = common.decode_match(csubs[csubidx])
+	       local ename, epos, exp = common.decode_match(csubs[1])
 	       -- parsing strips the quotes off when exp is only a literal string, but compiler
 	       -- needs them there.  this is inelegant.  sigh.
 	       if ename=="string" then exp = '"'..exp..'"'; end
-	       local tname, tpos, input_text = common.decode_match(csubs[csubidx+1])
+	       local tname, tpos, input_text = common.decode_match(csubs[2])
 	       input_text = common.unescape_string(input_text)
 	       local ok, m, left = api.match_using_exp(eid, exp, input_text)
 	       if not ok then

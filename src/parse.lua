@@ -145,9 +145,9 @@ function parse.syntax_error_check(ast)
    local function check_many_branches(a)
       local ans
       assert(a, "did not get ast in check_many_branches")
-      local name, pos, text, subs, subidx = common.decode_match(a)
+      local name, pos, text, subs = common.decode_match(a)
       if subs then
-	 for i = subidx, #subs do
+	 for i = 1, #subs do
 	    ans = parse.syntax_error_check(subs[i])
 	    if ans then return ans; end
 	 end -- for each
@@ -156,13 +156,13 @@ function parse.syntax_error_check(ast)
    end
    local function check_two_branches(a)
       assert(a, "did not get ast in check_two_branches")
-      local name, pos, text, subs, subidx = common.decode_match(a)
-      return parse.syntax_error_check(subs[subidx]) or parse.syntax_error_check(subs[subidx+1])
+      local name, pos, text, subs = common.decode_match(a)
+      return parse.syntax_error_check(subs[1]) or parse.syntax_error_check(subs[2])
    end
    local function check_one_branch(a)
       assert(a, "did not get ast in check_one_branch")
-      local name, pos, text, subs, subidx = common.decode_match(a)
-      return parse.syntax_error_check(subs[subidx])
+      local name, pos, text, subs = common.decode_match(a)
+      return parse.syntax_error_check(subs[1])
    end
    local functions = {"syntax_error_check";
 		      --group=check_many_branches;
@@ -204,14 +204,13 @@ end
 
 local function reveal_assignment(a)
    assert(a, "did not get ast in reveal_assignment")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="assignment_")
-   assert(type(subidx)=="number")
-   assert(next(subs[subidx])=="identifier")
-   assert(type(subs[subidx+1])=="table")	    -- the right side of the assignment
-   assert(not subs[subidx+2])
+   assert(next(subs[1])=="identifier")
+   assert(type(subs[2])=="table")	    -- the right side of the assignment
+   assert(not subs[3])
    local fmt = "assignment %s = %s"
-   local id, e = subs[subidx], subs[subidx+1]
+   local id, e = subs[1], subs[2]
    return string.format(fmt,
 			parse.reveal_exp(id),
 			parse.reveal_exp(e))
@@ -219,11 +218,11 @@ end
 
 local function reveal_grammar(a)
    assert(a, "did not get ast in reveal_grammar")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="grammar_")
-   assert(type(subs[subidx])=="table")
+   assert(type(subs[1])=="table")
    local str = "grammar\n"
-   for i = subidx, #subs do
+   for i = 1, #subs do
       local rule = subs[i]
       assert(rule, "did not get rule in reveal_grammar")
       local rname, rpos, rtext = common.decode_match(rule)
@@ -235,12 +234,12 @@ end
 
 local function reveal_alias(a)
    assert(a, "did not get ast in reveal_alias")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="alias_")
-   assert(type(subidx)=="number")
-   assert(next(subs[subidx])=="identifier")
+   assert(type(1)=="number")
+   assert(next(subs[1])=="identifier")
    local fmt = "alias %s = %s"
-   local id, e = subs[subidx], subs[subidx+1]
+   local id, e = subs[1], subs[2]
    return string.format(fmt,
 			parse.reveal_exp(id),
 			parse.reveal_exp(e))
@@ -248,8 +247,8 @@ end
 
 local function reveal_sequence(a)
    assert(a, "did not get ast in reveal_sequence")
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   local e1, e2 = subs[subidx], subs[subidx+1]
+   local name, pos, text, subs = common.decode_match(a)
+   local e1, e2 = subs[1], subs[2]
    return parse.reveal_exp(e1) .. " " .. parse.reveal_exp(e2)
 end
 
@@ -261,30 +260,30 @@ end
 
 local function reveal_negation(a)
    assert(a, "did not get ast in reveal_negation")
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   return "!"..parse.reveal_exp(subs[subidx])
+   local name, pos, text, subs = common.decode_match(a)
+   return "!"..parse.reveal_exp(subs[1])
 end
 
 local function reveal_lookat(a)
    assert(a, "did not get ast in reveal_lookat")
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   return "@"..parse.reveal_exp(subs[subidx])
+   local name, pos, text, subs = common.decode_match(a)
+   return "@"..parse.reveal_exp(subs[1])
 end
 
 local function reveal_repetition(a)
    assert(a, "did not get ast in reveal_repetition")
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   assert(subs[subidx], "did not get ast for min in reveal_repetition")
-   local miname, minpos, mintext = common.decode_match(subs[subidx])
-   assert(subs[subidx+1], "did not get ast for max in reveal_repetition")
-   local maxname, maxpos, maxtext = common.decode_match(subs[subidx+1])
+   local name, pos, text, subs = common.decode_match(a)
+   assert(subs[1], "did not get ast for min in reveal_repetition")
+   local miname, minpos, mintext = common.decode_match(subs[1])
+   assert(subs[2], "did not get ast for max in reveal_repetition")
+   local maxname, maxpos, maxtext = common.decode_match(subs[2])
    return "{"..mintext..","..maxtext.."}"
 end
 
 local function reveal_quantified_exp(a)
    assert(a, "did not get ast in reveal_quantified_exp")
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   local e, q = subs[subidx], subs[subidx+1]
+   local name, pos, text, subs = common.decode_match(a)
+   local e, q = subs[1], subs[2]
    assert(q, "did not get quantifier exp in reveal_quantified_exp")
    local qname, qpos, printable_q = common.decode_match(q)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
@@ -303,10 +302,10 @@ end
 
 local function reveal_charlist(a)
    assert(a, "did not get ast in reveal_charlist")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="charlist")
    local exps = "";
-   for i = subidx, #subs do
+   for i = 1, #subs do
       assert(subs[i], "did not get a character ast in reveal_charlist")
       local cname, cpos, ctext = common.decode_match(subs[i])
       assert(cname=="character")
@@ -317,39 +316,39 @@ end
 
 local function reveal_charset(a)
    assert(a, "did not get ast in reveal_charset")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    -- empty character lists are allowed
-   if not(subidx) then return "[]"
-   elseif next(subs[subidx])=="range" then
-      local rname, rpos, rtext, rsubs, rsubidx = common.decode_match(subs[subidx])
-      assert(rsubs[rsubidx], "did not get low sub in reveal_charset")
-      assert(rsubs[rsubidx+1], "did not get high sub in reveal_charset")
-      local lowname, lowpos, lowtext = common.decode_match(rsubs[rsubidx])
-      local hiname, hipos, hitext = common.decode_match(rsubs[rsubidx+1])
+   if not(1) then return "[]"
+   elseif next(subs[1])=="range" then
+      local rname, rpos, rtext, rsubs = common.decode_match(subs[1])
+      assert(rsubs[1], "did not get low sub in reveal_charset")
+      assert(rsubs[2], "did not get high sub in reveal_charset")
+      local lowname, lowpos, lowtext = common.decode_match(rsubs[1])
+      local hiname, hipos, hitext = common.decode_match(rsubs[2])
       assert(lowname=="character")
       assert(hiname=="character")
-      assert(not rsubs[rsubidx+2])
+      assert(not rsubs[3])
       return "[" ..  lowtext.. "-" .. hitext .. "]"
-   elseif next(subs[subidx])=="charlist" then
-      return "["..reveal_charlist(subs[subidx]).."]"
+   elseif next(subs[1])=="charlist" then
+      return "["..reveal_charlist(subs[1]).."]"
    else
-      error("Reveal error: Unknown charset type: ".. next(subs[subidx]))
+      error("Reveal error: Unknown charset type: ".. next(subs[1]))
    end
 end
 
 local function reveal_choice(a)
    assert(a, "did not get ast in reveal_choice")
-   local name, pos, text, subs, subidx = common.decode_match(a)
---   return "(" .. parse.reveal_exp(subs[subidx]) .. " / " .. parse.reveal_exp(subs[subidx+1]) .. ")";
-   return parse.reveal_exp(subs[subidx]) .. " / " .. parse.reveal_exp(subs[subidx+1]);
+   local name, pos, text, subs = common.decode_match(a)
+--   return "(" .. parse.reveal_exp(subs[1]) .. " / " .. parse.reveal_exp(subs[2]) .. ")";
+   return parse.reveal_exp(subs[1]) .. " / " .. parse.reveal_exp(subs[2]);
 end
 
 local function reveal_group(a)
    assert(a, "did not get ast in reveal_group")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="raw" or name=="cooked")
    local exps = nil
-   for i = subidx, #subs do
+   for i = 1, #subs do
       local item = subs[i]
       if exps then exps = exps .. " " .. parse.reveal_exp(item)
       else exps = parse.reveal_exp(item)
@@ -364,26 +363,26 @@ end
 
 function parse.reveal_syntax_error(a)
    -- name is "syntax_error"
-   -- subs[subidx] is the type of syntax error, e.g. "exp_stmt" or "top_level"
+   -- subs[1] is the type of syntax error, e.g. "exp_stmt" or "top_level"
    -- When the type is "exp_stmt", it has subs:
-   --   subs[subidx] is the type of statement, e.g. "alias_", "assignment_"
-   --   subs[subidx+1] is the expression the parser was looking at when the error happened
+   --   subs[1] is the type of statement, e.g. "alias_", "assignment_"
+   --   subs[2] is the expression the parser was looking at when the error happened
    -- When the type is "top_level", it has a sub:
-   --   subs[subidx] is the offending string
+   --   subs[1] is the offending string
    assert(a, "did not get ast in reveal_syntax_error")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    if text=="top_level" then
-      return "SYNTAX ERROR (TOP LEVEL): " .. tostring(subs[subidx])
+      return "SYNTAX ERROR (TOP LEVEL): " .. tostring(subs[1])
    elseif text=="exp_stmt" then
-      if next(subs[subidx+1])=="assignment_" then
-	 return "SYNTAX ERROR: ASSIGNMENT TO " .. parse.reveal_ast(subs[subidx+2])
-      elseif next(subs[subidx+1])=="alias_" then
-	 return "SYNTAX ERROR: ALIAS " .. parse.reveal_ast(subs[subidx+2])
+      if next(subs[2])=="assignment_" then
+	 return "SYNTAX ERROR: ASSIGNMENT TO " .. parse.reveal_ast(subs[3])
+      elseif next(subs[2])=="alias_" then
+	 return "SYNTAX ERROR: ALIAS " .. parse.reveal_ast(subs[3])
       else
-	 return "SYNTAX ERROR: (UNKNOWN STATEMENT TYPE) " .. parse.reveal_ast(subs[subidx+2])
+	 return "SYNTAX ERROR: (UNKNOWN STATEMENT TYPE) " .. parse.reveal_ast(subs[3])
       end
    elseif text=="charset" then
-      return "SYNTAX ERROR: CHARSET " .. tostring(subs[subidx]) .. " ..."
+      return "SYNTAX ERROR: CHARSET " .. tostring(subs[1]) .. " ..."
    else
       return "SYNTAX ERROR: " .. text
    end

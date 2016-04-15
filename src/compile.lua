@@ -140,18 +140,18 @@ end
 function compile.explain_syntax_error(a, source)
    local errast = parse.syntax_error_check(a)
    assert(errast)
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, pos)
 
    local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
 
    local err = parse.syntax_error_check(a)
-   local ename, errpos, etext, esubs, esubidx = common.decode_match(err)
+   local ename, errpos, etext, esubs = common.decode_match(err)
    msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
 
    if esubs then
       -- We only examine the first sub, assuming there are no others.  Is that right?
-      local etname, etpos, ettext, etsubs, etsubidx = common.decode_match(esubs[esubidx])
+      local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
       if etname=="statement_prefix" then
 	 msg = msg .. "Found start of a new statement inside an expression.\n"
       else
@@ -213,7 +213,7 @@ end
 
 local function explain_undefined_charset(a, source)
    assert(a, "did not get ast in explain_undefined_charset")
-   local _, errpos, name, subs, subidx = common.decode_match(a)
+   local _, errpos, name, subs = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
    local msg = "Compile error: named charset not defined " .. name .. "\n" ..
       string.format("At line %d:\n", lnum) ..
@@ -225,9 +225,9 @@ end
 
 local function explain_unknown_quantifier(a, source)
    assert(a, "did not get ast in explain_unknown_quantifier")
-   local name, errpos, text, subs, subidx = common.decode_match(a)
+   local name, errpos, text, subs = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
-   local q = subs[subidx+1]			    -- IS THIS RIGHT?
+   local q = subs[2]				    -- IS THIS RIGHT?
    local msg = "Compile error: unknown quantifier " .. q .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
@@ -279,7 +279,7 @@ end
 
 function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in process_quantified_exp")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="quantified_exp")
    -- Regarding debugging... the quantified exp a[1] fails as soon as:
    -- e^0 == e* can never fail, because it can match the empty string.
@@ -287,16 +287,17 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    -- e^-1 == e? can never fail because it can match the empty string
    -- e{n,m} == (e * e ...)*e^(m-n) will fail when any of the sequence fails.
    local qpeg, min, max
-   local e = cinternals.compile_exp(subs[subidx], raw, gmr, source, env)
+   local e = cinternals.compile_exp(subs[1], raw, gmr, source, env)
    local epeg = e.peg
    local append_boundary = false
-   if (((not raw) and next(subs[subidx])~="raw" 
-                  and next(subs[subidx])~="charset" 
-		  and next(subs[subidx])~="named_charset"
-		  and next(subs[subidx])~="string" 
-		  and next(subs[subidx])~="identifier"
+   local subname = next(subs[1])
+   if (((not raw) and subname~="raw" 
+                  and subname~="charset" 
+		  and subname~="named_charset"
+		  and subname~="string" 
+		  and subname~="identifier"
 	    )
-      or next(subs[subidx])=="cooked") then
+      or subname=="cooked") then
       append_boundary = true;
    end
 
@@ -304,9 +305,9 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       explain_quantified_limitation(a, source);
    end
 
-   local q = subs[subidx+1]
+   local q = subs[2]
    assert(q, "not getting quantifier clause in process_quantified_exp")
-   local qname, qpos, qtext, qsubs, qsubidx = common.decode_match(q)
+   local qname, qpos, qtext, qsubs = common.decode_match(q)
    if qname=="plus" then
       if append_boundary then qpeg=(epeg * boundary)^1
       else qpeg=epeg^1
@@ -320,13 +321,13 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       else qpeg=epeg^-1
       end
    elseif qname=="repetition" then
-      assert(type(qsubs[qsubidx])=="table")
-      assert(qsubs[qsubidx], "not getting min clause in process_quantified_exp")
-      local mname, mpos, mtext = common.decode_match(qsubs[qsubidx])
+      assert(type(qsubs[1])=="table")
+      assert(qsubs[1], "not getting min clause in process_quantified_exp")
+      local mname, mpos, mtext = common.decode_match(qsubs[1])
       assert(mname=="low")
       min = tonumber(mtext) or 0
-      assert(qsubs[qsubidx+1], "not getting max clause in process_quantified_exp")
-      local mname, mpos, mtext = common.decode_match(qsubs[qsubidx+1])
+      assert(qsubs[2], "not getting max clause in process_quantified_exp")
+      local mname, mpos, mtext = common.decode_match(qsubs[2])
       max = tonumber(mtext)
       if (min < 0) or (max and (max < 0)) or (max and (max < min)) then
 	 explain_repetition_error(a, source)
@@ -416,16 +417,16 @@ end
       
 function cinternals.compile_negation(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_negation")
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   local peg = cinternals.compile_exp(subs[subidx], raw, gmr, source, env).peg
+   local name, pos, text, subs = common.decode_match(a)
+   local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    peg = (- peg)
    return pattern{name=name, peg=peg}
 end
 
 function cinternals.compile_lookat(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_lookat")
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   local peg = cinternals.compile_exp(subs[subidx], raw, gmr, source, env).peg
+   local name, pos, text, subs = common.decode_match(a)
+   local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    peg = (# peg)
    return pattern{name=name, peg=peg}
 end
@@ -435,22 +436,22 @@ function cinternals.compile_sequence(a, raw, gmr, source, env)
    -- sequences from the parser are always binary, with subexps stored at positions 3 and 4
    -- (i.e. just after the source position field)
    -- Regarding debugging... the failure of a[3] is fatal for a[1]
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    local peg1, peg2
-   peg1 = cinternals.compile_exp(subs[subidx], raw, gmr, source, env).peg
-   peg2 = cinternals.compile_exp(subs[subidx+1], raw, gmr, source, env).peg
+   peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
+   peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
    -- when the first exp is a predicate, it will not consume any input, so we must avoid
    -- concatenating two "boundary" expressions, because boundary*boundary always fails!
    -- note that some quantified exps have their boundary included, and some do not.  but the new
    -- definition of boundary includes looking BACK at whitespace and forward at non-whitespace, so
    -- we can safely append a boundary to a quantified exp when not in raw mode.
    if raw or
-      next(subs[subidx])=="negation" or
-      next(subs[subidx])=="lookat"
+      next(subs[1])=="negation" or
+      next(subs[1])=="lookat"
 -- or
       -- special case for end of line coming next: don't want to capture any boundary whitespace
       -- between the pattern denoted by identifier and the end of the line
---      (next(subs[subidx+1])=="identifier" and subs[subidx+1].identifier.text=="$")
+--      (next(subs[2])=="identifier" and subs[2].identifier.text=="$")
    then
       return pattern{name=name, peg=peg1 * peg2}
    else
@@ -470,22 +471,22 @@ end
 
 function cinternals.compile_charset(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_charset")
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   if next(subs[subidx])=="range" then
-      local r = subs[subidx]
+   local name, pos, text, subs = common.decode_match(a)
+   if next(subs[1])=="range" then
+      local r = subs[1]
       assert(r, "did not get range ast in compile_charset")
-      local rname, rpos, rtext, rsubs, rsubidx = common.decode_match(r)
-      assert(not rsubs[rsubidx+2])
-      assert(next(rsubs[rsubidx])=="character")
-      assert(next(rsubs[rsubidx+1])=="character")
-      local cname1, cpos1, ctext1 = common.decode_match(rsubs[rsubidx])
-      local cname2, cpos2, ctext2 = common.decode_match(rsubs[rsubidx+1])
+      local rname, rpos, rtext, rsubs = common.decode_match(r)
+      assert(not rsubs[3])
+      assert(next(rsubs[1])=="character")
+      assert(next(rsubs[2])=="character")
+      local cname1, cpos1, ctext1 = common.decode_match(rsubs[1])
+      local cname2, cpos2, ctext2 = common.decode_match(rsubs[2])
       return pattern{name=name, peg=R(common.unescape_string(ctext1)..common.unescape_string(ctext2))}
-   elseif next(subs[subidx])=="charlist" then
+   elseif next(subs[1])=="charlist" then
       local exps = "";
-      assert(subs[subidx], "did not get charlist sub in compile_charset")
-      local clname, clpos, cltext, clsubs, clsubidx = common.decode_match(subs[subidx])
-      for i = clsubidx, #clsubs do
+      assert(subs[1], "did not get charlist sub in compile_charset")
+      local clname, clpos, cltext, clsubs = common.decode_match(subs[1])
+      for i = 1, #clsubs do
 	 local v = clsubs[i]
 	 assert(next(v)=="character", "did not get character sub in compile_charset")
 	 local cname, cpos, ctext = common.decode_match(v)
@@ -493,7 +494,7 @@ function cinternals.compile_charset(a, raw, gmr, source, env)
       end
       return pattern{name=name, peg=S(exps)}
    else
-      error("Internal error (compiler): Unknown charset type: "..next(subs[subidx]))
+      error("Internal error (compiler): Unknown charset type: "..next(subs[1]))
    end
 end
 
@@ -503,9 +504,9 @@ function cinternals.compile_choice(a, raw, gmr, source, env)
    -- expressions. 
    -- Regarding debugging...
    -- 'a' fails if both alternatives fail
-   local name, pos, text, subs, subidx = common.decode_match(a)
-   local peg1 = cinternals.compile_exp(subs[subidx], raw, gmr, source, env).peg
-   local peg2 = cinternals.compile_exp(subs[subidx+1], raw, gmr, source, env).peg
+   local name, pos, text, subs = common.decode_match(a)
+   local peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
+   local peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
    return pattern{name=name, peg=(peg1+peg2), alternates = { peg1, peg2 }}
 end
 
@@ -525,11 +526,11 @@ end
 
 function cinternals.compile_group(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_group")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="raw" or name=="cooked")
    if name=="raw" then raw=true; else raw=false; end
-   assert(not subs[subidx+1])
-   local peg = cinternals.compile_exp(subs[subidx], raw, gmr, source, env).peg
+   assert(not subs[2])
+   local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    return pattern{name=name, peg=peg}
 end
 
@@ -540,12 +541,12 @@ end
 
 function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_grammar")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="grammar_")
-   assert(type(subs[subidx])=="table")
+   assert(type(subs[1])=="table")
    assert(type(source)=="string")
    local gtable = compile.new_env(env)
-   local first = subs[subidx]			    -- first rule in grammar
+   local first = subs[1]			    -- first rule in grammar
    assert(first, "not getting first rule in compile_grammar")
    local fname, fpos, ftext = common.decode_match(first)
    assert(first and (fname=="assignment_" or fname=="alias_"))
@@ -553,11 +554,11 @@ function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
    local rule, id_node, id, exp_node
    
    -- first pass: collect rule names as V() refs into a new env
-   for i = subidx, #subs do			    -- for each rule
+   for i = 1, #subs do			    -- for each rule
       local rule = subs[i]
       assert(rule, "not getting rule in compile_grammar")
-      local rname, rpos, rtext, rsubs, rsubidx = common.decode_match(rule)
-      local id_node = rsubs[rsubidx]		    -- identifier clause
+      local rname, rpos, rtext, rsubs = common.decode_match(rule)
+      local id_node = rsubs[1]			    -- identifier clause
       assert(id_node and next(id_node)=="identifier")
       local iname, ipos, id = common.decode_match(id_node)
       gtable[id] = pattern{name=id, peg=V(id), alias=(rname=="alias_")}
@@ -566,15 +567,15 @@ function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
    -- second pass: compile right hand sides in gtable environment
    local pats = {}
    local start
-   for i = subidx, #subs do			    -- for each rule
+   for i = 1, #subs do			    -- for each rule
       rule = subs[i]
       assert(rule, "not getting rule in compile_grammar")
-      local rname, rpos, rtext, rsubs, rsubidx = common.decode_match(rule)
-      id_node = rsubs[rsubidx]			    -- identifier clause
+      local rname, rpos, rtext, rsubs = common.decode_match(rule)
+      id_node = rsubs[1]			    -- identifier clause
       assert(id_node, "not getting id_node in compile_grammar")
-      local iname, ipos, id, isubs, isubidx = common.decode_match(id_node)
+      local iname, ipos, id, isubs = common.decode_match(id_node)
       if not start then start=id; end		    -- first rule is start rule
-      exp_node = rsubs[rsubidx+1]		    -- expression clause
+      exp_node = rsubs[2]			    -- expression clause
       assert(exp_node, "not getting exp_node in compile_grammar")
       -- flags: not raw, inside grammar
       pats[id] = cinternals.compile_exp(exp_node, false, true, source, gtable)
@@ -635,49 +636,48 @@ function cinternals.compile_exp(a, raw, gmr, source, env)
 end
 
 function compile.expression_p(ast)
-   local name, pos, text, subs, subidx = common.decode_match(ast)
+   local name, pos, text, subs = common.decode_match(ast)
    return not (not cinternals.compile_exp_functions[name])
 end
 
 function cinternals.compile_assignment(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_assignment")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="assignment_")
-   assert(next(subs[subidx])=="identifier")
-   assert(type(subs[subidx+1])=="table")			    -- the right side of the assignment
-   assert(not subs[subidx+2])
+   assert(next(subs[1])=="identifier")
+   assert(type(subs[2])=="table")			    -- the right side of the assignment
+   assert(not subs[3])
    assert(type(source)=="string")
-   local _, ipos, iname = common.decode_match(subs[subidx])
+   local _, ipos, iname = common.decode_match(subs[1])
    if env[iname] and not QUIET then
       warn("Compiler: reassignment to identifier " .. iname)
    end
-   local pat = cinternals.compile_exp(subs[subidx+1], raw, gmr, source, env)
+   local pat = cinternals.compile_exp(subs[2], raw, gmr, source, env)
    -- N.B. If the RHS of the expression is a CHOICE node, then the value we compute here for
    -- pat.peg is only valid when the identifier being bound is later referenced in RAW mode.  If
    -- the identifier is referenced in COOKED mode, then we must ignore pat.peg and use the
    -- pat.alternates value to compute the correct peg.  That computation must be done in
    -- conjunction with match_node_wrap.
    pat.peg = C(pat.peg)
-   pat.ast = subs[subidx+1]			    -- expression ast
+   pat.ast = subs[2]				    -- expression ast
    env[iname] = pat
 end
 
 function cinternals.compile_alias(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_alias")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name=="alias_")
-   assert(type(subidx)=="number")
-   assert(next(subs[subidx])=="identifier")
-   assert(type(subs[subidx+1]=="table"))	    -- the right side of the assignment
-   assert(not subs[subidx+2])
+   assert(next(subs[1])=="identifier")
+   assert(type(subs[2]=="table"))		    -- the right side of the assignment
+   assert(not subs[3])
    assert(type(source)=="string")
-   local _, pos, alias_name = common.decode_match(subs[subidx])
+   local _, pos, alias_name = common.decode_match(subs[1])
    if env[alias_name] then
       warn("Compiler: reassignment to alias " .. alias_name)
    end
-   local pat = cinternals.compile_exp(subs[subidx+1], raw, gmr, source, env)
+   local pat = cinternals.compile_exp(subs[2], raw, gmr, source, env)
    pat.alias=true;
-   pat.ast = subs[subidx+1]			    -- expression ast
+   pat.ast = subs[2]				    -- expression ast
    env[alias_name] = pat
 end
 

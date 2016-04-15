@@ -18,8 +18,8 @@ function rosie_parse_without_error_check(str, pos, tokens)
    tokens = tokens or {}
    local nt, nextpos, state = ROSIE_ENGINE:match(str, pos)
    if (not nt) then return tokens; end
-   local name, pos, text, subs, subidx = common.decode_match(nt)
-   table.move(subs, subidx, #subs, #tokens+1, tokens)	    -- strip the 'rpl' off the top
+   local name, pos, text, subs = common.decode_match(nt)
+   table.move(subs, 1, #subs, #tokens+1, tokens)    -- strip the 'rpl' off the top
    return rosie_parse_without_error_check(str, nextpos, tokens)
 end
 

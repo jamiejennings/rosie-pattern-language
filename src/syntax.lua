@@ -9,8 +9,6 @@ local common = require "common"			    -- AST functions
 --local compile = require "compile"
 --local cinternals = compile.cinternals
 
--- !@# Eliminate subidx because it's always 1!
-
 -- Add to the Emacs command 'rosie':
    -- switch to rosie buffer if it exists
    -- memo of last rosie home dir used, if need to start rosie
@@ -22,14 +20,14 @@ local common = require "common"			    -- AST functions
 local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
 
 function cooked_to_raw(a)
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    assert(name == "cooked")
-   assert((#subs - subidx + 1) == 1)
-   local exp = subs[subidx]
+   assert(#subs == 1)
+   local exp = subs[1]
    if next(exp)=="sequence" then
-      local name, pos, text, subs, subidx = common.decode_match(exp)
-      assert((#subs - subidx + 1) == 2)		    -- two branches in a sequence
-      local type1 = next(subs[subidx])
+      local name, pos, text, subs = common.decode_match(exp)
+      assert(#subs == 2)			    -- two branches in a sequence
+      local type1 = next(subs[1])
       if type1=="negation" or type1=="lookat" then
 	 return a				    -- copy of?
       else
@@ -52,8 +50,8 @@ function cooked_to_raw(a)
    elseif next(exp)=="raw" then
       return a					    -- copy of?
    elseif next(exp)=="quantified_exp" then
-      local e = subs[subidx]
-      local q = subs[subidx+1]
+      local e = subs[1]
+      local q = subs[2]
       local type1 = next(e)
       if type1=="raw" or
 	 type1=="charset" or
@@ -94,7 +92,7 @@ function cooked_to_raw(a)
 	 --      important to match qe without a boundary following it always?  Can't think of any (noting
 	 --      that the end of input is not an issue because boundary checks for that).
 
-	 local qname, qpos, qtext, qsubs, qsubidx = common.decode_match(q)
+	 local qname, qpos, qtext, qsubs = common.decode_match(q)
 
 	 e = macro_expand(e)
 
@@ -105,13 +103,13 @@ function cooked_to_raw(a)
 	 elseif qname=="question" then
 	    -- a => {e boundary}?
 	 elseif qname=="repetition" then
-	    assert(type(qsubs[qsubidx])=="table")
-	    assert(qsubs[qsubidx], "not getting min clause in cooked_to_raw")
-	    local mname, mpos, mtext = common.decode_match(qsubs[qsubidx])
+	    assert(type(qsubs[1])=="table")
+	    assert(qsubs[1], "not getting min clause in cooked_to_raw")
+	    local mname, mpos, mtext = common.decode_match(qsubs[1])
 	    assert(mname=="low")
 	    min = tonumber(mtext) or 0
-	    assert(qsubs[qsubidx+1], "not getting max clause in cooked_to_raw")
-	    local mname, mpos, mtext = common.decode_match(qsubs[qsubidx+1])
+	    assert(qsubs[2], "not getting max clause in cooked_to_raw")
+	    local mname, mpos, mtext = common.decode_match(qsubs[2])
 	    max = tonumber(mtext)
 	    if (min < 0) or (max and (max < 0)) or (max and (max < min)) then
 	       explain_repetition_error(a, source)
