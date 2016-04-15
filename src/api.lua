@@ -236,60 +236,50 @@ end
 
 api.match = pcall_wrap(match)
    
+local function open3(infilename, outfilename, errfilename)
+   if type(infilename)~="string" then arg_error("bad input file name"); end
+   if type(outfilename)~="string" then arg_error("bad output file name"); end
+   if type(errfilename)~="string" then arg_error("bad error file name"); end   
+   local infile, outfile, errfile, msg
+   if #infilename==0 then infile = io.stdin;
+   else infile, msg = io.open(infilename, "r"); if not infile then error(msg, 0); end; end
+   if #outfilename==0 then outfile = io.stdout
+   else outfile, msg = io.open(outfilename, "w"); if not outfile then error(msg, 0); end; end
+   if #errfilename==0 then errfile = io.stderr;
+   else errfile, msg = io.open(errfilename, "w"); if not errfile then error(msg, 0); end; end
+   return infile, outfile, errfile
+end
+
+-- The match_file function was originally written to use en:match(...) but that's way too slow. 
+-- Should create engine.match_file() to do this work instead.
 local function match_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
-
-   -- Do this checking once.  Should create engine.match_file() to do this.
    if not en.program then
       error(string.format("Engine %s (%s): no program", en.name, en.id))
    end
    local instruction = en.program[1]
    local peg = (instruction.peg * Cp())
+   local infile, outfile, errfile = open3(infilename, outfilename, errfilename);
 
-   if type(infilename)~="string" then arg_error("bad input file name"); end
-   if type(outfilename)~="string" then arg_error("bad output file name"); end
-   if type(errfilename)~="string" then arg_error("bad error file name"); end
---   if outfilename=="" then outfilename = false; end
---   if errfilename=="" then errfilename = false; end
-   local infile, outfile, errfile, msg
-   infile, msg = io.open(infilename, "r")
-   if not infile then error(msg, 0); end
-   outfile, msg = io.open(outfilename, "w")
-   if not outfile then
-      if #outfilename==0 then outfile = io.stdout;
-      else error(msg, 0); end
-   end
-   errfile, msg = io.open(errfilename, "w")
-   if not errfile then
-      if #errfilename==0 then errfile = io.stderr;
-      else error(msg, 0); end
-   end
    local nextline = infile:lines()
    local inlines, outlines, errlines = 0, 0, 0;
    local result, nextpos;
    local l = nextline(); 
    while l do
-      -- This was originally written to use en:match(...) but that's way too slow. 
       result, nextpos = peg:match(l)
-
+      -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
+      -- Send it in a message to stderr?
       if result then
-	 if outfilename then
-	    outfile:write(json.encode(result), "\n")
-	    outlines = outlines + 1
-	 end
+	 outfile:write(json.encode(result), "\n")
+	 outlines = outlines + 1
       else
-	 if errfilename then
-	    errfile:write(l, "\n")
-	    errlines = errlines + 1
-	 end
+	 errfile:write(l, "\n")
+	 errlines = errlines + 1
       end
       inlines = inlines + 1
       l = nextline(); 
    end -- while
-
-   -- !@# What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
-
-   infile:close()
+   if infilename then infile:close(); end
    if outfilename then outfile:close(); end
    if errfilename then errfile:close(); end
    return inlines, outlines, errlines
@@ -301,7 +291,7 @@ local function eval_(id, input_text)
    local en = engine_from_id(id)
    if type(input_text)~="string" then arg_error("input text not a string"); end
 
-   -- abstraction breakage follows:  !@#
+   -- abstraction breakage follows: api should not need to know about engine program structure 
    if not en.program then
       error(string.format("Engine %s (%s): no program", en.name, en.id))
    end
