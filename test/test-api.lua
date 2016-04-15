@@ -397,7 +397,7 @@ macosx_log1 = [[
       ]]
 ok, msg = api.set_match_exp(eid, macosx_log1)
 check(ok)			    
-ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "")
+ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
 check(c_in==4 and c_out==2 and c_err==2, "ensure processing of first lines of test-input")
 
@@ -442,7 +442,9 @@ local function clear_output_and_error_files()
 end
 
 clear_output_and_error_files()
+io.write("\nTesting output to stdout:\n")
 ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "", "/tmp/err")
+io.write("\nEnd of output to stdout\n")
 check(ok)
 --check(c_in==4 and c_out==0 and c_err==2, "ensure processing of ONLY error lines of test-input")
 
@@ -454,7 +456,9 @@ if ok then
 end
 
 clear_output_and_error_files()
+io.write("\nTesting output to stderr:\n")
 ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "")
+io.write("\nEnd of output to stderr\n")
 check(ok)
 --check(c_in==4 and c_out==2 and c_err==0, "ensure processing of ONLY matching lines of test-input")
 
