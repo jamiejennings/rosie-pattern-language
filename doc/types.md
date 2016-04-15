@@ -70,3 +70,4 @@ E.g. changing the pattern being matched in mid-stream (for the multi-line situat
 
 Streaming (like the unix "tail" utility) versus file-based processing.  Streaming requires flushing the output after each write, among other accomodations. 
 
+

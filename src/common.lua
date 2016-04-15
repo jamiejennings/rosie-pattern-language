@@ -241,5 +241,4 @@ end
 
 common.boundary_identifier = "~"
 
-
 return common
