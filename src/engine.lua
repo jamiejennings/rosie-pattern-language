@@ -62,20 +62,26 @@ local locale = lpeg.locale()
 -- match(input_text, start)
 -- Using the stored program, run it against the input, starting at position start.
 
-local function engine_match(e, input, start)
+local function identity_function(...) return ...; end
+
+local function engine_match(e, input, start, encode)
    start = start or 1
+   encode = encode or identity_function
    if not e.program then
       error(string.format("Engine %s (%s): no program", e.name, e.id))
    end
    local instruction = e.program[1]
-   return compile.match_peg(instruction.peg, input, start)
+   local result, nextpos = compile.match_peg(instruction.peg, input, start)
+   return encode(result), nextpos
 end
 
-local function engine_match_using_exp(e, exp, input, start)
+local function engine_match_using_exp(e, exp, input, start, encode)
    start = start or 1
+   encode = encode or identity_function
    local pat, msg = compile.compile_command_line_expression(exp, e.env)
    if not pat then error(msg,0); end
-   return compile.match_peg(pat.peg, input)
+   local result, nextpos = compile.match_peg(pat.peg, input)
+   return encode(result), nextpos
 end
 
 engine.create_function =

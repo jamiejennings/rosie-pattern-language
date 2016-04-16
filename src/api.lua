@@ -12,6 +12,7 @@ require "engine"
 local manifest = require "manifest"
 local json = require "cjson"
 local eval = require "eval"
+require "color-output"
 
 -- temporary:
 require "grep"
@@ -37,7 +38,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --          + Get a copy of the engine environment
 --          + Get identifier definition (human readable, reconstituted)
 --
---        - Match related
+--        + Match related
 --          + match pattern against string
 --          + match pattern against file
 --          + eval pattern against string
@@ -47,7 +48,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 -- 
 
 ----------------------------------------------------------------------------------------
-local api = {VERSION="0.94 alpha"}
+local api = {VERSION="0.95 alpha"}
 ----------------------------------------------------------------------------------------
 
 local engine_list = {}
@@ -202,9 +203,9 @@ local function match_using_exp(id, pattern_exp, input_text)
    local en = engine_from_id(id)
    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
    if type(input_text)~="string" then arg_error("input text not a string"); end
-   local result, nextpos = en:match_using_exp(pattern_exp, input_text)
+   local result, nextpos = en:match_using_exp(pattern_exp, input_text, 1, json.encode)
    if result then
-      return json.encode(result), (#input_text - nextpos + 1)
+      return result, (#input_text - nextpos + 1)
    else
       return false, 0
    end
@@ -226,9 +227,9 @@ api.set_match_exp = pcall_wrap(set_match_exp)
 local function match(id, input_text)
    local en = engine_from_id(id)
    if type(input_text)~="string" then arg_error("input text not a string"); end
-   local result, nextpos = en:match(input_text)
+   local result, nextpos = en:match(input_text, 1, json.encode)
    if result then
-      return json.encode(result), (#input_text - nextpos + 1)
+      return result, (#input_text - nextpos + 1)
    else
       return false, 0
    end
