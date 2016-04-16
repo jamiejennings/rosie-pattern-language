@@ -72,16 +72,18 @@ local function engine_match(e, input, start, encode)
    end
    local instruction = e.program[1]
    local result, nextpos = compile.match_peg(instruction.peg, input, start)
-   return encode(result), nextpos
+   if result then return (encode(result)), nextpos;
+   else return false, 0; end
 end
 
 local function engine_match_using_exp(e, exp, input, start, encode)
    start = start or 1
    encode = encode or identity_function
    local pat, msg = compile.compile_command_line_expression(exp, e.env)
-   if not pat then error(msg,0); end
+   if not pat then error(msg, 0); end
    local result, nextpos = compile.match_peg(pat.peg, input)
-   return encode(result), nextpos
+   if result then return (encode(result)), nextpos;
+   else return false, 0; end
 end
 
 engine.create_function =
