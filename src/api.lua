@@ -198,6 +198,8 @@ api.get_definition = pcall_wrap(get_definition)
 -- Matching
 ----------------------------------------------------------------------------------------
 
+--!@# change to match_configure as a convenience? (one api call to configure and match)
+--!@# OR eliminate this altogether?
 local function match_using_exp(id, pattern_exp, input_text)
    -- returns success flag, json match results, and number of unmatched chars at end
    local en = engine_from_id(id)
@@ -222,8 +224,10 @@ local function configure(id, c_string)
       c.encoder = json.encode;
    elseif c.encoder == "color" then
       c.encoder = color_string_from_leaf_nodes;
-   elseif c.encoder == "" then
-      c.encoder = function(...) return ...; end
+   elseif c.encoder == "text" then
+      c.encoder = function(t) local k,v = next(t); assert(type(v)=="table"); return (v and v.text) or ""; end
+   else
+      arg_error("invalid encoder: " .. tostring(c.encoder));
    end
    return en:configure(c)
 end
@@ -241,10 +245,10 @@ end
 
 api.set_match_exp = pcall_wrap(set_match_exp)
 
-local function match(id, input_text)
+local function match(id, input_text, start)
    local en = engine_from_id(id)
    if type(input_text)~="string" then arg_error("input text not a string"); end
-   local result, nextpos = en:match(input_text, 1, json.encode)
+   local result, nextpos = en:match(input_text, start)
    if result then
       return result, (#input_text - nextpos + 1)
    else
@@ -254,44 +258,36 @@ end
 
 api.match = pcall_wrap(match)
 
--- The match_file function was originally written to use en:match(...) but that's way too slow. 
--- Should create engine.match_file() to do this work instead.
 local function match_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
---   en:configure({encoder=json.encode})
    return en:match_file(infilename, outfilename, errfilename)
 end
 
 api.match_file = pcall_wrap(match_file)
 
-local function eval_(id, input_text)
+--!@# default nextpos should be 1 not 0 !@# !@# !@#
+
+local function eval_(id, input_text, start)
    local en = engine_from_id(id)
    if type(input_text)~="string" then arg_error("input text not a string"); end
-
-   -- abstraction breakage follows: api should not need to know about engine program structure 
-   if not en.program then
-      error(string.format("Engine %s (%s): no program", en.name, en.id))
-   end
-   local pattern = en.program[1]
-
-   local ok, matches, nextpos, msg = eval.eval(pattern, input_text, 1, en.env)
-   if not ok then error(msg, 0); end
+   local result, nextpos, trace = en:eval(input_text, start)
+   if not result then error(nextpos, 0); end
    local leftover = 0;
    if nextpos then leftover = (#input_text - nextpos + 1); end
-   local match_results
-   if matches then
-      assert(type(matches)=="table", "eval should return a table of matches if matching succeeded")
-      match_results = json.encode(matches[1])	    -- null, or a match structure
-      assert((not matches[1]) or (not matches[0]), "eval should return exactly 0 or 1 match")
-   else
-      match_results = false			    -- indicating no matches
-   end
-   return msg, match_results, leftover
-
+   return result, leftover, trace
 end
 
 api.eval = pcall_wrap(eval_)
 
+local function eval_file(id, infilename, outfilename, errfilename)
+   local en = engine_from_id(id)
+   return en:eval_file(infilename, outfilename, errfilename)
+end
+
+api.eval_file = pcall_wrap(eval_file)
+
+
+--!@# Eliminate???
 local function eval_using_exp(id, pattern_exp, input_text)
    -- returns eval trace, json match results, number of unmatched chars at end
    local en = engine_from_id(id)
@@ -326,6 +322,3 @@ end
 api.set_match_exp_grep_TEMPORARY = pcall_wrap(set_match_exp_grep_TEMPORARY)
 
 return api
-
-
-

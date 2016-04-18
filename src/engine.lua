@@ -16,6 +16,7 @@
 --   id: a string meant to be a unique identifier (currently unique in the Lua state)
 
 local compile = require "compile"
+local eval = require "eval"
 local recordtype = require("recordtype")
 local unspecified = recordtype.unspecified;
 
@@ -28,6 +29,7 @@ engine =
       --
       match=false;
       match_file=false;
+      eval=false;
       configure=false;
       inspect=false;
       match_using_exp=false;
@@ -47,7 +49,7 @@ local function engine_error(e, msg)
 end
 
 local function no_pattern(e)
-   engine_error("no pattern configured")
+   engine_error(e, "no pattern configured")
 end
 
 local function engine_configure(e, configuration)
@@ -80,6 +82,18 @@ local function engine_match(e, input, start)
    local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
    if result then return (e.config.encoder(result)), nextpos;
    else return false, 0; end
+end
+
+local function engine_eval(e, input, start)
+   start = start or 1
+   if not e.config.pattern then no_pattern(e); end
+   local ok, matches, nextpos, trace = eval.eval(e.config.pattern, input, 1, e.env)
+   if not ok then return false, matches; end
+   if matches then
+      assert(type(matches)=="table", "eval should return a table, not this: " .. tostring(matches))
+      assert(not matches[2], "eval should return exactly 0 or 1 match")
+      return (e.config.encoder(matches[1])), nextpos, trace
+   else return "", 0, trace; end
 end
 
 local function engine_match_using_exp(e, exp, input, start, encoder_fn)
@@ -143,6 +157,7 @@ engine.create_function =
 		  config={},
 		  match=engine_match,
 		  match_file=engine_match_file,
+		  eval=engine_eval,
 		  configure=engine_configure,
 		  inspect=engine_inspect,
 		  match_using_exp=engine_match_using_exp}
