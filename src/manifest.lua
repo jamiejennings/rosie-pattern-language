@@ -28,9 +28,9 @@ local manifest_engine = engine("manifest", compile.new_env())
 local ok, msg = compile.compile(mpats, manifest_engine.env)
 if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
 assert(pattern.is(manifest_engine.env.line))
-local result, msg = compile.compile_command_line_expression('line', manifest_engine.env)
-if not result then error("Internal error: can't compile manifest top level defn: " .. tostring(msg)); end
-manifest_engine.program = { result }
+--local result, msg = compile.compile_command_line_expression('line', manifest_engine.env)
+--if not result then error("Internal error: can't compile manifest top level defn: " .. tostring(msg)); end
+manifest_engine:configure({ expression = "line" })
 
 local function process_manifest_line(en, line)
    local m = manifest_engine:match(line)

@@ -12,7 +12,7 @@
 ----------------------------------------------------------------------------------------
 -- A matching engine is a Lua object that has state as follows:
 --   env: environment of defined patterns
---   program: the pattern being matched (in earlier versions, this was a multi-step program)
+--   config: various configuration settings, including the default pattern to match
 --   id: a string meant to be a unique identifier (currently unique in the Lua state)
 
 local compile = require "compile"
@@ -23,10 +23,12 @@ engine =
    recordtype.define(
    {  name=unspecified;				    -- for reference, debugging
       env=false;
-      program=false;
+      config=false;
       id=unspecified;
       --
       match=false;
+      configure=false;
+      inspect=false;
       match_using_exp=false;
   },
    "engine"
@@ -35,53 +37,45 @@ engine =
 engine.tostring_function = function(orig, e)
 			      return '<engine: '..tostring(e.name)..' ('.. e.id ..')>'; end
 
--- This used to work.  Maybe should put this capability back into recordtypes?
---
---    engine.set_slot_function = 
---       function(set_slot, self, slot, value)
---          if slot=="program" then
---             if not pattern.is(value) then
---                error("Invalid engine program: " .. tostring(value)) 
---             end
---             set_slot(self, slot, value)
---          else -- switch on slot name
---             error('Cannot set this engine property: ' .. slot)
---          end
---       end
---
-
 local locale = lpeg.locale()
-
---local function engine_set_program(e, pat)
---   -- for now, a program is a list of one pattern (earlier versions had more...)
---   if not pattern.is(pat) then error("Invalid program: " .. tostring(pat)); end
---   e.program = { pat }
---   return true
---end
-
--- match(input_text, start)
--- Using the stored program, run it against the input, starting at position start.
 
 local function identity_function(...) return ...; end
 
-local function engine_match(e, input, start, encode)
-   start = start or 1
-   encode = encode or identity_function
-   if not e.program then
-      error(string.format("Engine %s (%s): no program", e.name, e.id))
+local function engine_error(e, msg)
+   error(string.format("Engine %s (%s): %s", e.name, e.id, tostring(msg)), 0)
+end
+
+local function engine_configure(e, configuration)
+   assert(type(configuration)=="table", "engine configuration not a table: " .. tostring(configuration))
+   if configuration.expression then
+      e.config.expression = configuration.expression
+      local pat, msg = compile.compile_command_line_expression(configuration.expression, e.env)
+      if not pat then engine_error(msg); end
+      e.config.pattern = pat
    end
-   local instruction = e.program[1]
-   local result, nextpos = compile.match_peg(instruction.peg, input, start)
+   if configuration.encoder then
+      e.config.encoder = configuration.encoder
+   end
+end
+
+local function engine_inspect(e)
+   return e.name, copy_table(e.config)
+end
+
+local function engine_match(e, input, start)
+   start = start or 1
+   local encode = e.config.encoder or identity_function
+   if not e.config.pattern then engine_error(e, "no pattern configured"); end
+   local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
    if result then return (encode(result)), nextpos;
    else return false, 0; end
 end
 
-local function engine_match_using_exp(e, exp, input, start, encode)
+local function engine_match_using_exp(e, exp, input, start, encoder_fn)
+   engine_configure(e, {expression=exp, encoder=encoder_fn})
    start = start or 1
-   encode = encode or identity_function
-   local pat, msg = compile.compile_command_line_expression(exp, e.env)
-   if not pat then error(msg, 0); end
-   local result, nextpos = compile.match_peg(pat.peg, input)
+   local encode = e.config.encoder or identity_function
+   local result, nextpos = compile.match_peg(e.config.pattern.peg, input)
    if result then return (encode(result)), nextpos;
    else return false, 0; end
 end
@@ -94,54 +88,10 @@ engine.create_function =
       return _new{name=name,
 		  env=initial_env,
 		  id=id,
+		  config={},
 		  match=engine_match,
+		  configure=engine_configure,
+		  inspect=engine_inspect,
 		  match_using_exp=engine_match_using_exp}
    end
-
-----------------------------------------------------------------------------------------
--- The functions below are used in run.lua to process input files
-----------------------------------------------------------------------------------------
-
--- return a flat list of matches
---    function grep_match_peg(peg, input, first_only)
---       -- search for first occurrence
---       local len = #input
---       local results = {}
---       local result
---       local pos = 1
---       local prev = 1
---       peg = peg * lpeg.Cp()
---
---       -- Note on looping:
---       -- It's possible for a pattern to match the empty string, and so we can get to a state where
---       -- that is the only match, even though there is still non-matching input left.  Since an empty
---       -- match consumes nothing, the pos will remain the same.  We look for when pos does not
---       -- advance, and end the loop.
---
---       while true do
---          result, pos = peg:match(input, prev)      -- result is one match or none
---          if pos then table.insert(results, result); end
---          if (not pos) or                           -- no more matches
---             (pos > len) or                         -- ran out of input
---             (pos == prev) or               -- looping (see below)
---             first_only                     -- only want first result
---          then return results; end
---          prev = pos
---       end -- while
---    end
-
---    -- A "finder peg" searches in a string for the first match of peg.  This should be implemented as
---    -- a macro (transformation on ASTs) at some point.
---    function peg_to_finder_peg(peg)
---       return lpeg.P(1 - peg)^0 * peg
---    end
---
---    function grep_match_compile_to_peg(exp_source, env)
---       local peg = compile.compile_command_line_expression(exp_source, env, false) -- NOT using raw mode
---       if peg then 
---          return peg.peg and peg_to_finder_peg(peg.peg)
---       else
---          return nil
---       end
---    end
 

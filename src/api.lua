@@ -77,13 +77,13 @@ end
 
 api.delete_engine = pcall_wrap(delete_engine)
 
-local function ping_engine(id)
+local function ping_engine(id)			    --!@# rename to 'inspect'?
    if type(id)~="string" then
       arg_error("engine id not a string")
    end
    local en = engine_list[id]
    if en then
-      return en.name
+      return en:inspect()
    else
       arg_error("invalid engine id")
    end
@@ -216,9 +216,9 @@ api.match_using_exp = pcall_wrap(match_using_exp)
 local function set_match_exp(id, pattern_exp)
    local en = engine_from_id(id)
    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
-   local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
-   if not pat then error(msg,0); end
-   en.program = { pat }
+--   local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
+--   if not pat then error(msg,0); end
+   en:configure({ expression = pattern_exp })
    return ""
 end
 
@@ -255,11 +255,10 @@ end
 -- Should create engine.match_file() to do this work instead.
 local function match_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
-   if not en.program then
-      error(string.format("Engine %s (%s): no program", en.name, en.id))
+   if not en.config.pattern then
+      error(string.format("Engine %s (%s): no pattern", en.name, en.id))
    end
-   local instruction = en.program[1]
-   local peg = (instruction.peg * Cp())
+   local peg = (en.config.pattern.peg * Cp())
    local infile, outfile, errfile = open3(infilename, outfilename, errfilename);
 
    local nextline = infile:lines()
