@@ -378,11 +378,11 @@ check(not ok)
 check(msg==arg_err_engine_id)
 ok, msg = api.match_file(eid)
 check(not ok)
-check(msg=="Argument error: bad input file name")
+check(msg:find(": bad input file name"))
 
 ok, msg = api.match_file(eid, ROSIE_HOME.."/test/test-input")
 check(not ok)
-check(msg=="Argument error: bad output file name")
+check(msg:find(": bad output file name"))
 
 ok, msg = api.match_file(eid, "thisfiledoesnotexist", "", "")
 check(not ok, "can't match against nonexistent file")

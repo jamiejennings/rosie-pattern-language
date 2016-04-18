@@ -157,6 +157,7 @@ function process_pattern_against_file()
 	 success, msg = api.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern)
       else
 	 success, msg = api.set_match_exp(CL_ENGINE, opt_pattern)
+	 if success then success, msg = api.configure(CL_ENGINE, json.encode{encoder="json"}); end
       end
       if not success then
 	 io.write(msg, "\n")
@@ -195,13 +196,15 @@ function process_pattern_against_file()
    
 -- THIS IS THE FAST VERSION:
 --
---   do
---      print("Temporarily using api.match_file")
---      local ok, msg = api.match_file(CL_ENGINE, opt_filename, "/tmp/outfile", "/dev/null")
---      if not ok then error("TEMP: " .. msg); end
---      print("End");
---      os.exit(0)
---   end
+  do
+     print("Temporarily using api.match_file")
+     local ok, msg = api.configure(CL_ENGINE, json.encode{encoder="color"})
+     if not ok then error("TEMP: " .. msg); end
+     local ok, msg = api.match_file(CL_ENGINE, opt_filename, "", "")
+     if not ok then error("TEMP: " .. msg); end
+     print("End");
+     os.exit(0)
+   end
 
    -- (4) Iterate through the lines in the input file
    if opt_filename=="-" then opt_filename = nil; end -- read from stdin

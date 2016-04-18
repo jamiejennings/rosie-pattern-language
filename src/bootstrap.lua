@@ -38,7 +38,7 @@ function bootstrap()
    compile.compile_core(ROSIE_HOME.."/src/rosie-core.rpl", ROSIE_ENGINE.env)
    local success, result = compile.core_compile_command_line_expression('rpl', ROSIE_ENGINE.env)
    if not success then error("Bootstrap error: could not compile rosie core rpl: " .. tostring(result)); end
-   ROSIE_ENGINE.config = ({ expression='rpl'; pattern=success })
+   ROSIE_ENGINE.config = ({ expression='rpl', pattern=success, encoder=function(...) return ...; end })
    BOOTSTRAP_COMPLETE = true
 end
 

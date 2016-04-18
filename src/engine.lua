@@ -27,6 +27,7 @@ engine =
       id=unspecified;
       --
       match=false;
+      match_file=false;
       configure=false;
       inspect=false;
       match_using_exp=false;
@@ -45,6 +46,10 @@ local function engine_error(e, msg)
    error(string.format("Engine %s (%s): %s", e.name, e.id, tostring(msg)), 0)
 end
 
+local function no_pattern(e)
+   engine_error("no pattern configured")
+end
+
 local function engine_configure(e, configuration)
    assert(type(configuration)=="table", "engine configuration not a table: " .. tostring(configuration))
    if configuration.expression then
@@ -56,6 +61,13 @@ local function engine_configure(e, configuration)
    if configuration.encoder then
       e.config.encoder = configuration.encoder
    end
+   if configuration.pattern then		    -- need this for grep functionality, FOR NOW
+      e.config.pattern = configuration.pattern
+   end
+   --
+   -- Ensure some reasonable defaults when we can
+   --
+   e.config.encoder = e.config.encoder or identity_function
 end
 
 local function engine_inspect(e)
@@ -64,20 +76,60 @@ end
 
 local function engine_match(e, input, start)
    start = start or 1
-   local encode = e.config.encoder or identity_function
-   if not e.config.pattern then engine_error(e, "no pattern configured"); end
+   if not e.config.pattern then no_pattern(e); end
    local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
-   if result then return (encode(result)), nextpos;
+   if result then return (e.config.encoder(result)), nextpos;
    else return false, 0; end
 end
 
 local function engine_match_using_exp(e, exp, input, start, encoder_fn)
    engine_configure(e, {expression=exp, encoder=encoder_fn})
    start = start or 1
-   local encode = e.config.encoder or identity_function
    local result, nextpos = compile.match_peg(e.config.pattern.peg, input)
-   if result then return (encode(result)), nextpos;
+   if result then return (e.config.encoder(result)), nextpos;
    else return false, 0; end
+end
+
+local function open3(e, infilename, outfilename, errfilename)
+   if type(infilename)~="string" then engine_error(e, "bad input file name"); end
+   if type(outfilename)~="string" then engine_error(e, "bad output file name"); end
+   if type(errfilename)~="string" then engine_error(e, "bad error file name"); end   
+   local infile, outfile, errfile, msg
+   if #infilename==0 then infile = io.stdin;
+   else infile, msg = io.open(infilename, "r"); if not infile then error(msg, 0); end; end
+   if #outfilename==0 then outfile = io.stdout
+   else outfile, msg = io.open(outfilename, "w"); if not outfile then error(msg, 0); end; end
+   if #errfilename==0 then errfile = io.stderr;
+   else errfile, msg = io.open(errfilename, "w"); if not errfile then error(msg, 0); end; end
+   return infile, outfile, errfile
+end
+
+local function engine_match_file(e, infilename, outfilename, errfilename)
+   if not e.config.pattern then no_pattern(e); end
+   local peg = (e.config.pattern.peg * Cp())
+   local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
+
+   local inlines, outlines, errlines = 0, 0, 0;
+   local result, nextpos;
+   local encode = e.config.encoder;
+   local nextline = infile:lines();
+   local l = nextline(); 
+   while l do
+      result, nextpos = peg:match(l)
+      -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
+      -- Send it in a message to stderr?
+      if result then
+	 outfile:write(encode(result), "\n")
+	 outlines = outlines + 1
+      else
+	 errfile:write(l, "\n")
+	 errlines = errlines + 1
+      end
+      inlines = inlines + 1
+      l = nextline(); 
+   end -- while
+   infile:close(); outfile:close(); errfile:close();
+   return inlines, outlines, errlines
 end
 
 engine.create_function =
@@ -90,6 +142,7 @@ engine.create_function =
 		  id=id,
 		  config={},
 		  match=engine_match,
+		  match_file=engine_match_file,
 		  configure=engine_configure,
 		  inspect=engine_inspect,
 		  match_using_exp=engine_match_using_exp}

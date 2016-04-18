@@ -213,6 +213,23 @@ end
    
 api.match_using_exp = pcall_wrap(match_using_exp)
 
+local function configure(id, c_string)
+   if type(c_string)~="string" then
+      arg_error("configuration not a (JSON) string: " .. tostring(c_string)); end
+   local en = engine_from_id(id)
+   local c = json.decode(c_string)
+   if c.encoder == "json" then
+      c.encoder = json.encode;
+   elseif c.encoder == "color" then
+      c.encoder = color_string_from_leaf_nodes;
+   elseif c.encoder == "" then
+      c.encoder = function(...) return ...; end
+   end
+   return en:configure(c)
+end
+
+api.configure = pcall_wrap(configure)
+   
 local function set_match_exp(id, pattern_exp)
    local en = engine_from_id(id)
    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
@@ -236,53 +253,13 @@ local function match(id, input_text)
 end
 
 api.match = pcall_wrap(match)
-   
-local function open3(infilename, outfilename, errfilename)
-   if type(infilename)~="string" then arg_error("bad input file name"); end
-   if type(outfilename)~="string" then arg_error("bad output file name"); end
-   if type(errfilename)~="string" then arg_error("bad error file name"); end   
-   local infile, outfile, errfile, msg
-   if #infilename==0 then infile = io.stdin;
-   else infile, msg = io.open(infilename, "r"); if not infile then error(msg, 0); end; end
-   if #outfilename==0 then outfile = io.stdout
-   else outfile, msg = io.open(outfilename, "w"); if not outfile then error(msg, 0); end; end
-   if #errfilename==0 then errfile = io.stderr;
-   else errfile, msg = io.open(errfilename, "w"); if not errfile then error(msg, 0); end; end
-   return infile, outfile, errfile
-end
 
 -- The match_file function was originally written to use en:match(...) but that's way too slow. 
 -- Should create engine.match_file() to do this work instead.
 local function match_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
-   if not en.config.pattern then
-      error(string.format("Engine %s (%s): no pattern", en.name, en.id))
-   end
-   local peg = (en.config.pattern.peg * Cp())
-   local infile, outfile, errfile = open3(infilename, outfilename, errfilename);
-
-   local nextline = infile:lines()
-   local inlines, outlines, errlines = 0, 0, 0;
-   local result, nextpos;
-   local l = nextline(); 
-   while l do
-      result, nextpos = peg:match(l)
-      -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
-      -- Send it in a message to stderr?
-      if result then
-	 outfile:write(json.encode(result), "\n")
-	 outlines = outlines + 1
-      else
-	 errfile:write(l, "\n")
-	 errlines = errlines + 1
-      end
-      inlines = inlines + 1
-      l = nextline(); 
-   end -- while
-   if infilename then infile:close(); end
-   if outfilename then outfile:close(); end
-   if errfilename then errfile:close(); end
-   return inlines, outlines, errlines
+--   en:configure({encoder=json.encode})
+   return en:match_file(infilename, outfilename, errfilename)
 end
 
 api.match_file = pcall_wrap(match_file)
@@ -342,7 +319,7 @@ api.eval_using_exp = pcall_wrap(eval_using_exp)
 local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    local en = engine_from_id(id)
    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
-   en.program = { pattern_EXP_to_grep_pattern(pattern_exp, en.env) }
+   en:configure({ pattern = pattern_EXP_to_grep_pattern(pattern_exp, en.env) })
    return ""
 end   
 

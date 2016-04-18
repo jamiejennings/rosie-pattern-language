@@ -156,3 +156,20 @@ function color_write(channel, color, ...)
    end
    channel:write(reset_color_attributes)
 end
+
+function color_string_from_leaf_nodes(t)
+   -- t is a match
+   local output = ""
+   local name, pos, text, subs = common.decode_match(t)
+   if (not subs) or (#subs==0) then
+      -- already at a leaf node
+      local cname, ccode = color(name)
+      text = tostring(text);			    -- just in case!
+      return ccode .. text .. reset_color_attributes .. " ";
+   else
+      for i = 1, #subs do
+	 output = output .. color_string_from_leaf_nodes(subs[i]);
+      end -- for all sub-matches
+      return output
+   end
+end
