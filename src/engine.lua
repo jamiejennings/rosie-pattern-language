@@ -32,7 +32,7 @@ engine =
       eval=false;
       configure=false;
       inspect=false;
-      match_using_exp=false;
+--      match_using_exp=false;
   },
    "engine"
 )
@@ -57,7 +57,7 @@ local function engine_configure(e, configuration)
    if configuration.expression then
       e.config.expression = configuration.expression
       local pat, msg = compile.compile_command_line_expression(configuration.expression, e.env)
-      if not pat then engine_error(msg); end
+      if not pat then engine_error(e, msg); end
       e.config.pattern = pat
    end
    if configuration.encoder then
@@ -93,16 +93,16 @@ local function engine_eval(e, input, start)
       assert(type(matches)=="table", "eval should return a table, not this: " .. tostring(matches))
       assert(not matches[2], "eval should return exactly 0 or 1 match")
       return (e.config.encoder(matches[1])), nextpos, trace
-   else return "", 0, trace; end
+   else return false, 0, trace; end
 end
 
-local function engine_match_using_exp(e, exp, input, start, encoder_fn)
-   engine_configure(e, {expression=exp, encoder=encoder_fn})
-   start = start or 1
-   local result, nextpos = compile.match_peg(e.config.pattern.peg, input)
-   if result then return (e.config.encoder(result)), nextpos;
-   else return false, 0; end
-end
+-- local function engine_match_using_exp(e, exp, input, start, encoder_fn)
+--    engine_configure(e, {expression=exp, encoder=encoder_fn})
+--    start = start or 1
+--    local result, nextpos = compile.match_peg(e.config.pattern.peg, input)
+--    if result then return (e.config.encoder(result)), nextpos;
+--    else return false, 0; end
+-- end
 
 local function open3(e, infilename, outfilename, errfilename)
    if type(infilename)~="string" then engine_error(e, "bad input file name"); end
@@ -159,7 +159,6 @@ engine.create_function =
 		  match_file=engine_match_file,
 		  eval=engine_eval,
 		  configure=engine_configure,
-		  inspect=engine_inspect,
-		  match_using_exp=engine_match_using_exp}
+		  inspect=engine_inspect}
    end
 

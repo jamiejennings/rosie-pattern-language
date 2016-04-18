@@ -151,7 +151,7 @@ function process_pattern_against_file()
       if OPTION["-grep"] then
 	 success, msg = api.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern)
       else
-	 success, msg = api.set_match_exp(CL_ENGINE, opt_pattern)
+	 success, msg = api.configure(CL_ENGINE, json.encode{expression=opt_pattern, encoder="json"})
       end
       if not success then io.write(msg, "\n"); os.exit(-1); end
    end
