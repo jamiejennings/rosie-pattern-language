@@ -45,8 +45,8 @@ local function print_match(m, left, eval_p)
    else
       local msg = "Repl: No match"
       if not eval_p then
-	 msg = msg .. ((debug and " (turn debug off to hide the match trace)")
-		    or " (turn debug on to show the match trace)")
+	 msg = msg .. ((debug and "  (turn debug off to hide the match evaluation trace)")
+		    or "  (turn debug on to show the match evaluation trace)")
       end
       print(msg)
    end

@@ -58,6 +58,17 @@ local function arg_error(msg)
    error("Argument error: " .. msg, 0)
 end
 
+local function engine_from_id(id)
+   if type(id)~="string" then
+      arg_error("engine id not a string")
+   end
+   local en = engine_list[id]
+   if (not engine.is(en)) then
+      arg_error("invalid engine id")
+   end
+   return en
+end
+
 local function pcall_wrap(f)
    return function(...)
 	     return pcall(f, ...)
@@ -79,15 +90,9 @@ end
 api.delete_engine = pcall_wrap(delete_engine)
 
 local function inspect_engine(id)
-   if type(id)~="string" then
-      arg_error("engine id not a string")
-   end
-   local en = engine_list[id]
-   if en then
-      return en:inspect()
-   else
-      arg_error("invalid engine id")
-   end
+   local en = engine_from_id(id)
+   local name, config = en:inspect()
+   return name, json.encode(config)
 end
 
 api.inspect_engine = pcall_wrap(inspect_engine)
@@ -105,17 +110,6 @@ local function new_engine(optional_name)	    -- optional manifest? file list? co
 end
 
 api.new_engine = pcall_wrap(new_engine)
-
-local function engine_from_id(id)
-   if type(id)~="string" then
-      arg_error("engine id not a string")
-   end
-   local en = engine_list[id]
-   if (not engine.is(en)) then
-      arg_error("invalid engine id")
-   end
-   return en
-end
 
 local function get_env(id)
    local en = engine_from_id(id)

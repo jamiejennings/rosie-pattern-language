@@ -74,7 +74,9 @@ local function engine_configure(e, configuration)
 end
 
 local function engine_inspect(e)
-   return e.name, copy_table(e.config)
+   local representation = {}
+   for k,v in pairs(e.config) do representation[k]=tostring(v); end
+   return e.name, representation
 end
 
 local function engine_match(e, input, start)
