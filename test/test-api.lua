@@ -506,7 +506,7 @@ check(ok)
 ok, match, leftover, msg = api.eval(eid, "foo")
 check(ok)
 check(not match)
-check(leftover==4)
+check(leftover==3)
 check(msg:find('FAILED to match against input "foo"')) -- % is esc char
 
 ok, msg = api.configure(eid, json.encode{expression="[:alpha:]*", encoder="json"})

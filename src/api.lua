@@ -239,8 +239,6 @@ end
 
 api.match_file = pcall_wrap(match_file)
 
---!@# default nextpos should be 1 not 0 !@# !@# !@#
-
 local function eval_(id, input_text, start)
    local en = engine_from_id(id)
    if type(input_text)~="string" then arg_error("input text not a string"); end
@@ -258,8 +256,6 @@ local function eval_file(id, infilename, outfilename, errfilename)
 end
 
 api.eval_file = pcall_wrap(eval_file)
--- debugging:
---api.eval_file = function(...) return true, eval_file(...); end
 
 local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    local en = engine_from_id(id)

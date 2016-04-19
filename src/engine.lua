@@ -82,7 +82,7 @@ local function engine_match(e, input, start)
    if not e.config.pattern then no_pattern(e); end
    local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
    if result then return (e.config.encoder(result)), nextpos;
-   else return false, 0; end
+   else return false, 1; end
 end
 
 local function engine_eval(e, input, start)
@@ -94,7 +94,7 @@ local function engine_eval(e, input, start)
       assert(type(matches)=="table", "eval should return a table, not this: " .. tostring(matches))
       assert(not matches[2], "eval should return exactly 0 or 1 match")
       return (e.config.encoder(matches[1])), nextpos, trace
-   else return false, 0, trace; end
+   else return false, 1, trace; end
 end
 
 local function open3(e, infilename, outfilename, errfilename)
