@@ -280,7 +280,6 @@ api.eval = pcall_wrap(eval_)
 
 local function eval_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
-   error("ENGINE eval_file NOT IMPLEMENTED")
    return en:eval_file(infilename, outfilename, errfilename)
 end
 

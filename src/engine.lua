@@ -30,6 +30,7 @@ engine =
       match=false;
       match_file=false;
       eval=false;
+      eval_file=false;
       configure=false;
       inspect=false;
 --      match_using_exp=false;
@@ -118,18 +119,20 @@ local function open3(e, infilename, outfilename, errfilename)
    return infile, outfile, errfile
 end
 
-local function engine_match_file(e, infilename, outfilename, errfilename)
+local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename)
    if not e.config.pattern then no_pattern(e); end
    local peg = (e.config.pattern.peg * Cp())
+   if not (eval_flag==true or eval_flag==false) then engine_error(e, "bad eval flag"); end
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
 
    local inlines, outlines, errlines = 0, 0, 0;
-   local result, nextpos;
-   local encode = e.config.encoder;
+   local result, nextpos, m;
+   local encode = (eval_flag and identity_function) or e.config.encoder;
    local nextline = infile:lines();
    local l = nextline(); 
    while l do
-      result, nextpos = peg:match(l)
+      if eval_flag then m, nextpos, result = engine_eval(e, l);
+      else result, nextpos = peg:match(l); end
       -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
       -- Send it in a message to stderr?
       if result then
@@ -146,6 +149,14 @@ local function engine_match_file(e, infilename, outfilename, errfilename)
    return inlines, outlines, errlines
 end
 
+local function engine_match_file(e, infilename, outfilename, errfilename)
+   return engine_process_file(e, false, infilename, outfilename, errfilename)
+end
+
+local function engine_eval_file(e, infilename, outfilename, errfilename)
+   return engine_process_file(e, true, infilename, outfilename, errfilename)
+end
+
 engine.create_function =
    function(_new, name, initial_env)
       initial_env = initial_env or compile.new_env()
@@ -158,6 +169,7 @@ engine.create_function =
 		  match=engine_match,
 		  match_file=engine_match_file,
 		  eval=engine_eval,
+		  eval_file=engine_eval_file,
 		  configure=engine_configure,
 		  inspect=engine_inspect}
    end
