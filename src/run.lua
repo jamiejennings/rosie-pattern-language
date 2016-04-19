@@ -13,12 +13,9 @@
 -- Rosie installation (not a relative path such as one starting with . or ..), and SCRIPTNAME set
 -- to arg[0] of the shell script that invoked this code.
 --
--- If the Lua binary that runs this script is called with the interactive ("-i") switch, then this
--- the interactive Lua session will start after the code in this file ends.
---
--- "-D" is an undocumented command line switch which, when it appears as the first command line
--- argument to the Rosie run script, will launch Rosie in development mode.  This file does not
--- need to process that switch.
+-- "-D" is an 'undocumented' command line switch which, when it appears as the first command line
+-- argument to the Rosie run script, will launch Rosie in development mode.  The code below does
+-- not need to process that switch.
 
 if not ROSIE_HOME then
    io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
@@ -29,12 +26,12 @@ end
 --    os.exit(-2)
 -- end
 
+-- Start the Rosie Pattern Engine
 dofile(ROSIE_HOME.."/src/bootstrap.lua")
 bootstrap()
 
 local common = require "common"
 local api = require "api"
-require "color-output"
 local json = require "cjson"
 require("repl")
 
@@ -45,8 +42,7 @@ local function greeting()
    io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")
 end
 
-local valid_options = {"-help", "-patterns", "-verbose", "-json", "-nooutput", "-nocolor",
-		       "-repl", "-manifest", "-grep", "-debug"}
+local valid_options = {"-help", "-patterns", "-verbose", "-json", "-nocolor", "-all", "-repl", "-manifest", "-grep", "-eval"}
 
 local function valid_option_is(opt)
    for i,v in ipairs(valid_options) do
@@ -118,12 +114,11 @@ function help()
    print("  -patterns       read manifest file, compile patterns, show pattern list (but process no input)")
    print("  -json           produce output in JSON instead of color text")
    print("                  (the default is terminal window output, with recognized items shown in color")
-   print("  -nooutput       generate no output to standard out; useful when interested only in unparsed lines")
-   print("                  (information and errors, including unparsed input, are sent to standard error")
-   print("  -nocolor        do not output the escape sequences that show color text in terminal windows")
-   print("  -debug          output a detailed listing of how the pattern matched the input;")
+   print("  -nocolor        output the matching text only (no escape sequences for color)")
+   print("  -all            output everything: matches to stdout and non-matching lines to stderr")
+   print("  -eval           output a detailed \"trace\" evaluation of how the pattern processed the input;")
    print("                  this feature generates LOTS of output, so best to use it on ONE LINE OF INPUT;")
-   print("  -grep           emulate grep, but with RPL, by searching for all occurrences of <pattern> (interpreted in RAW mode) in the input")
+   print("  -grep           emulate grep, but with RPL, by searching for all occurrences of <pattern> in the input")
    print("  -manifest <fn>  load the manifest file <fn> instead of MANIFEST from the Rosie install directory")
    print()
    print("  <pattern>       RPL expression, which may be the name of a defined pattern, against which each line will be matched")
@@ -131,17 +126,17 @@ function help()
    print()
    print("Notes: ")
    print("(1) lines from the input file for which the pattern does NOT match are written to stderr so they can be redirected, e.g. to /dev/null")
-   print("(2) the -debug option currently does not work with the -grep option")
+   print("(2) the -eval option currently does not work with the -grep option")
    print("(3) to load no manifest file at all, supply a single dash as the filename argument: -manifest -")
    print()
 end
 
 function process_pattern_against_file()
-   if OPTION["-grep"] and OPTION["-debug"] then
-      print("Error: currently, the -grep option and the -debug option are incompatible.  Use one or the other.")
+   if OPTION["-grep"] and OPTION["-eval"] then
+      print("Error: currently, the -grep option and the -eval option are incompatible.  Use one or the other.")
       os.exit(-1)
    end
-   local debug = OPTION["-debug"]
+   local eval = OPTION["-eval"]
    -- (1) Load the manifest
    if opt_manifest then
       local success, msg = api.load_manifest(CL_ENGINE, opt_manifest)
@@ -156,76 +151,35 @@ function process_pattern_against_file()
       if OPTION["-grep"] then
 	 success, msg = api.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern)
       else
-	 success, msg = api.set_match_exp(CL_ENGINE, opt_pattern)
+	 success, msg = api.configure(CL_ENGINE, json.encode{expression=opt_pattern, encoder="json"})
       end
-      if not success then
-	 io.write(msg, "\n")
-	 os.exit(-1)
-      end
+      if not success then io.write(msg, "\n"); os.exit(-1); end
    end
-   -- (3) Set up the match and output functions
-   local match_function, default_output_function;
-   if debug then
-      match_function = api.eval
-   else
-      match_function = api.match
-   end
-   default_output_function =
-      function(t)
-	 color_print_leaf_nodes(json.decode(t))	    -- inefficient
-	 io.write("\n")
-      end
-   if OPTION["-nooutput"] then
-      output_function = function(t) return; end;
-   elseif OPTION["-debug"] then
-      output_function = print
-   elseif OPTION["-json"] then
-      output_function = function(t) io.write(t, "\n"); end;
-   elseif OPTION["-nocolor"] then
-      output_function =
-	 function(t)
-	    -- the json.decode here is inefficient because t was json encoded by the api just
-	    -- before it was returned to us
-	    local name, pos, text, subs, subidx = common.decode_match(json.decode(t));
-	    io.write(text, "\n")
-	 end
-   else
-      output_function = default_output_function;
-   end
-   
--- THIS IS THE FAST VERSION:
---
---   do
---      print("Temporarily using api.match_file")
---      local ok, msg = api.match_file(CL_ENGINE, opt_filename, "/tmp/outfile", "/dev/null")
---      if not ok then error("TEMP: " .. msg); end
---      print("End");
---      os.exit(0)
---   end
 
-   -- (4) Iterate through the lines in the input file
-   if opt_filename=="-" then opt_filename = nil; end -- read from stdin
-   local nextline = io.lines(opt_filename);
-   local lines = 0;
-   local l = nextline(); 
-   local ok, t;
-   while l do
-      ok, t = match_function(CL_ENGINE, l);
-      if not ok then error(t); end		    -- api call failed, t is message
-      if t then
-	 output_function(t)
-      else
-	 -- pattern did not match
-	 if not QUIET then
-	    io.stderr:write("Pattern did not match: ", l, "\n");
-	 end
-      end
-      lines = lines + 1;
-      l = nextline(); 
-   end
-   -- (5) Print summary
+   -- (3) Set up the input, output and error parameters
+   infilename = opt_filename
+   if opt_filename=="-" then infilename = ""; end   -- stdin
+   outfilename = ""				    -- stdout
+   errfilename = "/dev/null"
+   if OPTION["-all"] then errfilename = ""; end	    -- stderr
+
+   -- (4) Set up what kind of encoding we want done on the output
+   encoder = "color"
+   if OPTION["-json"] then encoder = "json"
+   elseif OPTION["-nocolor"] then encoder = "text"; end
+   success, msg = api.configure(CL_ENGINE, json.encode{encoder=encoder})
+   if not success then io.write(msg, "\n"); os.exit(-1); end
+
+   -- (5) Iterate through the lines in the input file
+   local match_function = api.match_file
+   if eval then match_function = api.eval_file; end
+   local ok, cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename)
+   if not ok then io.write(cin, "\n"); os.exit(-1); end
+
+   -- (6) Print summary
    if not QUIET then
-      io.stderr:write("Rosie: " .. lines .. " input lines processed.\n")
+      local fmt = "Rosie: %d input items processed (%d matches, %d items unmatched)\n"
+      io.stderr:write(string.format(fmt, cin, cout, cerr))
    end
 end
 
@@ -282,8 +236,3 @@ else
    if not QUIET then greeting(); end
    process_pattern_against_file()
 end
-
-
-
-
-

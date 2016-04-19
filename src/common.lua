@@ -106,7 +106,7 @@ function common.walk_ast(a, functions, ...)
    assert(type(a)=="table", "walk_ast: first argument not an ast "..tostring(a))
    assert(type(a[1])~="table", "walk_ast first argument not an ast (maybe it's a list of ast's?): "..tostring(a))
    assert(type(functions)=="table")
-   local name, pos, text, subs, subidx = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
    local f = functions[name]
    if not f then f = functions.default; end
    if not f then
@@ -150,19 +150,19 @@ end
 
 function common.decode_match(t)
    local name, rest = next(t)
-   return name, rest.pos, rest.text, rest.subs[1] and rest.subs, rest.subs[1] and 1
+   return name, rest.pos, rest.text, (rest.subs[1] and rest.subs)
 end
 
 -- verify that a match has the correct structure
 function common.verify_match(t)
    assert(type(t)=="table", "Match is not a table")
-   local name, pos, text, subs, subidx = decode_match(t)
+   local name, pos, text, subs = decode_match(t)
    assert(type(name)=="string", "Match name is not a string: "..tostring(name))
    assert(type(text)=="string", "Match text is not a string: "..tostring(text).." in match name: "..name)
    assert(type(pos)=="number", "Match position is not a number: "..tostring(pos).." in match name: "..name)
-   if subidx then
-      for i = subidx, #subs do
-	 local v = subs[subidx]
+   if subs then
+      for i = 1, #subs do
+	 local v = subs[i]
 	 assert(type(v)=="table", "Sub match is not a table: "..tostring(v).." in match name: "..name)
 	 assert(verify_match(v))
       end
@@ -177,16 +177,14 @@ function common.compare_matches(t1, t2)
 	       .. tostring(p1) .. "," .. tostring(p2) .. ")")
       end
    end
-   local name1, pos1, text1, subs1, subidx1 = common.decode_match(t1)
-   local name2, pos2, text2, subs2, subidx2 = common.decode_match(t2)
-   if name1 == name2
-      and text1 == text2
-      and subidx1 == subidx2
+   local name1, pos1, text1, subs1 = common.decode_match(t1)
+   local name2, pos2, text2, subs2 = common.decode_match(t2)
+   if name1 == name2 and text1 == text2
    then
-      if subidx1 then
+      if subs1 then
 	 -- subs exist
 	 local mismatch = false;
-	 for i = subidx1, #subs1 do
+	 for i = 1, #subs1 do
 	    local ok, m1, m2 = common.compare_matches(subs1[i], subs2[i])
 	    if not ok then
 	       mismatch = i
@@ -237,7 +235,6 @@ function common.reconstitute_pattern_definition(id, p)
       return "undefined identifier: " .. id
    end
 end
-
 
 common.boundary_identifier = "~"
 

@@ -31,7 +31,8 @@ local ok
 ok, repl_engine = api.new_engine("repl")
 api.load_file(repl_engine, "src/rosie-core.rpl")
 api.load_string(repl_engine, repl_patterns)
-api.set_match_exp(repl_engine, "input")
+ok, msg = api.configure(repl_engine, json.encode{expression="input", encoder="json"})
+if not ok then error(msg); end
 
 repl_prompt = "Rosie> "
 
@@ -44,15 +45,15 @@ local function print_match(m, left, eval_p)
    else
       local msg = "Repl: No match"
       if not eval_p then
-	 msg = msg .. ((debug and " (turn debug off to hide the match trace)")
-		    or " (turn debug on to show the match trace)")
+	 msg = msg .. ((debug and "  (turn debug off to hide the match evaluation trace)")
+		    or "  (turn debug on to show the match evaluation trace)")
       end
       print(msg)
    end
 end
 
 function repl(eid)
-   local ok = api.ping_engine(eid)
+   local ok = api.inspect_engine(eid)
    if (not ok) then
       error("Argument to repl is not the id of a live engine: " .. tostring(eid))
    end
@@ -61,7 +62,7 @@ function repl(eid)
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
       local ok, m, left = api.match(repl_engine, s)
-      if not ok then error("Repl internal error: ", tostring(m), "\n"); end
+      if not ok then error("Internal error: ".. tostring(m)); end
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
       else
@@ -71,8 +72,8 @@ function repl(eid)
 	    io.write('Warning: ignoring extraneous input "', s:sub(-left), '"\n')
 	 end
 	 m = json.decode(m)			    -- inefficient, but let's not worry right now
-	 local _, _, _, subs, subidx = common.decode_match(m)
-	 local name, pos, text, subs, subidx = common.decode_match(subs[subidx])
+	 local _, _, _, subs = common.decode_match(m)
+	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
 	    local ok, def = api.get_definition(eid, text)
 	    if ok then 
@@ -84,9 +85,9 @@ function repl(eid)
 	       end
 	    end
 	 elseif name=="command" then
-	    local cname, cpos, ctext, csubs, csubidx = common.decode_match(subs[subidx])
+	    local cname, cpos, ctext, csubs = common.decode_match(subs[1])
 	    if cname=="load" or cname=="manifest" then
-	       local pname, ppos, path = common.decode_match(csubs[csubidx])
+	       local pname, ppos, path = common.decode_match(csubs[1])
 	       local results, msg
 	       if cname=="load" then 
 		  results, msg = api.load_file(eid, path)
@@ -100,7 +101,7 @@ function repl(eid)
 	       end
 	    elseif cname=="debug" then
 	       if csubs then
-		  local _, _, arg = common.decode_match(csubs[csubidx])
+		  local _, _, arg = common.decode_match(csubs[1])
 		  debug = (arg=="on")
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
@@ -116,25 +117,27 @@ function repl(eid)
 	       ok = api.clear_env(eid)
 	       io.write("Pattern environment cleared\n")
 	    elseif cname=="match" or cname =="eval" then
-	       local ename, epos, exp = common.decode_match(csubs[csubidx])
+	       local ename, epos, exp = common.decode_match(csubs[1])
 	       -- parsing strips the quotes off when exp is only a literal string, but compiler
 	       -- needs them there.  this is inelegant.  sigh.
 	       if ename=="string" then exp = '"'..exp..'"'; end
-	       local tname, tpos, input_text = common.decode_match(csubs[csubidx+1])
+	       local tname, tpos, input_text = common.decode_match(csubs[2])
 	       input_text = common.unescape_string(input_text)
-	       local ok, m, left = api.match_using_exp(eid, exp, input_text)
+	       local ok, msg = api.configure(eid, json.encode{expression=exp, encoder="json"})
 	       if not ok then
-		  io.write(tostring(m), "\n")	    -- syntax and compile errors
+		  io.write(msg, "\n");		    -- syntax and compile errors
 	       else
+		  local ok, m, left = api.match(eid, input_text)
+--		  if not ok then ... ?
 		  if cname=="match" then
 		     if debug and (not m) then
-			local ok, msg = api.eval_using_exp(eid, exp, input_text)
-			io.write(msg, "\n")
+			local ok, match, leftover, trace = api.eval(eid, input_text)
+			io.write(trace, "\n")
 		     end
 		  else
 		     -- must be eval
-		     local ok, msg = api.eval_using_exp(eid, exp, input_text)
-		     io.write(msg, "\n")
+		     local ok, match, leftover, trace = api.eval(eid, input_text)
+		     io.write(trace, "\n")
 		  end
 		  print_match(m, left, (cname=="eval"))
 	       end -- if pat

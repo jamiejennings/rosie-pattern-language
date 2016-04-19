@@ -41,7 +41,8 @@ function test_compiling_stuff()
 end
 
 function test_match(exp, input, start, engine)
-   return engine:match_using_exp(exp, input, start)
+   engine:configure({expression=exp, encode="json"})
+   return engine:match(input, start)
 end
 
 function compiler_sniff_test()

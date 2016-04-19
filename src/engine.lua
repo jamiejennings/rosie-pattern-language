@@ -12,10 +12,11 @@
 ----------------------------------------------------------------------------------------
 -- A matching engine is a Lua object that has state as follows:
 --   env: environment of defined patterns
---   program: the pattern being matched (in earlier versions, this was a multi-step program)
+--   config: various configuration settings, including the default pattern to match
 --   id: a string meant to be a unique identifier (currently unique in the Lua state)
 
 local compile = require "compile"
+local eval = require "eval"
 local recordtype = require("recordtype")
 local unspecified = recordtype.unspecified;
 
@@ -23,11 +24,16 @@ engine =
    recordtype.define(
    {  name=unspecified;				    -- for reference, debugging
       env=false;
-      program=false;
+      config=false;
       id=unspecified;
       --
       match=false;
-      match_using_exp=false;
+      match_file=false;
+      eval=false;
+      eval_file=false;
+      configure=false;
+      inspect=false;
+--      match_using_exp=false;
   },
    "engine"
 )
@@ -35,47 +41,114 @@ engine =
 engine.tostring_function = function(orig, e)
 			      return '<engine: '..tostring(e.name)..' ('.. e.id ..')>'; end
 
--- This used to work.  Maybe should put this capability back into recordtypes?
---
---    engine.set_slot_function = 
---       function(set_slot, self, slot, value)
---          if slot=="program" then
---             if not pattern.is(value) then
---                error("Invalid engine program: " .. tostring(value)) 
---             end
---             set_slot(self, slot, value)
---          else -- switch on slot name
---             error('Cannot set this engine property: ' .. slot)
---          end
---       end
---
-
 local locale = lpeg.locale()
 
---local function engine_set_program(e, pat)
---   -- for now, a program is a list of one pattern (earlier versions had more...)
---   if not pattern.is(pat) then error("Invalid program: " .. tostring(pat)); end
---   e.program = { pat }
---   return true
---end
+local function identity_function(...) return ...; end
 
--- match(input_text, start)
--- Using the stored program, run it against the input, starting at position start.
+local function engine_error(e, msg)
+   error(string.format("Engine %s (%s): %s", e.name, e.id, tostring(msg)), 0)
+end
+
+local function no_pattern(e)
+   engine_error(e, "no pattern configured")
+end
+
+local function engine_configure(e, configuration)
+   assert(type(configuration)=="table", "engine configuration not a table: " .. tostring(configuration))
+   if configuration.expression then
+      e.config.expression = configuration.expression
+      local pat, msg = compile.compile_command_line_expression(configuration.expression, e.env)
+      if not pat then engine_error(e, msg); end
+      e.config.pattern = pat
+   end
+   if configuration.encoder then
+      e.config.encoder = configuration.encoder
+   end
+   if configuration.pattern then		    -- need this for grep functionality, FOR NOW
+      e.config.pattern = configuration.pattern
+   end
+   --
+   -- Ensure some reasonable defaults when we can
+   --
+   e.config.encoder = e.config.encoder or identity_function
+end
+
+local function engine_inspect(e)
+   local representation = {}
+   for k,v in pairs(e.config) do representation[k]=tostring(v); end
+   return e.name, representation
+end
 
 local function engine_match(e, input, start)
    start = start or 1
-   if not e.program then
-      error(string.format("Engine %s (%s): no program", e.name, e.id))
-   end
-   local instruction = e.program[1]
-   return compile.match_peg(instruction.peg, input, start)
+   if not e.config.pattern then no_pattern(e); end
+   local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
+   if result then return (e.config.encoder(result)), nextpos;
+   else return false, 1; end
 end
 
-local function engine_match_using_exp(e, exp, input, start)
+local function engine_eval(e, input, start)
    start = start or 1
-   local pat, msg = compile.compile_command_line_expression(exp, e.env)
-   if not pat then error(msg,0); end
-   return compile.match_peg(pat.peg, input)
+   if not e.config.pattern then no_pattern(e); end
+   local ok, matches, nextpos, trace = eval.eval(e.config.pattern, input, 1, e.env)
+   if not ok then return false, matches; end
+   if matches then
+      assert(type(matches)=="table", "eval should return a table, not this: " .. tostring(matches))
+      assert(not matches[2], "eval should return exactly 0 or 1 match")
+      return (e.config.encoder(matches[1])), nextpos, trace
+   else return false, 1, trace; end
+end
+
+local function open3(e, infilename, outfilename, errfilename)
+   if type(infilename)~="string" then engine_error(e, "bad input file name"); end
+   if type(outfilename)~="string" then engine_error(e, "bad output file name"); end
+   if type(errfilename)~="string" then engine_error(e, "bad error file name"); end   
+   local infile, outfile, errfile, msg
+   if #infilename==0 then infile = io.stdin;
+   else infile, msg = io.open(infilename, "r"); if not infile then error(msg, 0); end; end
+   if #outfilename==0 then outfile = io.stdout
+   else outfile, msg = io.open(outfilename, "w"); if not outfile then error(msg, 0); end; end
+   if #errfilename==0 then errfile = io.stderr;
+   else errfile, msg = io.open(errfilename, "w"); if not errfile then error(msg, 0); end; end
+   return infile, outfile, errfile
+end
+
+local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename)
+   if not e.config.pattern then no_pattern(e); end
+   local peg = (e.config.pattern.peg * Cp())
+   if not (eval_flag==true or eval_flag==false) then engine_error(e, "bad eval flag"); end
+   local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
+
+   local inlines, outlines, errlines = 0, 0, 0;
+   local result, nextpos, m;
+   local encode = (eval_flag and identity_function) or e.config.encoder;
+   local nextline = infile:lines();
+   local l = nextline(); 
+   while l do
+      if eval_flag then m, nextpos, result = engine_eval(e, l);
+      else result, nextpos = peg:match(l); end
+      -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
+      -- Send it in a message to stderr?
+      if result then
+	 outfile:write(encode(result), "\n")
+	 outlines = outlines + 1
+      else
+	 errfile:write(l, "\n")
+	 errlines = errlines + 1
+      end
+      inlines = inlines + 1
+      l = nextline(); 
+   end -- while
+   infile:close(); outfile:close(); errfile:close();
+   return inlines, outlines, errlines
+end
+
+local function engine_match_file(e, infilename, outfilename, errfilename)
+   return engine_process_file(e, false, infilename, outfilename, errfilename)
+end
+
+local function engine_eval_file(e, infilename, outfilename, errfilename)
+   return engine_process_file(e, true, infilename, outfilename, errfilename)
 end
 
 engine.create_function =
@@ -86,54 +159,12 @@ engine.create_function =
       return _new{name=name,
 		  env=initial_env,
 		  id=id,
+		  config={},
 		  match=engine_match,
-		  match_using_exp=engine_match_using_exp}
+		  match_file=engine_match_file,
+		  eval=engine_eval,
+		  eval_file=engine_eval_file,
+		  configure=engine_configure,
+		  inspect=engine_inspect}
    end
-
-----------------------------------------------------------------------------------------
--- The functions below are used in run.lua to process input files
-----------------------------------------------------------------------------------------
-
--- return a flat list of matches
---    function grep_match_peg(peg, input, first_only)
---       -- search for first occurrence
---       local len = #input
---       local results = {}
---       local result
---       local pos = 1
---       local prev = 1
---       peg = peg * lpeg.Cp()
---
---       -- Note on looping:
---       -- It's possible for a pattern to match the empty string, and so we can get to a state where
---       -- that is the only match, even though there is still non-matching input left.  Since an empty
---       -- match consumes nothing, the pos will remain the same.  We look for when pos does not
---       -- advance, and end the loop.
---
---       while true do
---          result, pos = peg:match(input, prev)      -- result is one match or none
---          if pos then table.insert(results, result); end
---          if (not pos) or                           -- no more matches
---             (pos > len) or                         -- ran out of input
---             (pos == prev) or               -- looping (see below)
---             first_only                     -- only want first result
---          then return results; end
---          prev = pos
---       end -- while
---    end
-
---    -- A "finder peg" searches in a string for the first match of peg.  This should be implemented as
---    -- a macro (transformation on ASTs) at some point.
---    function peg_to_finder_peg(peg)
---       return lpeg.P(1 - peg)^0 * peg
---    end
---
---    function grep_match_compile_to_peg(exp_source, env)
---       local peg = compile.compile_command_line_expression(exp_source, env, false) -- NOT using raw mode
---       if peg then 
---          return peg.peg and peg_to_finder_peg(peg.peg)
---       else
---          return nil
---       end
---    end
 
