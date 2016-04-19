@@ -284,6 +284,8 @@ local function eval_file(id, infilename, outfilename, errfilename)
 end
 
 api.eval_file = pcall_wrap(eval_file)
+-- debugging:
+--api.eval_file = function(...) return true, eval_file(...); end
 
 
 --!@# Eliminate???

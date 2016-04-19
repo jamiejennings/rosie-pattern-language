@@ -159,6 +159,7 @@ end
 
 function color_string_from_leaf_nodes(t)
    -- t is a match
+   if not t then return ""; end
    local output = ""
    local name, pos, text, subs = common.decode_match(t)
    if (not subs) or (#subs==0) then
