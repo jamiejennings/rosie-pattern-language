@@ -133,7 +133,7 @@ end
 --     [text: "Hello", 
 --      pos: 1]]
 
-local function create_match(name, pos, capture, ...)
+function common.create_match(name, pos, capture, ...)
    local t = {};
    t.pos = pos;
    t.text=capture;
@@ -142,7 +142,7 @@ local function create_match(name, pos, capture, ...)
 end
 
 function common.match_node_wrap(peg, name)
-   return (Cc(name) * Cp() * peg) / create_match
+   return (Cc(name) * Cp() * peg) / common.create_match
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the
@@ -237,5 +237,8 @@ function common.reconstitute_pattern_definition(id, p)
       return "undefined identifier: " .. id
    end
 end
+
+
+common.boundary_identifier = "~"
 
 return common

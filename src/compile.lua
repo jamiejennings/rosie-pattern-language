@@ -33,11 +33,24 @@ local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt =
 local locale = lpeg.locale()
 
 ----------------------------------------------------------------------------------------
+-- Boundary for tokenization... this is going to be customizable, but hard-coded for now
+----------------------------------------------------------------------------------------
+
+local b_id = common.boundary_identifier
+
+local boundary = locale.space^1 + #locale.punct
+              + (lpeg.B(locale.punct) * #(-locale.punct))
+	      + (lpeg.B(locale.space) * #(-locale.space))
+	      + P(-1)
+compile.boundary = boundary
+
+----------------------------------------------------------------------------------------
 -- Base environment, which can be extended with new_env, but not written to directly,
 -- because it is shared between match engines.
 ----------------------------------------------------------------------------------------
-local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};	-- any single character
-       ["$"] = pattern{name="$"; peg=P(-1); alias=true}; -- end of input
+local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};  -- any single character
+             ["$"] = pattern{name="$"; peg=P(-1); alias=true}; -- end of input
+             [b_id] = pattern{name=b_id; peg=boundary; alias=true, ast=false}; -- token boundary
        }
 setmetatable(ENV, {__tostring = function(env)
 				   return "<base environment>"
@@ -47,6 +60,8 @@ setmetatable(ENV, {__tostring = function(env)
 					 .. 'cannot assign "' .. key .. '"')
 				end;
 		})
+
+cinternals.ENV = ENV
 
 function compile.new_env(base_env)
    local env = {}
@@ -226,12 +241,6 @@ end
 -- Compile
 ----------------------------------------------------------------------------------------
 
-local boundary = locale.space^1 + #locale.punct
-              + (lpeg.B(locale.punct) * #(-locale.punct))
-	      + (lpeg.B(locale.space) * #(-locale.space))
-	      + P(-1)
-compile.boundary = boundary
-
 local function matches_empty(peg)
    local result = peg:match("")
    return result
@@ -325,6 +334,7 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       if (not max) then
 	 if (min == 0) then
 	    -- same as star
+--	    if append_boundary then qpeg = (epeg^1 * boundary)^-1    -- !@# NEED A TEST CASE FOR THIS!
 	    if append_boundary then qpeg = ((epeg * boundary)^1)^-1
 	    else qpeg = epeg^0
 	    end
