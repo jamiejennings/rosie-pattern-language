@@ -97,14 +97,6 @@ local function engine_eval(e, input, start)
    else return false, 0, trace; end
 end
 
--- local function engine_match_using_exp(e, exp, input, start, encoder_fn)
---    engine_configure(e, {expression=exp, encoder=encoder_fn})
---    start = start or 1
---    local result, nextpos = compile.match_peg(e.config.pattern.peg, input)
---    if result then return (e.config.encoder(result)), nextpos;
---    else return false, 0; end
--- end
-
 local function open3(e, infilename, outfilename, errfilename)
    if type(infilename)~="string" then engine_error(e, "bad input file name"); end
    if type(outfilename)~="string" then engine_error(e, "bad output file name"); end

@@ -42,13 +42,14 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --          + match pattern against string
 --          + match pattern against file
 --          + eval pattern against string
+--          + eval pattern against file
 --
 --        - Human interaction / debugging
 --          - CRUD on color assignments for color output?
 -- 
 
 ----------------------------------------------------------------------------------------
-local api = {VERSION="0.95 alpha"}
+local api = {VERSION="0.96 alpha"}
 ----------------------------------------------------------------------------------------
 
 local engine_list = {}
@@ -198,22 +199,6 @@ api.get_definition = pcall_wrap(get_definition)
 -- Matching
 ----------------------------------------------------------------------------------------
 
---eliminate this altogether?
--- local function match_using_exp(id, pattern_exp, input_text)
---    -- returns success flag, json match results, and number of unmatched chars at end
---    local en = engine_from_id(id)
---    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
---    if type(input_text)~="string" then arg_error("input text not a string"); end
---    local result, nextpos = en:match_using_exp(pattern_exp, input_text, 1, json.encode)
---    if result then
---       return result, (#input_text - nextpos + 1)
---    else
---       return false, 0
---    end
--- end
-   
--- api.match_using_exp = pcall_wrap(match_using_exp)
-
 local function configure(id, c_string)
    local en = engine_from_id(id)
    if type(c_string)~="string" then
@@ -234,17 +219,6 @@ end
 
 api.configure = pcall_wrap(configure)
    
--- local function set_match_exp(id, pattern_exp)
---    local en = engine_from_id(id)
---    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
--- --   local pat, msg = compile.compile_command_line_expression(pattern_exp, en.env)
--- --   if not pat then error(msg,0); end
---    en:configure({ expression = pattern_exp })
---    return ""
--- end
-
--- api.set_match_exp = pcall_wrap(set_match_exp)
-
 local function match(id, input_text, start)
    local en = engine_from_id(id)
    if type(input_text)~="string" then arg_error("input text not a string"); end
@@ -286,32 +260,6 @@ end
 api.eval_file = pcall_wrap(eval_file)
 -- debugging:
 --api.eval_file = function(...) return true, eval_file(...); end
-
-
---!@# Eliminate???
--- local function eval_using_exp(id, pattern_exp, input_text)
---    -- returns eval trace, json match results, number of unmatched chars at end
---    local en = engine_from_id(id)
---    if not pattern_exp then arg_error("missing pattern expression"); end
---    if not input_text then arg_error("missing input text"); end
-
---    local ok, matches, nextpos, msg =
---       eval.eval_command_line_expression(pattern_exp, input_text, 1, en.env)
---    if not ok then error(msg, 0); end
---    local leftover = 0;
---    if nextpos then leftover = (#input_text - nextpos + 1); end
---    local match_results
---    if matches then
---       assert(type(matches)=="table", "eval should return a table of matches if matching succeeded")
---       match_results = json.encode(matches[1])	    -- null, or a match structure
---       assert((not matches[1]) or (not matches[0]), "eval should return exactly 0 or 1 match")
---    else
---       match_results = false			    -- indicating no matches
---    end
---    return msg, match_results, leftover
--- end
-
--- api.eval_using_exp = pcall_wrap(eval_using_exp)
 
 local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    local en = engine_from_id(id)
