@@ -26,6 +26,21 @@ function map(fn, ls1, ...)
    return results
 end
 
+-- limitation: the fn can only return one value.
+-- limitation: only the first list's elements are present in the result.
+function filter(fn, ls1, ...)
+   local results = {}
+   local out_index = 1
+   for i=1,#ls1 do
+      local temp = apply_at_i(fn, i, ls1, ...)
+      if temp then
+	 results[out_index] = ls1[i]
+	 out_index = out_index + 1
+      end
+   end
+   return results
+end
+
 function foreach(fn, ls1, ...)
    for i=1,#ls1 do
       apply_at_i(fn, i, ls1, ...)
