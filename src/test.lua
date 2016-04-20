@@ -41,7 +41,7 @@ function test_compiling_stuff()
 end
 
 function test_match(exp, input, start, engine)
-   engine:configure({expression=exp, encode="json"})
+   engine:configure({expression=exp, encoder=false}) -- force the default encoder (identity fcn)
    return engine:match(input, start)
 end
 

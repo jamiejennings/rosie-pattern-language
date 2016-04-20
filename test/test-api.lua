@@ -6,7 +6,6 @@
 ----
 
 json = require "cjson"
-package.loaded.api = false			    -- force re-load of api.lua
 
 if not color_write then
    color_write = function(channel, ignore_color, ...)

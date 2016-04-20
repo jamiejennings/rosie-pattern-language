@@ -52,7 +52,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 local api = {VERSION="0.96 alpha"}
 ----------------------------------------------------------------------------------------
 
-local engine_list = {}
+engine_list = {}
 
 local function arg_error(msg)
    error("Argument error: " .. msg, 0)
