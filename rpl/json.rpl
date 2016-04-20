@@ -1,0 +1,53 @@
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- json.rpl    some rpl patterns for processing json input
+----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+
+---------------------------------------------------------------------------------------------------
+-- The rpl definition 'json' matches JSON input and returns it as a monolithic entity with no
+-- sub-matches at all.
+--
+-- If you want Rosie to parse out some individual JSON values, you can do this by:
+-- (1) Selectively removing 'alias' in some definitions, and/or
+-- (2) Adding some definitions of your own to create Rosie captures, as we did below by defining
+-- 'json' to be a capturing version of 'json.json_discard'.
+--
+-- Note: There are simpler ways of matching an entire JSON input string in the case where validation
+-- is not necessary.  Simply matching text with balanced [] and {} pairs will consume JSON arrays
+-- and objects, respectively.
+--
+-- When matching against the 'json' pattern at the command line, use the -nocolor switch to output
+-- the JSON itself.  Or use the -json switch to produce the usual Rosie json structure.  The 'text'
+-- field will contain the matched (JSON) string from the input, as always.
+---------------------------------------------------------------------------------------------------
+
+alias json.string = "\""  {"\\\"" / {! [\"] .}}* "\""
+
+alias json.int = { [-]? {[1-9][0-9]+} / [0-9] }
+alias json.frac = { [.] [0-9]+ }
+alias json.exp = { [eE] [+-]? [0-9]+ }
+alias json.number = { json.int json.frac? json.exp? }
+
+alias json.true = "true"
+alias json.false = "false"
+alias json.null = "null"
+
+grammar
+   alias json.json_discard = json.value
+   alias json.value = json.string / json.number / json.object / json.array / json.true / json.false / json.null
+   alias json.member = json.string ":" json.value
+   alias json.object = "{" (json.member ("," json.member)*)? "}"
+   alias json.array = "[" (json.value ("," json.value)*)? "]"
+end
+
+---------------------------------------------------------------------------------------------------
+--
+-- Match against 'json' to capture a json value: (at the command line, don't forget the -nocolor switch)
+--
+
+json = json.json_discard
+

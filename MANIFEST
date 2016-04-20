@@ -20,6 +20,7 @@ rpl/basic.rpl			-- for matching full lines of input against a
                                 -- variety of "basic" patterns of semantic interest
 
 rpl/csv.rpl                     -- CSV file formats
+rpl/json.rpl			-- JSON data format
 
 -- Some definitions that are familiar to grep users:
       
