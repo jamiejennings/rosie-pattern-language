@@ -5,73 +5,14 @@
 ---- (c) 2016, Jamie A. Jennings
 ----
 
+test = require "test-functions"
 json = require "cjson"
 
-if not color_write then
-   color_write = function(channel, ignore_color, ...)
-		    for _,v in ipairs({...}) do
-		       channel:write(v)
-		    end
-		 end
-end
+check = test.check
+heading = test.heading
+subheading = test.subheading
 
-function red_write(...)
-   local str = ""
-   for _,v in ipairs({...}) do str = str .. tostring(v); end
-   color_write(io.stdout, "red", str)
-end
-
-local count = 0
-local fail_count = 0
-local heading_count = 0
-local subheading_count = 0
-local messages = {}
-local current_heading = "Heading not assigned"
-local current_subheading = "Subheading not assigned"
-
-function check(thing, message)
-   count = count + 1
-   heading_count = heading_count + 1
-   subheading_count = subheading_count + 1
-   if not (thing) then
-      red_write("X")
-      table.insert(messages, {h=current_heading or "Heading unassigned",
-			      sh=current_subheading or "",
-			      shc=subheading_count,
-			      hc=heading_count,
-			      c=count,
-			      m=message or ""})
-      fail_count = fail_count + 1
-   else
-      io.stdout:write(".")
-   end
-end
-
-function heading(label)
-   heading_count = 0
-   subheading_count = 0
-   current_heading = label
-   current_subheading = ""
-   io.stdout:write("\n", label, " ")
-end
-
-function subheading(label)
-   subheading_count = 0
-   current_subheading = label
-   io.stdout:write("\n\t", label, " ")
-end
-
-function ending()
-   io.stdout:write("\n\n** TOTAL ", tostring(count), " tests attempted.\n")
-   if fail_count == 0 then
-      io.stdout:write("** All tests passed.\n")
-   else
-      io.stdout:write("** ", tostring(fail_count), " tests failed:\n")
-      for _,v in ipairs(messages) do
-	 red_write(v.h, ": ", v.sh, ": ", "#", v.shc, " ", v.m, "\n")
-      end
-   end
-end
+test.start()
 
 arg_err_engine_id = "Argument error: engine id not a string"
 
@@ -578,4 +519,5 @@ if ok then check_eval_output_file(); end
 
 
 
-ending()
+test.finish()
+
