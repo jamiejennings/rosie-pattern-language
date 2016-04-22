@@ -30,7 +30,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text)
    if expectation then
       check(leftover==expected_leftover,
 	    string.format(fmt, exp, input, expected_leftover, leftover))
-      if expected_text then
+      if expected_text and m then
 	 local t = json.decode(m)
 	 local text = t["*"].text
 	 local fmt = "expected text matching %s against '%s' was '%s' but received '%s'"
@@ -55,6 +55,12 @@ check(type(api.new_engine)=="function")
 ok, eid = api.new_engine("hello")
 check(ok)
 check(type(eid)=="string")
+
+subheading("Setting up assignments")
+ok, msg = api.load_string(eid, 'a = "a"  b = "b"  c = "c"  d = "d"')
+check(ok)
+ok, msg = api.get_definition(eid, "a")
+check(ok)
 
 ----------------------------------------------------------------------------------------
 heading("Literals")
@@ -97,15 +103,54 @@ check_match('"hi" "there"', "hi\n\t\t    there ", true, 1)
 check_match('"hi" "there"', "hithere", false)
 
 ----------------------------------------------------------------------------------------
+heading("Alternation (choice)")
+----------------------------------------------------------------------------------------
+check_match('a / b', "", false)
+check_match('a / b', "x", false)
+check_match('a / b', "a", true, 0, "a")
+check_match('a / b', "ab", false)
+check_match('a / b', "a b", true, 1, "a")
+check_match('a / b', "ba", false)
+check_match('a / b', "b a", true, 1, "b")
+check_match('a / b', "b b", true, 1, "b")
+check_match('a / b', "b", true, 0, "b")
+check_match('a / b / c', "a", true, 0, "a")
+check_match('a / b / c', "b ", true, 0, "b")
+check_match('a / b / c', "c a", true, 1, "c")
+
+----------------------------------------------------------------------------------------
 heading("Cooked groups")
 ----------------------------------------------------------------------------------------
-
-
+check_match('a b c', "a b c", true, 0, "a b c")
+check_match('(a b c)', "a b c", true, 0, "a b c")
+check_match('a (b c)', "a b c", true, 0, "a b c")
+check_match('a / (b c)', "a b c", true, 3, "a")
+check_match('a / (b c)', "b c a", true, 1, "b c")
+check_match('a / (b c)', "b c", true, 0, "b c")
+check_match('a / (b c)', " b c", false)
+check_match('a / (b c)', "bc", false)
 
 ----------------------------------------------------------------------------------------
 heading("Raw groups")
 ----------------------------------------------------------------------------------------
-
+check_match('a b c', "abc", false)
+check_match('{a b c}', "abc", true, 0, "abc")
+check_match('a {b c}', "a bc", true, 0, "a bc")
+check_match('a {b c}', "abc", false)
+check_match('a {b c}', "a b", false)
+check_match('{a b} c', "ab \tc", true, 0, "ab \tc")
+check_match('{a b} c', "abc", false)
+check_match('{a b} c', "a b", false)
+check_match('{a b} c', "ab c", true, 0, "ab c")
+check_match('a / {b c}', "a b c", true, 3, "a")
+check_match('a / {b c}', "b c a", false)
+check_match('a / {b c}', "b c", false)
+check_match('a / {b c}', " bc", false)
+check_match('a / {b c}', "bc", true, 0, "bc")
+check_match('{a / b} c', "a b c", false)
+check_match('{a / b} c', "b c a", true, 2, "b c")   -- 2 leftover, not just 1?
+check_match('{a / b} c', "b c", true, 0, "b c")
+check_match('{a / b} c', " bc", false)
 
 ----------------------------------------------------------------------------------------
 heading("Look-ahead")
@@ -119,12 +164,6 @@ heading("Negative look-ahead")
 ----------------------------------------------------------------------------------------
 heading("Precedence and right association")
 ----------------------------------------------------------------------------------------
-
-subheading("Setting up assignments")
-ok, msg = api.load_string(eid, 'a = "a"  b = "b"  c = "c"  d = "d"')
-check(ok)
-ok, msg = api.get_definition(eid, "a")
-check(ok)
 
 -- Precedence/associativity examples
 -- 
