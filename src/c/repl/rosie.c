@@ -168,7 +168,7 @@ int main (int argc, char **argv) {
 
   lua_getglobal(L, "api");
   lua_getfield(L, -1 , "new_engine");		    /* -1 is stack top, i.e. api table */
-  lua_pushstring(L, "REPL ENGINE");
+  lua_pushstring(L, "REPL ENGINE"); 
   status = docall(L, 1, 2);                         /* call 'api.new_engine(name)' 1 arg, 2 results */
   report(L, status);
   if (status != LUA_OK) return EXIT_FAILURE;
@@ -185,7 +185,7 @@ int main (int argc, char **argv) {
 
   lua_getglobal(L, "repl");	  /* push repl fcn */
   lua_getglobal(L, "eid");	  /* push engine id */
-  docall(L, 1, 1);				    /* print(ok) */
+  docall(L, 1, 1);		  /* call repl(eid) */
   report(L, status);
   if (status != LUA_OK) {
        l_message(progname, lua_pushfstring(L, "error starting repl: %s", lua_tostring(L, -1)));
