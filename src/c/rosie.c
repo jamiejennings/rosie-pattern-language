@@ -1,6 +1,6 @@
 /*  -*- Mode: C/l; -*-                                                       */
 /*                                                                           */
-/* librosie.c      Create a Lua state, load Rosie, expose the Rosie API      */
+/* rosie.c      Create a Lua state, load Rosie, expose the Rosie API         */
 /*                                                                           */
 /*  © Copyright IBM Corporation 2016.                                        */
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
@@ -9,10 +9,13 @@
 
 /* 
  * Based on src/lua.c from the open source Lua 5.3.2 distribution under MIT license
+ *
+ * Right now, this is just hacking around to learn my way around using the Lua state.
+ *
  */
 
 
-#define librosie_c
+#define rosie_c
 
 #include <signal.h>
 #include <stdio.h>
@@ -156,14 +159,41 @@ int main (int argc, char **argv) {
   report(L, status);
   if (status != LUA_OK) return EXIT_FAILURE;
 
-  lua_getglobal(L, "repl");
-  lua_insert(L, 1);
-  status = lua_pcall(L, 0, 0, 0);
-  if (status != LUA_OK)
-       l_message(progname, lua_pushfstring(L, "error calling 'repl' (%s)",
-					   lua_tostring(L, -1)));
+  lua_getglobal(L, "require");
+  lua_pushstring(L, "api");
+  status = docall(L, 1, 1);  /* call 'require(name)' */
+  lua_pop(L, 1);	     /* pop result of require */
+  report(L, status);
+  if (status != LUA_OK) return EXIT_FAILURE;
+
+  lua_getglobal(L, "api");
+  lua_getfield(L, -1 , "new_engine");		    /* -1 is stack top, i.e. api table */
+  lua_pushstring(L, "REPL ENGINE");
+  status = docall(L, 1, 2);                         /* call 'api.new_engine(name)' 1 arg, 2 results */
+  report(L, status);
+  if (status != LUA_OK) return EXIT_FAILURE;
+
+  lua_pushboolean(L, 1);			    /* push true */
+  if (lua_compare(L, -1, -3, LUA_OPEQ) != 1) {
+       l_message(progname, lua_pushfstring(L, "error getting engine: %s", lua_tostring(L, -2)));
+       return EXIT_FAILURE;
+  }
+
+  lua_pop(L, 1);				    /* remove the true we pushed */
+  lua_setglobal(L, "eid");			    /* save engine id */ 
+  lua_pop(L, 1);				    /* pop the ok returned by new_engine */
+
+  lua_getglobal(L, "repl");	  /* push repl fcn */
+  lua_getglobal(L, "eid");	  /* push engine id */
+  docall(L, 1, 1);				    /* print(ok) */
+  report(L, status);
+  if (status != LUA_OK) {
+       l_message(progname, lua_pushfstring(L, "error starting repl: %s", lua_tostring(L, -1)));
+       return EXIT_FAILURE;
+  }
 
   lua_close(L);
   return (status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
+
 }
 
