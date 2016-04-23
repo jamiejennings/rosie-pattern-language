@@ -16,6 +16,7 @@ Major work items:
   - Human interaction / debugging:
     + get env contents in json format
     - CRUD on color assignments for color output?
+      (Need to rewrite color-output.lua, which was a quick hack.)
 
 * Use syntax transformation (on ASTs) instead of current code for:
     - quantified expressions
@@ -29,6 +30,12 @@ Major work items:
 * Implement post-match instructions, based on prototype work
 
 * Enforce package namespaces, with import/export declarations
+
+* Support arbitrary versions and dialects of RPL with a simple declaration, e.g.
+     .interpreter "rpl/0.92"
+  which will load that version/dialect of RPL and use it for the (remainder of) the
+  definitions in that file.  (Implementation will introduce a lexical scope to facilitate
+  future addition of block structure to RPL.)
 
 * Optimizations
     - Overall
