@@ -213,14 +213,14 @@ check_match('a* b', 'a a b', false)
 
 check_match('a* b', 'aaa b', true, 0, "aaa b")
 check_match('a* b', ' b', true, 0, " b")
-check_match('a* b', 'b', false)
+check_match('a* b', 'b', true, 0, "b")		    -- boundary change Saturday, April 23, 2016
 
 subheading("Testing (a)* b")
 check_match('(a)* b', 'a b', true, 0, "a b")
 check_match('(a)* b', 'aa b', false)
 check_match('(a)* b', 'a a a b', true, 0, "a a a b")
 check_match('(a)* b', ' b', true, 0, " b")
-check_match('(a)* b', 'b', false)
+check_match('(a)* b', 'b', true, 0, "b")	    -- boundary change Saturday, April 23, 2016
 
 subheading("Testing {(a)* b}")
 check_match('{(a)* b}', 'a b', true, 0, "a b")

@@ -27,8 +27,8 @@ require "utils"
 require "recordtype"
 local unspecified = recordtype.unspecified
 
-local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt =
-   lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt
+local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt, B =
+   lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt, lpeg.B
 
 local locale = lpeg.locale()
 
@@ -42,6 +42,7 @@ local boundary = locale.space^1 + #locale.punct
               + (lpeg.B(locale.punct) * #(-locale.punct))
 	      + (lpeg.B(locale.space) * #(-locale.space))
 	      + P(-1)
+	      + (- B(P(1)))
 compile.boundary = boundary
 
 ----------------------------------------------------------------------------------------
