@@ -1,22 +1,14 @@
 Major work items:
 
-* Consolidate the Rosie API
-  + Engine related:
-    + new engine
-    + delete engine
-    + ping engine
-  + RPL related:
-    + RPL statement (incremental compilation)
-    + RPL file compilation
-    + RPL manifest processing
-  + Match related:
-    + match pattern against string
-    + match pattern against file
-    + eval pattern against string
-  - Human interaction / debugging:
-    + get env contents in json format
-    - CRUD on color assignments for color output?
-      (Need to rewrite color-output.lua, which was a quick hack.)
+* Expose the Rosie API as a C library; make it available through libffi.
+
+* Add color output management to the Rosie API so any client could leverage it.
+  Support CRUD on color assignments for color output. (Need to rewrite color-output.lua,
+  which was a quick hack.)
+
+* RPL compilation is lexically scoped in the sense that an expression is closed over the
+  environment in which it is defined.  But "eval" (the interpreter function used for debugging)
+  is ACCIDENTALLY dynamically scoped.  See doc/eval-scope-note.txt.
 
 * Use syntax transformation (on ASTs) instead of current code for:
     - quantified expressions

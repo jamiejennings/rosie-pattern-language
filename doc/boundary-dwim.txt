@@ -1,0 +1,82 @@
+Saturday, April 23, 2016
+
+Issue of how to define the boundary and the meaning of cooked expressions
+relative to the DWIM concept:
+
+Note that this transcript is using the boundary enhancement that considers the
+start of the string to be a boundary.  But it is still the case that a cooked
+exp only looks for a boundary between elements of a SEQUENCE.  
+
+
+bash-3.2$ rosie -repl
+This is Rosie v0.92boundary
+Rosie> .match "a", "abc"
+{"*": 
+   {"pos": 1.0, 
+    "text": "a", 
+    "subs": []}}
+Warning: 2 unmatched characters at end of input
+Rosie> .match ("a"), "abc"
+{"*": 
+   {"pos": 1.0, 
+    "text": "a", 
+    "subs": []}}
+Warning: 2 unmatched characters at end of input
+Rosie> .match "a"~, "abc"
+     SEQUENCE: "a" ~
+     FAILED to match against input "abc"
+     Explanation:
+  1.....LITERAL STRING: "a"
+        Matched "a" (against input "abc")
+  2.....BOUNDARY
+        FAILED to match against input "bc"
+
+Repl: No match  (turn debug off to hide the match evaluation trace)
+Rosie> .match "a"~, "a bc"
+{"*": 
+   {"pos": 1.0, 
+    "text": "a ", 
+    "subs": []}}
+Warning: 2 unmatched characters at end of input
+Rosie> .match "a"~, " a bc"
+     SEQUENCE: "a" ~
+     FAILED to match against input " a bc"
+     Explanation:
+  1.....LITERAL STRING: "a"
+        FAILED to match against input " a bc"
+
+Repl: No match  (turn debug off to hide the match evaluation trace)
+Rosie> .match ~"a"~, " a bc"
+{"*": 
+   {"pos": 1.0, 
+    "text": " a ", 
+    "subs": []}}
+Warning: 2 unmatched characters at end of input
+Rosie> 
+
+Rosie> .match ~"a"~, " a#bc"
+{"*": 
+   {"subs": [], 
+    "pos": 1.0, 
+    "text": " a"}}
+Warning: 3 unmatched characters at end of input
+Rosie> .match ~"a"~, " a"
+{"*": 
+   {"subs": [], 
+    "pos": 1.0, 
+    "text": " a"}}
+Rosie> .match ~"a"~, "a"
+{"*": 
+   {"subs": [], 
+    "pos": 1.0, 
+    "text": "a"}}
+Rosie>
+
+Rosie> .match ("a")+, " a a"
+Repl: No match  (turn debug on to show the match evaluation trace)
+Rosie> .match ~("a")+, " a a"
+{"*": 
+   {"subs": [], 
+    "pos": 1.0, 
+    "text": " a a"}}
+Rosie>
