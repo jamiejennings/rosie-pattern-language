@@ -80,3 +80,38 @@ Rosie> .match ~("a")+, " a a"
     "pos": 1.0, 
     "text": " a a"}}
 Rosie>
+
+----------------------------------------------------------------------------------------
+-- To look for tokens, it's best to be explicit about what a token is, and
+-- whether or not you want to keep the intertoken space.  The ~ binding to
+-- Rosie's token boundary definition is not actually very useful for this!
+-- (Need to rethink whether to expose ~ at all, or to use something else?)
+----------------------------------------------------------------------------------------
+ 
+Rosie> token = {[:punct:] / {![:punct:] ![:space:] !$ .}+}
+Rosie> s
+alias s = [:space:]
+Rosie> .match {s* token}*, "  hi there, \n  mary     "
+{"*": 
+   {"text": "  hi there, \
+  mary", 
+    "pos": 1.0, 
+    "subs": 
+      [{"token": 
+         {"text": "hi", 
+          "pos": 3.0, 
+          "subs": []}}, 
+       {"token": 
+         {"text": "there", 
+          "pos": 6.0, 
+          "subs": []}}, 
+       {"token": 
+         {"text": ",", 
+          "pos": 11.0, 
+          "subs": []}}, 
+       {"token": 
+         {"text": "mary", 
+          "pos": 16.0, 
+          "subs": []}}]}}
+Warning: 5 unmatched characters at end of input
+Rosie> 

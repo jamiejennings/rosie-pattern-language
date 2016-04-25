@@ -75,6 +75,12 @@ local function pcall_wrap(f)
 	  end
 end
 
+local function version()
+   return api.VERSION, (ROSIE_VERSION or "unknown rpl version")
+end
+
+api.version = pcall_wrap(version)
+
 ----------------------------------------------------------------------------------------
 -- Managing the environment (engine functions)
 ----------------------------------------------------------------------------------------

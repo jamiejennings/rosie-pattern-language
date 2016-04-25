@@ -25,6 +25,12 @@ check(type(api)=="table")
 check(api.VERSION)
 check(type(api.VERSION=="string"))
 
+ok, api_v, rpl_v = api.version()
+check(ok)
+check(type(api_v)=="string")
+check(type(rpl_v)=="string")
+check(not rpl_v:find("unknown"))
+
 ----------------------------------------------------------------------------------------
 heading("Engine")
 ----------------------------------------------------------------------------------------

@@ -39,7 +39,6 @@ Modern patterns also now support both relatively numbered and named
 backreferences now."
 (http://stackoverflow.com/questions/764247/why-are-regular-expressions-so-controversial)
 
-
 "filter(P, S) is almost always written clearer as [x for x in S if P(x)]"
 Guido van Rossum on Python, quoted by Paul Graham
 (http://www.paulgraham.com/quo.html)
@@ -59,3 +58,10 @@ precisely-specified interactions."
 [2] Brooks, Frederick P., Jr. (1982). "The Tar Pit", published in "The Mythical
 Man-Month - Anniversary Edition". ISBN 0-201-83595-9 
 (https://en.wikipedia.org/wiki/Programming_in_the_large_and_programming_in_the_small)
+
+"Every day, we create 2.5 quintillion bytes of data — so much that 90% of the
+data in the world today has been created in the last two years alone. This data
+comes from everywhere: sensors used to gather climate information, posts to
+social media sites, digital pictures and videos, purchase transaction records,
+and cell phone GPS signals to name a few."
+(http://www-01.ibm.com/software/data/bigdata/what-is-big-data.html)
