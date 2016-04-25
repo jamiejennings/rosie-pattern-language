@@ -29,3 +29,6 @@ rpl/grep.rpl
 -- Sample patterns for processing log files:
 
 rpl/spark.rpl   	        -- spark logs with python and java entries
+
+-- Esoteric, perhaps:
+rpl/rosie.rpl

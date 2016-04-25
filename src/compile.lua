@@ -42,7 +42,7 @@ local boundary = locale.space^1 + #locale.punct
               + (lpeg.B(locale.punct) * #(-locale.punct))
 	      + (lpeg.B(locale.space) * #(-locale.space))
 	      + P(-1)
-	      + (- B(P(1)))
+	      + (- B(1))
 compile.boundary = boundary
 
 ----------------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ compile.boundary = boundary
 ----------------------------------------------------------------------------------------
 local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};  -- any single character
              ["$"] = pattern{name="$"; peg=P(-1); alias=true}; -- end of input
-             [b_id] = pattern{name=b_id; peg=boundary; alias=true, ast=false}; -- token boundary
+             [b_id] = pattern{name=b_id; peg=boundary; alias=true}; -- token boundary
        }
 setmetatable(ENV, {__tostring = function(env)
 				   return "<base environment>"
