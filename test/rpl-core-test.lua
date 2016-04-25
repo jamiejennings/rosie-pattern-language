@@ -32,7 +32,9 @@ function check_match(exp, input, expectation, expected_leftover, expected_text)
 	    string.format(fmt, exp, input, expected_leftover, leftover))
       if expected_text and m then
 	 local t = json.decode(m)
-	 local text = t["*"].text
+	 --local text = t["*"].text
+	 local name, match = next(t)
+	 local text = match.text
 	 local fmt = "expected text matching %s against '%s' was '%s' but received '%s'"
 	 check(expected_text==text,
 	       string.format(fmt, exp, input, expected_text, text))
@@ -257,6 +259,36 @@ subheading("Confirming that a{0,1} is not equivalent to a?")
 check_match('a{0,1}', 'aa', false)
 check_match('a?', 'aa', true, 1, "a")
 
+heading("Boundary testing")
+check_match('a*', 'aa', true, 0, "aa")
+check_match('{a}*', 'aa', true, 0, "aa")
+check_match('(a)*', 'aa', true, 2, "")
+check_match('(a)*', 'a a', true, 0, "a a")
+check_match('(a)*', 'a a   ', true, 0, "a a   ")
+check_match('(a)*', ' a a   ', true, 7)
+check_match('~(a)*', ' a a   ', true, 0, " a a   ")
+ok, msg = api.load_string(eid, "token = { ![:space:] . {!~ .}* }")
+check(ok)
+check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 40, "The")
+check_match('token token token', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,")
+check_match('token{4,}', 'The quick, brown fox.\nSentence fragment!!  ', false)
+check_match('(token){4,}', 'The quick, brown fox.\nSentence fragment!!  ', true, 0)
+check_match('(token){4,4}', 'The quick, brown fox.\nSentence fragment!!  ', false)
+check_match('token*', 'The quick, brown fox.\nSentence fragment!!  ', true, 40, "The")
+check_match('(token)*', 'The quick, brown fox.\nSentence fragment!!  ', true, 0)
+
+check_match('(token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 44, "")
+check_match('~(token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
+check_match('(~token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
+check_match('(~token~)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
+
+check_match('~~~~~~', '     V', true, 1, "     ")
+check_match('~~~~~~', 'V', true, 1, "")		    -- idempotent
+
+check_match('~', 'X', true, 1, "")
+check_match('~', '', true, 0, "")
+check_match('"X"~', 'X', true, 0, "X")
+check_match('"X"~~~~', 'X', true, 0, "X")	    -- idempotent
 
 ----------------------------------------------------------------------------------------
 test.heading("Quantified expressions")
