@@ -45,7 +45,6 @@ Here's how to proceed:
 - A single expression, in cooked mode, will have a boundary appended at top level. 
 - 
 
-
 Saturday, April 23, 2016
 
 Issue of how to define the boundary and the meaning of cooked expressions
