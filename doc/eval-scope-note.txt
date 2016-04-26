@@ -1,0 +1,94 @@
+Compilation is lexically scoped; a definition is closed over the environments in
+which it is defined.
+
+E.g.
+
+    Rosie> foo = "foo"
+    Rosie> bar = "bar"
+    Rosie> baz = {foo bar}
+    Rosie> .match baz, "foobar"
+    {"baz": 
+       {"subs": 
+	  [{"foo": 
+	     {"subs": [], 
+	      "pos": 1.0, 
+	      "text": "foo"}}, 
+	   {"bar": 
+	     {"subs": [], 
+	      "pos": 4.0, 
+	      "text": "bar"}}], 
+	"pos": 1.0, 
+	"text": "foobar"}}
+    Rosie> foo = "la la la"
+    Rosie> baz
+    baz = {foo bar}
+    Rosie> .match baz, "foobar"
+    {"baz": 
+       {"subs": 
+	  [{"foo": 
+	     {"subs": [], 
+	      "pos": 1.0, 
+	      "text": "foo"}}, 
+	   {"bar": 
+	     {"subs": [], 
+	      "pos": 4.0, 
+	      "text": "bar"}}], 
+	"pos": 1.0, 
+	"text": "foobar"}}
+    Rosie> baz = {foo bar}
+    Rosie> .match baz, "foobar"
+    Repl: No match  (turn debug on to show the match evaluation trace)
+    Rosie>
+
+
+But, evaluation is (accidentally) dynamically scoped.  When evaluating
+(interpreting) a definition, the environment at definition time is not
+available, so lookups occur in the current (dynamic) environment.  This is a bug
+that needs to be fixed!
+
+E.g.
+
+    Rosie> foo = "foo"
+    Rosie> bar = "bar"
+    Rosie> baz = {foo bar}
+    Rosie> foo = "la la la"
+    Rosie> .match baz, "foobar"
+    {"baz": 
+       {"subs": 
+	  [{"foo": 
+	     {"subs": [], 
+	      "pos": 1.0, 
+	      "text": "foo"}}, 
+	   {"bar": 
+	     {"subs": [], 
+	      "pos": 4.0, 
+	      "text": "bar"}}], 
+	"pos": 1.0, 
+	"text": "foobar"}}
+    Rosie> .eval baz, "foobar"
+	 GROUP: {foo bar}
+	 FAILED to match against input "foobar"
+	 Explanation:
+	    SEQUENCE: foo bar
+	    FAILED to match against input "foobar"
+	    Explanation:
+	       IDENTIFIER: foo
+	       FAILED to match against input "foobar"
+	       Explanation (identifier's definition): "la la la"
+      1...........LITERAL STRING: "la la la"
+		  FAILED to match against input "foobar"
+
+    {"baz": 
+       {"subs": 
+	  [{"foo": 
+	     {"subs": [], 
+	      "pos": 1.0, 
+	      "text": "foo"}}, 
+	   {"bar": 
+	     {"subs": [], 
+	      "pos": 4.0, 
+	      "text": "bar"}}], 
+	"pos": 1.0, 
+	"text": "foobar"}}
+    Rosie>
+    
