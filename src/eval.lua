@@ -193,8 +193,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
 
       if m then
 	 -- First alternative succeeded...
-	 if raw then
-	    -- ... and do NOT need to look for boundary
+	 if raw then -- do NOT need to look for boundary
 	    return m, pos, msg;
 	 else
 	    local m2, pos2
@@ -211,8 +210,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
 				fail_output_only, step, msg)
 	 if m then
 	    -- Second alternative succeeded...
-	    if raw then
-	       -- ... and do NOT need to look for boundary
+	    if raw then -- do NOT need to look for boundary
 	       return m, pos, msg;
 	    else
 	       local m2, pos2
