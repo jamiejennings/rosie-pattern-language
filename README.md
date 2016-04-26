@@ -28,6 +28,13 @@ You should see this message if all went well: `Rosie Pattern Engine installed su
 
 #### Docs
 
+Blog posts on Rosie:
+* [Project Overview](https://developer.ibm.com/open/rosie-pattern-language/)
+* [Introduction](https://developer.ibm.com/open/2016/02/20/world-data-science-needs-rosie-pattern-language/)
+* [Parsing Spark logs](https://developer.ibm.com/open/2016/04/26/develop-test-rosie-pattern-language-patterns-part-1-parsing-log-files/)
+* Parsing CSV files (forthcoming)
+* Generating patterns automatically (forthcoming)
+
 To write patterns in Rosie Pattern Language, see [the RPL documentation](doc/rpl.md).
 
 For an introduction to Rosie and explanations of the key concepts, see
