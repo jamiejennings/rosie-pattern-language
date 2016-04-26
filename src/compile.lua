@@ -725,7 +725,7 @@ local function core_parse_and_explain(source)
    end
 end
 
-function compile.compile(source, env, raw, gmr, parser)
+function compile.compile(source, env, parser)
    if not parser then parser = parse_and_explain; end
    local astlist, msg = parser(source)
    if not astlist then return false, msg; end	    -- errors are explained in msg
@@ -742,9 +742,9 @@ function compile.compile(source, env, raw, gmr, parser)
    end
 end
 
-function compile.compile_command_line_expression(source, env, raw, gmr, parser)
+function compile.compile_command_line_expression(source, env, parser)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local result, msg, astlist = compile.compile(source, env, raw, gmr, parser)
+   local result, msg, astlist = compile.compile(source, env, parser)
    if not result then return result, msg; end
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
@@ -783,10 +783,10 @@ function compile.compile_command_line_expression(source, env, raw, gmr, parser)
 end
 
 function compile.core_compile_command_line_expression(source, env)
-   return compile.compile_command_line_expression(source, env, false, false, core_parse_and_explain)
+   return compile.compile_command_line_expression(source, env, core_parse_and_explain)
 end
    
-function compile.compile_file(filename, env, raw, gmr)
+function compile.compile_file(filename, env)
    local f = io.open(filename);
    if (not f) then
       return false, 'Compiler: cannot open file "'..filename..'"'
@@ -796,7 +796,7 @@ function compile.compile_file(filename, env, raw, gmr)
    if type(source)~="string" then
       return false, 'Compiler: unreadable file "'..filename..'"'
    end
-   return compile.compile(source, env, raw, gmr)
+   return compile.compile(source, env)
 end
 
 function compile.compile_core(filename, env)

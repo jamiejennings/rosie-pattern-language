@@ -290,6 +290,15 @@ check_match('~', '', true, 0, "")
 check_match('"X"~', 'X', true, 0, "X")
 check_match('"X"~~~~', 'X', true, 0, "X")	    -- idempotent
 
+check_match('{ a / b }', 'ax', true, 1, "a")
+check_match('a / b', 'ax', false)
+check_match('a / b', 'a x', true, 1)
+check_match('a / b', 'a', true)
+check_match('(a / b)', 'ax', false)		    -- BUG!
+check_match('(a / b)', 'a x', true, 2)
+check_match('(a / b)', 'a', true)
+
+
 ----------------------------------------------------------------------------------------
 test.heading("Quantified expressions")
 ----------------------------------------------------------------------------------------
