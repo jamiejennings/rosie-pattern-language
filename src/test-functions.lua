@@ -38,7 +38,9 @@ function test.start(optional_msg)
    if optional_msg then io.write(optional_msg, "\n"); end
 end
 
-function test.check(thing, message)
+function test.check(thing, message, level)
+   level = level or 0
+   local line = debug.getinfo(2+level, 'l').currentline
    count = count + 1
    heading_count = heading_count + 1
    subheading_count = subheading_count + 1
@@ -49,6 +51,7 @@ function test.check(thing, message)
 			      shc=subheading_count,
 			      hc=heading_count,
 			      c=count,
+			      l=line,
 			      m=message or ""})
       fail_count = fail_count + 1
    else
@@ -77,7 +80,7 @@ function test.finish(optional_msg)
    else
       io.stdout:write("** ", tostring(fail_count), " tests failed:\n")
       for _,v in ipairs(messages) do
-	 red_write(v.h, ": ", v.sh, ": ", "#", v.shc, " ", v.m, "\n")
+	 red_write("Line ", v.l, " ", v.h, ": ", v.sh, ": ", v.m, "\n")
       end
    end
    if optional_msg then io.write(optional_msg, "\n"); end
