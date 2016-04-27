@@ -1,34 +1,49 @@
 Tuesday, April 26, 2016
 
-a+	       == (a+)
+a+	       == (a+)		/at top level/
 (a+)	       aaaa...a~
 {a+}	       aaaa...a
 
-{a}+	       == a+ == (a+)	aaaa...a~
-({a}+)	       == (a+)
-{{a}+}	       == {a+}		aaaa...a
-(a)+	       a~a~a~a~
-((a)+)	       == (a)+
+{a}+	       == ({a}+) == (a+)	aaaa...a~	/at top level/
+({a}+)	       == ({a}+)
+{{a}+}	       == {a+}			aaaa...a
+(a)+	       == ((a)+)	/at top level/
+((a)+)	       a~a~a~a~
 {(a)+}	       a~a~a~a
 
 {(a)+ b}       a~a~a~ab
+{a}+ b	       == ({a}+ b)	/at top level/
+a+ b  	       == (a+ b) == ({a}+ b)	/at top level/
 ({a}+ b)       aaaa...a~b~
-a+ b  	       == (a+ b) == ({a}+ b)
 
 a++	       syntax error
-(a+)+	       aaaa...a~aaaa...a~
-((a)+)+	       a~a~a~a~
+(a+)+	       == ((a+)+)	/at top level/
+((a+)+)	       aaaa...a~aaaa...a~
+((a)+)+	       == (((a)+)+)	/at top level/
+(((a)+)+)      a~a~a~a~
 {(a+)+}	       aaaa...a~aaaa...a
 {{a+}+}	       aaaa...aaaaa...a
 
+a	       == (a)		/at top level/
+(a)	       a~
+{a}	       a
+a$	       == (a$)		/at top level/
+(a$)	       a~<EOS> == a<EOS>
+{a$}	       a<EOS> == a~<EOS>
+
+a b	       == (a b)		/at top level/
+(a b)	       a~b~
+{(a b)}	       a~b
+
 Here's how to proceed:
 - If we let the user change the boundary definition (which we want to do), then
-  we must keep the elaborate way of compiling quantified expressions.
+  we must keep the elaborate way of compiling quantified expressions, because
+  they may set it to something that is NOT idempotent.
 - But, we must modify the qe calculation to NOT put a boundary at the end.
-- At top-level, a cooked group should be explicitly added.  But NOT when
-  compiling an identifier!
-- Sequences must end in a boundary in cooked mode.
-
+- An expression that is not a group will be wrapped in a cooked group when it is
+  compiled (e.g. at top level or when being bound to an identifier).
+- A single expression, in cooked mode, will have a boundary appended at top level. 
+- 
 
 
 Saturday, April 23, 2016
@@ -255,4 +270,4 @@ Rosie> .match tokens, "  hi there, \n  mary     "
           "text": "mary", 
           "subs": []}}]}}
 Warning: 5 unmatched characters at end of input
-Rosie> 
+Rosie>

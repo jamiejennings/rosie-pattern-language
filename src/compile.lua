@@ -10,8 +10,6 @@
 -- TO DO:
 -- Clean up the loading of parse_and_explain (right now via rpl-parse)
 
--- 
-
 local compile = {}				    -- exported top level interface
 local cinternals = {}				    -- exported interface to compiler internals
 
@@ -300,6 +298,7 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    local epeg = e.peg
    local append_boundary = false
    local subname = next(subs[1])
+   -- !@# CAN WE NOW GET RID OF THIS TEST? !@#
    if (((not raw) and subname~="raw" 
                   and subname~="charset" 
 		  and subname~="named_charset"
@@ -309,6 +308,7 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       or subname=="cooked") then
       append_boundary = true;
    end
+   -- 
 
    if (not gmr) and matches_empty(epeg) then
       explain_quantified_limitation(a, source);
@@ -322,13 +322,15 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       else qpeg=epeg^1
       end
    elseif qname=="star" then
-      if append_boundary then qpeg = ((epeg * boundary)^1)^-1 -- yep.
+--      if append_boundary then qpeg = ((epeg * boundary)^1)^-1 -- yep.
+      if append_boundary then qpeg = (epeg * (boundary * epeg)^0)^-1
       else qpeg=epeg^0
       end
    elseif qname=="question" then
-      if append_boundary then qpeg = (epeg * boundary)^-1
-      else qpeg=epeg^-1
-      end
+--      if append_boundary then qpeg = (epeg * boundary)^-1
+--      else qpeg=epeg^-1
+--      end
+      qpeg = epeg^-1
    elseif qname=="repetition" then
       assert(type(qsubs[1])=="table")
       assert(qsubs[1], "not getting min clause in process_quantified_exp")
@@ -355,8 +357,8 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
 	    end
 	 end
       else
-	 -- here's where things get interesting, because we must see at least min copies of epeg,
-	 -- and at most max.
+	 -- here's where things get interesting, because we must match at least min copies of
+	 -- epeg, and at most max.
 	 qpeg=P"";
 	 for i=1,min do
 	    qpeg = qpeg * ((append_boundary and (epeg * boundary)) or epeg)
@@ -367,7 +369,7 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
 	    assert(min==max)
 	 end
 	 -- finally, here's the check for "and not looking at another copy of epeg"
-	 qpeg = qpeg * (-epeg)
+	 -- qpeg = qpeg * (-epeg)
       end
    else						    -- switch on quantifier type
       explain_unknown_quantifier(a, source)
@@ -656,6 +658,15 @@ function compile.expression_p(ast)
    return not (not cinternals.compile_exp_functions[name])
 end
 
+function cinternals.cook_if_needed(a)
+   local name = common.decode_match(a)
+   if name~="raw" and name~="cooked" then
+      return common.create_match("cooked", 1, "(...)", a)
+   else
+      return a
+   end
+end
+
 function cinternals.compile_assignment(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_assignment")
    local name, pos, text, subs = common.decode_match(a)
@@ -668,12 +679,17 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
    if env[iname] and not QUIET then
       warn("Compiler: reassignment to identifier " .. iname)
    end
-   local pat = cinternals.compile_exp(subs[2], raw, gmr, source, env)
+
+   local rhs = cinternals.cook_if_needed(subs[2])
+
+   local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
+   -- !@# IS THIS STILL VALID? !@#
    -- N.B. If the RHS of the expression is a CHOICE node, then the value we compute here for
    -- pat.peg is only valid when the identifier being bound is later referenced in RAW mode.  If
    -- the identifier is referenced in COOKED mode, then we must ignore pat.peg and use the
    -- pat.alternates value to compute the correct peg.  That computation must be done in
    -- conjunction with match_node_wrap.
+   -- 
    pat.peg = C(pat.peg)
    pat.ast = subs[2]				    -- expression ast
    env[iname] = pat
@@ -786,6 +802,12 @@ function compile.compile_command_line_expression(source, env, parser)
       -- expression
       return result[1]
    else
+
+      local name, pos, text, subs = common.decode_match(astlist[1])
+      if name=="cooked" or name~="raw" then
+	 -- append a boundary to look for
+	 result[1].peg = result[1].peg * boundary
+      end
       -- if the user entered an expression other than an identifier, we should treat it like it
       -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
       -- since that can't be an identifier name 
