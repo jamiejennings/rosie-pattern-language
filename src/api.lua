@@ -169,9 +169,9 @@ function api.load_string(id, input)
    if not ok then return false, en; end
    local ok, msg = compile.compile(input, en.env)
    if ok then
-      return true, ""
+      return true, (msg or "")			    -- msg may contain warnings in future
    else 
-      return false, msg
+      return false, (msg or "")			    -- msg should contain errors
    end
 end
 
