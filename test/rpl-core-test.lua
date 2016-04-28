@@ -339,6 +339,10 @@ check_match('(~token~)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true
 
 check_match('~~~~~~', '     V', true, 1, "     ")
 check_match('~~~~~~', 'V', true, 1, "")		    -- idempotent
+check_match('(~~~~~~)', '     V', true, 1, "     ")
+check_match('(~~~~~~)', 'V', true, 1, "")	    -- idempotent
+check_match('{~~~~~~}', '     V', true, 1, "     ")
+check_match('{~~~~~~}', 'V', true, 1, "")	    -- idempotent
 
 check_match('~', 'X', true, 1, "")
 check_match('~', '', true, 0, "")
