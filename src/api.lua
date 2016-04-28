@@ -139,7 +139,7 @@ api.clear_env = pcall_wrap(clear_env)
 
 function api.load_manifest(id, manifest_file)
    local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end		    -- en is a message in this case
+   if not ok then return false, en; end		    -- en is a message
    local ok, full_path = pcall(common.compute_full_path, manifest_file)
    if not ok then return false, full_path; end	    -- full_path is a message
    local result, msg = manifest.process_manifest(en, full_path)
@@ -153,7 +153,7 @@ end
 function api.load_file(id, path)
    -- paths not starting with "." or "/" are interpreted as relative to rosie home directory
    local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end		    -- en is a message in this case
+   if not ok then return false, en; end		    -- en is a message
    local ok, full_path = pcall(common.compute_full_path, path)
    if not ok then return false, full_path; end	    -- full_path is a message
    local result, msg = compile.compile_file(full_path, en.env)
@@ -166,7 +166,7 @@ end
 
 function api.load_string(id, input)
    local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end
+   if not ok then return false, en; end		    -- en is a message
    local ok, msg = compile.compile(input, en.env)
    if ok then
       return true, (msg or "")			    -- msg may contain warnings in future
@@ -239,16 +239,20 @@ end
 
 api.match_file = pcall_wrap(match_file)
 
-local function eval_(id, input_text, start)
-   local en = engine_from_id(id)
-   if type(input_text)~="string" then arg_error("input text not a string"); end
-   local result, nextpos, trace = en:eval(input_text, start)
+function api.eval(id, input_text, start)
+   local ok, en = pcall(engine_from_id, id)
+   if not ok then return false, en; end		    -- en is a message
+   if type(input_text)~="string" then
+      return pcall(arg_error, "input text not a string");
+   end
    local leftover = 0;
+   local ok, result, nextpos, trace = pcall(en.eval, en, input_text, start)
+   if not ok then
+      return false, result, leftover, ""	    -- result is error message
+   end
    if nextpos then leftover = (#input_text - nextpos + 1); end
-   return result, leftover, trace
+   return true, result, leftover, trace
 end
-
-api.eval = pcall_wrap(eval_)
 
 local function eval_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)

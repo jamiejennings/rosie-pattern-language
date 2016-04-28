@@ -427,102 +427,111 @@ if ok then
 end
 
 subheading("eval")
-check(type(api.eval)=="function")
-ok, msg = api.eval()
-check(not ok)
-check(msg==arg_err_engine_id)
-ok, msg = api.eval(eid)
-check(not ok)
-check(msg=="Argument error: input text not a string")
+print("TEMPORARILY NOT TESTING EVAL")
+-- check(type(api.eval)=="function")
+-- ok, msg = api.eval()
+-- check(not ok)
+-- check(msg==arg_err_engine_id)
+-- ok, msg = api.eval(eid)
+-- check(not ok)
+-- check(msg=="Argument error: input text not a string")
 
-ok, msg = api.configure(eid, json.encode{expression=".*//", encoder="json"})
-check(not ok)
-check(msg:find('Syntax error at line 1:'))
+-- ok, msg = api.configure(eid, json.encode{expression=".*//", encoder="json"})
+-- check(not ok)
+-- check(msg:find('Syntax error at line 1:'))
 
-ok, msg = api.configure(eid, json.encode{expression=".*", encoder="json"})
-check(ok)
-ok, match, leftover, msg = api.eval(eid, "foo")
-check(ok)
-check(match)
-check(leftover==0)
-check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+-- ok, msg = api.configure(eid, json.encode{expression=".*", encoder="json"})
+-- check(ok)
+-- ok, match, leftover, msg = api.eval(eid, "foo")
+-- check(ok)
+-- if ok then
+--    check(match)
+--    check(leftover==0)
+--    check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+-- end
 
-ok, msg = api.configure(eid, json.encode{expression="[:digit:]", encoder="json"})
-check(ok)
-ok, match, leftover, msg = api.eval(eid, "foo")
-check(ok)
-check(not match)
-check(leftover==3)
-check(msg:find('FAILED to match against input "foo"')) -- % is esc char
+-- ok, msg = api.configure(eid, json.encode{expression="[:digit:]", encoder="json"})
+-- check(ok)
+-- ok, match, leftover, msg = api.eval(eid, "foo")
+-- check(ok)
+-- if ok then
+--    check(not match)
+--    check(leftover==3)
+--    check(msg:find('FAILED to match against input "foo"')) -- % is esc char
+-- end
 
-ok, msg = api.configure(eid, json.encode{expression="[:alpha:]*", encoder="json"})
-check(ok)
-ok, match, leftover, msg = api.eval(eid, "foo56789")
-check(ok)
-check(match)
-check(leftover==5)
-check(msg:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
+-- ok, msg = api.configure(eid, json.encode{expression="[:alpha:]*", encoder="json"})
+-- check(ok)
+-- ok, match, leftover, msg = api.eval(eid, "foo56789")
+-- check(ok)
+-- if ok then 
+--    check(match)
+--    check(leftover==5)
+--    check(msg:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
+-- end
 
-ok, msg = api.configure(eid, json.encode{expression="common.number", encoder="json"})
-check(ok)
-ok, match, leftover, msg = api.eval(eid, "abc.x")
-check(ok)
-check(match)
-j = json.decode(match)
-check(j["common.hex"])
-check(j["common.hex"].text=="abc")
-check(leftover==2)
-check(msg:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
+-- ok, msg = api.configure(eid, json.encode{expression="common.number", encoder="json"})
+-- check(ok)
+-- ok, match, leftover, msg = api.eval(eid, "abc.x")
+-- check(ok)
+-- if ok then
+--    check(match)
+--    j = json.decode(match)
+--    check(j["common.hex"])
+--    check(j["common.hex"].text=="abc")
+--    check(leftover==2)
+--    check(msg:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
+-- end
 
-subheading("eval_file")
-check(type(api.eval_file)=="function")
-ok, msg = api.eval_file()
-check(not ok)
-check(msg==arg_err_engine_id)
-ok, msg = api.eval_file(eid)
-check(not ok)
-check(msg:find(": bad input file name"))
+-- subheading("eval_file")
+-- check(type(api.eval_file)=="function")
+-- ok, msg = api.eval_file()
+-- check(not ok)
+-- check(msg==arg_err_engine_id)
+-- ok, msg = api.eval_file(eid)
+-- check(not ok)
+-- check(msg:find(": bad input file name"))
 
-ok, msg = api.eval_file(eid, ROSIE_HOME.."/test/test-input")
-check(not ok)
-check(msg:find(": bad output file name"))
+-- ok, msg = api.eval_file(eid, ROSIE_HOME.."/test/test-input")
+-- check(not ok)
+-- check(msg:find(": bad output file name"))
 
-ok, msg = api.eval_file(eid, "thisfiledoesnotexist", "", "")
-check(not ok, "can't match against nonexistent file")
-check(msg:find("No such file or directory"))
+-- ok, msg = api.eval_file(eid, "thisfiledoesnotexist", "", "")
+-- check(not ok, "can't match against nonexistent file")
+-- check(msg:find("No such file or directory"))
 
-ok, msg = api.configure(eid, json.encode{expression=macosx_log1, encoder="json"})
-check(ok)			    
-ok, c_in, c_out, c_err = api.eval_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
-check(ok, "the macosx log pattern in the test file works on some log lines")
-check(c_in==4 and c_out==4 and c_err==0, "ensure that output was written for all lines of test-input")
+-- ok, msg = api.configure(eid, json.encode{expression=macosx_log1, encoder="json"})
+-- check(ok)			    
+-- ok, c_in, c_out, c_err = api.eval_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
+-- check(ok, "the macosx log pattern in the test file works on some log lines")
+-- check(c_in==4 and c_out==4 and c_err==0, "ensure that output was written for all lines of test-input")
 
-local function check_eval_output_file()
-   -- check the structure of the output file: 2 traces of matches, 2 traces of failed matches
-   nextline = io.lines("/tmp/out")
-   for i=1,4 do
-      local l = nextline()
-      check(l:find("SEQUENCE: basic.datetime_patterns{2,2}"), "the eval output starts out correctly")
-      l = nextline()
-      if i<3 then 
-	 check(l:find('Matched'), "the eval output for a match continues correctly")
-	 l = nextline(); while not l:find("27%.%.%.%.%.") do l = nextline(); end
-	 l = nextline()
-	 check(l:find('Matched "Service'), "the eval output's last match step looks good")
-      else
-	 check(l:find("FAILED to match against input"), "the eval output failed match continues correctly")
-	 l = nextline(); while not l:find("10%.%.%.%.%.") do print(l); l = nextline(); end
-	 l = nextline()
-	 print(l)
-	 check(l:find("FAILED to match against input"), "the eval output's last fail step looks good")
-      end   
-      nextline()				    -- blank line
-   end -- for loop
-   check(not nextline(), "exactly 4 eval traces in output file")
-end
+-- local function check_eval_output_file()
+--    -- check the structure of the output file: 2 traces of matches, 2 traces of failed matches
+--    nextline = io.lines("/tmp/out")
+--    for i=1,4 do
+--       local l = nextline()
+--       check(l:find("SEQUENCE: basic.datetime_patterns{2,2}"), "the eval output starts out correctly")
+--       l = nextline()
+--       if i<3 then 
+-- 	 check(l:find('Matched'), "the eval output for a match continues correctly")
+-- 	 l = nextline(); while not l:find("27%.%.%.%.%.") do l = nextline(); end
+-- 	 l = nextline()
+-- 	 check(l:find('Matched "Service'), "the eval output's last match step looks good")
+--       else
+-- 	 check(l:find("FAILED to match against input"), "the eval output failed match continues correctly")
+-- 	 l = nextline(); while not l:find("10%.%.%.%.%.") do print(l); l = nextline(); end
+-- 	 l = nextline()
+-- 	 print(l)
+-- 	 check(l:find("FAILED to match against input"), "the eval output's last fail step looks good")
+--       end   
+--       nextline()				    -- blank line
+--    end -- for loop
+--    check(not nextline(), "exactly 4 eval traces in output file")
+-- end
 
-print("*** TEMPORARILY NOT CHECKING OUTPUT FILE ***")
---if ok then check_eval_output_file(); end
+-- print("*** TEMPORARILY NOT CHECKING OUTPUT FILE ***")
+-- --if ok then check_eval_output_file(); end
 
 
 

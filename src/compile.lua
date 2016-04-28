@@ -524,13 +524,13 @@ end
 function cinternals.wrap_peg(pat, name, raw)
    local peg
    -- !@# DEBUGGING !@#
-   if pat.alternates and (not raw) then
-      print("***** USING ALTERNATES *****")
-      print("name is: ", name)
-      print("raw is: ", tostring(raw))
-      pattern.print(pat)
-      print("*****")
-   end
+   -- if pat.alternates and (not raw) then
+   --    print("***** USING ALTERNATES *****")
+   --    print("name is: ", name)
+   --    print("raw is: ", tostring(raw))
+   --    pattern.print(pat)
+   --    print("*****")
+   -- end
    if pat.alternates and (not raw) then
       -- The presence of pat.alternates means this pattern came from a CHOICE exp, in which case 
       -- val.peg already holds the compiler result for this node.  But val.peg was calculated 
@@ -616,8 +616,8 @@ function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
       return start, pattern{name="grammar", peg=peg_or_msg, ast=a, alias=gtable[t[1]].alias}
    else -- failed
       local rule = peg_or_msg:match("'%w'$")
-      table.print(a)
-      print(peg_or_msg)
+      table.print(a)				    -- !@#
+      print(peg_or_msg)				    -- !@#
       -- !@# FIXME:
       -- Explain some error that may not be related to quantifier!  Change the call below: 
       explain_quantified_limitation(a, source, rule)
@@ -815,7 +815,7 @@ function compile.compile_command_line_expression(source, env, parser)
    -- NEW TOP LEVEL TREATMENT
    if kind~="raw" then
       -- append a boundary to look for
-      print("Appending a boundary to top-level expression")
+--      print("Appending a boundary to top-level expression")
       result[1].peg = result[1].peg * boundary
    end
 

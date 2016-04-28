@@ -27,11 +27,10 @@ local locale = lpeg.locale()
 -- Eval (debugging capability for matching)
 ----------------------------------------------------------------------------------------
 
--- APPROACH:
--- Each AST node should (where appropriate) be evaluated using its PEG first.  If it matches and
--- we're doing the full eval, we then descend into the definition of the node and try to match
--- each piece.  If it matches and we're doing fail_output_only, then we simply move on without
--- writing any output.
+-- APPROACH: Each AST node should (where appropriate) be evaluated using its PEG first.  If it
+-- matches and we're doing fail_output_only, then we simply move on without writing any output.
+-- If it matches and we're doing the full eval, we then descend into the definition of the node
+-- and try to match each piece.
 
 local delta = 3
 
@@ -74,9 +73,7 @@ end
 
 local function eval_group(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    local name, pos, text, subs = common.decode_match(a)
-   if name=="raw" then raw=true;
-   elseif name=="cooked" then raw=false;
-   end
+   if name=="raw" then raw=true; else raw=false; end
    assert(subs[1] and not subs[2])		    -- always one sub
    msg = msg .. indent_(indent) .. "GROUP: " .. parse.reveal_ast(a) .. "\n"
 
@@ -86,8 +83,8 @@ local function eval_group(a, input, start, raw, gmr, source, env, indent, fail_o
 
    if not (m and fail_output_only) then
       msg = msg .. indent_(indent) .. "Explanation:\n"
-      m, pos, msg = eval_exp(subs[1], input, start, raw, gmr, source, env, indent+delta,
-			     fail_output_only, step, msg)
+      em, epos, msg = eval_exp(subs[1], input, start, raw, gmr, source, env, indent+delta,
+			       fail_output_only, step, msg)
    end
 
    return m, pos, msg
@@ -341,19 +338,42 @@ eval_exp = function(ast, input, start, raw, gmr, source, env, indent, fail_outpu
       fail_output_only, step, msg)
 end
 
-function eval.eval_command_line_expression(source, input, start, env, fail_output_only)
+function eval.eval_command_line_expression(pat, input, start, env, fail_output_only)
    -- if fail_output_only is true, then we are using "eval" to explain a syntax error, not to dump
    -- a full trace of the entire matching process
-   assert(type(source)=="string" and type(input)=="string" and (not env or type(env)=="table"))
+--   assert(type(source)=="string" and type(input)=="string" and (not env or type(env)=="table"))
+   assert(pattern.is(pat) and type(input)=="string" and (not env or type(env)=="table"))
 
-   local pat, errmsg = compile.compile_command_line_expression(source, env)
-   if not pat then return false, false, false, errmsg; end -- errors will be in errmsg
+   -- local pat, errmsg = compile.compile_command_line_expression(source, env)
+   -- if not pat then return false, errmsg; end
 
-   local raw = false;
+   local name, pos, text, subs = common.decode_match(pat.ast)
+   -- print("### DECODED:")
+   -- print(name, pos, text)
+   -- print("###")
+   local raw = (name=="raw")
    local step = {1};
    start = start or 1
    local indent = 5				  -- need to leave room for the step number "%3d."
-   return true, eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
+
+   local exp
+   if raw then
+      exp = pat.ast
+   else
+      exp = common.create_match("sequence", 1, "//generated//",
+				pat.ast,
+				common.create_match("identifier", 1, common.boundary_identifier))
+   end
+
+   local matches, nextpos, trace =
+      eval_exp(exp, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
+
+   -- local b_matches, b_nextpos, b_trace =
+   --    eval_boundary(pat.ast, input, nextpos, raw, gmr, source, env, indent, fail_output_only, step, trace)
+
+--   if not b_matches then return true, false, lastpos, b_trace; end
+
+   return true, matches, nextpos, trace
 end
 
 function eval.eval(pat, input, start, env, fail_output_only)
