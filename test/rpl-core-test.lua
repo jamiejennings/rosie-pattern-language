@@ -359,6 +359,49 @@ check_match('(a / b)', 'a', true)
 check_match('{a / b}', 'a', true)
 check_match('a / b', 'a', true)
 
+subheading("Checking an alternation that is not in a group")
+check_match('b a / b', 'b', false)
+check_match('b a / b', 'b a', true)
+check_match('b a / b', 'b b', true)
+check_match('b a / b', 'b a   x', true, 1)
+
+check_match('b (a / b)', 'b', false)
+check_match('b (a / b)', 'b a', true)
+check_match('b (a / b)', 'b b', true)
+check_match('b (a / b)', 'b a   x', true, 1)
+
+check_match('b {a / b}', 'b', false)
+check_match('b {a / b}', 'b a', true)
+check_match('b {a / b}', 'b b', true)
+check_match('b {a / b}', 'b a   x', true, 1)
+
+check_match('(b a / b)', 'b', false)
+check_match('(b a / b)', 'b a', true)
+check_match('(b a / b)', 'b b', true)
+check_match('(b a / b)', 'b a   x', true, 1)
+
+-- The tests above are just for consistency.  Here's the important stuff:
+check_match('{b a / b}', 'b', false)
+check_match('{b a / b}', 'b a', false)
+check_match('{b a / b}', 'ba', true)
+check_match('{b a / b}', 'bb', true)
+check_match('{b a / b}', 'b a   x', false)
+check_match('{b a / b}', 'ba   x', true, 4)
+check_match('{b a / b}', 'bax', true, 1)
+
+check_match('{b (a / b)}', 'b', false)
+check_match('{b (a / b)}', 'b a', false)
+check_match('{b (a / b)}', 'ba', true)
+check_match('{b (a / b)}', 'bb', true)
+check_match('{b (a / b)}', 'b a   x', false)
+check_match('{b (a / b)}', 'ba   x', true, 4)
+
+check_match('{b (a / b)}', 'bax', true, 1)	    -- this is key: no top-level boundary added
+check_match('({b (a / b)})', 'bax', false)	    -- this is key: top-level boundary added
+
+check_match('{b (a)}', 'bax', true, 1)
+check_match('({b (a)})', 'bax', false)
+check_match('{b (a)}', 'ba x', true, 2)
 
 ----------------------------------------------------------------------------------------
 test.heading("Quantified expressions")
@@ -368,7 +411,7 @@ check_match('a*', '', true)
 check_match('a*', 'a', true)
 check_match('a*', 'aaaaaa', true)
 check_match('a*', 'aaaaaa ', true, 0)
-check_match('{a*}', 'aaaaaa ', true, 1)
+check_match('{a*}', 'aaaaaa ', true, 1)		    -- !@# let's not capture the trailing boundary
 check_match('a*', 'x', true, 1, '')
 check_match('{a}*', '', true)
 check_match('{a}*', 'a', true)
