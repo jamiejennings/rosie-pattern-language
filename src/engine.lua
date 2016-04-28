@@ -96,8 +96,8 @@ end
 local function engine_eval(e, input, start)
    start = start or 1
    if not e.config.pattern then no_pattern(e); end
-   local ok, matches, nextpos, trace = eval.eval(e.config.pattern, input, 1, e.env)
-   if not ok then return false, matches; end
+   local ok, matches, nextpos, trace = eval.eval_command_line_expression(e.config.pattern, input, 1, e.env)
+   if not ok then return false, trace; end
    if matches then
       assert(type(matches)=="table", "eval should return a table, not this: " .. tostring(matches))
       assert(not matches[2], "eval should return exactly 0 or 1 match")

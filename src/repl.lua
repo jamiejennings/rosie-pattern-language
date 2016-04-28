@@ -128,15 +128,19 @@ function repl(eid)
 		  io.write(msg, "\n");		    -- syntax and compile errors
 	       else
 		  local ok, m, left = api.match(eid, input_text)
---		  if not ok then ... ?
+		  if not ok then error("Repl: api.match failed: " .. tostring(m)); end
 		  if cname=="match" then
 		     if debug and (not m) then
 			local ok, match, leftover, trace = api.eval(eid, input_text)
+			if not ok then error("Repl: api.eval failed: " .. tostring(match)); end
 			io.write(trace, "\n")
 		     end
 		  else
 		     -- must be eval
 		     local ok, match, leftover, trace = api.eval(eid, input_text)
+		     if not ok then error("Repl: api.eval failed: " .. tostring(match)); end
+		     -- m and match SHOULD be equivalent but let's print what eval produces.
+		     m = match
 		     io.write(trace, "\n")
 		  end
 		  print_match(m, left, (cname=="eval"))
