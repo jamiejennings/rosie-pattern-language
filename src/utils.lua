@@ -128,7 +128,7 @@ end
 
 function prettify_json(s)
    local t = json.decode(s)
-   return table_to_pretty_string(t, nil, true)
+   return (t==json.null and "NULL") or table_to_pretty_string(t, nil, true)
 end
 
 
