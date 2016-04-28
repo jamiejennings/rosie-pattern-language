@@ -524,12 +524,13 @@ end
 function cinternals.wrap_peg(pat, name, raw)
    local peg
    -- !@# DEBUGGING !@#
-   -- if pat.alternates then
-   --    print("*****")
-   --    print(name)
-   --    pattern.print(pat)
-   --    print("*****")
-   -- end
+   if pat.alternates and (not raw) then
+      print("***** USING ALTERNATES *****")
+      print("name is: ", name)
+      print("raw is: ", tostring(raw))
+      pattern.print(pat)
+      print("*****")
+   end
    if pat.alternates and (not raw) then
       -- The presence of pat.alternates means this pattern came from a CHOICE exp, in which case 
       -- val.peg already holds the compiler result for this node.  But val.peg was calculated 
@@ -548,8 +549,8 @@ function cinternals.compile_group(a, raw, gmr, source, env)
    assert(name=="raw" or name=="cooked")
    if name=="raw" then raw=true; else raw=false; end
    assert(not subs[2])
-   local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
-   return pattern{name=name, peg=peg}
+   local pat = cinternals.compile_exp(subs[1], raw, gmr, source, env)
+   return pattern{name=name, peg=pat.peg, ast=pat.ast, alternates=pat.alternates}
 end
 
 function cinternals.compile_syntax_error(a, raw, gmr, source, env)
@@ -684,6 +685,7 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
 
    local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
    -- !@# IS THIS STILL VALID? !@#
+   --
    -- N.B. If the RHS of the expression is a CHOICE node, then the value we compute here for
    -- pat.peg is only valid when the identifier being bound is later referenced in RAW mode.  If
    -- the identifier is referenced in COOKED mode, then we must ignore pat.peg and use the
@@ -707,9 +709,10 @@ function cinternals.compile_alias(a, raw, gmr, source, env)
    if env[alias_name] then
       warn("Compiler: reassignment to alias " .. alias_name)
    end
-   local pat = cinternals.compile_exp(subs[2], raw, gmr, source, env)
+   local rhs = cinternals.cook_if_needed(subs[2])
+   local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
    pat.alias=true;
-   pat.ast = subs[2]				    -- expression ast
+   pat.ast = rhs				    -- expression ast
    env[alias_name] = pat
 end
 
@@ -792,30 +795,32 @@ function compile.compile_command_line_expression(source, env, parser)
       -- E.g. an assignment or alias statement won't produce a pattern
       return false, "Error: expression did not compile to a pattern: " .. source
    end
+
    -- now we check to see if the expression we are evaluating is an identifier, and therefore does
    -- not have to be anonymous
    local kind, pos, id = common.decode_match(astlist[1])
    local pat = env[id]
-   if kind=="identifier" and pattern.is(pat) and (not pat.alias) then
+   if not (kind=="identifier" and pattern.is(pat) and (not pat.alias)) then
       -- if the user entered an identifier, then we are all set, unless it is an alias, which
       -- by itself may capture nothing and thus should be handled like any other kind of
-      -- expression
-      return result[1]
-   else
-
-      local name, pos, text, subs = common.decode_match(astlist[1])
-      if name=="cooked" or name~="raw" then
-	 -- append a boundary to look for
-	 result[1].peg = result[1].peg * boundary
-      end
-      -- if the user entered an expression other than an identifier, we should treat it like it
+      -- expression.  
+      -- BUT if the user entered an expression other than an identifier, we should treat it like it
       -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
       -- since that can't be an identifier name 
       result[1].peg = C(result[1].peg)
-      result[1].peg = cinternals.wrap_peg(result[1], "*", false)
+      result[1].peg = cinternals.wrap_peg(result[1], "*", (kind=="raw"))
       result[1].ast = astlist[1]
-      return result[1]
    end
+
+   -- NEW TOP LEVEL TREATMENT
+   if kind~="raw" then
+      -- append a boundary to look for
+      print("Appending a boundary to top-level expression")
+      result[1].peg = result[1].peg * boundary
+   end
+
+   return result[1]
+
 end
 
 function compile.core_compile_command_line_expression(source, env)
