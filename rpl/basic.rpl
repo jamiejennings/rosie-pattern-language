@@ -45,10 +45,10 @@ basic.network_patterns =
 basic.punctuation = [:punct:]
 
 
-basic.matchall = { basic.datetime_patterns / basic.network_patterns /
+basic.matchall = ( basic.datetime_patterns / basic.network_patterns /
                    basic.element / basic.element_quoted / basic.element_bracketed /
                    [:space:]+ /
 		   basic.punctuation / 
 		   basic.unmatched
-		 }+
+		)+
 
