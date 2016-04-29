@@ -640,7 +640,25 @@ check_match('{b{2,4}}', 'bb b', true, 2, 'bb')
 check_match('{b{2,4}}', 'bbb b', true, 2, 'bbb')
 check_match('{b{2,4}}', 'bbbb b', true, 2, 'bbbb')
 
+subheading("Sequences of raw and cooked groups")
+check_match('{a b} {c d}', 'ab cd', true)
+check_match('{{a b} {c d}}', 'abcd', true)
+check_match('({a b} {c d})', 'ab cd', true)
+check_match('({{a b} {c d}})', 'abcd', true)
 
+check_match('(a b) (c d)', 'a b c d', true)
+check_match('(a b) (c d)', 'a bc d', false)
+check_match('{(a b) (c d)}', 'a bc d', true)
+
+check_match('((a b) (c d))', 'a b c d', true)
+check_match('((a b) (c d))', 'a bc d', false)
+check_match('({(a b) (c d)})', 'a bc d', true)
+check_match('({(a b) (c d)})', 'a b c d', false)
+
+check_match('({(a b) (c d)})', 'a bc dx', false)
+check_match('((a b) (c d))', 'a b c dx', false)
+check_match('(a b) (c d)', 'a b c dx', false)
+check_match('{a b} {c d}', 'ab cdx', false)
 
 test.finish()
 
