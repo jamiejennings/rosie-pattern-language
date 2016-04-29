@@ -346,28 +346,33 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       if (not max) then
 	 if (min == 0) then
 	    -- same as star
-	    if append_boundary then qpeg = (epeg^1 * boundary)^-1 -- !@# NEED A TEST CASE FOR THIS!
-	    else qpeg = epeg^0
+	    if append_boundary then qpeg = (epeg * (boundary * epeg)^0)^-1
+	    else qpeg=epeg^0
 	    end
 	 else
 	    -- min > 0 due to prior checking
 	    assert(min > 0)
-	    if append_boundary then qpeg = (epeg * boundary)^min
+	    if append_boundary then qpeg = (epeg * (boundary * epeg)^(min-1))
 	    else qpeg = epeg^min
 	    end
 	 end
       else
 	 -- here's where things get interesting, because we must match at least min copies of
 	 -- epeg, and at most max.
-	 qpeg=P"";
-	 for i=1,min do
-	    qpeg = qpeg * ((append_boundary and (epeg * boundary)) or epeg)
-	 end -- for
-	 if (min-max) < 0 then
-	    qpeg = qpeg * ((append_boundary and (epeg * boundary) or epeg)^(min-max))
+	 if min==0 then
+	    qpeg = ((append_boundary and (boundary * epeg)) or epeg)^(-max)
 	 else
-	    assert(min==max)
-	 end
+	    assert(min > 0)
+	    qpeg = epeg
+	    for i=1,(min-1) do
+	       qpeg = qpeg * ((append_boundary and (boundary * epeg)) or epeg)
+	    end -- for
+	    if (min-max) < 0 then
+	       qpeg = qpeg * ((append_boundary and (boundary * epeg) or epeg)^(min-max))
+	    else
+	       assert(min==max)
+	    end
+	 end -- if min==0
 	 -- finally, here's the check for "and not looking at another copy of epeg"
 	 -- qpeg = qpeg * (-epeg)
       end
