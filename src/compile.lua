@@ -296,7 +296,6 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    local epeg = e.peg
    local append_boundary = false
    local subname = next(subs[1])
-   -- !@# CAN WE NOW GET RID OF THIS TEST? !@#
    if (((not raw) and subname~="raw" 
                   and subname~="charset" 
 		  and subname~="named_charset"
@@ -656,7 +655,6 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
    -- the identifier is referenced in COOKED mode, then we must ignore pat.peg and use the
    -- pat.alternates value to compute the correct peg.  That computation must be done in
    -- conjunction with match_node_wrap.
-   -- 
    pat.peg = C(pat.peg)
    pat.ast = subs[2]				    -- expression ast
    env[iname] = pat
