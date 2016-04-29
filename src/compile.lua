@@ -9,6 +9,8 @@
 
 -- TO DO:
 -- Clean up the loading of parse_and_explain (right now via rpl-parse)
+-- And general cleanup, after so much evolution in the language definition!
+
 
 local compile = {}				    -- exported top level interface
 local cinternals = {}				    -- exported interface to compiler internals
@@ -298,7 +300,6 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    local epeg = e.peg
    local append_boundary = false
    local subname = next(subs[1])
-   -- !@# CAN WE NOW GET RID OF THIS TEST? !@#
    if (((not raw) and subname~="raw" 
                   and subname~="charset" 
 		  and subname~="named_charset"
@@ -528,14 +529,6 @@ end
 
 function cinternals.wrap_peg(pat, name, raw)
    local peg
-   -- !@# DEBUGGING !@#
-   -- if pat.alternates and (not raw) then
-   --    print("***** USING ALTERNATES *****")
-   --    print("name is: ", name)
-   --    print("raw is: ", tostring(raw))
-   --    pattern.print(pat)
-   --    print("*****")
-   -- end
    if pat.alternates and (not raw) then
       -- The presence of pat.alternates means this pattern came from a CHOICE exp, in which case 
       -- val.peg already holds the compiler result for this node.  But val.peg was calculated 
@@ -689,14 +682,11 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
    local rhs = cinternals.cook_if_needed(subs[2])
 
    local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
-   -- !@# IS THIS STILL VALID? !@#
-   --
    -- N.B. If the RHS of the expression is a CHOICE node, then the value we compute here for
    -- pat.peg is only valid when the identifier being bound is later referenced in RAW mode.  If
    -- the identifier is referenced in COOKED mode, then we must ignore pat.peg and use the
    -- pat.alternates value to compute the correct peg.  That computation must be done in
    -- conjunction with match_node_wrap.
-   -- 
    pat.peg = C(pat.peg)
    pat.ast = subs[2]				    -- expression ast
    env[iname] = pat
