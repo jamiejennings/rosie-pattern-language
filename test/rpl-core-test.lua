@@ -659,5 +659,172 @@ check_match('((a b) (c d))', 'a b c dx', false)
 check_match('(a b) (c d)', 'a b c dx', false)
 check_match('{a b} {c d}', 'ab cdx', false)
 
+heading("Quantified alternatives and sequences")
+subheading("Alternatives with question operator")
+check_match('(a/b/c)?', '', true)
+check_match('(a/b/c)?', 'a', true)
+check_match('(a/b/c)?', 'b', true)
+check_match('(a/b/c)?', 'c', true)
+check_match('(a/b/c)?', 'ab', false)
+check_match('(a/b/c)?', 'a!', true, 1)
+-- next set same as previous set
+check_match('{a/b/c}?', '', true)
+check_match('{a/b/c}?', 'a', true)
+check_match('{a/b/c}?', 'b', true)
+check_match('{a/b/c}?', 'c', true)
+check_match('{a/b/c}?', 'ab', false)
+check_match('{a/b/c}?', 'a!', true, 1)
+-- next set same as previous set
+check_match('({a/b/c}?)', '', true)
+check_match('({a/b/c}?)', 'a', true)
+check_match('({a/b/c}?)', 'b', true)
+check_match('({a/b/c}?)', 'c', true)
+check_match('({a/b/c}?)', 'ab', false)
+check_match('({a/b/c}?)', 'a!', true, 1)
+-- and this one is different
+check_match('{{a/b/c}?}', '', true)
+check_match('{{a/b/c}?}', 'a', true)
+check_match('{{a/b/c}?}', 'b', true)
+check_match('{{a/b/c}?}', 'c', true)
+check_match('{{a/b/c}?}', 'ab', true, 1)	    -- the difference
+check_match('{{a/b/c}?}', 'a!', true, 1)
+
+check_match('{a/b/c}? d', 'a d', true)
+check_match('{a/b/c}? d', 'ad', false)
+check_match('({a/b/c}? d)', 'a d', true)
+check_match('({a/b/c}? d)', 'ad', false)
+check_match('{{a/b/c}? d}', 'a d', false)
+check_match('{{a/b/c}? d}', 'ad', true)
+
+subheading("Alternatives with range operator")
+check_match('(a/b/c){1,2}', '', false)
+check_match('(a/b/c){1,2}', 'a', true)
+check_match('(a/b/c){1,2}', 'b', true)
+check_match('(a/b/c){1,2}', 'c', true)
+check_match('(a/b/c){1,2}', 'a b', true)
+check_match('(a/b/c){1,2}', 'c c', true)
+check_match('(a/b/c){1,2}', 'c a', true)
+check_match('(a/b/c){1,2}', 'c a ', true)
+check_match('(a/b/c){1,2}', 'a c!', true, 1)
+check_match('(a/b/c){1,2}', 'a cX', false)
+-- next set same as previous set
+check_match('((a/b/c){1,2})', '', false)
+check_match('((a/b/c){1,2})', 'a', true)
+check_match('((a/b/c){1,2})', 'b', true)
+check_match('((a/b/c){1,2})', 'c', true)
+check_match('((a/b/c){1,2})', 'a b', true)
+check_match('((a/b/c){1,2})', 'c c', true)
+check_match('((a/b/c){1,2})', 'c a', true)
+check_match('((a/b/c){1,2})', 'c a ', true)
+check_match('((a/b/c){1,2})', 'a c!', true, 1)
+check_match('((a/b/c){1,2})', 'a cX', false)
+-- difference
+check_match('{(a/b/c){1,2}}', '', false)
+check_match('{(a/b/c){1,2}}', 'a', true)
+check_match('{(a/b/c){1,2}}', 'b', true)
+check_match('{(a/b/c){1,2}}', 'c', true)
+check_match('{(a/b/c){1,2}}', 'a b', true)
+check_match('{(a/b/c){1,2}}', 'c c', true)
+check_match('{(a/b/c){1,2}}', 'c a', true)
+check_match('{(a/b/c){1,2}}', 'c a ', true, 1)	    -- difference
+check_match('{(a/b/c){1,2}}', 'a c!', true, 1)
+check_match('{(a/b/c){1,2}}', 'a cX', true, 1)	    -- difference
+
+check_match('{a/b/c}{1,2}', '', false)
+check_match('{a/b/c}{1,2}', 'a', true)
+check_match('{a/b/c}{1,2}', 'b', true)
+check_match('{a/b/c}{1,2}', 'c', true)
+check_match('{a/b/c}{1,2}', 'ab', true)
+check_match('{a/b/c}{1,2}', 'cc', true)
+check_match('{a/b/c}{1,2}', 'ca', true)
+check_match('{a/b/c}{1,2}', 'ca ', true)
+check_match('{a/b/c}{1,2}', 'ac!', true, 1)
+check_match('{a/b/c}{1,2}', 'acX', false)
+-- next set same as previous set
+check_match('({a/b/c}{1,2})', '', false)
+check_match('({a/b/c}{1,2})', 'a', true)
+check_match('({a/b/c}{1,2})', 'b', true)
+check_match('({a/b/c}{1,2})', 'c', true)
+check_match('({a/b/c}{1,2})', 'ab', true)
+check_match('({a/b/c}{1,2})', 'cc', true)
+check_match('({a/b/c}{1,2})', 'ca', true)
+check_match('({a/b/c}{1,2})', 'ca ', true)
+check_match('({a/b/c}{1,2})', 'ac!', true, 1)
+check_match('({a/b/c}{1,2})', 'acX', false)
+-- difference
+check_match('{{a/b/c}{1,2}}', '', false)
+check_match('{{a/b/c}{1,2}}', 'a', true)
+check_match('{{a/b/c}{1,2}}', 'b', true)
+check_match('{{a/b/c}{1,2}}', 'c', true)
+check_match('{{a/b/c}{1,2}}', 'ab', true)
+check_match('{{a/b/c}{1,2}}', 'cc', true)
+check_match('{{a/b/c}{1,2}}', 'ca', true)
+check_match('{{a/b/c}{1,2}}', 'ca ', true, 1)	    -- difference
+check_match('{{a/b/c}{1,2}}', 'ac!', true, 1)
+check_match('{{a/b/c}{1,2}}', 'acX', true, 1)	    -- difference
+
+subheading("Sequences with question operator")
+check_match('(a b)?', '', true)
+check_match('(a b)?', 'a', true, 1)
+check_match('(a b)?', 'ab', true, 2)
+check_match('(a b)?', 'a b', true)
+check_match('(a b)?', 'a b  ', true)
+check_match('(a b)?', 'a bx  ', false)		    -- !@# Hmmmmm...
+-- next set same as previous set
+check_match('((a b)?)', '', true)
+check_match('((a b)?)', 'a', true, 1)
+check_match('((a b)?)', 'ab', true, 2)
+check_match('((a b)?)', 'a b', true)
+check_match('((a b)?)', 'a b  ', true)
+check_match('((a b)?)', 'a bx  ', false)	    -- !@# Hmmmmm...
+-- difference shows up here
+check_match('{(a b)?}', '', true)
+check_match('{(a b)?}', 'a', true, 1)
+check_match('{(a b)?}', 'ab', true, 2)
+check_match('{(a b)?}', 'a b', true)
+check_match('{(a b)?}', 'a b  ', true, 2)	    -- difference
+check_match('{(a b)?}', 'a bx  ', true, 3)	    -- difference
+
+subheading("Cooked sequences with range operator")
+check_match('(a b){2,2}', 'a b', false)
+check_match('(a b){2,2}', 'a b a b', true)
+check_match('(a b){2,2}', 'a ba b', false)
+check_match('(a b){2,2}', 'a b a b ', true)
+check_match('(a b){2,2}', 'a b a bx', false)
+-- next set same as previous set
+check_match('((a b){2,2})', 'a b', false)
+check_match('((a b){2,2})', 'a b a b', true)
+check_match('((a b){2,2})', 'a ba b', false)
+check_match('((a b){2,2})', 'a b a b ', true)
+check_match('((a b){2,2})', 'a b a bx', false)
+-- difference
+check_match('{(a b){2,2}}', 'a b', false)
+check_match('{(a b){2,2}}', 'a b a b', true)
+check_match('{(a b){2,2}}', 'a ba b', false)	    -- !@# Hmmm...
+check_match('{(a b){2,2}}', 'a b a b ', true, 1)    -- difference
+check_match('{(a b){2,2}}', 'a b a bx', true, 1)    -- difference
+
+subheading("Raw sequences with range operator")
+check_match('{a b}{2,2}', 'ab', false)
+check_match('{a b}{2,2}', 'abab', true)
+check_match('{a b}{2,2}', 'ab ab', false)
+check_match('{a b}{2,2}', 'abab!', true, 1)
+check_match('{a b}{2,2}', 'ababx', false)
+check_match('{a b}{2,2}', 'abab ', true)
+-- next set same as previous set
+check_match('({a b}{2,2})', 'ab', false)
+check_match('({a b}{2,2})', 'abab', true)
+check_match('({a b}{2,2})', 'ab ab', false)
+check_match('({a b}{2,2})', 'abab!', true, 1)
+check_match('({a b}{2,2})', 'ababx', false)
+check_match('({a b}{2,2})', 'abab ', true)
+-- difference
+check_match('{{a b}{2,2}}', 'ab', false)
+check_match('{{a b}{2,2}}', 'abab', true)
+check_match('{{a b}{2,2}}', 'ab ab', false)
+check_match('{{a b}{2,2}}', 'abab!', true, 1)
+check_match('{{a b}{2,2}}', 'ababx', true, 1)
+check_match('{{a b}{2,2}}', 'abab ', true, 1)
+
 test.finish()
 
