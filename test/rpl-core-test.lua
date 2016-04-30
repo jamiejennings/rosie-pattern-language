@@ -660,7 +660,7 @@ check_match('(a b) (c d)', 'a b c dx', false)
 check_match('{a b} {c d}', 'ab cdx', false)
 
 heading("Quantified alternatives and sequences")
-subheading("Alternatives with question operator")
+subheading("Cooked alternatives with question operator")
 check_match('(a/b/c)?', '', true)
 check_match('(a/b/c)?', 'a', true)
 check_match('(a/b/c)?', 'b', true)
@@ -730,6 +730,7 @@ check_match('{(a/b/c){1,2}}', 'c a ', true, 1)	    -- difference
 check_match('{(a/b/c){1,2}}', 'a c!', true, 1)
 check_match('{(a/b/c){1,2}}', 'a cX', true, 1)	    -- difference
 
+subheading("Raw alternatives with question operator")
 check_match('{a/b/c}{1,2}', '', false)
 check_match('{a/b/c}{1,2}', 'a', true)
 check_match('{a/b/c}{1,2}', 'b', true)

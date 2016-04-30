@@ -19,12 +19,15 @@ alias csv.dquote = "\""				    -- "
 csv.escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\""   -- \" or \"\" or "" 
 alias csv.squote = "'"				    -- '
 csv.escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
+
 -- Capture the contents of a quoted field by assigning it to an RPL name:
 csv.dquoted_field = {csv.escaped_dquote / {!csv.dquote .}}*
 csv.squoted_field = {csv.escaped_squote / {!csv.squote .}}*
+
 -- Wrap the field contents with quotation marks:
 alias csv.dq = {csv.dquote csv.dquoted_field csv.dquote}
 alias csv.sq = {csv.squote csv.squoted_field csv.squote}
+
 -- Look for either double or single quoted fields
 csv.quoted_field = csv.dq / csv.sq
 
