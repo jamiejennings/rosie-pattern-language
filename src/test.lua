@@ -170,7 +170,9 @@ function test_expressions()
    result = test_match("test", ' b', 1, TEST_ENGINE)
    assert(result and result.test and result.test.text==" b")
    result = test_match("test", 'b', 1, TEST_ENGINE)
-   assert(not result)
+   --   assert(not result)
+   -- boundary changed:
+   assert(result and result.test and result.test.text=="b")
 
    print("Testing (a)* b")
    compile.compile('test = (a)* b', TEST_ENGINE.env)
@@ -183,7 +185,9 @@ function test_expressions()
    result = test_match("test", ' b', 1, TEST_ENGINE)
    assert(result and result.test and result.test.text==" b")
    result = test_match("test", 'b', 1, TEST_ENGINE)
-   assert(not result)
+   --   assert(not result)
+   -- boundary changed:
+   assert(result and result.test and result.test.text=="b")
    
    print("Testing {(a)* b}")
    compile.compile('test = {(a)* b}', TEST_ENGINE.env)

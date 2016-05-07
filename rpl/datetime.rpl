@@ -145,10 +145,12 @@ datetime.datetime_RFC2822 = datetime.date_RFC2822 datetime.time_RFC2822
 -- Other formats
 --
 
+alias day_of_week_full = "Monday" / "Tuesday" / "Wednesday" / "Thursday" / "Friday" / "Saturday" / "Sunday" 
+
 alias month_name_full = "January" / "February" / "March" / "April" / "May" / "June" / 
                         "July" / "August" / "September" / "October" / "November" / "December" 
 
-datetime.shortdate = (month_RFC2822 / month_name_full) day_RFC2822
+datetime.shortdate = (day_of_week_full ",")? (month_RFC2822 / month_name_full) day_RFC2822 ("," fullyear)?
 
 alias ampm = "AM" / "am" / "PM" / "pm"
 datetime.simple_time = { hour_RFC2822 ":" minute_RFC2822 {":" * second_RFC2822 {"." d+}?}? }  ampm?

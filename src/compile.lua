@@ -42,6 +42,7 @@ local boundary = locale.space^1 + #locale.punct
               + (lpeg.B(locale.punct) * #(-locale.punct))
 	      + (lpeg.B(locale.space) * #(-locale.space))
 	      + P(-1)
+	      + (- lpeg.B(1))
 compile.boundary = boundary
 
 ----------------------------------------------------------------------------------------
