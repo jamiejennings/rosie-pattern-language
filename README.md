@@ -1,4 +1,4 @@
-# This is Rosie Pattern Language v0.92a
+# This is Rosie Pattern Language v0.92c
 
 ### Rosie will tidy up raw data (text), recognize key pieces of data, and create JSON structured output
 
