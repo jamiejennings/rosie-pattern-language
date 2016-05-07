@@ -1,3 +1,6 @@
+"Regular expressions are dangerous"
+(https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-regexp-query.html)
+
 "Some people, when confronted with a problem, think “I know,
 I'll use regular expressions.”  Now they have two problems."
 Jamie Zawinski, in a Usenet post quoted with this attribution
