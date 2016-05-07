@@ -27,8 +27,8 @@ require "utils"
 require "recordtype"
 local unspecified = recordtype.unspecified
 
-local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt =
-   lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt
+local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt, B =
+   lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt, lpeg.B
 
 local locale = lpeg.locale()
 
@@ -42,7 +42,11 @@ local boundary = locale.space^1 + #locale.punct
               + (lpeg.B(locale.punct) * #(-locale.punct))
 	      + (lpeg.B(locale.space) * #(-locale.space))
 	      + P(-1)
+<<<<<<< HEAD
 	      + (- lpeg.B(1))
+=======
+	      + (- B(1))
+>>>>>>> 3eae70937ea6fe2b115b0763e8e1563604b8441a
 compile.boundary = boundary
 
 ----------------------------------------------------------------------------------------
@@ -51,7 +55,7 @@ compile.boundary = boundary
 ----------------------------------------------------------------------------------------
 local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};  -- any single character
              ["$"] = pattern{name="$"; peg=P(-1); alias=true}; -- end of input
-             [b_id] = pattern{name=b_id; peg=boundary; alias=true, ast=false}; -- token boundary
+             [b_id] = pattern{name=b_id; peg=boundary; alias=true}; -- token boundary
        }
 setmetatable(ENV, {__tostring = function(env)
 				   return "<base environment>"
@@ -247,36 +251,44 @@ local function matches_empty(peg)
    return result
 end
 
--- Compiling quantified expressions is subtle when Rosie is tokenizing, i.e. in "cooked" mode.
---    With a naive approach, this expression will always fail to recognize more than one word:
---                    (","? word)*
---    The reason is that the repetition ends up looking for the token boundary TWICE when the ","?
---    fails.  And (in the absence of punctuation) since the token boundary consumes all whitespace
---    (and must consume something), the second attempt to match boundary will fail because the
---    prior attempt consumed all the whitespace.
+-- THIS RATIONALE NO LONGER APPLIES DUE TO CHANGES IN THE BOUNDARY DEFINITION!
+--
+    -- Compiling quantified expressions is subtle when Rosie is tokenizing, i.e. in "cooked" mode.
+    --    With a naive approach, this expression will always fail to recognize more than one word:
+    --                    (","? word)*
+    --    The reason is that the repetition ends up looking for the token boundary TWICE when the ","?
+    --    fails.  And (in the absence of punctuation) since the token boundary consumes all whitespace
+    --    (and must consume something), the second attempt to match boundary will fail because the
+    --    prior attempt consumed all the whitespace.
+--
+-- INDEED, THE EXPRESSION (","? word)* WORKS GREAT!
 -- 
---    Here's the solution:
---      Consider e*, e?, and e{0,m} where m>0.  Call these expressions qe.  When we
---      have a sequence of qe followed by f, what we want to happen in cooked mode is
---      this:
---        match('qe f', "e f") -> match
---        match('qe f', " f") -> no match, strictly speaking
---        match('qe f', "f") -> match
---      I.e. 'e* f' should work like '<e+ boundary f> / f'
---           'e? f' should work like '<e boundary f> / f'
---           'e{0,m} f' should work like '<e{1,m} boundary f> / f'
---      And these can be rewritten as:
---           '<e+ boundary f> / f'      -->  < <e+ boundary>? f >
---           '<e boundary f> / f'       -->  < <e boundary>? f >
---           '<e{1,m} boundary f> / f'  -->  < <e{1,m} boundary>? f >
---      Conclusion: In cooked mode, quantified expressions like qe should compile as:
---         e*     --> <e+ boundary>?
---         e?     --> <e boundary>?
---         e{0,m} --> <e{1,m} boundary>?
---      Of course, the boundary is only necessary when qe appears in the context of a
---      sequence, with terms coming after it.  Are there edge cases where it might be
---      important to match qe without a boundary following it always?  Can't think of any (noting
---      that the end of input is not an issue because boundary checks for that).
+    --    Here's the solution:
+    --      Consider e*, e?, and e{0,m} where m>0.  Call these expressions qe.  When we
+    --      have a sequence of qe followed by f, what we want to happen in cooked mode is
+    --      this:
+    --        match('qe f', "e f") -> match
+    --        match('qe f', " f") -> no match, strictly speaking
+    --        match('qe f', "f") -> match
+    --      I.e. 'e* f' should work like '<e+ boundary f> / f'
+    --           'e? f' should work like '<e boundary f> / f'
+    --           'e{0,m} f' should work like '<e{1,m} boundary f> / f'
+    --      And these can be rewritten as:
+    --           '<e+ boundary f> / f'      -->  < <e+ boundary>? f >
+    --           '<e boundary f> / f'       -->  < <e boundary>? f >
+    --           '<e{1,m} boundary f> / f'  -->  < <e{1,m} boundary>? f >
+    --      Conclusion: In cooked mode, quantified expressions like qe should compile as:
+    --         e*     --> <e+ boundary>?
+    --         e?     --> <e boundary>?
+    --         e{0,m} --> <e{1,m} boundary>?
+    --      Of course, the boundary is only necessary when qe appears in the context of a
+    --      sequence, with terms coming after it.  Are there edge cases where it might be
+    --      important to match qe without a boundary following it always?  Can't think of any (noting
+    --      that the end of input is not an issue because boundary checks for that).
+--
+-- AND YES, THERE IS AN EDGE CASE IN WHICH WE WANT TO MATCH qe WITH NO BOUNDARY AFTER:
+-- .match {("a")+ "b"}, "a ab"
+-- THIS SHOULD PRODUCE A MATCH WHERE THE qe MATCHES "a a" AND THE {} glues it to "b".
 
 function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in process_quantified_exp")
@@ -513,6 +525,13 @@ end
 
 function cinternals.wrap_peg(pat, name, raw)
    local peg
+   -- !@# DEBUGGING !@#
+   -- if pat.alternates then
+   --    print("*****")
+   --    print(name)
+   --    pattern.print(pat)
+   --    print("*****")
+   -- end
    if pat.alternates and (not raw) then
       -- The presence of pat.alternates means this pattern came from a CHOICE exp, in which case 
       -- val.peg already holds the compiler result for this node.  But val.peg was calculated 
@@ -725,15 +744,14 @@ local function core_parse_and_explain(source)
    end
 end
 
-function compile.compile(source, env, raw, gmr, parser)
+function compile.compile(source, env, parser)
    if not parser then parser = parse_and_explain; end
    local astlist, msg = parser(source)
    if not astlist then return false, msg; end	    -- errors are explained in msg
    assert(type(astlist)=="table")
---   if not next(astlist) then return true, ""; end   -- empty astlist, e.g. from whitespace, comments
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local c = coroutine.create(cinternals.compile_astlist)
-   local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, raw, gmr, source, env)
+   local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, false, false, source, env)
    if no_lua_error then
       -- the last return value, astlist, is only used in compile_command_line_expression
       return results_or_error, error_msg, astlist
@@ -742,9 +760,9 @@ function compile.compile(source, env, raw, gmr, parser)
    end
 end
 
-function compile.compile_command_line_expression(source, env, raw, gmr, parser)
+function compile.compile_command_line_expression(source, env, parser)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local result, msg, astlist = compile.compile(source, env, raw, gmr, parser)
+   local result, msg, astlist = compile.compile(source, env, parser)
    if not result then return result, msg; end
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
@@ -776,17 +794,17 @@ function compile.compile_command_line_expression(source, env, raw, gmr, parser)
       -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
       -- since that can't be an identifier name 
       result[1].peg = C(result[1].peg)
-      result[1].peg = cinternals.wrap_peg(result[1], "*", raw)
+      result[1].peg = cinternals.wrap_peg(result[1], "*", false)
       result[1].ast = astlist[1]
       return result[1]
    end
 end
 
 function compile.core_compile_command_line_expression(source, env)
-   return compile.compile_command_line_expression(source, env, false, false, core_parse_and_explain)
+   return compile.compile_command_line_expression(source, env, core_parse_and_explain)
 end
    
-function compile.compile_file(filename, env, raw, gmr)
+function compile.compile_file(filename, env)
    local f = io.open(filename);
    if (not f) then
       return false, 'Compiler: cannot open file "'..filename..'"'
@@ -796,7 +814,7 @@ function compile.compile_file(filename, env, raw, gmr)
    if type(source)~="string" then
       return false, 'Compiler: unreadable file "'..filename..'"'
    end
-   return compile.compile(source, env, raw, gmr)
+   return compile.compile(source, env)
 end
 
 function compile.compile_core(filename, env)
@@ -811,7 +829,7 @@ function compile.compile_core(filename, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local astlist = core_parse_and_explain(source)
    if not astlist then return nil; end		    -- errors have been explained already
-   return cinternals.compile_astlist(astlist, raw, gmr, source, env)
+   return cinternals.compile_astlist(astlist, false, false, source, env)
 end
 
 ----------------------------------------------------------------------------------------

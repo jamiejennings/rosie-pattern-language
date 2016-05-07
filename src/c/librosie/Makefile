@@ -31,8 +31,8 @@ PLATS= aix bsd c89 freebsd generic linux macosx mingw posix solaris
 
 LUA_A=	/Users/jjennings/Work/Dev/rosie-pattern-language/lua-5.3.2/src/liblua.a
 
-T=	librosie
-O=	librosie.o
+T=	rtest
+O=	rtest.o
 
 
 # Targets start here.
@@ -62,7 +62,7 @@ echo:
 	@echo "RM= $(RM)"
 
 # Convenience targets for popular platforms
-ALL= librosie
+ALL= rtest
 
 none:
 	@echo "Please do 'make PLATFORM' where PLATFORM is one of these:"

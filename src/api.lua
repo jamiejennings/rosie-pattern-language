@@ -52,7 +52,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 local api = {VERSION="0.96 alpha"}
 ----------------------------------------------------------------------------------------
 
-local engine_list = {}
+engine_list = {}
 
 local function arg_error(msg)
    error("Argument error: " .. msg, 0)
@@ -74,6 +74,12 @@ local function pcall_wrap(f)
 	     return pcall(f, ...)
 	  end
 end
+
+local function version()
+   return api.VERSION, (ROSIE_VERSION or "unknown rpl version")
+end
+
+api.version = pcall_wrap(version)
 
 ----------------------------------------------------------------------------------------
 -- Managing the environment (engine functions)

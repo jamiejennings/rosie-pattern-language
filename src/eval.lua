@@ -193,8 +193,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
 
       if m then
 	 -- First alternative succeeded...
-	 if raw then
-	    -- ... and do NOT need to look for boundary
+	 if raw then -- do NOT need to look for boundary
 	    return m, pos, msg;
 	 else
 	    local m2, pos2
@@ -211,8 +210,7 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
 				fail_output_only, step, msg)
 	 if m then
 	    -- Second alternative succeeded...
-	    if raw then
-	       -- ... and do NOT need to look for boundary
+	    if raw then -- do NOT need to look for boundary
 	       return m, pos, msg;
 	    else
 	       local m2, pos2
@@ -347,13 +345,14 @@ function eval.eval_command_line_expression(source, input, start, env, fail_outpu
    -- if fail_output_only is true, then we are using "eval" to explain a syntax error, not to dump
    -- a full trace of the entire matching process
    assert(type(source)=="string" and type(input)=="string" and (not env or type(env)=="table"))
-   start = start or 1
-   local indent = 5				  -- need to leave room for the step number "%3d."
+
+   local pat, errmsg = compile.compile_command_line_expression(source, env)
+   if not pat then return false, false, false, errmsg; end -- errors will be in errmsg
+
    local raw = false;
    local step = {1};
-
-   local pat, errmsg = compile.compile_command_line_expression(source, env, raw)
-   if not pat then return false, false, false, errmsg; end -- errors will be in errmsg
+   start = start or 1
+   local indent = 5				  -- need to leave room for the step number "%3d."
    return true, eval_exp(pat.ast, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
 end
 

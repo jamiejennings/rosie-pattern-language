@@ -41,7 +41,7 @@ function test_compiling_stuff()
 end
 
 function test_match(exp, input, start, engine)
-   engine:configure({expression=exp, encode="json"})
+   engine:configure({expression=exp, encoder=false}) -- force the default encoder (identity fcn)
    return engine:match(input, start)
 end
 
@@ -171,8 +171,7 @@ function test_expressions()
    assert(result and result.test and result.test.text==" b")
    result = test_match("test", 'b', 1, TEST_ENGINE)
    --   assert(not result)
-   -- boundary changed:
-   assert(result and result.test and result.test.text=="b")
+   assert(result and result.test and result.test.text=="b") -- boundary change Saturday, April 23, 2016
 
    print("Testing (a)* b")
    compile.compile('test = (a)* b', TEST_ENGINE.env)
@@ -186,8 +185,7 @@ function test_expressions()
    assert(result and result.test and result.test.text==" b")
    result = test_match("test", 'b', 1, TEST_ENGINE)
    --   assert(not result)
-   -- boundary changed:
-   assert(result and result.test and result.test.text=="b")
+   assert(result and result.test and result.test.text=="b") -- boundary change Saturday, April 23, 2016
    
    print("Testing {(a)* b}")
    compile.compile('test = {(a)* b}', TEST_ENGINE.env)

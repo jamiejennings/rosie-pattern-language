@@ -71,6 +71,12 @@ local function engine_configure(e, configuration)
    -- Ensure some reasonable defaults when we can
    --
    e.config.encoder = e.config.encoder or identity_function
+   --
+   -- Check for common errors
+   --
+   if type(e.config.encoder)~="function" then
+      engine_error(e, "encoder not a function: " .. tostring(e.config.encoder))
+   end
 end
 
 local function engine_inspect(e)
