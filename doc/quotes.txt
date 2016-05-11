@@ -1,3 +1,6 @@
+"not that regular expressions are evil, per se, but that overuse of regular expressions is evil."
+(http://blog.codinghorror.com/regular-expressions-now-you-have-two-problems/)
+
 "Regular expressions are dangerous"
 (https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-regexp-query.html)
 

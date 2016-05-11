@@ -23,6 +23,10 @@
 
 - [ ] Enforce package namespaces, with import/export declarations
 
+- [ ] Expose testing functionality via the API so that the user can code up a
+  set of tests for their own patterns, and Rosie will run the tests and
+  summarize the results.
+
 - [ ] Support arbitrary versions and dialects of RPL with a simple declaration, e.g.
      .interpreter "rpl/0.92"
   which will load that version/dialect of RPL and use it for the (remainder of) the
