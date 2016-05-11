@@ -166,8 +166,6 @@ end
 -- Compile-time errors
 ----------------------------------------------------------------------------------------
 
-local magic_string = "This is Rosie!";
-
 local function explain_quantified_limitation(a, source, maybe_rule)
    assert(a, "did not get ast in explain_quantified_limitation")
    local name, errpos, text = common.decode_match(a)
@@ -179,8 +177,6 @@ local function explain_quantified_limitation(a, source, maybe_rule)
       string.format("%s\n", line) ..
       string.rep(" ", pos) .. "^"
    coroutine.yield(false, msg)			    -- throw
---   error(magic_string)				    -- throw
-
 end
 
 local function explain_repetition_error(a, source)
@@ -323,14 +319,10 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       else qpeg=epeg^1
       end
    elseif qname=="star" then
---      if append_boundary then qpeg = ((epeg * boundary)^1)^-1 -- yep.
       if append_boundary then qpeg = (epeg * (boundary * epeg)^0)^-1
       else qpeg=epeg^0
       end
    elseif qname=="question" then
---      if append_boundary then qpeg = (epeg * boundary)^-1
---      else qpeg=epeg^-1
---      end
       qpeg = epeg^-1
    elseif qname=="repetition" then
       assert(type(qsubs[1])=="table")
@@ -374,8 +366,6 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
 	       assert(min==max)
 	    end
 	 end -- if min==0
-	 -- finally, here's the check for "and not looking at another copy of epeg"
-	 -- qpeg = qpeg * (-epeg)
       end
    else						    -- switch on quantifier type
       explain_unknown_quantifier(a, source)
@@ -450,25 +440,15 @@ end
 
 function cinternals.compile_sequence(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_sequence")
-   -- sequences from the parser are always binary, with subexps stored at positions 3 and 4
-   -- (i.e. just after the source position field)
-   -- Regarding debugging... the failure of a[3] is fatal for a[1]
+   -- sequences from the parser are always binary, i.e. with 2 subs.
+   -- Regarding debugging... the failure of subs[1] is fatal for a.
    local name, pos, text, subs = common.decode_match(a)
    local peg1, peg2
    peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
-   -- when the first exp is a predicate, it will not consume any input, so we must avoid
-   -- concatenating two "boundary" expressions, because boundary*boundary always fails!
-   -- note that some quantified exps have their boundary included, and some do not.  but the new
-   -- definition of boundary includes looking BACK at whitespace and forward at non-whitespace, so
-   -- we can safely append a boundary to a quantified exp when not in raw mode.
    if raw or
       next(subs[1])=="negation" or
       next(subs[1])=="lookat"
--- or
-      -- special case for end of line coming next: don't want to capture any boundary whitespace
-      -- between the pattern denoted by identifier and the end of the line
---      (next(subs[2])=="identifier" and subs[2].identifier.text=="$")
    then
       return pattern{name=name, peg=peg1 * peg2}
    else
@@ -517,10 +497,8 @@ end
 
 function cinternals.compile_choice(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_choice")
-   -- The parser returns only binary choice tokens, i.e. a choice bewteen exactly two
-   -- expressions. 
-   -- Regarding debugging...
-   -- 'a' fails if both alternatives fail
+   -- Choice ASTs will have exactly two alternatives
+   -- Regarding debugging... 'a' fails only if both alternatives fail
    local name, pos, text, subs = common.decode_match(a)
    local peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    local peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
@@ -725,7 +703,6 @@ end
 
 function cinternals.compile_astlist(astlist, raw, gmr, source, env)
    assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
---   assert(type(astlist[1])=="table", "Compiler: first argument not list of ast's: "..tostring(a))
    assert(type(source)=="string")
    local results = {}
    for _,ast in ipairs(astlist) do
@@ -744,11 +721,10 @@ local function core_parse_and_explain(source)
    local astlist, errlist = parse.parse(source)
    if #errlist~=0 then
       local msg = "Core parser reports syntax errors:\n"
---      for _,e in ipairs(errlist) do
-         local _,e = next(errlist)		    -- explain only FIRST error for now
+      for _,e in ipairs(errlist) do
 	 msg = msg .. "\n" .. compile.explain_syntax_error(e, source)
---      end
-	 return false, msg
+      end
+      return false, msg
    else -- successful parse
       return astlist
    end
