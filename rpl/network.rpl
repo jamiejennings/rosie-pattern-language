@@ -64,7 +64,9 @@ network.email_address = { email_alias_part "@" fqdn }
 alias protocol = {{letter+} "://"}
 network.protocol = protocol
 
-alias url = {protocol {fqdn / ip_address} common.path?} / {protocol? {fqdn / ip_address}? common.path}
+alias url = {network.protocol {network.fqdn / network.ip_address} common.path?} /
+            {network.protocol {network.fqdn / network.ip_address}? common.path}
+
 network.url = url
 
 -- Some very simple HTTP patterns
