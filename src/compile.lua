@@ -739,14 +739,15 @@ function compile.compile(source, env, parser)
    local c = coroutine.create(cinternals.compile_astlist)
    local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, false, false, source, env)
    if no_lua_error then
-      -- the last return value, astlist, is only used in compile_command_line_expression
+      -- the last return value, astlist, is only used in compile_match_expression
       return results_or_error, error_msg, astlist
    else
       error("Internal error (compiler): " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
    end
 end
 
-function compile.compile_command_line_expression(source, env, parser)
+-- was compile_command_line_expression
+function compile.compile_match_expression(source, env, parser)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local result, msg, astlist = compile.compile(source, env, parser)
    if not result then return result, msg; end
@@ -786,16 +787,15 @@ function compile.compile_command_line_expression(source, env, parser)
    -- NEW TOP LEVEL TREATMENT
    if kind~="raw" then
       -- append a boundary to look for
---      print("Appending a boundary to top-level expression")
-      result[1].peg = result[1].peg * boundary
+      result[1].peg = result[1].peg * boundary	    -- !@# Should modify the AST, not the peg
    end
 
    return result[1]
 
 end
 
-function compile.core_compile_command_line_expression(source, env)
-   return compile.compile_command_line_expression(source, env, core_parse_and_explain)
+function compile.core_compile_match_expression(source, env)
+   return compile.compile_match_expression(source, env, core_parse_and_explain)
 end
    
 function compile.compile_file(filename, env)

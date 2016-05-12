@@ -26,7 +26,7 @@ function pattern_EXP_to_grep_pattern(pattern_exp, env)
    local env = compile.new_env(env)		    -- new scope, which will be discarded
    local pat, msg = compile.compile("alias p = " .. pattern_exp, env) -- should write gensym
    if not pat then error(msg); end
-   local pat, msg = compile.compile_command_line_expression("{{!p .}* p}+", env)
+   local pat, msg = compile.compile_match_expression("{{!p .}* p}+", env)
    if not pat then error(msg); end
    return pat
 end
