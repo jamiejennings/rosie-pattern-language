@@ -7,6 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 local common = require "common"
+local parse = require "parse"
 local compile = require "compile"
 require "engine"
 local manifest = require "manifest"
@@ -175,6 +176,16 @@ function api.load_string(id, input)
    end
 end
 
+local function reconstitute_pattern_definition(id, p)
+   if p then
+      return ((p.alias and "alias ") or "") .. id .. " = " .. ((p.ast and
+								parse.reveal_ast(p.ast)) or
+							    "// built-in RPL pattern //") 
+   else
+      return "undefined identifier: " .. id
+   end
+end
+
 -- get a human-readable definition of identifier (reconstituted from its ast)
 local function get_definition(engine_id, identifier)
    local en = engine_from_id(engine_id)
@@ -186,7 +197,7 @@ local function get_definition(engine_id, identifier)
       error("undefined identifier", 0)
    else
       if pattern.is(val) then
-	 return common.reconstitute_pattern_definition(identifier, val)
+	 return reconstitute_pattern_definition(identifier, val)
       else
 	 error("Internal error: object in environment not a pattern: " .. tostring(val))
       end
