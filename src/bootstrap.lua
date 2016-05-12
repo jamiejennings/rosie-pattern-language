@@ -13,7 +13,6 @@ package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 local parse = require "parse"
 local compile = require "compile"
---require "rpl-parse"				    --!@#
 local common = require "common"
 require "engine"
 require "os"
@@ -48,10 +47,9 @@ local function parse_and_explain(source)
    local astlist, errlist = rosie_parse(source)
    if #errlist~=0 then
       local msg = ""
---      for _,e in ipairs(errlist) do
-         local _,e=next(errlist)		    -- explain only FIRST error (for now)
+      for _,e in ipairs(errlist) do
 	 msg = msg .. compile.explain_syntax_error(e, source) .. "\n"
---      end
+      end
       return false, msg
    else -- successful parse
       return astlist
