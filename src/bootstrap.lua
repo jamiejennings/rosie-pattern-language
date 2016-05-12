@@ -71,6 +71,7 @@ function bootstrap()
    
    -- During bootstrapping, we have to compile the rpl using the "core" compiler, and
    -- manually configure ROSIE_ENGINE without calling engine_configure.
+
    ROSIE_VERSION = vfile:read("l"); vfile:close();
    
    -- To bootstrap, we have to compile the Rosie rpl using the core parser/compiler
