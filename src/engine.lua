@@ -88,7 +88,7 @@ end
 local function engine_match(e, input, start)
    start = start or 1
    if not e.config.pattern then no_pattern(e); end
-   local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
+   local result, nextpos = e.config.pattern.peg:match(input, start)
    if result then return (e.config.encoder(result)), nextpos;
    else return false, 1; end
 end
@@ -121,7 +121,6 @@ end
 
 local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename)
    if not e.config.pattern then no_pattern(e); end
-   local peg = (e.config.pattern.peg * Cp())
    if not (eval_flag==true or eval_flag==false) then engine_error(e, "bad eval flag"); end
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
 
@@ -132,7 +131,7 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
    local l = nextline(); 
    while l do
       if eval_flag then m, nextpos, result = engine_eval(e, l);
-      else result, nextpos = peg:match(l); end
+      else result, nextpos = e.config.pattern.peg:match(l); end
       -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
       -- Send it in a message to stderr?
       if result then
