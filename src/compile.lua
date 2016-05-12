@@ -745,10 +745,13 @@ function compile.compile_match_expression(source, env)
    -- This transformation of the ast will eventually move into an explicit macro expansion step. 
    local orig_ast = astlist[1]
    local ast = orig_ast
+   local ast_history = {}
    local name = common.decode_match(ast)
    if name~="raw" then
+      table.insert(ast_history, 1, ast)
       ast = cinternals.append_boundary(ast)
    end
+   table.insert(ast_history, 1, ast)
    ast = cinternals.cook_if_needed(ast)
 
    local c = coroutine.create(cinternals.compile_exp)
@@ -763,7 +766,7 @@ function compile.compile_match_expression(source, env)
       return false, error_msg
    end
 
-   -- now we check to see if the expression we are evaluating is an identifier, and therefore does
+   -- now we check to see if the original expression is an identifier, and therefore does
    -- not have to be anonymous
    local kind, pos, id = common.decode_match(orig_ast)
    local pat = env[id]
@@ -776,8 +779,10 @@ function compile.compile_match_expression(source, env)
       -- since that can't be an identifier name 
       result.peg = C(result.peg)
       result.peg = cinternals.wrap_peg(result, "*", (kind=="raw"))
-      result.ast = ast
    end
+
+   result.ast = ast
+   result.ast_history = ast_history
 
    -- Top-level wrap to turn this into a matchable expression
    result.peg = (result.peg * Cp())
