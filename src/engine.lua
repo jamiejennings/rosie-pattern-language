@@ -57,7 +57,7 @@ local function engine_configure(e, configuration)
    assert(type(configuration)=="table", "engine configuration not a table: " .. tostring(configuration))
    if configuration.expression then
       e.config.expression = configuration.expression
-      local pat, msg = compile.compile_command_line_expression(configuration.expression, e.env)
+      local pat, msg = compile.compile_match_expression(configuration.expression, e.env)
       if not pat then engine_error(e, msg); end
       e.config.pattern = pat
    end
