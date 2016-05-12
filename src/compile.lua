@@ -394,31 +394,15 @@ end
 function cinternals.compile_identifier(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_identifier")
    local _, pos, name = common.decode_match(a)
-   --   local enumerate = function(input, pos, ...)      -- TESTING!
-   --                        return pos, ...
-   --                     end
-
    local val = env[name]
-   if (not val) then
-      explain_undefined_identifier(a, source);
-   end
+   if (not val) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(val), "Did not get a pattern: "..tostring(val))
    if val.alias then 
       return pattern{name=name, peg=val.peg, ast=val.ast}
    else
-
-      -- TESTING!
-      --      if name=="process" then
-      --	 return pattern{name=name, peg=Cmt(Ct(Cg(Ct(val.peg), name)), enumerate), ast=val.ast}
-      --      else
-      --
-      --	 return pattern{name=name, peg=Ct(Cg(Ct(val.peg), name)), ast=val.ast}
-
       return pattern{name=name,
 		     peg=cinternals.wrap_peg(val, name, raw), 
 		     ast=val.ast}
-   
-      --      end
    end
 end
       
@@ -502,7 +486,7 @@ function cinternals.compile_choice(a, raw, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    local peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    local peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
-   return pattern{name=name, peg=(peg1+peg2), alternates = { peg1, peg2 }}
+   return pattern{name=name, peg=(peg1+peg2), alternates = { C(peg1), C(peg2) }}
 end
 
 function cinternals.wrap_peg(pat, name, raw)
@@ -512,7 +496,7 @@ function cinternals.wrap_peg(pat, name, raw)
       -- val.peg already holds the compiler result for this node.  But val.peg was calculated 
       -- assuming RAW mode.  So if we are NOT in raw mode, then we must finish the compilation in
       -- a special way.
-      peg = ( common.match_node_wrap(C(pat.alternates[1]), name) * boundary ) + ( common.match_node_wrap(C(pat.alternates[2]), name) * boundary )
+      peg = ( common.match_node_wrap(pat.alternates[1], name) * boundary ) + ( common.match_node_wrap(pat.alternates[2], name) * boundary )
    else
       peg = common.match_node_wrap(pat.peg, name)
    end
@@ -776,6 +760,9 @@ function compile.compile_match_expression(source, env)
       result[1].peg = result[1].peg * boundary	    -- !@# Should modify the AST, not the peg
    end
 
+   -- Top-level wrap to turn this into a matchable expression
+   result[1].peg = (result[1].peg * Cp())
+
    return result[1]
 
 end
@@ -808,14 +795,6 @@ function compile.compile_core(filename, env)
    local astlist = parse.core_parse_and_explain(source)
    if not astlist then return nil; end		    -- errors have been explained already
    return cinternals.compile_astlist(astlist, false, false, source, env)
-end
-
-----------------------------------------------------------------------------------------
--- Low level match functions (user level functions use engines)
-----------------------------------------------------------------------------------------
-
-function compile.match_peg(peg, input, start)
-   return (peg * Cp()):match(input, start)
 end
 
 compile.cinternals = cinternals
