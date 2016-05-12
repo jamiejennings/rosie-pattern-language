@@ -432,4 +432,19 @@ function parse.reveal(astlist)
    return s
 end
 
+-- For parsing the Rosie core:
+function parse.core_parse_and_explain(source)
+   assert(type(source)=="string", "Compiler: source argument is not a string: "..tostring(source))
+   local astlist, errlist = parse.parse(source)
+   if #errlist~=0 then
+      local msg = "Core parser reports syntax errors:\n"
+      for _,e in ipairs(errlist) do
+	 msg = msg .. "\n" .. compile.explain_syntax_error(e, source)
+      end
+      return false, msg
+   else -- successful parse
+      return astlist
+   end
+end
+
 return parse
