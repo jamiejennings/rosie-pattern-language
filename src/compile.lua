@@ -628,6 +628,12 @@ function cinternals.cook_if_needed(a)
    end
 end
 
+local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
+function cinternals.append_boundary(a)
+   return common.create_match("sequence", 1, "/generated/", a, looking_at_boundary_ast)
+end
+
 function cinternals.compile_assignment(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_assignment")
    local name, pos, text, subs = common.decode_match(a)
@@ -674,7 +680,7 @@ function cinternals.compile_alias(a, raw, gmr, source, env)
 end
 
 function cinternals.compile_ast(ast, raw, gmr, source, env)
-   assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(a))
+   assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
 		      assignment_=cinternals.compile_assignment;
 		      alias_=cinternals.compile_alias;
@@ -709,8 +715,7 @@ function compile.compile(source, env)
    local c = coroutine.create(cinternals.compile_astlist)
    local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, false, false, source, env)
    if no_lua_error then
-      -- the last return value, astlist, is only used in compile_match_expression
-      return results_or_error, error_msg, astlist
+      return results_or_error, error_msg
    else
       error("Internal error (compiler): " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
    end
@@ -719,8 +724,11 @@ end
 -- was compile_command_line_expression
 function compile.compile_match_expression(source, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local result, msg, astlist = compile.compile(source, env)
-   if not result then return result, msg; end
+
+   local astlist, msg = compile.parser(source)
+   if not astlist then return false, msg; end	    -- errors are explained in msg
+   assert(type(astlist)=="table")
+
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
       for i, a in ipairs(astlist) do
@@ -732,15 +740,32 @@ function compile.compile_match_expression(source, env)
       local msg = "Error: only expressions can be matched (not statements): " .. source
       return false, msg
    end
+
+   -- NEW TOP LEVEL TREATMENT
+   -- This transformation of the ast will eventually move into an explicit macro expansion step. 
+   local orig_ast = astlist[1]
+   local ast = orig_ast
+   local name = common.decode_match(ast)
+   if name~="raw" then
+      ast = cinternals.append_boundary(ast)
+   end
+   ast = cinternals.cook_if_needed(ast)
+
+   local c = coroutine.create(cinternals.compile_exp)
+   local no_lua_error, result, error_msg = coroutine.resume(c, ast, false, false, source, env)
+   if not no_lua_error then
+      error("Internal error (compiler): " .. tostring(result) .. " / " .. tostring(error_msg))
+   end
+
    -- one ast will compile to one pattern
-   if not (result and result[1] and pattern.is(result[1])) then
+   if not (result and pattern.is(result)) then
       -- E.g. an assignment or alias statement won't produce a pattern
-      return false, "Error: expression did not compile to a pattern: " .. source
+      return false, error_msg
    end
 
    -- now we check to see if the expression we are evaluating is an identifier, and therefore does
    -- not have to be anonymous
-   local kind, pos, id = common.decode_match(astlist[1])
+   local kind, pos, id = common.decode_match(orig_ast)
    local pat = env[id]
    if not (kind=="identifier" and pattern.is(pat) and (not pat.alias)) then
       -- if the user entered an identifier, then we are all set, unless it is an alias, which
@@ -749,21 +774,15 @@ function compile.compile_match_expression(source, env)
       -- BUT if the user entered an expression other than an identifier, we should treat it like it
       -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
       -- since that can't be an identifier name 
-      result[1].peg = C(result[1].peg)
-      result[1].peg = cinternals.wrap_peg(result[1], "*", (kind=="raw"))
-      result[1].ast = astlist[1]
-   end
-
-   -- NEW TOP LEVEL TREATMENT
-   if kind~="raw" then
-      -- append a boundary to look for
-      result[1].peg = result[1].peg * boundary	    -- !@# Should modify the AST, not the peg
+      result.peg = C(result.peg)
+      result.peg = cinternals.wrap_peg(result, "*", (kind=="raw"))
+      result.ast = ast
    end
 
    -- Top-level wrap to turn this into a matchable expression
-   result[1].peg = (result[1].peg * Cp())
+   result.peg = (result.peg * Cp())
 
-   return result[1]
+   return result
 
 end
    
