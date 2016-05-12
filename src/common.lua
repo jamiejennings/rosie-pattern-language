@@ -13,9 +13,10 @@
 ----------------------------------------------------------------------------------------
 
 lpeg = require "lpeg"
+local Cc, Cg, Ct, Cp, C = lpeg.Cc, lpeg.Cg, lpeg.Ct, lpeg.Cp, lpeg.C
+
 recordtype = require "recordtype"
 local unspecified = recordtype.unspecified
-local Cc, Cg, Ct, Cp, C = lpeg.Cc, lpeg.Cg, lpeg.Ct, lpeg.Cp, lpeg.C
 
 local common = {}				    -- interface
 
@@ -230,16 +231,6 @@ pattern =
   },
    "pattern"
 )
-
-function common.reconstitute_pattern_definition(id, p)
-   if p then
-      return ((p.alias and "alias ") or "") .. id .. " = " .. ((p.ast and
-								parse.reveal_ast(p.ast)) or
-							    "// built-in RPL pattern //") 
-   else
-      return "undefined identifier: " .. id
-   end
-end
 
 common.boundary_identifier = "~"
 

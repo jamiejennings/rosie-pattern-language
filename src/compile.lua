@@ -715,24 +715,10 @@ end
 -- Top-level interface to compiler
 ----------------------------------------------------------------------------------------
 
--- Rosie core:
-local function core_parse_and_explain(source)
-   assert(type(source)=="string", "Compiler: source argument is not a string: "..tostring(source))
-   local astlist, errlist = parse.parse(source)
-   if #errlist~=0 then
-      local msg = "Core parser reports syntax errors:\n"
-      for _,e in ipairs(errlist) do
-	 msg = msg .. "\n" .. compile.explain_syntax_error(e, source)
-      end
-      return false, msg
-   else -- successful parse
-      return astlist
-   end
-end
+compile.parser = parse.core_parse_and_explain;	    -- note: parser is a dynamic variable
 
-function compile.compile(source, env, parser)
-   if not parser then parser = parse_and_explain; end
-   local astlist, msg = parser(source)
+function compile.compile(source, env)
+   local astlist, msg = compile.parser(source)
    if not astlist then return false, msg; end	    -- errors are explained in msg
    assert(type(astlist)=="table")
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
@@ -747,9 +733,9 @@ function compile.compile(source, env, parser)
 end
 
 -- was compile_command_line_expression
-function compile.compile_match_expression(source, env, parser)
+function compile.compile_match_expression(source, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local result, msg, astlist = compile.compile(source, env, parser)
+   local result, msg, astlist = compile.compile(source, env)
    if not result then return result, msg; end
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
@@ -793,10 +779,6 @@ function compile.compile_match_expression(source, env, parser)
    return result[1]
 
 end
-
-function compile.core_compile_match_expression(source, env)
-   return compile.compile_match_expression(source, env, core_parse_and_explain)
-end
    
 function compile.compile_file(filename, env)
    local f = io.open(filename);
@@ -821,7 +803,9 @@ function compile.compile_core(filename, env)
       f:close()
    end
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local astlist = core_parse_and_explain(source)
+   -- intentionally ignoring the value of compile.parse, we ensure the use of
+   -- core_parse_and_explain for parsing the Rosie rpl
+   local astlist = parse.core_parse_and_explain(source)
    if not astlist then return nil; end		    -- errors have been explained already
    return cinternals.compile_astlist(astlist, false, false, source, env)
 end
