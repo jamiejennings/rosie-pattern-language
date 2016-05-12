@@ -18,10 +18,14 @@ local cinternals = compile.cinternals
 local common = require "common"
 local eval = {}
 
-local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt =
-   lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt
+local P, V, C, S, R, Cg, Cp, Cc, Cmt =
+   lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt
 
 local locale = lpeg.locale()
+
+local function match_peg(peg, input, start)
+   return compile.match_peg(C(peg), input, start)
+end
 
 ----------------------------------------------------------------------------------------
 -- Eval (debugging capability for matching)
@@ -78,7 +82,7 @@ local function eval_group(a, input, start, raw, gmr, source, env, indent, fail_o
    msg = msg .. indent_(indent) .. "GROUP: " .. parse.reveal_ast(a) .. "\n"
 
    local pat = cinternals.compile_group(a, raw, gmr, source, env)
-   local m, pos = compile.match_peg(Ct(pat.peg), input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not (m and fail_output_only) then
@@ -100,7 +104,7 @@ end
 local function eval_identifier(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. indent_(indent) .. "IDENTIFIER: " .. parse.reveal_ast(a) .. "\n"
    local pat = cinternals.compile_identifier(a, raw, gmr, source, env)
-   local m, pos = compile.match_peg(Ct(pat.peg), input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
@@ -132,7 +136,7 @@ local function eval_sequence(a, input, start, raw, gmr, source, env, indent, fai
    msg = msg .. indent_(indent) .. "SEQUENCE: " .. parse.reveal_ast(a) .. "\n"
    
    local pat = cinternals.compile_sequence(a, raw, gmr, source, env)
-   local m, pos = compile.match_peg(Ct(pat.peg), input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then
@@ -170,9 +174,9 @@ local function eval_choice(a, input, start, raw, gmr, source, env, indent, fail_
    local pat = cinternals.compile_choice(a, raw, gmr, source, env)
    local m, pos
    if raw then
-      m, pos = compile.match_peg(Ct(pat.peg), input, start)
+      m, pos = match_peg(pat.peg, input, start)
    else
-      m, pos = compile.match_peg(Ct(pat.peg * compile.boundary), input, start)
+      m, pos = match_peg((pat.peg * compile.boundary), input, start)
    end
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
@@ -231,7 +235,7 @@ local function eval_quantified_exp(a, input, start, raw, gmr, source, env, inden
 		      (append_boundary and "tokenized/cooked): ") or "raw): ",
 		      parse.reveal_ast(a))
 
-   local m, pos = compile.match_peg(Ct(qpeg), input, start) 
+   local m, pos = match_peg(qpeg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
 --   descend into quantified exp's structure here?
@@ -245,7 +249,7 @@ end
 local function eval_string(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "LITERAL STRING: ", parse.reveal_ast(a))
    local name, pos, text, subs = common.decode_match(a)
-   local m, pos = compile.match_peg(Ct(common.unescape_string(text)), input, start)
+   local m, pos = match_peg(common.unescape_string(text), input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
@@ -257,7 +261,7 @@ local function eval_charset(a, input, start, raw, gmr, source, env, indent, fail
 		      parse.reveal_ast(a),
 		      (name=="range" and " (a character range)") or (" (a set of " .. #subs .. " characters)"))
    local pat = cinternals.compile_charset(a, raw, gmr, source, env)
-   local m, pos = compile.match_peg(Ct(pat.peg), input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
@@ -265,7 +269,7 @@ end
 local function eval_named_charset(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "NAMED CHARSET: ", parse.reveal_ast(a))
    local pat = cinternals.compile_named_charset(a, raw, gmr, source, env)
-   local m, pos = compile.match_peg(C(pat.peg), input, start)
+   local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
@@ -274,7 +278,7 @@ local function eval_negation(a, input, start, raw, gmr, source, env, indent, fai
    msg = msg .. step_(indent, step, "NEGATION (NEGATIVE LOOK-AHEAD): ", parse.reveal_ast(a))
    
    local pat = cinternals.compile_negation(a, raw, gmr, source, env)
-   local m, pos = compile.match_peg(C(pat.peg), input, start)
+   local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then
@@ -294,7 +298,7 @@ local function eval_lookat(a, input, start, raw, gmr, source, env, indent, fail_
    msg = msg .. indent_(indent) .. "LOOKAT (LOOK-AHEAD): " .. parse.reveal_ast(a) .. "\n"
    
    local pat = cinternals.compile_lookat(a, raw, gmr, source, env)
-   local m, pos = compile.match_peg(C(pat.peg), input, start)
+   local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    
    if not(m and fail_output_only) then
@@ -313,7 +317,7 @@ end
 local function eval_grammar(a, input, start, raw, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "GRAMMAR:") .. indent_(indent) .. reveal_ast_indented(a, indent) .. "\n"
    local name, pat = cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
-   local m, pos = compile.match_peg(Ct(pat.peg), input, start)
+   local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    -- How to descend into the definition of a grammar?
    return m, pos, msg
@@ -341,11 +345,7 @@ end
 function eval.eval_command_line_expression(pat, input, start, env, fail_output_only)
    -- if fail_output_only is true, then we are using "eval" to explain a syntax error, not to dump
    -- a full trace of the entire matching process
---   assert(type(source)=="string" and type(input)=="string" and (not env or type(env)=="table"))
    assert(pattern.is(pat) and type(input)=="string" and (not env or type(env)=="table"))
-
-   -- local pat, errmsg = compile.compile_command_line_expression(source, env)
-   -- if not pat then return false, errmsg; end
 
    local name, pos, text, subs = common.decode_match(pat.ast)
    -- print("### DECODED:")
@@ -367,11 +367,6 @@ function eval.eval_command_line_expression(pat, input, start, env, fail_output_o
 
    local matches, nextpos, trace =
       eval_exp(exp, input, start, raw, gmr, source, env, indent, fail_output_only, step, "")
-
-   -- local b_matches, b_nextpos, b_trace =
-   --    eval_boundary(pat.ast, input, nextpos, raw, gmr, source, env, indent, fail_output_only, step, trace)
-
---   if not b_matches then return true, false, lastpos, b_trace; end
 
    return true, matches, nextpos, trace
 end
