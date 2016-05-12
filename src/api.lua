@@ -192,7 +192,7 @@ local function get_binding(id, identifier)
       error("undefined identifier: " .. identifier, 0)
    else
       if pattern.is(val) then
-	 return common.reconstitute_pattern_definition(identifier, val)
+	 return reconstitute_pattern_definition(identifier, val)
       else
 	 error("Internal error: object in environment not a pattern: " .. tostring(val))
       end
