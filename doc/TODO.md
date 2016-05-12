@@ -6,6 +6,11 @@
   Support CRUD on color assignments for color output. (Need to rewrite color-output.lua,
   which was a quick hack.)
 
+- [ ] Maybe have an option to output the entire line containing a match, in
+  order to make Rosie an alternative to grep.  This would be useful for
+  "playing" with Rosie to understand how rpl ("rosex"?) differs from regex, and
+  maybe for use in shell scripts as well.
+
 - [ ] RPL compilation is lexically scoped in the sense that an expression is closed over the
   environment in which it is defined.  But "eval" (the interpreter function used for debugging)
   is ACCIDENTALLY dynamically scoped.  See doc/eval-scope-note.txt.
