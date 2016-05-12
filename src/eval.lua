@@ -24,7 +24,7 @@ local P, V, C, S, R, Cg, Cp, Cc, Cmt =
 local locale = lpeg.locale()
 
 local function match_peg(peg, input, start)
-   return compile.match_peg(C(peg), input, start)
+   return (C(peg) * Cp()):match(input, start)
 end
 
 ----------------------------------------------------------------------------------------
