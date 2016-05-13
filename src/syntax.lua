@@ -6,6 +6,145 @@
 ----
 
 local common = require "common"			    -- AST functions
+require "list"
+
+-- common.create_match("cooked", 1, "(...)", a)
+-- local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+-- local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
+-- function cinternals.append_boundary(a)
+--    return common.create_match("sequence", 1, "/generated/", a, looking_at_boundary_ast)
+-- end
+   
+function validate(ast)
+   if type(ast)~="table" then
+      return false, "ast not a table";
+   end
+   local name, body = next(ast)
+   if next(ast, name) then
+      return false, "multiple names";
+   elseif type(name)~="string" then
+      return false, "non-string name";
+   elseif type(body)~="table" then
+      return false, "non-table body";
+   else
+      local function err(msg)
+	 error("Invalid AST " .. name .. ": " .. msg)
+      end
+      for k,v in pairs(body) do
+	 if type(k)~="string" then return err("non-string key in body");
+	 elseif (k=="text") then
+	    if (type(v)~="string") then return err("text value not a string"); end
+	 elseif (k=="pos") then
+	    if (type(v)~="number") then return err("pos value not a number"); end
+	 elseif (k=="subs") then
+	    for i,s in pairs(v) do
+	       if type(i)~="number" then
+		  return err("subs list has a non-numeric key")
+	       end
+	       local ok, msg = validate(s)
+	       if not ok then
+		  return err("in sub " .. tostring(i) .. ": " .. msg);
+	       end
+	    end -- loop through subs
+	 else -- unrecognized key
+	    return false, "unexpected key in body";
+	 end -- switch on k
+      end -- loop through body
+   end -- all tests have passed
+   return ast;
+end
+
+function generated_ast(node_name, ...)
+   -- ... are the subs
+   return common.create_match(node_name, 0, "*generated*", ...)
+end
+
+function make_transformer(fcn, target_name, recursive)
+   local function transform (ast)
+      local name, body = next(ast)
+      if (target_name==nil) or (name==target_name) then
+	 local new = common.create_match(name,
+					 body.pos,
+					 body.text,
+					 table.unpack((recursive and map(transform, body.subs))
+						      or body.subs))
+	 return validate(fcn(new))
+      else
+	 return ast
+      end
+   end -- function transform
+   return transform
+end
+
+-- function make_transformer(fcn, target_name, recursive)
+--    local function transform (ast)
+--       local name, orig_body = next(ast)
+--       if (target_name==nil) or (name==target_name) then
+-- 	 local new = validate(fcn(ast))
+-- 	 local name, body = next(new)
+-- 	 if recursive then
+-- 	    local new_subs = 
+-- 	       return common.create_match(name,
+-- 					  body.pos,
+-- 					  body.text,
+-- 					  table.unpack(map(transform, body.subs)))
+-- 	 else
+-- 	    return new
+-- 	 end
+--       end
+--    end -- function transform
+--    return transform
+-- end
+
+----------------------------------------------------------------------------------------
+
+cook_if_needed =
+   make_transformer(function(ast)
+		       local name, body = next(ast)
+		       if (name=="raw") or (name=="cooked") then
+			  return ast
+		       else
+			  return generated_ast("cooked", ast)
+		       end
+		    end,
+		    nil,
+		    false)
+
+
+wraptest =
+   make_transformer(function(ast)
+		       return generated_ast("wrapped", ast)
+		    end,
+		    nil,
+		    false)
+
+wrapchoicetest = 
+   make_transformer(function(ast)
+		       return generated_ast("choice wrapped", ast)
+		    end,
+		    "choice",
+		    false)
+
+
+
+recwraptest =
+   make_transformer(function(ast)
+		       return generated_ast("rec wrapped", ast)
+		    end,
+		    nil,
+		    true)
+
+
+cooked_to_raw =
+   make_transformer(function(ast)
+		       local name, body = next(ast)
+		       -- NEED walk_ast here... should put that in make_transformer
+		       return common.create_match()
+		    end,
+		    "cooked",
+		    true)
+
+
 --local compile = require "compile"
 --local cinternals = compile.cinternals
 
@@ -17,9 +156,9 @@ local common = require "common"			    -- AST functions
 
 
 --local boundary_ast = cinternals.ENV[common.boundary_identifier].ast
-local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+--local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
 
-function cooked_to_raw(a)
+function _____cooked_to_raw(a)
    local name, pos, text, subs = common.decode_match(a)
    assert(name == "cooked")
    assert(#subs == 1)
