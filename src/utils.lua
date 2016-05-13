@@ -45,7 +45,7 @@ end
 
 function pretty_print_table(t, max_item_length, js_style)
    if not t then
-      io.stderr:write("Error: pretty_print_table called with nil table\n");
+      io.stderr:write("Error: nil table\n");
       return;
    end
    io.write(table_to_pretty_string(t, max_item_length, js_style), "\n")
