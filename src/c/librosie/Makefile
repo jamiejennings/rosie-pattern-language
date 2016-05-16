@@ -1,5 +1,8 @@
 # Makefile for building TEST driver program for Rosie
 
+# The value of HOME should be the Rosie install directory (called ROSIE_HOME in
+# the Rosie source).  It's important that this value be passed without any additional
+# surrounding quotation marks.
 HOME = `cd ../../..; pwd`
 
 

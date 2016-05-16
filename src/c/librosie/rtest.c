@@ -152,57 +152,69 @@ static void stackDump (lua_State *L) {
       printf("\n");  /* end the listing */
     }
 
-/* ************************************************* */
-/* Let's write some functions that use the Rosie API */
-/* ************************************************* */
+#define TRUE 1
+#define FALSE 0
 
-#define SET_ROSIE_HOME(val) HELPER(val)
-#define HELPER(thing) QUOTE(ROSIE_HOME = #thing)
+#define SET_ROSIE_HOME(val) SET_ROSIE_HOME_HELPER(val)
+#define SET_ROSIE_HOME_HELPER(thing) QUOTE(ROSIE_HOME = #thing)
 
 #define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
 #define QUOTE(thing) #thing			    /* stringify it */
+
+static int bootstrap (lua_State *L) {
+     char name[4096];
+     (void) strlcpy(name, QUOTE_EXPAND(ROSIE_HOME), sizeof(name));
+     (void) strlcat(name, "/src/bootstrap.lua", sizeof(name));
+  return dochunk(L, luaL_loadfile(L, name));
+}
+
+void require (lua_State *L, const char *name, int assign_name) {
+     int status;
+     lua_getglobal(L, "require");
+     lua_pushstring(L, name);
+     status = docall(L, 1, 1);                   /* call 'require(name)' */
+     if (status != LUA_OK) {
+	  l_message(progname, lua_pushfstring(L, "error requiring %s (%s)", name, lua_tostring(L, -1)));
+	  exit(-1);
+     }
+     if (assign_name==TRUE) {			 /* set the global to the return value of 'require' */
+	  lua_setglobal(L, name);
+     }
+     else {
+	  lua_pop(L, 1);		   /* else discard the result of require */
+     };
+}
+     
+
+
+/* ************************************************* */
+/* Let's write some functions that use the Rosie API */
+/* ************************************************* */
 
 static int initialize(lua_State *L) {
 
      int status;
      int stkpos = lua_gettop(L);
-     const char *rhome = QUOTE_EXPAND(ROSIE_HOME);
-     
-     printf("%s\n", rhome);
-     
+
      const char *setup = SET_ROSIE_HOME(ROSIE_HOME);
-     printf("%s\n", setup);
-     /* ("ROSIE_HOME = \"/Users/jjennings/Work/Dev/rosie-pattern-language/\"" );*/
-     status = dostring (L, setup, "this is a test");
+     status = dostring (L, setup, "set ROSIE_HOME");
      report(L, status);
      if (status != LUA_OK) return EXIT_FAILURE;
   
-     status = dofile(L, "/Users/jjennings/Work/Dev/rosie-pattern-language/src/bootstrap.lua");
-     report(L, status);
+     status = bootstrap(L);
      if (status != LUA_OK) return EXIT_FAILURE;
 
      lua_getglobal(L, "bootstrap");
      lua_insert(L, 1);
      status = lua_pcall(L, 0, 0, 0);
-     if (status != LUA_OK)
-	  l_message(progname, lua_pushfstring(L, "error calling 'bootstrap' (%s)",
+     if (status != LUA_OK) {
+	  l_message(progname, lua_pushfstring(L, "error during bootstrap (%s)",
 					      lua_tostring(L, -1)));
-     report(L, status);
-     if (status != LUA_OK) return EXIT_FAILURE;
+	  return EXIT_FAILURE;
+     }
   
-     lua_getglobal(L, "require");
-     lua_pushstring(L, "repl");
-     status = docall(L, 1, 1);  /* call 'require(name)' */
-     lua_pop(L, 1);	     /* pop result of require */
-     report(L, status);
-     if (status != LUA_OK) return EXIT_FAILURE;
-
-     lua_getglobal(L, "require");
-     lua_pushstring(L, "api");
-     status = docall(L, 1, 1);  /* call 'require(name)' */
-     lua_pop(L, 1);	     /* pop result of require */
-     report(L, status);
-     if (status != LUA_OK) return EXIT_FAILURE;
+     require(L, "repl", FALSE);
+     require(L, "api", TRUE);
 
      if (lua_gettop(L)!=stkpos)
 	  printf("WARNING: after initialization, top should be %d but was %d\n",
