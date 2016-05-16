@@ -121,6 +121,35 @@ static int dostring (lua_State *L, const char *s, const char *name) {
   return dochunk(L, luaL_loadbuffer(L, s, strlen(s), name));
 }
 
+static void stackDump (lua_State *L) {
+      int i;
+      int top = lua_gettop(L);
+      for (i = 1; i <= top; i++) {  /* repeat for each level */
+        int t = lua_type(L, i);
+        switch (t) {
+    
+          case LUA_TSTRING:  /* strings */
+            printf("`%s'", lua_tostring(L, i));
+            break;
+    
+          case LUA_TBOOLEAN:  /* booleans */
+            printf(lua_toboolean(L, i) ? "true" : "false");
+            break;
+    
+          case LUA_TNUMBER:  /* numbers */
+            printf("%g", lua_tonumber(L, i));
+            break;
+    
+          default:  /* other values */
+            printf("%s", lua_typename(L, t));
+            break;
+    
+        }
+        printf("  ");  /* put a separator */
+      }
+      printf("\n");  /* end the listing */
+    }
+
 /* ************************************************* */
 /* Let's write some functions that use the Rosie API */
 /* ************************************************* */
@@ -177,30 +206,67 @@ static int initialize(lua_State *L) {
 int rosie_api(lua_State *L, const char *name, ...) {
 
      va_list args;
-     int status;
      char *arg;
+     int top, base;
      
+     int nargs = 1;		   /* get this later from a table */
+
      va_start(args, name);	   /* setup variadic arg processing */
-     arg = va_arg(args, char *);   /* get the first arg */
+
+     printf("Stack at start of rosie_api:\n");
+     stackDump(L);
+     base = lua_gettop(L);			    /* save top pointer */
 
      /* Optimize later: memoize stack value of fcn for each api call to avoid this lookup? */
 
      lua_getglobal(L, "api");
      lua_getfield(L, -1 , name);                    /* -1 is stack top, i.e. api table */
-     /* insert a check HERE for value is a function */
 
-     lua_pushstring(L, arg); 
-     status = docall(L, 1, 2);                      /* call 'api.new_engine(name)' 1 arg, 2 results */
-     report(L, status);
-     if (status != LUA_OK) return EXIT_FAILURE;
+     /* Later: insert a check HERE to ensure the value we get is a function */
 
-     lua_pushboolean(L, 1);			    /* push true */
-     if (lua_compare(L, -1, -3, LUA_OPEQ) != 1) {
-	  l_message(progname, lua_pushfstring(L, "error getting engine: %s", lua_tostring(L, -2)));
-	  return EXIT_FAILURE;
+     for (int i = 1; i <= nargs; i++) {
+	  arg = va_arg(args, char *);   /* get the next arg */
+	  lua_pushstring(L, arg);	/* push it */
      }
 
-     lua_pop(L, 1);				    /* remove the true we pushed */
+     lua_call(L, nargs, LUA_MULTRET); 
+     if (lua_isboolean(L, base+1) != 0) {
+	  l_message(progname, lua_pushfstring(L, "api error: calling %s and first return value not a boolean", name));
+	  exit(-1);
+     }
+
+     int ok = lua_toboolean(L, base+1);
+     if (!ok) {
+	       printf("== In api error handler ==\n");
+	       stackDump(L);
+	       /* l_message((const char *)'\0', lua_pushfstring(L, "error calling %s: %s", name, lua_tostring(L, -1))); */
+	       l_message(progname, lua_pushfstring(L, "error getting engine: %s", lua_tostring(L, -2)));
+	       exit(-1);
+	  }
+
+     /* old error handler */
+     lua_pushboolean(L, 1);			    /* push true */
+     if (lua_compare(L, -1, -3, LUA_OPEQ) != 1) {
+	  /* a false return value should be accompanied by a Rosie API error message */
+	  /* TODO: Use that instead of this message */
+	  printf("*******************************************************\n");
+	  stackDump(L);
+	  lua_pop(L, 1);       /* pop the true value we pushed for comparison */
+	  /* l_message((const char *)'\0', lua_pushfstring(L, "error calling %s: %s", name, lua_tostring(L, -1))); */
+	  l_message(progname, lua_pushfstring(L, "error getting engine: %s", lua_tostring(L, -2)));
+	  exit(-1);
+     }
+
+     lua_pop(L, 1);       /* pop the api status return value (boolean) */
+     top = lua_gettop(L); 
+     for (int i=1; i <= (top - 2); i++) {
+	  lua_replace(L, 1);    /* move current top elt (an api retval) to bottom of stack */
+     }
+     lua_settop(L, (top - 2));  /* trash all but the rosie api retval */
+
+
+     printf("Stack at end of rosie_api:\n");
+     stackDump(L);
 
      va_end(args);
      
@@ -227,13 +293,10 @@ int main (int argc, char **argv) {
 
   char *name = malloc(sizeof(char) * 100);
   strcpy(name, "REPL ENGINE");
-  status = rosie_api(L, "new_engine", name);
-
-  lua_setglobal(L, "eid");			    /* save engine id */ 
-  lua_pop(L, 1);				    /* pop the ok returned by new_engine */
+  status = rosie_api(L, "new_engine", name);	    /* leaves engine id on stack */
 
   lua_getglobal(L, "repl");	  /* push repl fcn */
-  lua_getglobal(L, "eid");	  /* push engine id */
+  lua_pushvalue(L, -2);		  /* copy engine id to top of stack */
   docall(L, 1, 1);		  /* call repl(eid) */
   report(L, status);
   if (status != LUA_OK) {

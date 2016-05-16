@@ -49,7 +49,12 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 -- 
 
 ----------------------------------------------------------------------------------------
-local api = {VERSION="0.96 alpha"}
+-- Note: NARGS is the number of args to pass to each api function
+
+local api = {API_VERSION = "0.96 alpha",
+	     ROSIE_VERSION = ROSIE_VERSION,
+	     ROSIE_HOME = ROSIE_HOME,
+	     NARGS = {}} 
 ----------------------------------------------------------------------------------------
 
 engine_list = {}
@@ -72,14 +77,15 @@ end
 local function pcall_wrap(f)
    return function(...)
 	     return pcall(f, ...)
-	  end
+	  end,
+   debug.getinfo(f, "u").nparams
 end
 
 local function version()
    return api.VERSION, (ROSIE_VERSION or "unknown rpl version")
 end
 
-api.version = pcall_wrap(version)
+api.version, api.NARGS.version = pcall_wrap(version)
 
 ----------------------------------------------------------------------------------------
 -- Managing the environment (engine functions)
@@ -93,7 +99,7 @@ local function delete_engine(id)
    return ""
 end
 
-api.delete_engine = pcall_wrap(delete_engine)
+api.delete_engine, api.NARGS.delete_engine = pcall_wrap(delete_engine)
 
 local function inspect_engine(id)
    local en = engine_from_id(id)
@@ -101,7 +107,7 @@ local function inspect_engine(id)
    return name, json.encode(config)
 end
 
-api.inspect_engine = pcall_wrap(inspect_engine)
+api.inspect_engine, api.NARGS.inspect_engine = pcall_wrap(inspect_engine)
 
 local function new_engine(optional_name)	    -- optional manifest? file list? code string?
    if optional_name and (type(optional_name)~="string") then
@@ -115,7 +121,7 @@ local function new_engine(optional_name)	    -- optional manifest? file list? co
    return en.id
 end
 
-api.new_engine = pcall_wrap(new_engine)
+api.new_engine, api.NARGS.new_engine = pcall_wrap(new_engine)
 
 local function get_env(id)
    local en = engine_from_id(id)
@@ -123,7 +129,7 @@ local function get_env(id)
    return json.encode(env)
 end
 
-api.get_env = pcall_wrap(get_env)
+api.get_env, api.NARGS.get_env = pcall_wrap(get_env)
 
 local function clear_env(id)
    local en = engine_from_id(id)
@@ -131,7 +137,7 @@ local function clear_env(id)
    return ""
 end
 
-api.clear_env = pcall_wrap(clear_env)
+api.clear_env, api.NARGS.clear_env = pcall_wrap(clear_env)
 
 ----------------------------------------------------------------------------------------
 -- Loading manifests, files, strings
@@ -193,7 +199,7 @@ local function get_definition(engine_id, identifier)
    end
 end
 
-api.get_definition = pcall_wrap(get_definition)
+api.get_definition, api.NARGS.get_definition = pcall_wrap(get_definition)
 
 ----------------------------------------------------------------------------------------
 -- Matching
@@ -217,7 +223,7 @@ local function configure(id, c_string)
    return ""
 end
 
-api.configure = pcall_wrap(configure)
+api.configure, api.NARGS.configure = pcall_wrap(configure)
    
 local function match(id, input_text, start)
    local en = engine_from_id(id)
@@ -230,14 +236,14 @@ local function match(id, input_text, start)
    end
 end
 
-api.match = pcall_wrap(match)
+api.match, api.NARGS.match = pcall_wrap(match)
 
 local function match_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
    return en:match_file(infilename, outfilename, errfilename)
 end
 
-api.match_file = pcall_wrap(match_file)
+api.match_file, api.NARGS.match_file = pcall_wrap(match_file)
 
 local function eval_(id, input_text, start)
    local en = engine_from_id(id)
@@ -248,14 +254,14 @@ local function eval_(id, input_text, start)
    return result, leftover, trace
 end
 
-api.eval = pcall_wrap(eval_)
+api.eval, api.NARGS.eval = pcall_wrap(eval_)
 
 local function eval_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
    return en:eval_file(infilename, outfilename, errfilename)
 end
 
-api.eval_file = pcall_wrap(eval_file)
+api.eval_file, api.NARGS.eval_file = pcall_wrap(eval_file)
 
 local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    local en = engine_from_id(id)
@@ -264,6 +270,22 @@ local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    return ""
 end   
 
-api.set_match_exp_grep_TEMPORARY = pcall_wrap(set_match_exp_grep_TEMPORARY)
+api.set_match_exp_grep_TEMPORARY, api.NARGS.set_match_exp_grep_TEMPORARY = pcall_wrap(set_match_exp_grep_TEMPORARY)
+
+-- pcall_wrap will fill in the number of args that each api function takes, but (obviously) only
+-- for the wrapped functions.  This loop catches the rest:
+
+for name, thing in pairs(api) do
+   if type(thing)=="function" then
+      if not api.NARGS[name] then
+	 local info = debug.getinfo(thing, "u")
+	 if info.isvararg=="true" then
+	    error("Error loading api: vararg function found: " .. name)
+	 else
+	    api.NARGS[name] = info.nparams
+	 end
+      end -- no NARGS entry
+   end -- for each function
+end
 
 return api
