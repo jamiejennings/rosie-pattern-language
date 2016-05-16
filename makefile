@@ -15,6 +15,8 @@ JSON_ARCHIVE = 'http://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.t
 
 ## ----------------------------------------------------------------------------- ##
 
+HOME = "`pwd`"
+
 default: $(PLATFORM)
 
 download: $(LUA_DIR) $(LPEG_DIR) $(JSON_DIR)
@@ -92,11 +94,12 @@ lib/cjson.so: $(JSON_DIR)
 	cp $(JSON_DIR)/cjson.so lib
 
 test:
+	@echo "Rosie home is $(HOME)"
 	@RESULT="$(shell ./run 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
             echo "Rosie Pattern Engine installed successfully!"; \
-            echo "\nTry this as a test: ./run basic.matchall /etc/resolv.conf\n"; \
+            echo "Try this as a test: ./run basic.matchall /etc/resolv.conf"; \
         else \
             echo "Rosie Pattern Engine test failed."; \
         fi

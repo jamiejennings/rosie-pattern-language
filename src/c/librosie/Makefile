@@ -1,5 +1,13 @@
 # Makefile for building TEST driver program for Rosie
 
+HOME = `cd ../../..; pwd`
+
+
+
+
+
+
+
 # See ../doc/readme.html for installation and customization instructions.
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
@@ -8,7 +16,7 @@
 PLAT= none
 
 CC= gcc -std=gnu99
-CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS)
+CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) -DROSIE_HOME=$(HOME)
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= -lm $(SYSLIBS) $(MYLIBS)
 
@@ -52,6 +60,7 @@ depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
 echo:
+	@echo "HOME= $(HOME)"
 	@echo "PLAT= $(PLAT)"
 	@echo "CC= $(CC)"
 	@echo "CFLAGS= $(CFLAGS)"

@@ -7,13 +7,15 @@
 /*  AUTHOR: Jamie A. Jennings                                                */
 
 
+/* ROSIE_HOME defined on command line during compilation (see Makefile)      */
+
+
 /* 
  * Based on src/lua.c from the open source Lua 5.3.2 distribution under MIT license
  *
  * Right now, this is just hacking around to learn my way around using the Lua state.
  *
  */
-
 
 #define rosie_c
 
@@ -154,12 +156,23 @@ static void stackDump (lua_State *L) {
 /* Let's write some functions that use the Rosie API */
 /* ************************************************* */
 
+#define SET_ROSIE_HOME(val) HELPER(val)
+#define HELPER(thing) QUOTE(ROSIE_HOME = #thing)
+
+#define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
+#define QUOTE(thing) #thing			    /* stringify it */
+
 static int initialize(lua_State *L) {
 
      int status;
      int stkpos = lua_gettop(L);
+     const char *rhome = QUOTE_EXPAND(ROSIE_HOME);
      
-     const char *setup = "ROSIE_HOME=\"/Users/jjennings/Work/Dev/rosie-pattern-language\"; SCRIPTNAME=\"foo\"";
+     printf("%s\n", rhome);
+     
+     const char *setup = SET_ROSIE_HOME(ROSIE_HOME);
+     printf("%s\n", setup);
+     /* ("ROSIE_HOME = \"/Users/jjennings/Work/Dev/rosie-pattern-language/\"" );*/
      status = dostring (L, setup, "this is a test");
      report(L, status);
      if (status != LUA_OK) return EXIT_FAILURE;
@@ -199,9 +212,7 @@ static int initialize(lua_State *L) {
      return EXIT_SUCCESS;
 }
 
-/* After tuning these, move them to header file */
-/* #define API_MAX_ARGS 5 */
-/* #define API_MAX_ARG_LEN 500 */
+
 
 int rosie_api(lua_State *L, const char *name, ...) {
 
