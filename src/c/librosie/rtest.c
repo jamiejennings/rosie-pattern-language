@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "lauxlib.h"
 #include "lualib.h"
@@ -173,10 +174,15 @@ static int initialize(lua_State *L) {
 /* #define API_MAX_ARGS 5 */
 /* #define API_MAX_ARG_LEN 500 */
 
-int rosie_api(lua_State *L, const char *name, char *arg) {
+int rosie_api(lua_State *L, const char *name, ...) {
 
+     va_list args;
      int status;
+     char *arg;
      
+     va_start(args, name);	   /* setup variadic arg processing */
+     arg = va_arg(args, char *);   /* get the first arg */
+
      /* Optimize later: memoize stack value of fcn for each api call to avoid this lookup? */
 
      lua_getglobal(L, "api");
@@ -196,6 +202,8 @@ int rosie_api(lua_State *L, const char *name, char *arg) {
 
      lua_pop(L, 1);				    /* remove the true we pushed */
 
+     va_end(args);
+     
      return LUA_OK;
 }
 
