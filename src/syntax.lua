@@ -9,7 +9,9 @@ local common = require "common"			    -- AST functions
 require "list"
 
 -- common.create_match("cooked", 1, "(...)", a)
--- local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+
+local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+
 -- local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
 -- function cinternals.append_boundary(a)
 --    return common.create_match("sequence", 1, "/generated/", a, looking_at_boundary_ast)
@@ -137,9 +139,17 @@ recwraptest =
 
 cooked_to_raw =
    make_transformer(function(ast)
-		       local name, body = next(ast)
-		       -- NEED walk_ast here... should put that in make_transformer
-		       return common.create_match()
+		       local _, body = next(ast)
+		       local sub = body.subs[1]
+		       local name, subbody = next(sub)
+		       assert((type(subbody)=="table") and next(subbody), "bad cooked node")
+		       if name=="sequence" then
+			  local s = generated_ast("sequence", sub, boundary_ast)
+			  return generated_ast("raw", s)
+		       else
+			  -- other tests? choice?
+			  return generated_ast("raw", sub) -- we lose the original text/pos here
+		       end
 		    end,
 		    "cooked",
 		    true)
