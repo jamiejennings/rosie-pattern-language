@@ -82,7 +82,7 @@ local function pcall_wrap(f)
 end
 
 local function version()
-   return api.VERSION, (ROSIE_VERSION or "unknown rpl version")
+   return api.API_VERSION, api.ROSIE_VERSION, api.ROSIE_HOME
 end
 
 api.version, api.NARGS.version = pcall_wrap(version)

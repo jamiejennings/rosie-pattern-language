@@ -8,7 +8,9 @@
 
 
 /* ROSIE_HOME defined on command line during compilation (see Makefile)      */
-
+#ifndef ROSIE_HOME
+#error "ROSIE_HOME not defined.  Check CFLAGS in Makefile?"
+#endif
 
 /* 
  * Based on src/lua.c from the open source Lua 5.3.2 distribution under MIT license
@@ -115,9 +117,11 @@ static int dochunk (lua_State *L, int status) {
   return report(L, status);
 }
 
+#if 0
 static int dofile (lua_State *L, const char *name) {
   return dochunk(L, luaL_loadfile(L, name));
 }
+#endif
 
 static int dostring (lua_State *L, const char *s, const char *name) {
   return dochunk(L, luaL_loadbuffer(L, s, strlen(s), name));
@@ -168,7 +172,7 @@ static int bootstrap (lua_State *L) {
   return dochunk(L, luaL_loadfile(L, name));
 }
 
-void require (lua_State *L, const char *name, int assign_name) {
+static void require (lua_State *L, const char *name, int assign_name) {
      int status;
      lua_getglobal(L, "require");
      lua_pushstring(L, name);
@@ -191,7 +195,7 @@ void require (lua_State *L, const char *name, int assign_name) {
 /* Let's write some functions that use the Rosie API */
 /* ************************************************* */
 
-static int initialize(lua_State *L) {
+static void initialize(lua_State *L) {
 
      int status;
      int stkpos = lua_gettop(L);
@@ -199,10 +203,10 @@ static int initialize(lua_State *L) {
      const char *setup = SET_ROSIE_HOME(ROSIE_HOME);
      status = dostring (L, setup, "set ROSIE_HOME");
      report(L, status);
-     if (status != LUA_OK) return EXIT_FAILURE;
+     if (status != LUA_OK) exit(-1);
   
      status = bootstrap(L);
-     if (status != LUA_OK) return EXIT_FAILURE;
+     if (status != LUA_OK) exit(-1);
 
      lua_getglobal(L, "bootstrap");
      lua_insert(L, 1);
@@ -210,7 +214,7 @@ static int initialize(lua_State *L) {
      if (status != LUA_OK) {
 	  l_message(progname, lua_pushfstring(L, "error during bootstrap (%s)",
 					      lua_tostring(L, -1)));
-	  return EXIT_FAILURE;
+	  exit(-1);
      }
   
      require(L, "repl", FALSE);
@@ -220,8 +224,6 @@ static int initialize(lua_State *L) {
 	  printf("WARNING: after initialization, top should be %d but was %d\n",
 		 stkpos,
 		 lua_gettop(L));
-
-     return EXIT_SUCCESS;
 }
 
 
@@ -230,7 +232,7 @@ int rosie_api(lua_State *L, const char *name, ...) {
 
      va_list args;
      char *arg;
-     int top, base;
+     int base;
      
      int nargs = 1;		   /* get this later from a table */
 
@@ -239,12 +241,13 @@ int rosie_api(lua_State *L, const char *name, ...) {
      printf("Stack at start of rosie_api:\n");
      stackDump(L);
      base = lua_gettop(L);			    /* save top pointer */
+     printf("Base of stack is %d\n", base);
 
      /* Optimize later: memoize stack value of fcn for each api call to avoid this lookup? */
 
      lua_getglobal(L, "api");
      lua_getfield(L, -1 , name);                    /* -1 is stack top, i.e. api table */
-
+     lua_remove(L, base+1);			    /* remove the api table from the stack */
      /* Later: insert a check HERE to ensure the value we get is a function */
 
      for (int i = 1; i <= nargs; i++) {
@@ -253,21 +256,24 @@ int rosie_api(lua_State *L, const char *name, ...) {
      }
 
      lua_call(L, nargs, LUA_MULTRET); 
-     if (lua_isboolean(L, base+1) != 0) {
-	  l_message(progname, lua_pushfstring(L, "api error: calling %s and first return value not a boolean", name));
+
+     printf("Stack immediately after lua_call:\n");
+     stackDump(L);
+     
+     if (lua_isboolean(L, base+2) != 0) {
+	  l_message(progname, lua_pushfstring(L, "api error: first return value of %s not a boolean", name));
 	  exit(-1);
      }
 
-     int ok = lua_toboolean(L, base+1);
+     int ok = lua_toboolean(L, base+2);
      if (!ok) {
 	       printf("== In api error handler ==\n");
 	       stackDump(L);
-	       /* l_message((const char *)'\0', lua_pushfstring(L, "error calling %s: %s", name, lua_tostring(L, -1))); */
-	       l_message(progname, lua_pushfstring(L, "error getting engine: %s", lua_tostring(L, -2)));
+	       l_message(progname, lua_pushfstring(L, "lua error in api when calling %s: %s", name, lua_tostring(L, -2)));
 	       exit(-1);
 	  }
 
-     /* old error handler */
+#if 0 /* old error handler */
      lua_pushboolean(L, 1);			    /* push true */
      if (lua_compare(L, -1, -3, LUA_OPEQ) != 1) {
 	  /* a false return value should be accompanied by a Rosie API error message */
@@ -279,14 +285,10 @@ int rosie_api(lua_State *L, const char *name, ...) {
 	  l_message(progname, lua_pushfstring(L, "error getting engine: %s", lua_tostring(L, -2)));
 	  exit(-1);
      }
-
-     lua_pop(L, 1);       /* pop the api status return value (boolean) */
-     top = lua_gettop(L); 
-     for (int i=1; i <= (top - 2); i++) {
-	  lua_replace(L, 1);    /* move current top elt (an api retval) to bottom of stack */
-     }
-     lua_settop(L, (top - 2));  /* trash all but the rosie api retval */
-
+     lua_pop(L, 1);       /* pop the true value we pushed for comparison */
+#endif
+     
+     lua_remove(L, base+1);			    /* remove the boolean retval of api call */
 
      printf("Stack at end of rosie_api:\n");
      stackDump(L);
@@ -296,30 +298,44 @@ int rosie_api(lua_State *L, const char *name, ...) {
      return LUA_OK;
 }
 
-     
+/*
+---------------------------------------------------------------------------------------------------
+ main 
+--------------------------------------------------------------------------------------------------- 
+*/
 
-// $SCRIPT_PATH/bin/lua -e "ROSIE_HOME=\"$SCRIPT_PATH\"; SCRIPTNAME=\"$0\"" $SCRIPT_PATH/src/run.lua "$@"
 
 int main (int argc, char **argv) {
   int status;
-  lua_State *L = luaL_newstate();  /* create state */
+  lua_State *L = luaL_newstate();
   if (L == NULL) {
-    l_message(argv[0], "cannot create state: not enough memory");
-    return EXIT_FAILURE;
+    l_message(argv[0], "cannot create lua state: not enough memory");
+    exit(-2);
   }
 
-  luaL_checkversion(L);  /* check that interpreter has correct version ??? */
+/* luaL_checkversion checks whether the core running the call, the core that created the Lua state,
+   and the code making the call are all using the same version of Lua. Also checks whether the core
+   running the call and the core that created the Lua state are using the same address space.
+*/   
+  luaL_checkversion(L);
 
-  luaL_openlibs(L);  /* open standard libraries */
+  luaL_openlibs(L);				    /* open standard libraries */
 
-  if (initialize(L)==EXIT_FAILURE) return EXIT_FAILURE;
+  initialize(L);				    /* initialize Rosie */
 
-  char *name = malloc(sizeof(char) * 100);
-  strcpy(name, "REPL ENGINE");
+  const char *name = "REPL ENGINE";
   status = rosie_api(L, "new_engine", name);	    /* leaves engine id on stack */
 
+  const char *eid = lua_tostring(L, 1);
+  
+  status = rosie_api(L, "get_env", eid);	    /* leaves env string on stack */
+  status = rosie_api(L, "get_env", eid);	    /* leaves env string on stack */
+  status = rosie_api(L, "inspect_engine", eid);	    /* leaves env string on stack */
+  status = rosie_api(L, "inspect_engine", eid);	    /* leaves env string on stack */
+
+
   lua_getglobal(L, "repl");	  /* push repl fcn */
-  lua_pushvalue(L, -2);		  /* copy engine id to top of stack */
+  lua_pushstring(L, eid);	  /* engine id */
   docall(L, 1, 1);		  /* call repl(eid) */
   report(L, status);
   if (status != LUA_OK) {

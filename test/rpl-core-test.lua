@@ -50,8 +50,8 @@ heading("Setting up")
 api = require "api"
 
 check(type(api)=="table")
-check(api.VERSION)
-check(type(api.VERSION=="string"))
+check(api.API_VERSION)
+check(type(api.API_VERSION=="string"))
 
 check(type(api.new_engine)=="function")
 ok, eid = api.new_engine("hello")

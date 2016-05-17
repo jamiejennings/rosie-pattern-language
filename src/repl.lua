@@ -6,18 +6,18 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-
 api = require "api"
 common = require "common"
 json = require "cjson"
 
 local repl_patterns = [==[
+      rpl_expression = expression
       alias validchars = { [:alnum:] / [_%!$@:.,~-] }
       path = "/"? { validchars+ {"/" validchars+}* }
       load = ".load" path
       manifest = ".manifest" path
-      match = ".match" expression "," quoted_string
-      eval = ".eval" expression "," quoted_string
+      match = ".match" rpl_expression "," quoted_string
+      eval = ".eval" rpl_expression "," quoted_string
       on_off = "on" / "off"
       debug = ".debug" on_off?
       patterns = ".patterns"
@@ -29,6 +29,7 @@ local repl_patterns = [==[
 
 local ok
 ok, repl_engine = api.new_engine("repl")
+assert(ok, "error in initializing repl: failed to get an engine")
 api.load_file(repl_engine, "src/rosie-core.rpl")
 api.load_string(repl_engine, repl_patterns)
 ok, msg = api.configure(repl_engine, json.encode{expression="input", encoder="json"})
@@ -118,6 +119,7 @@ function repl(eid)
 	       io.write("Pattern environment cleared\n")
 	    elseif cname=="match" or cname =="eval" then
 	       local ename, epos, exp = common.decode_match(csubs[1])
+	       print("**** DEBUG: exp = " .. exp)
 	       -- parsing strips the quotes off when exp is only a literal string, but compiler
 	       -- needs them there.  this is inelegant.  sigh.
 	       if ename=="string" then exp = '"'..exp..'"'; end

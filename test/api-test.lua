@@ -22,14 +22,15 @@ heading("Require api")
 api = require "api"
 
 check(type(api)=="table")
-check(api.VERSION)
-check(type(api.VERSION=="string"))
+check(api.API_VERSION and type(api.API_VERSION=="string"))
+check(api.ROSIE_VERSION and type(api.ROSIE_VERSION=="string"))
+check(api.ROSIE_HOME and type(api.ROSIE_HOME=="string"))
 
-ok, api_v, rpl_v = api.version()
+ok, api_v, rpl_v, r_home = api.version()
 check(ok)
 check(type(api_v)=="string")
 check(type(rpl_v)=="string")
-check(not rpl_v:find("unknown"))
+check(type(r_home)=="string")
 
 ----------------------------------------------------------------------------------------
 heading("Engine")
