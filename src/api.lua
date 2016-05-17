@@ -104,6 +104,7 @@ api.delete_engine, api.NARGS.delete_engine = pcall_wrap(delete_engine)
 local function inspect_engine(id)
    local en = engine_from_id(id)
    local name, config = en:inspect()
+   config.encoder = encoder_to_name(config.encoder)
    return name, json.encode(config)
 end
 
@@ -205,18 +206,30 @@ api.get_definition, api.NARGS.get_definition = pcall_wrap(get_definition)
 -- Matching
 ----------------------------------------------------------------------------------------
 
+local encoder_table =
+   {json = json.encode,
+    color = color_string_from_leaf_nodes,
+    text = function(t) local k,v = next(t); assert(type(v)=="table"); return (v and v.text) or ""; end,
+ }
+
+function name_to_encoder(name)
+   return encoder_table[name]
+end
+
+function encoder_to_name(fcn)
+   for k,v in pairs(encoder_table) do
+      if v==fcn then return k; end
+   end
+   return "<unknown>"
+end
+
 local function configure(id, c_string)
    local en = engine_from_id(id)
    if type(c_string)~="string" then
       arg_error("configuration not a (JSON) string: " .. tostring(c_string)); end
    local c = json.decode(c_string)
-   if c.encoder == "json" then
-      c.encoder = json.encode;
-   elseif c.encoder == "color" then
-      c.encoder = color_string_from_leaf_nodes;
-   elseif c.encoder == "text" then
-      c.encoder = function(t) local k,v = next(t); assert(type(v)=="table"); return (v and v.text) or ""; end
-   else
+   c.encoder = name_to_encoder(c.encoder)
+   if not c.encoder then
       arg_error("invalid encoder: " .. tostring(c.encoder));
    end
    en:configure(c)

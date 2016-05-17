@@ -165,7 +165,7 @@ engine.create_function =
       return _new{name=name,
 		  env=initial_env,
 		  id=id,
-		  config={},
+		  config={encoder=identity_function},	    -- defaults
 		  match=engine_match,
 		  match_file=engine_match_file,
 		  eval=engine_eval,
