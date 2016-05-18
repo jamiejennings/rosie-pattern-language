@@ -234,7 +234,7 @@ int rosie_api(lua_State *L, const char *name, ...) {
      char *arg;
      int base;
      
-     int nargs = 1;		   /* get this later from a table */
+     int nargs = 2;		   /* get this later from a table */
 
      printf("Calling Rosie api: %s\n", name);
 
@@ -256,6 +256,8 @@ int rosie_api(lua_State *L, const char *name, ...) {
 	  arg = va_arg(args, char *);   /* get the next arg */
 	  lua_pushstring(L, arg);	/* push it */
      }
+
+     va_end(args);
 
      lua_call(L, nargs, LUA_MULTRET); 
 
@@ -283,7 +285,6 @@ int rosie_api(lua_State *L, const char *name, ...) {
      printf("Stack at end of call to Rosie api: %s\n", name);
      stackDump(L);
 
-     va_end(args);
      
      return LUA_OK;
 }
@@ -314,15 +315,16 @@ int main (int argc, char **argv) {
   initialize(L);				    /* initialize Rosie */
 
   const char *name = "REPL ENGINE";
-  status = rosie_api(L, "new_engine", name);	    /* leaves engine id on stack */
+  status = rosie_api(L, "new_engine", name, "");    /* leaves engine id on stack */
 
   const char *eid = lua_tostring(L, 1);
   
-  status = rosie_api(L, "get_env", eid);	    /* leaves env string on stack */
-  status = rosie_api(L, "inspect_engine", eid);	    /* leaves env string on stack */
-  status = rosie_api(L, "get_env", eid);	    /* leaves env string on stack */
-  status = rosie_api(L, "inspect_engine", eid);	    /* leaves env string on stack */
-  status = rosie_api(L, "get_env", eid);	    /* leaves env string on stack */
+  status = rosie_api(L, "get_env", eid, "");	   
+  status = rosie_api(L, "configure", eid, "{\"expression\": \"[:digit:]+\", \"encoder\": \"json\"}");
+  status = rosie_api(L, "inspect_engine", eid, "");
+  status = rosie_api(L, "match", eid, "123");
+  status = rosie_api(L, "match", eid, "123 abcdef");
+  status = rosie_api(L, "match", eid, "hi");
 
 
   lua_getglobal(L, "repl");	  /* push repl fcn */
