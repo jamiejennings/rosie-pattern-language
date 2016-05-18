@@ -135,19 +135,19 @@ static void stackDump (lua_State *L) {
         switch (t) {
     
           case LUA_TSTRING:  /* strings */
-            printf("`%s'", lua_tostring(L, i));
+	       printf("%d: `%s'", i, lua_tostring(L, i));
             break;
     
           case LUA_TBOOLEAN:  /* booleans */
-            printf(lua_toboolean(L, i) ? "true" : "false");
+	       printf("%d: %s", i, (lua_toboolean(L, i) ? "true" : "false"));
             break;
     
           case LUA_TNUMBER:  /* numbers */
-            printf("%g", lua_tonumber(L, i));
+	       printf("%d: %g", i, lua_tonumber(L, i));
             break;
     
           default:  /* other values */
-            printf("%s", lua_typename(L, t));
+	       printf("%d: %s", i, lua_typename(L, t));
             break;
     
         }
@@ -236,12 +236,14 @@ int rosie_api(lua_State *L, const char *name, ...) {
      
      int nargs = 1;		   /* get this later from a table */
 
+     printf("Calling Rosie api: %s\n", name);
+
      va_start(args, name);	   /* setup variadic arg processing */
 
      printf("Stack at start of rosie_api:\n");
      stackDump(L);
      base = lua_gettop(L);			    /* save top pointer */
-     printf("Base of stack is %d\n", base);
+     /* printf("Base of stack is %d\n", base); */
 
      /* Optimize later: memoize stack value of fcn for each api call to avoid this lookup? */
 
@@ -257,40 +259,28 @@ int rosie_api(lua_State *L, const char *name, ...) {
 
      lua_call(L, nargs, LUA_MULTRET); 
 
-     printf("Stack immediately after lua_call:\n");
-     stackDump(L);
+     /* printf("Stack immediately after lua_call:\n"); */
+     /* stackDump(L); */
      
-     if (lua_isboolean(L, base+2) != 0) {
+     /* printf("base+1 value from stack as a boolean: %s\n", lua_toboolean(L, base+1) ? "true" : "false"); */
+     /* printf("base+1 value from stack as a string: %s\n", lua_tostring(L, base+1)); */
+
+     if (lua_isboolean(L, base+1) != TRUE) {
 	  l_message(progname, lua_pushfstring(L, "api error: first return value of %s not a boolean", name));
 	  exit(-1);
      }
 
-     int ok = lua_toboolean(L, base+2);
-     if (!ok) {
+     int ok = lua_toboolean(L, base+1);
+     if (ok != TRUE) {
 	       printf("== In api error handler ==\n");
 	       stackDump(L);
-	       l_message(progname, lua_pushfstring(L, "lua error in api when calling %s: %s", name, lua_tostring(L, -2)));
+	       l_message(progname, lua_pushfstring(L, "lua error in rosie api call '%s': %s", name, lua_tostring(L, -1)));
 	       exit(-1);
 	  }
 
-#if 0 /* old error handler */
-     lua_pushboolean(L, 1);			    /* push true */
-     if (lua_compare(L, -1, -3, LUA_OPEQ) != 1) {
-	  /* a false return value should be accompanied by a Rosie API error message */
-	  /* TODO: Use that instead of this message */
-	  printf("*******************************************************\n");
-	  stackDump(L);
-	  lua_pop(L, 1);       /* pop the true value we pushed for comparison */
-	  /* l_message((const char *)'\0', lua_pushfstring(L, "error calling %s: %s", name, lua_tostring(L, -1))); */
-	  l_message(progname, lua_pushfstring(L, "error getting engine: %s", lua_tostring(L, -2)));
-	  exit(-1);
-     }
-     lua_pop(L, 1);       /* pop the true value we pushed for comparison */
-#endif
-     
      lua_remove(L, base+1);			    /* remove the boolean retval of api call */
 
-     printf("Stack at end of rosie_api:\n");
+     printf("Stack at end of call to Rosie api: %s\n", name);
      stackDump(L);
 
      va_end(args);
@@ -329,9 +319,10 @@ int main (int argc, char **argv) {
   const char *eid = lua_tostring(L, 1);
   
   status = rosie_api(L, "get_env", eid);	    /* leaves env string on stack */
+  status = rosie_api(L, "inspect_engine", eid);	    /* leaves env string on stack */
   status = rosie_api(L, "get_env", eid);	    /* leaves env string on stack */
   status = rosie_api(L, "inspect_engine", eid);	    /* leaves env string on stack */
-  status = rosie_api(L, "inspect_engine", eid);	    /* leaves env string on stack */
+  status = rosie_api(L, "get_env", eid);	    /* leaves env string on stack */
 
 
   lua_getglobal(L, "repl");	  /* push repl fcn */

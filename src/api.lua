@@ -51,10 +51,11 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 ----------------------------------------------------------------------------------------
 -- Note: NARGS is the number of args to pass to each api function
 
-local api = {API_VERSION = "0.96 alpha",
-	     ROSIE_VERSION = ROSIE_VERSION,
-	     ROSIE_HOME = ROSIE_HOME,
-	     NARGS = {}} 
+local api = {API_VERSION = "0.96 alpha",	    -- api version
+	     RPL_VERSION = "0.96",		    -- language version
+	     ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
+	     ROSIE_HOME = ROSIE_HOME,		    -- install directory
+	     NARGS = {}} 			    -- number of args for each api call
 ----------------------------------------------------------------------------------------
 
 engine_list = {}
@@ -81,8 +82,20 @@ local function pcall_wrap(f)
    debug.getinfo(f, "u").nparams
 end
 
-local function version()
-   return api.API_VERSION, api.ROSIE_VERSION, api.ROSIE_HOME
+local function version(verbose)
+   if (not verbose) or (verbose=="false") then
+      return api.API_VERSION
+   elseif (verbose=="true") then
+      local info = {}
+      for k,v in pairs(api) do
+	 if (type(k)=="string") and (type(v)=="string") then
+	    info[k] = v
+	 end
+      end -- loop
+      return json.encode(info)
+   else
+      arg_error('optional arg must be "true" or "false"')
+   end -- switch on verbose
 end
 
 api.version, api.NARGS.version = pcall_wrap(version)
@@ -96,7 +109,6 @@ local function delete_engine(id)
       arg_error("engine id not a string")
    end
    engine_list[id] = nil;
-   return ""
 end
 
 api.delete_engine, api.NARGS.delete_engine = pcall_wrap(delete_engine)
@@ -135,7 +147,6 @@ api.get_env, api.NARGS.get_env = pcall_wrap(get_env)
 local function clear_env(id)
    local en = engine_from_id(id)
    en.env = compile.new_env()
-   return ""
 end
 
 api.clear_env, api.NARGS.clear_env = pcall_wrap(clear_env)
@@ -176,7 +187,7 @@ function api.load_string(id, input)
    if not ok then return false, en; end
    local ok, msg = compile.compile(input, en.env)
    if ok then
-      return true, ""
+      return true
    else 
       return false, msg
    end
@@ -233,7 +244,6 @@ local function configure(id, c_string)
       arg_error("invalid encoder: " .. tostring(c.encoder));
    end
    en:configure(c)
-   return ""
 end
 
 api.configure, api.NARGS.configure = pcall_wrap(configure)
@@ -245,7 +255,7 @@ local function match(id, input_text, start)
    if result then
       return result, (#input_text - nextpos + 1)
    else
-      return false, 0
+      return false
    end
 end
 
@@ -280,7 +290,6 @@ local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    local en = engine_from_id(id)
    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
    en:configure({ pattern = pattern_EXP_to_grep_pattern(pattern_exp, en.env) })
-   return ""
 end   
 
 api.set_match_exp_grep_TEMPORARY, api.NARGS.set_match_exp_grep_TEMPORARY = pcall_wrap(set_match_exp_grep_TEMPORARY)

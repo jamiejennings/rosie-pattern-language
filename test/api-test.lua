@@ -26,11 +26,26 @@ check(api.API_VERSION and type(api.API_VERSION=="string"))
 check(api.ROSIE_VERSION and type(api.ROSIE_VERSION=="string"))
 check(api.ROSIE_HOME and type(api.ROSIE_HOME=="string"))
 
-ok, api_v, rpl_v, r_home = api.version()
+ok, api_v = api.version()
 check(ok)
 check(type(api_v)=="string")
-check(type(rpl_v)=="string")
-check(type(r_home)=="string")
+check(not api_v:find("{"))			    -- not JSON
+
+ok, api_v = api.version("false")
+check(ok)
+check(type(api_v)=="string")
+check(not api_v:find("{"))			    -- not JSON
+
+ok, json_info = api.version("true")
+check(ok)
+check(type(json_info)=="string")
+info = json.decode(json_info)
+check(info)
+check(type(info.API_VERSION)=="string")
+check(type(info.RPL_VERSION)=="string")
+check(type(info.ROSIE_VERSION)=="string")
+check(type(info.ROSIE_HOME)=="string")
+
 
 ----------------------------------------------------------------------------------------
 heading("Engine")
@@ -61,10 +76,10 @@ subheading("delete_engine")
 check(type(api.delete_engine)=="function")
 ok, msg = api.delete_engine(eid2)
 check(ok)
-check(msg=="")
+check(not msg)
 ok, msg = api.delete_engine(eid2)
 check(ok, "idempotent delete function")
-check(msg=="")
+check(not msg)
 
 ok, msg = api.inspect_engine(eid2)
 check(not ok)
@@ -115,14 +130,14 @@ check(not ok)
 check(1==msg:find("Compile error: reference to undefined identifier foo"))
 ok, msg = api.load_string(eid, 'foo = "a"')
 check(ok)
-check(msg=="")
+check(not msg)
 ok, env = api.get_env(eid)
 check(ok)
 j = json.decode(env)
 check(j["foo"].type=="definition", "env contains newly defined identifier")
 ok, msg = api.load_string(eid, 'bar = foo / "1" $')
 check(ok)
-check(msg=="")
+check(not msg)
 ok, env = api.get_env(eid)
 check(ok)
 j = json.decode(env)
@@ -140,7 +155,7 @@ check(not j["x"])
 ok, msg = api.load_string(eid, '-- comments and \n -- whitespace\t\n\n',
    "an empty list of ast's is the result of parsing comments and whitespace")
 check(ok)
-check(msg=="")
+check(not msg)
 
 g = [[grammar
   S = {"a" B} / {"b" A} / "" 
@@ -150,7 +165,7 @@ end]]
 
 ok, msg = api.load_string(eid, g)
 check(ok)
-check(msg=="")
+check(not msg)
 
 ok, def = api.get_definition(eid, "S")
 check(ok)
@@ -298,7 +313,7 @@ check(ok)
 ok, msg = api.configure(eid, json.encode({expression="common.dotted_identifier",
 					  encoder="json"}))
 check(ok)
-check(msg=="")
+check(not msg)
 
 print(" Need more tests!")
 
@@ -326,8 +341,9 @@ ok, msg = api.configure(eid, json.encode{expression='common.number', encoder="js
 check(ok)
 
 ok, match, left = api.match(eid, "x.y.z")
-check(ok, "verifying that the engine exp has NOT been reset...")
-check(left==0)
+check(ok, "verifying that the engine exp has been changed by the call to configure")
+check(not match)
+check(not left)
 
 subheading("match_file")
 check(type(api.match_file)=="function")
