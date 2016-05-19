@@ -21,7 +21,7 @@ PLAT= none
 CC= gcc -std=gnu99
 CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) -DROSIE_HOME=$(HOME)
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
-LIBS= -lm $(SYSLIBS) $(MYLIBS)
+LIBS= $(SYSLIBS) $(MYLIBS)
 
 AR= ar rcu
 RANLIB= ranlib
@@ -33,7 +33,7 @@ SYSLIBS=
 
 MYCFLAGS=  -I/Users/jjennings/Work/Dev/rosie-pattern-language/lua-5.3.2/include
 MYLDFLAGS= -L/Users/jjennings/Work/Dev/rosie-pattern-language/lua-5.3.2/src
-MYLIBS=
+MYLIBS= 
 MYOBJS=
 
 # == END OF USER SETTINGS -- NO NEED TO CHANGE ANYTHING BELOW THIS LINE =======
@@ -41,23 +41,25 @@ MYOBJS=
 PLATS= aix bsd c89 freebsd generic linux macosx mingw posix solaris
 
 LUA_A=	/Users/jjennings/Work/Dev/rosie-pattern-language/lua-5.3.2/src/liblua.a
-
-T=	rtest
-O=	rtest.o
+LIBROSIE= /Users/jjennings/Work/Dev/rosie-pattern-language/src/C/librosie/librosie.so
 
 
 # Targets start here.
 default: $(PLAT)
 
-all:	$(T)
+all:	librosie.so rtest
 
-o:	$(O)
+rtest: librosie.so
+	$(CC) -o $@ rtest.c $(CFLAGS) $(LIBROSIE) $(LUA_A) $(LIBS)
 
-$(T): $(O)
-	$(CC) -o $@ $(LDFLAGS) $(O) $(LUA_A) $(LIBS)
+librosie.o: 
+	$(CC) -o $@ -c librosie.c $(CFLAGS)
+
+librosie.so: librosie.o
+	$(CC) -shared -o $@ librosie.o $(LDFLAGS) $(LUA_A)
 
 clean:
-	$(RM) $(T) $(O)
+	$(RM) librosie.so librosie.o rtest.o rtest
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
@@ -74,7 +76,7 @@ echo:
 	@echo "RM= $(RM)"
 
 # Convenience targets for popular platforms
-ALL= rtest
+ALL= librosie.so rtest
 
 none:
 	@echo "Please do 'make PLATFORM' where PLATFORM is one of these:"
@@ -91,3 +93,6 @@ macosx: CC=cc			    # override on the command line for gcc
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none
 
+
+rtest.o: rtest.c librosie.h
+librosie.o: librosie.c

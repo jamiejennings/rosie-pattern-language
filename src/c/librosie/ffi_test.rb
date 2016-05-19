@@ -1,3 +1,5 @@
+# gem install ffi
+
 require 'ffi'
 
 class AP < FFI::AutoPointer
