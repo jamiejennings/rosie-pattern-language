@@ -22,6 +22,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+static lua_State *single_instanceL = NULL;	    /* !@# Make a table? */
+
 static lua_State *globalL = NULL;
 static const char *progname = "librosie";
 
@@ -156,7 +158,8 @@ static void stackDump (lua_State *L) {
 #define QUOTE(thing) #thing			    /* stringify it */
 
 #define MAXPATHSIZE 4096
-int bootstrap (lua_State *L, const char *rosie_home) {
+int bootstrap (const char *rosie_home) {
+     lua_State *L = single_instanceL;
      char name[MAXPATHSIZE + 1];
      if (strlcpy(name, rosie_home, sizeof(name)) >= sizeof(name))
 	  luaL_error(L, "error during bootstrap: MAXPATHSIZE too small");
@@ -165,8 +168,9 @@ int bootstrap (lua_State *L, const char *rosie_home) {
      return dochunk(L, luaL_loadfile(L, name));
 }
 
-void require (lua_State *L, const char *name, int assign_name) {
+void require (const char *name, int assign_name) {
      int status;
+     lua_State *L = single_instanceL;
      lua_getglobal(L, "require");
      lua_pushstring(L, name);
      status = docall(L, 1, 1);                   /* call 'require(name)' */
@@ -182,9 +186,34 @@ void require (lua_State *L, const char *name, int assign_name) {
      };
 }
 
-void initialize(lua_State *L, const char *rosie_home) {
+lua_State *get_L() { return single_instanceL; }
+
+void initialize(const char *rosie_home) {
 
      int status;
+
+  lua_State *L = luaL_newstate();
+  if (L == NULL) {
+       l_message((char *)'\0', "cannot create lua state: not enough memory");
+    exit(-2);
+  }
+
+    single_instanceL = L;
+
+
+
+
+/* 
+   luaL_checkversion checks whether the core running the call, the core that created the Lua state,
+   and the code making the call are all using the same version of Lua. Also checks whether the core
+   running the call and the core that created the Lua state are using the same address space.
+*/   
+  luaL_checkversion(L);
+
+  luaL_openlibs(L);				    /* open standard libraries */
+
+
+
      int stkpos = lua_gettop(L);
 
      const char *setup = SET_ROSIE_HOME(ROSIE_HOME); /* !@# */
@@ -192,7 +221,7 @@ void initialize(lua_State *L, const char *rosie_home) {
      report(L, status);
      if (status != LUA_OK) exit(-1);
   
-     status = bootstrap(L, QUOTE_EXPAND(ROSIE_HOME));
+     status = bootstrap(QUOTE_EXPAND(ROSIE_HOME));
      if (status != LUA_OK) exit(-1);
 
      lua_getglobal(L, "bootstrap");
@@ -204,8 +233,8 @@ void initialize(lua_State *L, const char *rosie_home) {
 	  exit(-1);
      }
   
-     require(L, "repl", FALSE);
-     require(L, "api", TRUE);
+     require( "repl", FALSE);
+     require( "api", TRUE);
 
      if (lua_gettop(L)!=stkpos)
 	  printf("WARNING: after initialization, top should be %d but was %d\n",
@@ -215,12 +244,14 @@ void initialize(lua_State *L, const char *rosie_home) {
 
 
 
-int rosie_api(lua_State *L, const char *name, ...) {
+int rosie_api(const char *name, ...) {
 
      va_list args;
      char *arg;
      int base;
      
+     lua_State *L = single_instanceL;
+
      int nargs = 2;		   /* get this later from a table */
 
      printf("Calling Rosie api: %s\n", name);

@@ -7,10 +7,12 @@
 /*  AUTHOR: Jamie A. Jennings                                                */
 
 
-extern int bootstrap (lua_State *L, const char *rosie_home);
-extern void require (lua_State *L, const char *name, int assign_name);
-extern void initialize(lua_State *L, const char *rosie_home);
-extern int rosie_api(lua_State *L, const char *name, ...);
+/* extern int bootstrap (lua_State *L, const char *rosie_home); */
+extern void require (const char *name, int assign_name);
+extern void initialize(const char *rosie_home);
+extern int rosie_api(const char *name, ...);
 
 /* !@# */
 extern void l_message (const char *pname, const char *msg);
+extern lua_State *get_L();
+     

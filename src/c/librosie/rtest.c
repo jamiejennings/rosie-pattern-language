@@ -37,34 +37,21 @@
 
 int main (int argc, char **argv) {
   int status;
-  lua_State *L = luaL_newstate();
-  if (L == NULL) {
-    l_message(argv[0], "cannot create lua state: not enough memory");
-    exit(-2);
-  }
 
-/* 
-   luaL_checkversion checks whether the core running the call, the core that created the Lua state,
-   and the code making the call are all using the same version of Lua. Also checks whether the core
-   running the call and the core that created the Lua state are using the same address space.
-*/   
-  luaL_checkversion(L);
-
-  luaL_openlibs(L);				    /* open standard libraries */
-
-  initialize(L, QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
+  initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
 
   const char *name = "REPL ENGINE";
-  status = rosie_api(L, "new_engine", name, "");    /* leaves engine id on stack */
+  status = rosie_api("new_engine", name, "");    /* leaves engine id on stack */
 
+  lua_State *L = get_L();  
   const char *eid = lua_tostring(L, 1);
   
-  status = rosie_api(L, "get_env", eid, "");	   
-  status = rosie_api(L, "configure", eid, "{\"expression\": \"[:digit:]+\", \"encoder\": \"json\"}");
-  status = rosie_api(L, "inspect_engine", eid, "");
-  status = rosie_api(L, "match", eid, "123");
-  status = rosie_api(L, "match", eid, "123 abcdef");
-  status = rosie_api(L, "match", eid, "hi");
+  status = rosie_api( "get_env", eid, "");	   
+  status = rosie_api( "configure", eid, "{\"expression\": \"[:digit:]+\", \"encoder\": \"json\"}");
+  status = rosie_api( "inspect_engine", eid, "");
+  status = rosie_api( "match", eid, "123");
+  status = rosie_api( "match", eid, "123 abcdef");
+  status = rosie_api( "match", eid, "hi");
 
 
   lua_getglobal(L, "repl");	  /* push repl fcn */
