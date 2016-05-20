@@ -97,11 +97,12 @@ local function engine_eval(e, input, start)
    start = start or 1
    if not e.config.pattern then no_pattern(e); end
    local ok, matches, nextpos, trace = eval.eval(e.config.pattern, input, 1, e.env)
-   if not ok then return false, matches; end
-   if matches then
-      assert(type(matches)=="table", "eval should return a table, not this: " .. tostring(matches))
-      assert(not matches[2], "eval should return exactly 0 or 1 match")
-      return (e.config.encoder(matches[1])), nextpos, trace
+   -- we are going to avoid relying on the match returned by eval.eval for now, because it isn't
+   -- always right, and we are about to rewrite eval anyway. (Friday, May 20, 2016)
+   local match, nextpos = e:match(input, start)
+   if not ok then return false, matches; end	    -- return message
+   if match then
+      return (e.config.encoder(match)), nextpos, trace
    else return false, 1, trace; end
 end
 

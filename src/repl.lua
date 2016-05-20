@@ -119,7 +119,6 @@ function repl(eid)
 	       io.write("Pattern environment cleared\n")
 	    elseif cname=="match" or cname =="eval" then
 	       local ename, epos, exp = common.decode_match(csubs[1])
-	       print("**** DEBUG: exp = " .. exp)
 	       -- parsing strips the quotes off when exp is only a literal string, but compiler
 	       -- needs them there.  this is inelegant.  sigh.
 	       if ename=="string" then exp = '"'..exp..'"'; end
