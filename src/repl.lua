@@ -6,7 +6,7 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-api = require "api"
+lapi = require "lua_api"
 common = require "common"
 json = require "cjson"
 
@@ -27,13 +27,10 @@ local repl_patterns = [==[
       input = command / statement / identifier
 ]==]
 
-local ok
-ok, repl_engine = api.new_engine("repl")
-assert(ok, "error in initializing repl: failed to get an engine")
-api.load_file(repl_engine, "src/rosie-core.rpl")
-api.load_string(repl_engine, repl_patterns)
-ok, msg = api.configure(repl_engine, json.encode{expression="input", encoder="json"})
-if not ok then error(msg); end
+repl_engine = lapi.new_engine("repl")
+lapi.load_file(repl_engine, "src/rosie-core.rpl")
+lapi.load_string(repl_engine, repl_patterns)
+lapi.configure(repl_engine, {expression="input", encoder="json"})
 
 repl_prompt = "Rosie> "
 
@@ -54,7 +51,7 @@ local function print_match(m, left, eval_p)
 end
 
 function repl(eid)
-   local ok = api.inspect_engine(eid)
+   local ok = lapi.inspect_engine(eid)
    if (not ok) then
       error("Argument to repl is not the id of a live engine: " .. tostring(eid))
    end
@@ -62,7 +59,7 @@ function repl(eid)
    local s = io.stdin:read("l")
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
-      local ok, m, left = api.match(repl_engine, s)
+      local ok, m, left = lapi.match(repl_engine, s)
       if not ok then error("Internal error: ".. tostring(m)); end
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
@@ -76,7 +73,7 @@ function repl(eid)
 	 local _, _, _, subs = common.decode_match(m)
 	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
-	    local ok, def = api.get_definition(eid, text)
+	    local ok, def = lapi.get_definition(eid, text)
 	    if ok then 
 	       io.write(def, "\n")
 	    else
@@ -91,9 +88,9 @@ function repl(eid)
 	       local pname, ppos, path = common.decode_match(csubs[1])
 	       local results, msg
 	       if cname=="load" then 
-		  results, msg = api.load_file(eid, path)
+		  results, msg = lapi.load_file(eid, path)
 	       else -- manifest command
-		  results, msg = api.load_manifest(eid, path)
+		  results, msg = lapi.load_manifest(eid, path)
 	       end
 	       if results then
 		  io.write("Loaded ", msg, "\n")
@@ -107,7 +104,7 @@ function repl(eid)
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
 	    elseif cname=="patterns" then
-	       local ok, env = api.get_env(eid)
+	       local ok, env = lapi.get_env(eid)
 	       if ok then
 		  env = json.decode(env)	    -- inefficient, blah, blah, blah
 		  common.print_env(env)
@@ -115,7 +112,7 @@ function repl(eid)
 		  io.write("Repl: error accessing pattern environment\n")
 	       end
 	    elseif cname=="clear" then
-	       ok = api.clear_env(eid)
+	       ok = lapi.clear_env(eid)
 	       io.write("Pattern environment cleared\n")
 	    elseif cname=="match" or cname =="eval" then
 	       local ename, epos, exp = common.decode_match(csubs[1])
@@ -124,20 +121,20 @@ function repl(eid)
 	       if ename=="string" then exp = '"'..exp..'"'; end
 	       local tname, tpos, input_text = common.decode_match(csubs[2])
 	       input_text = common.unescape_string(input_text)
-	       local ok, msg = api.configure(eid, json.encode{expression=exp, encoder="json"})
+	       ok, msg = lapi.configure(eid, json.encode{expression=exp, encoder="json"})
 	       if not ok then
 		  io.write(msg, "\n");		    -- syntax and compile errors
 	       else
-		  local ok, m, left = api.match(eid, input_text)
+		  local ok, m, left = lapi.match(eid, input_text)
 --		  if not ok then ... ?
 		  if cname=="match" then
 		     if debug and (not m) then
-			local ok, match, leftover, trace = api.eval(eid, input_text)
+			local ok, match, leftover, trace = lapi.eval(eid, input_text)
 			io.write(trace, "\n")
 		     end
 		  else
 		     -- must be eval
-		     local ok, match, leftover, trace = api.eval(eid, input_text)
+		     local ok, match, leftover, trace = lapi.eval(eid, input_text)
 		     io.write(trace, "\n")
 		  end
 		  print_match(m, left, (cname=="eval"))
@@ -148,7 +145,7 @@ function repl(eid)
 	       io.write("Repl: unimplemented command\n")
 	    end -- switch on command
 	 elseif name=="alias_" or name=="assignment_" or name=="grammar_" then
-	    local result, msg = api.load_string(eid, text);
+	    local result, msg = lapi.load_string(eid, text);
 	    if not result then io.write(msg, "\n"); end
 	 else
 	    io.write("Repl: internal error\n")

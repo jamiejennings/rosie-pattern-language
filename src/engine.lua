@@ -54,15 +54,14 @@ local function no_pattern(e)
 end
 
 local function engine_configure(e, configuration)
-   assert(type(configuration)=="table", "engine configuration not a table: " .. tostring(configuration))
    if configuration.expression then
       e.config.expression = configuration.expression
       local pat, msg = compile.compile_command_line_expression(configuration.expression, e.env)
       if not pat then engine_error(e, msg); end
       e.config.pattern = pat
    end
-   if configuration.encoder then
-      e.config.encoder = configuration.encoder
+   if configuration.encoder_function then
+      e.config.encoder_function = configuration.encoder_function
    end
    if configuration.pattern then		    -- need this for grep functionality, FOR NOW
       e.config.pattern = configuration.pattern
@@ -70,18 +69,19 @@ local function engine_configure(e, configuration)
    --
    -- Ensure some reasonable defaults when we can
    --
-   e.config.encoder = e.config.encoder or identity_function
+   e.config.encoder_function = e.config.encoder_function or identity_function
    --
    -- Check for common errors
    --
-   if type(e.config.encoder)~="function" then
-      engine_error(e, "encoder not a function: " .. tostring(e.config.encoder))
+   if type(e.config.encoder_function)~="function" then
+      engine_error(e, "encoder not a function: " .. tostring(e.config.encoder_function))
    end
 end
 
 local function engine_inspect(e)
    local representation = {}
-   for k,v in pairs(e.config) do representation[k]=tostring(v); end
+   -- return a shallow copy
+   for k,v in pairs(e.config) do representation[k]=v; end
    return e.name, representation
 end
 
@@ -89,7 +89,7 @@ local function engine_match(e, input, start)
    start = start or 1
    if not e.config.pattern then no_pattern(e); end
    local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
-   if result then return (e.config.encoder(result)), nextpos;
+   if result then return (e.config.encoder_function(result)), nextpos;
    else return false, 1; end
 end
 
@@ -101,8 +101,7 @@ local function engine_eval(e, input, start)
    -- always right, and we are about to rewrite eval anyway. (Friday, May 20, 2016)
    local match, nextpos = e:match(input, start)
    if not ok then return false, matches; end	    -- return message
-   if match then
-      return (e.config.encoder(match)), nextpos, trace
+   if match then return match, nextpos, trace
    else return false, 1, trace; end
 end
 
@@ -128,7 +127,8 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
 
    local inlines, outlines, errlines = 0, 0, 0;
    local result, nextpos, m;
-   local encode = (eval_flag and identity_function) or e.config.encoder;
+   local encode = (eval_flag and identity_function) or e.config.encoder_function;
+--   local encode = (eval_flag and identity_function) or json.encode; -- !@# FIXME
    local nextline = infile:lines();
    local l = nextline(); 
    while l do
@@ -162,11 +162,12 @@ engine.create_function =
    function(_new, name, initial_env)
       initial_env = initial_env or compile.new_env()
       -- assigning a unique instance id should be part of the recordtype module
-      local id = tostring({}):match("0x(.*)") or "id/err"
+      local config = {encoder_function=identity_function}    -- defaults
+      local id = tostring(config):match("0x(.*)") or "id/err"
       return _new{name=name,
 		  env=initial_env,
 		  id=id,
-		  config={encoder=identity_function},	    -- defaults
+		  config=config,
 		  match=engine_match,
 		  match_file=engine_match_file,
 		  eval=engine_eval,

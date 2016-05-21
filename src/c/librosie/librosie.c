@@ -221,17 +221,17 @@ void initialize(const char *rosie_home) {
      report(L, status);
      if (status != LUA_OK) exit(-1);
   
-     status = bootstrap(QUOTE_EXPAND(ROSIE_HOME));
-     if (status != LUA_OK) exit(-1);
+     /* status = bootstrap(QUOTE_EXPAND(ROSIE_HOME)); */
+     /* if (status != LUA_OK) exit(-1); */
 
-     lua_getglobal(L, "bootstrap");
-     lua_insert(L, 1);
-     status = lua_pcall(L, 0, 0, 0);
-     if (status != LUA_OK) {
-	  l_message(progname, lua_pushfstring(L, "error during bootstrap (%s)",
-					      lua_tostring(L, -1)));
-	  exit(-1);
-     }
+     /* lua_getglobal(L, "bootstrap"); */
+     /* lua_insert(L, 1); */
+     /* status = lua_pcall(L, 0, 0, 0); */
+     /* if (status != LUA_OK) { */
+     /* 	  l_message(progname, lua_pushfstring(L, "error during bootstrap (%s)", */
+     /* 					      lua_tostring(L, -1))); */
+     /* 	  exit(-1); */
+     /* } */
   
      require( "repl", FALSE);
      require( "api", TRUE);

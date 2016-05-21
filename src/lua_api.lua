@@ -1,6 +1,6 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- extern-api.lua     Rosie API for external use
+---- lua_api.lua     Rosie API in Lua, for Lua programs
 ----
 ---- © Copyright IBM Corporation 2016.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -51,11 +51,11 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 ----------------------------------------------------------------------------------------
 -- Note: NARGS is the number of args to pass to each api function
 
-local api = {API_VERSION = "0.96 alpha",	    -- api version
-	     RPL_VERSION = "0.96",		    -- language version
-	     ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
-	     ROSIE_HOME = ROSIE_HOME,		    -- install directory
-	     NARGS = {}} 			    -- number of args for each api call
+local lua_api = {API_VERSION = "0.96 alpha",	    -- api version
+                 RPL_VERSION = "0.96",		    -- language version
+                 ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
+	         ROSIE_HOME = ROSIE_HOME,	    -- install directory
+	         NARGS = {}} 			    -- number of args for each api call
 ----------------------------------------------------------------------------------------
 
 engine_list = {}
@@ -78,57 +78,43 @@ end
 local function pcall_wrap(f)
    return function(...)
 	     return pcall(f, ...)
-	  end,
-   debug.getinfo(f, "u").nparams		    -- number of args for f
+	  end
 end
 
-local function version(verbose)
-   if (not verbose) or (verbose=="false") then
-      return api.API_VERSION
-   elseif (verbose=="true") then
+function lua_api.version(verbose)
+   if (not verbose) then
+      return lua_api.API_VERSION
+   else
       local info = {}
-      for k,v in pairs(api) do
+      for k,v in pairs(lua_api) do
 	 if (type(k)=="string") and (type(v)=="string") then
 	    info[k] = v
 	 end
       end -- loop
-      return json.encode(info)
-   else
-      arg_error('optional arg must be "true" or "false"')
+      return info
    end -- switch on verbose
 end
-
-api.version, api.NARGS.version = pcall_wrap(version)
 
 ----------------------------------------------------------------------------------------
 -- Managing the environment (engine functions)
 ----------------------------------------------------------------------------------------
 
-local function delete_engine(id)
+function lua_api.delete_engine(id)
    if type(id)~="string" then
       arg_error("engine id not a string")
    end
    engine_list[id] = nil;
 end
 
-api.delete_engine, api.NARGS.delete_engine = pcall_wrap(delete_engine)
-
-local function inspect_engine(id)
+function lua_api.inspect_engine(id)
    local en = engine_from_id(id)
    local name, config = en:inspect()
-   local inspection = {}
-   for k,v in pairs(config) do
-      inspection[k] = tostring(v);
-   end
-   return name, json.encode(inspection)
+   config.encoder = encoder_to_name(config.encoder)
+   return name, config
 end
 
-api.inspect_engine, api.NARGS.inspect_engine = pcall_wrap(inspect_engine)
-
-local function new_engine(optional_name)	    -- optional manifest? file list? code string?
-   if optional_name and (type(optional_name)~="string") then
-      arg_error("optional engine name not a string")
-   end
+function lua_api.new_engine(optional_name)	    -- optional manifest? file list? code string?
+   optional_name = (optional_name and tostring(optional_name)) or "<anonymous>"
    local en = engine(optional_name, compile.new_env())
    if engine_list[en.id] then
       error("Internal error: duplicate engine ids: " .. en.id)
@@ -137,28 +123,21 @@ local function new_engine(optional_name)	    -- optional manifest? file list? co
    return en.id
 end
 
-api.new_engine, api.NARGS.new_engine = pcall_wrap(new_engine)
-
-local function get_env(id)
+function lua_api.get_env(id)
    local en = engine_from_id(id)
-   local env = compile.flatten_env(en.env)
-   return json.encode(env)
+   return compile.flatten_env(en.env)
 end
 
-api.get_env, api.NARGS.get_env = pcall_wrap(get_env)
-
-local function clear_env(id)
+function lua_api.clear_env(id)
    local en = engine_from_id(id)
    en.env = compile.new_env()
 end
-
-api.clear_env, api.NARGS.clear_env = pcall_wrap(clear_env)
 
 ----------------------------------------------------------------------------------------
 -- Loading manifests, files, strings
 ----------------------------------------------------------------------------------------
 
-function api.load_manifest(id, manifest_file)
+function lua_api.load_manifest(id, manifest_file)
    local ok, en = pcall(engine_from_id, id)
    if not ok then return false, en; end		    -- en is a message in this case
    local ok, full_path = pcall(common.compute_full_path, manifest_file)
@@ -171,12 +150,10 @@ function api.load_manifest(id, manifest_file)
    end
 end
 
-function api.load_file(id, path)
+function lua_api.load_file(id, path)
    -- paths not starting with "." or "/" are interpreted as relative to rosie home directory
-   local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end		    -- en is a message in this case
-   local ok, full_path = pcall(common.compute_full_path, path)
-   if not ok then return false, full_path; end	    -- full_path is a message
+   local en = engine_from_id(id)
+   local full_path = common.compute_full_path(path)
    local result, msg = compile.compile_file(full_path, en.env)
    if result then
       return true, full_path
@@ -185,19 +162,18 @@ function api.load_file(id, path)
    end
 end
 
-function api.load_string(id, input)
-   local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end
+function lua_api.load_string(id, input)
+   local en = engine_from_id(id)
    local ok, msg = compile.compile(input, en.env)
    if ok then
-      return true
+      return true, msg				    -- msg may contain warnings
    else 
       return false, msg
    end
 end
 
 -- get a human-readable definition of identifier (reconstituted from its ast)
-local function get_definition(engine_id, identifier)
+function lua_api.get_definition(engine_id, identifier)
    local en = engine_from_id(engine_id)
    if type(identifier)~="string" then
       arg_error("identifier argument not a string")
@@ -213,8 +189,6 @@ local function get_definition(engine_id, identifier)
       end
    end
 end
-
-api.get_definition, api.NARGS.get_definition = pcall_wrap(get_definition)
 
 ----------------------------------------------------------------------------------------
 -- Matching
@@ -237,57 +211,41 @@ function encoder_to_name(fcn)
    return "<unknown>"
 end
 
-local function configure(id, c_string)
+function lua_api.configure(id, c)
    local en = engine_from_id(id)
-   if type(c_string)~="string" then
-      arg_error("configuration not a (JSON) string: " .. tostring(c_string)); end
-   local c = json.decode(c_string)
-   c.encoder = name_to_encoder(c.encoder)
-   if not c.encoder then
+   if type(c)~="table" then
+      arg_error("configuration not a table: " .. tostring(c)); end
+   c.encoder_function = name_to_encoder(c.encoder)
+   if not c.encoder_function then
       arg_error("invalid encoder: " .. tostring(c.encoder));
    end
-   en:configure(c)
+   return pcall(en.configure, en, c)
 end
 
-api.configure, api.NARGS.configure = pcall_wrap(configure)
-   
-local function match(id, input_text, start)
-   local en = engine_from_id(id)
-   if type(input_text)~="string" then arg_error("input text not a string"); end
-   local result, nextpos = en:match(input_text, start)
-   if result then
-      return json.encode(result), (#input_text - nextpos + 1)
-   else
-      return false
-   end
+function lua_api.match(id, input_text, start)
+   local result, nextpos = (engine_from_id(id)):match(input_text, start)
+   return result, (#input_text - nextpos + 1)
 end
 
-api.match, api.NARGS.match = pcall_wrap(match)
-
-local function match_file(id, infilename, outfilename, errfilename)
-   local en = engine_from_id(id)
-   return en:match_file(infilename, outfilename, errfilename)
+function lua_api.match_file(id, infilename, outfilename, errfilename)
+   return (engine_from_id(id)):match_file(infilename, outfilename, errfilename)
 end
 
-api.match_file, api.NARGS.match_file = pcall_wrap(match_file)
-
-local function eval_(id, input_text, start)
+function lua_api.eval_(id, input_text, start)
    local en = engine_from_id(id)
    if type(input_text)~="string" then arg_error("input text not a string"); end
    local result, nextpos, trace = en:eval(input_text, start)
    local leftover = 0;
    if nextpos then leftover = (#input_text - nextpos + 1); end
-   return (result and json.encode(result)), leftover, trace
+   return result, leftover, trace
 end
-
-api.eval, api.NARGS.eval = pcall_wrap(eval_)
 
 local function eval_file(id, infilename, outfilename, errfilename)
    local en = engine_from_id(id)
    return en:eval_file(infilename, outfilename, errfilename)
 end
 
-api.eval_file, api.NARGS.eval_file = pcall_wrap(eval_file)
+lua_api.eval_file, lua_api.NARGS.eval_file = pcall_wrap(eval_file)
 
 local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    local en = engine_from_id(id)
@@ -295,22 +253,22 @@ local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    en:configure({ pattern = pattern_EXP_to_grep_pattern(pattern_exp, en.env) })
 end   
 
-api.set_match_exp_grep_TEMPORARY, api.NARGS.set_match_exp_grep_TEMPORARY = pcall_wrap(set_match_exp_grep_TEMPORARY)
+lua_api.set_match_exp_grep_TEMPORARY, lua_api.NARGS.set_match_exp_grep_TEMPORARY = pcall_wrap(set_match_exp_grep_TEMPORARY)
 
 -- pcall_wrap will fill in the number of args that each api function takes, but (obviously) only
 -- for the wrapped functions.  This loop catches the rest:
 
-for name, thing in pairs(api) do
+for name, thing in pairs(lua_api) do
    if type(thing)=="function" then
-      if not api.NARGS[name] then
+      if not lua_api.NARGS[name] then
 	 local info = debug.getinfo(thing, "u")
 	 if info.isvararg=="true" then
 	    error("Error loading api: vararg function found: " .. name)
 	 else
-	    api.NARGS[name] = info.nparams
+	    lua_api.NARGS[name] = info.nparams
 	 end
       end -- no NARGS entry
    end -- for each function
 end
 
-return api
+return lua_api

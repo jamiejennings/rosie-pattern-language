@@ -470,7 +470,7 @@ ok, match, leftover, msg = api.eval(eid, "foo")
 check(ok)
 check(not match)
 check(leftover==3)
-check(msg:find('FAILED to match against input "foo"')) -- % is esc char
+check(msg:find('FAILED to match against input "foo"'))
 
 ok, msg = api.configure(eid, json.encode{expression="[:alpha:]*", encoder="json"})
 check(ok)
@@ -486,8 +486,8 @@ ok, match, leftover, msg = api.eval(eid, "abc.x")
 check(ok)
 check(match)
 j = json.decode(match)
-check(j["common.hex"])
-check(j["common.hex"].text=="abc")
+check(j["common.number"])
+check(j["common.number"].text=="abc")
 check(leftover==2)
 check(msg:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
 

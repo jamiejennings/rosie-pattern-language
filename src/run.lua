@@ -28,15 +28,14 @@ end
 
 -- Start the Rosie Pattern Engine
 dofile(ROSIE_HOME.."/src/bootstrap.lua")
-bootstrap()
+--bootstrap()					    -- now done while loading
 
 local common = require "common"
-local api = require "api"
+local lapi = require "lua_api"
 local json = require "cjson"
 require("repl")
 
-local ok, CL_ENGINE = api.new_engine("command line engine")
-if not ok then error(CL_ENGINE); end
+CL_ENGINE = lapi.new_engine("command line engine")
 
 local function greeting()
    io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")
@@ -139,7 +138,7 @@ function process_pattern_against_file()
    local eval = OPTION["-eval"]
    -- (1) Load the manifest
    if opt_manifest then
-      local success, msg = api.load_manifest(CL_ENGINE, opt_manifest)
+      local success, msg = lapi.load_manifest(CL_ENGINE, opt_manifest)
       if not success then
 	 io.stdout:write(msg, "\n")
 	 os.exit(-4)
@@ -149,9 +148,9 @@ function process_pattern_against_file()
    do 
       local success, msg
       if OPTION["-grep"] then
-	 success, msg = api.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern)
+	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern)
       else
-	 success, msg = api.configure(CL_ENGINE, json.encode{expression=opt_pattern, encoder="json"})
+	 success, msg = lapi.configure(CL_ENGINE, {expression=opt_pattern, encoder="json"})
       end
       if not success then io.write(msg, "\n"); os.exit(-1); end
    end
@@ -167,12 +166,12 @@ function process_pattern_against_file()
    encoder = "color"
    if OPTION["-json"] then encoder = "json"
    elseif OPTION["-nocolor"] then encoder = "text"; end
-   success, msg = api.configure(CL_ENGINE, json.encode{encoder=encoder})
+   success, msg = lapi.configure(CL_ENGINE, {encoder=encoder})
    if not success then io.write(msg, "\n"); os.exit(-1); end
 
    -- (5) Iterate through the lines in the input file
-   local match_function = api.match_file
-   if eval then match_function = api.eval_file; end
+   local match_function = lapi.match_file
+   if eval then match_function = lapi.eval_file; end
    local ok, cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename)
    if not ok then io.write(cin, "\n"); os.exit(-1); end
 
@@ -205,13 +204,13 @@ if OPTION["-patterns"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
    if opt_manifest then
-      local success, msg = api.load_manifest(CL_ENGINE, opt_manifest)
+      local success, msg = lapi.load_manifest(CL_ENGINE, opt_manifest)
       if not success then
 	 io.stdout:write(msg, "\n")
 	 os.exit(-4)
       end
    end
-   local ok, env = api.get_env(CL_ENGINE)
+   local ok, env = lapi.get_env(CL_ENGINE)
    if not ok then error(env); end		    -- api call failed, env is message
    common.print_env(json.decode(env))		    -- inefficient FIXME!
    os.exit()
@@ -221,7 +220,7 @@ if OPTION["-repl"] then
    greeting();
    if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
    if opt_manifest then
-      local ok, msg = api.load_manifest(CL_ENGINE, opt_manifest)
+      local ok, msg = lapi.load_manifest(CL_ENGINE, opt_manifest)
       if not ok then io.write(msg, "\n"); os.exit(-4); end
    end
    repl(CL_ENGINE)
