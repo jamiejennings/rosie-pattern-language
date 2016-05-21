@@ -512,7 +512,7 @@ ok, msg = api.configure(eid, json.encode{expression=macosx_log1, encoder="json"}
 check(ok)			    
 ok, c_in, c_out, c_err = api.eval_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
-check(c_in==4 and c_out==4 and c_err==0, "ensure that output was written for all lines of test-input")
+check(c_in==4 and c_out==2 and c_err==0, "ensure that output was written for all lines of test-input")
 
 local function check_eval_output_file()
    -- check the structure of the output file: 2 traces of matches, 2 traces of failed matches
@@ -533,7 +533,10 @@ local function check_eval_output_file()
 	 print(l)
 	 check(l:find("FAILED to match against input"), "the eval output's last fail step looks good")
       end   
-      nextline()				    -- blank line
+      if i<3 then
+	 l = nextline();
+	 local t = json.decode(l);		    -- match
+      end
    end -- for loop
    check(not nextline(), "exactly 4 eval traces in output file")
 end

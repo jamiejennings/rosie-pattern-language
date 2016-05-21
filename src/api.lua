@@ -242,9 +242,9 @@ local function configure(id, c_string)
    if type(c_string)~="string" then
       arg_error("configuration not a (JSON) string: " .. tostring(c_string)); end
    local c = json.decode(c_string)
-   c.encoder = name_to_encoder(c.encoder)
-   if not c.encoder then
-      arg_error("invalid encoder: " .. tostring(c.encoder));
+   c.encoder_function = name_to_encoder(c.encoder)
+   if not c.encoder_function then
+      arg_error("invalid encoder: " .. tostring(c.encoder_function));
    end
    en:configure(c)
 end
@@ -256,7 +256,7 @@ local function match(id, input_text, start)
    if type(input_text)~="string" then arg_error("input text not a string"); end
    local result, nextpos = en:match(input_text, start)
    if result then
-      return json.encode(result), (#input_text - nextpos + 1)
+      return result, (#input_text - nextpos + 1)
    else
       return false
    end
@@ -277,7 +277,7 @@ local function eval_(id, input_text, start)
    local result, nextpos, trace = en:eval(input_text, start)
    local leftover = 0;
    if nextpos then leftover = (#input_text - nextpos + 1); end
-   return (result and json.encode(result)), leftover, trace
+   return result, leftover, trace
 end
 
 api.eval, api.NARGS.eval = pcall_wrap(eval_)

@@ -53,6 +53,10 @@ local function no_pattern(e)
    engine_error(e, "no pattern configured")
 end
 
+local function no_encoder(e)
+   engine_error(e, "no encoder configured")
+end
+
 local function engine_configure(e, configuration)
    if configuration.expression then
       e.config.expression = configuration.expression
@@ -66,10 +70,6 @@ local function engine_configure(e, configuration)
    if configuration.pattern then		    -- need this for grep functionality, FOR NOW
       e.config.pattern = configuration.pattern
    end
-   --
-   -- Ensure some reasonable defaults when we can
-   --
-   e.config.encoder_function = e.config.encoder_function or identity_function
    --
    -- Check for common errors
    --
@@ -88,6 +88,7 @@ end
 local function engine_match(e, input, start)
    start = start or 1
    if not e.config.pattern then no_pattern(e); end
+   if not e.config.encoder_function then no_encoder(e); end
    local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
    if result then return (e.config.encoder_function(result)), nextpos;
    else return false, 1; end
@@ -126,20 +127,19 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
 
    local inlines, outlines, errlines = 0, 0, 0;
-   local result, nextpos, m;
-   local encode = (eval_flag and identity_function) or e.config.encoder_function;
---   local encode = (eval_flag and identity_function) or json.encode; -- !@# FIXME
+   local trace, nextpos, m;
+   local encode = e.config.encoder_function;
    local nextline = infile:lines();
    local l = nextline(); 
    while l do
-      if eval_flag then m, nextpos, result = engine_eval(e, l);
-      else result, nextpos = peg:match(l); end
+      if eval_flag then _, _, trace = engine_eval(e, l); end
+      m, nextpos = peg:match(l);
       -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
-      -- Send it in a message to stderr?
-      if result then
-	 outfile:write(encode(result), "\n")
+      if trace then outfile:write(trace); end
+      if m then
+	 outfile:write(encode(m), "\n")
 	 outlines = outlines + 1
-      else
+      elseif not eval_flag then
 	 errfile:write(l, "\n")
 	 errlines = errlines + 1
       end
@@ -162,7 +162,7 @@ engine.create_function =
    function(_new, name, initial_env)
       initial_env = initial_env or compile.new_env()
       -- assigning a unique instance id should be part of the recordtype module
-      local config = {encoder_function=identity_function}    -- defaults
+      local config = {}
       local id = tostring(config):match("0x(.*)") or "id/err"
       return _new{name=name,
 		  env=initial_env,

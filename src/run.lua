@@ -31,7 +31,7 @@ dofile(ROSIE_HOME.."/src/bootstrap.lua")
 --bootstrap()					    -- now done while loading
 
 local common = require "common"
-local lapi = require "lua_api"
+local lapi = require "lapi"
 local json = require "cjson"
 require("repl")
 
@@ -148,7 +148,7 @@ function process_pattern_against_file()
    do 
       local success, msg
       if OPTION["-grep"] then
-	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern)
+	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern, "json")
       else
 	 success, msg = lapi.configure(CL_ENGINE, {expression=opt_pattern, encoder="json"})
       end

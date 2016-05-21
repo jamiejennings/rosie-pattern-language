@@ -153,6 +153,11 @@ function common.decode_match(t)
    return name, rest.pos, rest.text, (rest.subs[1] and rest.subs)
 end
 
+function common.match_to_text(t)
+   local name, rest = next(t)
+   return rest.text
+end
+
 -- verify that a match has the correct structure
 function common.verify_match(t)
    assert(type(t)=="table", "Match is not a table")

@@ -6,7 +6,7 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-lapi = require "lua_api"
+lapi = require "lapi"
 common = require "common"
 json = require "cjson"
 
@@ -59,8 +59,7 @@ function repl(eid)
    local s = io.stdin:read("l")
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
-      local ok, m, left = lapi.match(repl_engine, s)
-      if not ok then error("Internal error: ".. tostring(m)); end
+      local m, left = lapi.match(repl_engine, s)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
       else
@@ -104,15 +103,10 @@ function repl(eid)
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
 	    elseif cname=="patterns" then
-	       local ok, env = lapi.get_env(eid)
-	       if ok then
-		  env = json.decode(env)	    -- inefficient, blah, blah, blah
-		  common.print_env(env)
-	       else
-		  io.write("Repl: error accessing pattern environment\n")
-	       end
+	       local env = lapi.get_env(eid)
+	       common.print_env(env)
 	    elseif cname=="clear" then
-	       ok = lapi.clear_env(eid)
+	       lapi.clear_env(eid)
 	       io.write("Pattern environment cleared\n")
 	    elseif cname=="match" or cname =="eval" then
 	       local ename, epos, exp = common.decode_match(csubs[1])
@@ -121,20 +115,19 @@ function repl(eid)
 	       if ename=="string" then exp = '"'..exp..'"'; end
 	       local tname, tpos, input_text = common.decode_match(csubs[2])
 	       input_text = common.unescape_string(input_text)
-	       ok, msg = lapi.configure(eid, json.encode{expression=exp, encoder="json"})
+	       local ok, msg = lapi.configure(eid, {expression=exp, encoder="json"})
 	       if not ok then
 		  io.write(msg, "\n");		    -- syntax and compile errors
 	       else
-		  local ok, m, left = lapi.match(eid, input_text)
---		  if not ok then ... ?
+		  local m, left = lapi.match(eid, input_text)
 		  if cname=="match" then
 		     if debug and (not m) then
-			local ok, match, leftover, trace = lapi.eval(eid, input_text)
+			local match, leftover, trace = lapi.eval(eid, input_text)
 			io.write(trace, "\n")
 		     end
 		  else
 		     -- must be eval
-		     local ok, match, leftover, trace = lapi.eval(eid, input_text)
+		     local match, leftover, trace = lapi.eval(eid, input_text)
 		     io.write(trace, "\n")
 		  end
 		  print_match(m, left, (cname=="eval"))

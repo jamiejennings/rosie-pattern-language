@@ -32,7 +32,7 @@ function bootstrap()
       os.exit(-3)
    end
    
-   -- Because this is bootstrapping, we have to compile the rpl using the "core" compiler, and
+   -- During bootstrapping, we have to compile the rpl using the "core" compiler, and
    -- manually configure ROSIE_ENGINE without calling engine_configure.
    ROSIE_VERSION = vfile:read("l"); vfile:close();
    compile.compile_core(ROSIE_HOME.."/src/rosie-core.rpl", ROSIE_ENGINE.env)
@@ -40,7 +40,8 @@ function bootstrap()
    if not success then error("Bootstrap error: could not compile rosie core rpl: " .. tostring(result)); end
    ROSIE_ENGINE.config.expression = 'rpl';
    ROSIE_ENGINE.config.pattern = success;
-   ROSIE_ENGINE.config.encoder = function(...) return ...; end;
+   ROSIE_ENGINE.config.encoder = "null/bootstrap";
+   ROSIE_ENGINE.config.encoder_function = function(m) return m; end;
    BOOTSTRAP_COMPLETE = true
 end
 
