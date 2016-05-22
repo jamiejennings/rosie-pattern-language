@@ -6,18 +6,21 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-local common = require "common"
-local compile = require "compile"
-require "engine"
-local manifest = require "manifest"
-local json = require "cjson"
-local eval = require "eval"
-require "color-output"
+local lapi = require "lapi"
+require "list"
+
+-- local common = require "common"
+-- local compile = require "compile"
+-- require "engine"
+-- local manifest = require "manifest"
+-- local json = require "cjson"
+-- local eval = require "eval"
+-- require "color-output"
 
 -- temporary:
-require "grep"
-lpeg = require "lpeg"
-Cp = lpeg.Cp
+-- require "grep"
+-- lpeg = require "lpeg"
+-- Cp = lpeg.Cp
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
@@ -58,51 +61,49 @@ local api = {API_VERSION = "0.96 alpha",	    -- api version
 	     NARGS = {}} 			    -- number of args for each api call
 ----------------------------------------------------------------------------------------
 
-engine_list = {}
+-- SLOW?
+local function api_wrap(f)
+   api.NARGS[f] = debug.getinfo(f, "u").nparams	    -- number of args for f
+   return function(...)
+	     local retvals = { pcall(f, ...) }
+	     return retvals[1], json.encode({ table.unpack(retvals, 2) })
+	  end
+end
 
 local function arg_error(msg)
    error("Argument error: " .. msg, 0)
 end
 
-local function engine_from_id(id)
-   if type(id)~="string" then
-      arg_error("engine id not a string")
-   end
-   local en = engine_list[id]
-   if (not engine.is(en)) then
-      arg_error("invalid engine id")
-   end
-   return en
-end
-
-local function pcall_wrap(f)
-   return function(...)
-	     return pcall(f, ...)
-	  end,
-   debug.getinfo(f, "u").nparams		    -- number of args for f
-end
-
 local function version(verbose)
-   if (not verbose) or (verbose=="false") then
+   if type(verbose)~="string" then
+      arg_error("verbose flag not a string")
+   end
+   if verbose=="false" then
       return api.API_VERSION
-   elseif (verbose=="true") then
+   elseif verbose=="true" then
       local info = {}
       for k,v in pairs(api) do
 	 if (type(k)=="string") and (type(v)=="string") then
 	    info[k] = v
 	 end
       end -- loop
-      return json.encode(info)
+      return info
    else
-      arg_error('optional arg must be "true" or "false"')
+      arg_error('verbose flag not "true" or "false"')
    end -- switch on verbose
 end
 
-api.version, api.NARGS.version = pcall_wrap(version)
+api.version = api_wrap(version)
 
 ----------------------------------------------------------------------------------------
--- Managing the environment (engine functions)
+-- Managing the environment (collection of engines)
 ----------------------------------------------------------------------------------------
+
+engine_list = {}
+
+local function engine_from_id(id)
+   return engine_list[id] or arg_error("invalid engine id")
+end
 
 local function delete_engine(id)
    if type(id)~="string" then
@@ -111,25 +112,21 @@ local function delete_engine(id)
    engine_list[id] = nil;
 end
 
-api.delete_engine, api.NARGS.delete_engine = pcall_wrap(delete_engine)
+api.delete_engine = api_wrap(delete_engine)
+
+----------------------------------------------------------------------------------------
 
 local function inspect_engine(id)
-   local en = engine_from_id(id)
-   local name, config = en:inspect()
-   local inspection = {}
-   for k,v in pairs(config) do
-      inspection[k] = tostring(v);
-   end
-   return name, json.encode(inspection)
+   return lapi.inspect_engine(engine_from_id(id))
 end
 
-api.inspect_engine, api.NARGS.inspect_engine = pcall_wrap(inspect_engine)
+api.inspect_engine = api_wrap(inspect_engine)
 
-local function new_engine(optional_name)	    -- optional manifest? file list? code string?
-   if optional_name and (type(optional_name)~="string") then
-      arg_error("optional engine name not a string")
+local function new_engine(name)			    -- optional manifest? file list? code string?
+   if type(name)~="string" then
+      arg_error("engine name not a string")
    end
-   local en = engine(optional_name, compile.new_env())
+   local en = engine(name)
    if engine_list[en.id] then
       error("Internal error: duplicate engine ids: " .. en.id)
    end
@@ -137,33 +134,34 @@ local function new_engine(optional_name)	    -- optional manifest? file list? co
    return en.id
 end
 
-api.new_engine, api.NARGS.new_engine = pcall_wrap(new_engine)
+api.new_engine = api_wrap(new_engine)
 
 local function get_env(id)
-   local en = engine_from_id(id)
-   local env = compile.flatten_env(en.env)
-   return json.encode(env)
+   return compile.flatten_env((engine_from_id(id)).env)
 end
 
-api.get_env, api.NARGS.get_env = pcall_wrap(get_env)
+api.get_env = api_wrap(get_env)
 
 local function clear_env(id)
-   local en = engine_from_id(id)
-   en.env = compile.new_env()
+   (engine_from_id(id)).env = compile.new_env()
 end
 
-api.clear_env, api.NARGS.clear_env = pcall_wrap(clear_env)
+api.clear_env = api_wrap(clear_env)
 
 ----------------------------------------------------------------------------------------
 -- Loading manifests, files, strings
 ----------------------------------------------------------------------------------------
 
-function api.load_manifest(id, manifest_file)
-   local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end		    -- en is a message in this case
-   local ok, full_path = pcall(common.compute_full_path, manifest_file)
-   if not ok then return false, full_path; end	    -- full_path is a message
-   local result, msg = manifest.process_manifest(en, full_path)
+local function load_manifest(id, manifest_file)
+   -- process_manifest does the compute_full_path calculation
+   return manifest.process_manifest(engine_from_id(id), manifest_file)
+end
+
+api.load_manifest = api_wrap(load_manifest)
+
+local function load_file(id, path)
+   local full_path = common.compute_full_path(path)
+   local result, msg = compile.compile_file(full_path, (engine_from_id(id)).env)
    if result then
       return true, full_path
    else
@@ -171,40 +169,22 @@ function api.load_manifest(id, manifest_file)
    end
 end
 
-function api.load_file(id, path)
-   -- paths not starting with "." or "/" are interpreted as relative to rosie home directory
-   local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end		    -- en is a message in this case
-   local ok, full_path = pcall(common.compute_full_path, path)
-   if not ok then return false, full_path; end	    -- full_path is a message
-   local result, msg = compile.compile_file(full_path, en.env)
-   if result then
-      return true, full_path
-   else
-      return false, msg
-   end
+api.load_file = api_wrap(load_file)
+
+local function load_string(id, input)
+   return compile.compile(input, (engine_from_id(id)).env)
 end
 
-function api.load_string(id, input)
-   local ok, en = pcall(engine_from_id, id)
-   if not ok then return false, en; end
-   local ok, msg = compile.compile(input, en.env)
-   if ok then
-      return true
-   else 
-      return false, msg
-   end
-end
+api.load_string = api_wrap(load_string)
 
--- get a human-readable definition of identifier (reconstituted from its ast)
-local function get_definition(engine_id, identifier)
-   local en = engine_from_id(engine_id)
+-- return a human-readable definition of identifier (reconstituted from its ast)
+local function get_definition(id, identifier)
    if type(identifier)~="string" then
       arg_error("identifier argument not a string")
    end
-   local val = en.env[identifier]
+   local val = (engine_from_id(id)).env[identifier]
    if not val then
-      error("undefined identifier", 0)
+      error("undefined identifier: " .. identifier, 0)
    else
       if pattern.is(val) then
 	 return common.reconstitute_pattern_definition(identifier, val)
@@ -214,7 +194,7 @@ local function get_definition(engine_id, identifier)
    end
 end
 
-api.get_definition, api.NARGS.get_definition = pcall_wrap(get_definition)
+api.get_definition = api_wrap(get_definition)
 
 ----------------------------------------------------------------------------------------
 -- Matching
@@ -226,11 +206,11 @@ local encoder_table =
     text = function(t) local k,v = next(t); assert(type(v)=="table"); return (v and v.text) or ""; end,
  }
 
-function name_to_encoder(name)
+local function name_to_encoder(name)
    return encoder_table[name]
 end
 
-function encoder_to_name(fcn)
+local function encoder_to_name(fcn)
    for k,v in pairs(encoder_table) do
       if v==fcn then return k; end
    end
@@ -238,76 +218,56 @@ function encoder_to_name(fcn)
 end
 
 local function configure(id, c_string)
-   local en = engine_from_id(id)
-   if type(c_string)~="string" then
-      arg_error("configuration not a (JSON) string: " .. tostring(c_string)); end
-   local c = json.decode(c_string)
-   c.encoder_function = name_to_encoder(c.encoder)
-   if not c.encoder_function then
-      arg_error("invalid encoder: " .. tostring(c.encoder_function));
+   local ok, c_table = pcall(json.decode, c_string)
+   if ok then 
+      return lapi.configure((engine_from_id(id)), c_table)
    end
-   en:configure(c)
+   return c_table
 end
 
-api.configure, api.NARGS.configure = pcall_wrap(configure)
+api.configure = api_wrap(configure)
    
 local function match(id, input_text, start)
-   local en = engine_from_id(id)
-   if type(input_text)~="string" then arg_error("input text not a string"); end
-   local result, nextpos = en:match(input_text, start)
-   if result then
-      return result, (#input_text - nextpos + 1)
-   else
-      return false
-   end
+   return lapi.match((engine_from_id(id)), input_text, start)
 end
 
-api.match, api.NARGS.match = pcall_wrap(match)
+api.match = api_wrap(match)
 
 local function match_file(id, infilename, outfilename, errfilename)
-   local en = engine_from_id(id)
-   return en:match_file(infilename, outfilename, errfilename)
+   return lapi.match_file((engine_from_id(id)), infilename, outfilename, errfilename)
 end
 
-api.match_file, api.NARGS.match_file = pcall_wrap(match_file)
+api.match_file = api_wrap(match_file)
 
 local function eval_(id, input_text, start)
-   local en = engine_from_id(id)
-   if type(input_text)~="string" then arg_error("input text not a string"); end
-   local result, nextpos, trace = en:eval(input_text, start)
-   local leftover = 0;
-   if nextpos then leftover = (#input_text - nextpos + 1); end
-   return result, leftover, trace
+   return lapi.eval(engine_from_id(id), input_text, start)
 end
 
-api.eval, api.NARGS.eval = pcall_wrap(eval_)
+api.eval = api_wrap(eval_)
 
 local function eval_file(id, infilename, outfilename, errfilename)
-   local en = engine_from_id(id)
-   return en:eval_file(infilename, outfilename, errfilename)
+   return lapi.eval_file(engine_from_id(id), infilename, outfilename, errfilename)
 end
 
-api.eval_file, api.NARGS.eval_file = pcall_wrap(eval_file)
+api.eval_file = api_wrap(eval_file)
 
 local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
-   local en = engine_from_id(id)
-   if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
-   en:configure({ pattern = pattern_EXP_to_grep_pattern(pattern_exp, en.env) })
+   return lapi.set_match_exp_grep_TEMPORARY(engine_from_id(id), pattern_exp)
 end   
 
-api.set_match_exp_grep_TEMPORARY, api.NARGS.set_match_exp_grep_TEMPORARY = pcall_wrap(set_match_exp_grep_TEMPORARY)
+api.set_match_exp_grep_TEMPORARY = api_wrap(set_match_exp_grep_TEMPORARY)
 
--- pcall_wrap will fill in the number of args that each api function takes, but (obviously) only
+-- api_wrap will fill in the number of args that each api function takes, but (obviously) only
 -- for the wrapped functions.  This loop catches the rest:
 
 for name, thing in pairs(api) do
    if type(thing)=="function" then
-      if not api.NARGS[name] then
+      if not api.NARGS[thing] then
 	 local info = debug.getinfo(thing, "u")
 	 if info.isvararg=="true" then
 	    error("Error loading api: vararg function found: " .. name)
 	 else
-	    api.NARGS[name] = info.nparams
+	    api.NARGS[thing] = info.nparams
 	 end
       end -- no NARGS entry
    end -- for each function

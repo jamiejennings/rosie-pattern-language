@@ -87,12 +87,12 @@ local function engine_configure(e, configuration)
    for k,v in pairs(configuration) do
       if k=="expression" then
 	 local pat, msg = compile.compile_command_line_expression(v, e.env)
-	 if not pat then engine_error(e, msg); end
+	 if not pat then return false, msg; end
 	 e.pattern = pat
       elseif k=="encoder" then
 	 local f = name_to_encoder(v)
 	 if type(f)~="function" then
-	    engine_error(e, 'invalid encoder name: "' .. tostring(v) .. '"')
+	    return false, 'invalid encoder name: "' .. tostring(v) .. '"'
 	 else
 	    e.encoder = k
 	    e.encoder_function = f
@@ -100,9 +100,10 @@ local function engine_configure(e, configuration)
       elseif k=="name" then
 	 e.name = tostring(v)
       else
-	 engine_error(e, 'invalid configuration parameter: ' .. tostring(k))
+	 return false, 'invalid configuration parameter: ' .. tostring(k)
       end
    end -- for each configuration key/value
+   return true
 end
 
 local function engine_inspect(e)

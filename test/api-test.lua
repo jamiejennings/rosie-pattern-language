@@ -19,6 +19,7 @@ arg_err_engine_id = "Argument error: engine id not a string"
 ----------------------------------------------------------------------------------------
 heading("Require api")
 ----------------------------------------------------------------------------------------
+package.loaded.api = false			    -- force a re-load of the api
 api = require "api"
 
 check(type(api)=="table")
@@ -27,15 +28,19 @@ check(api.ROSIE_VERSION and type(api.ROSIE_VERSION=="string"))
 check(api.ROSIE_HOME and type(api.ROSIE_HOME=="string"))
 
 ok, api_v = api.version()
-check(ok)
+check(not ok)
+
+ok, t = api.version("false")
+api_v = json.decode(t)[1]
 check(type(api_v)=="string")
 check(not api_v:find("{"))			    -- not JSON
 
-ok, api_v = api.version("false")
+ok, t = api.version("true")
 check(ok)
-check(type(api_v)=="string")
-check(not api_v:find("{"))			    -- not JSON
-
+api_v = json.decode(t)[1]
+if check(type(api_v)=="string") then
+   check(not api_v:find("{"), "false arg should NOT return JSON object") -- not JSON
+end
 ok, json_info = api.version("true")
 check(ok)
 check(type(json_info)=="string")

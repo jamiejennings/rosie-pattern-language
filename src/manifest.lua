@@ -57,24 +57,21 @@ function manifest.process_manifest(en, manifest_filename)
    if not success then
       local msg = 'Error: Cannot open manifest file "' .. full_path .. '"'
       return false, msg
-   else
-      if not QUIET then
-	 io.stderr:write("Reading manifest file: ", full_path, "\n")
-      end
-      local line, success
-      success, line = pcall(nextline)
-      if not success then
-	 -- e.g. error if a directory
-	 local msg = 'Error: Cannot read manifest file "' .. full_path .. '": ' .. line	
-	 return false, msg
-      else
-	 while line and success do
-	    success, msg = process_manifest_line(en, line)
-	    line = nextline()
-	 end
-	 return success, msg
-      end
    end
+   if not QUIET then
+      io.stderr:write("Reading manifest file: ", full_path, "\n")
+   end
+   local line, success = pcall(nextline)
+   if not success then
+      -- e.g. error if a directory
+      local msg = 'Error: Cannot read manifest file "' .. full_path .. '": ' .. line	
+      return false, msg
+   end
+   while line and success do
+      success, msg = process_manifest_line(en, line)
+      line = nextline()
+   end
+   return success, full_path
 end
 
 return manifest

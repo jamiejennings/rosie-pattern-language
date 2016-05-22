@@ -47,29 +47,10 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 
 ----------------------------------------------------------------------------------------
-local lapi = {API_VERSION = "0.96 alpha",	    -- api version
-              RPL_VERSION = "0.96",		    -- language version
-              ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
-              ROSIE_HOME = ROSIE_HOME		    -- install directory
-}
-----------------------------------------------------------------------------------------
+local lapi = {}
 
 local function arg_error(msg)
    error("Argument error: " .. msg, 0)
-end
-
-function lapi.version(verbose)
-   if (not verbose) then
-      return lapi.API_VERSION
-   else
-      local info = {}
-      for k,v in pairs(lapi) do
-	 if (type(k)=="string") and (type(v)=="string") then
-	    info[k] = v
-	 end
-      end -- loop
-      return info
-   end -- switch on verbose
 end
 
 ----------------------------------------------------------------------------------------
@@ -102,8 +83,7 @@ end
 
 function lapi.load_manifest(en, manifest_file)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   local ok, full_path = pcall(common.compute_full_path, manifest_file)
-   if not ok then return false, full_path; end	    -- full_path is a message
+   local full_path = common.compute_full_path(manifest_file)
    local result, msg = manifest.process_manifest(en, full_path)
    if result then
       return true, full_path
@@ -125,12 +105,7 @@ end
 
 function lapi.load_string(en, input)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   local ok, msg = compile.compile(input, en.env)
-   if ok then
-      return true, msg				    -- msg may contain warnings
-   else 
-      return false, msg
-   end
+   return compile.compile(input, en.env)
 end
 
 -- get a human-readable definition of identifier (reconstituted from its ast)
@@ -156,7 +131,7 @@ function lapi.configure(en, c)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if type(c)~="table" then
       arg_error("configuration not a table: " .. tostring(c)); end
-   return pcall(en.configure, en, c)
+   return en:configure(c)
 end
 
 ----------------------------------------------------------------------------------------
