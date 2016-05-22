@@ -50,10 +50,10 @@ local function print_match(m, left, eval_p)
    end
 end
 
-function repl(eid)
-   local ok = lapi.inspect_engine(eid)
+function repl(en)
+   local ok = lapi.inspect_engine(en)
    if (not ok) then
-      error("Argument to repl is not the id of a live engine: " .. tostring(eid))
+      error("Argument to repl is not a live engine: " .. tostring(en))
    end
    io.write(repl_prompt)
    local s = io.stdin:read("l")
@@ -72,11 +72,10 @@ function repl(eid)
 	 local _, _, _, subs = common.decode_match(m)
 	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
-	    local ok, def = lapi.get_definition(eid, text)
-	    if ok then 
-	       io.write(def, "\n")
+	    local def, msg = lapi.get_definition(en, text)
+	    if def then io.write(def, "\n")
 	    else
-	       io.write("Repl: undefined identifier ", text, "\n")
+	       io.write("Repl: ", msg, "\n")
 	       if text=="help" then
 		  io.write("  Hint: use .help to get help\n")
 	       end
@@ -87,9 +86,9 @@ function repl(eid)
 	       local pname, ppos, path = common.decode_match(csubs[1])
 	       local results, msg
 	       if cname=="load" then 
-		  results, msg = lapi.load_file(eid, path)
+		  results, msg = lapi.load_file(en, path)
 	       else -- manifest command
-		  results, msg = lapi.load_manifest(eid, path)
+		  results, msg = lapi.load_manifest(en, path)
 	       end
 	       if results then
 		  io.write("Loaded ", msg, "\n")
@@ -103,10 +102,10 @@ function repl(eid)
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
 	    elseif cname=="patterns" then
-	       local env = lapi.get_env(eid)
+	       local env = lapi.get_env(en)
 	       common.print_env(env)
 	    elseif cname=="clear" then
-	       lapi.clear_env(eid)
+	       lapi.clear_env(en)
 	       io.write("Pattern environment cleared\n")
 	    elseif cname=="match" or cname =="eval" then
 	       local ename, epos, exp = common.decode_match(csubs[1])
@@ -115,19 +114,19 @@ function repl(eid)
 	       if ename=="string" then exp = '"'..exp..'"'; end
 	       local tname, tpos, input_text = common.decode_match(csubs[2])
 	       input_text = common.unescape_string(input_text)
-	       local ok, msg = lapi.configure(eid, {expression=exp, encoder="json"})
+	       local ok, msg = lapi.configure(en, {expression=exp, encoder="json"})
 	       if not ok then
 		  io.write(msg, "\n");		    -- syntax and compile errors
 	       else
-		  local m, left = lapi.match(eid, input_text)
+		  local m, left = lapi.match(en, input_text)
 		  if cname=="match" then
 		     if debug and (not m) then
-			local match, leftover, trace = lapi.eval(eid, input_text)
+			local match, leftover, trace = lapi.eval(en, input_text)
 			io.write(trace, "\n")
 		     end
 		  else
 		     -- must be eval
-		     local match, leftover, trace = lapi.eval(eid, input_text)
+		     local match, leftover, trace = lapi.eval(en, input_text)
 		     io.write(trace, "\n")
 		  end
 		  print_match(m, left, (cname=="eval"))
@@ -138,14 +137,14 @@ function repl(eid)
 	       io.write("Repl: unimplemented command\n")
 	    end -- switch on command
 	 elseif name=="alias_" or name=="assignment_" or name=="grammar_" then
-	    local result, msg = lapi.load_string(eid, text);
+	    local result, msg = lapi.load_string(en, text);
 	    if not result then io.write(msg, "\n"); end
 	 else
 	    io.write("Repl: internal error\n")
 	 end -- switch on type of input received
       end
    end
-   repl(eid)
+   repl(en)
 end
 
 local help_text = [[
