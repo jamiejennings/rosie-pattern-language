@@ -30,7 +30,7 @@ if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
 assert(pattern.is(manifest_engine.env.line))
 --local result, msg = compile.compile_command_line_expression('line', manifest_engine.env)
 --if not result then error("Internal error: can't compile manifest top level defn: " .. tostring(msg)); end
-manifest_engine:configure({ expression = "line", encoder_function = function(m) return m; end })
+manifest_engine:configure({ expression = "line", encoder = false })
 
 local function process_manifest_line(en, line)
    local m = manifest_engine:match(line)

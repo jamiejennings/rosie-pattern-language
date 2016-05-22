@@ -10,7 +10,6 @@ local common = require "common"
 local compile = require "compile"
 require "engine"
 local manifest = require "manifest"
-local json = require "cjson"
 local eval = require "eval"
 require "color-output"
 
@@ -79,9 +78,7 @@ end
 
 function lapi.inspect_engine(en)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   local name, config = en:inspect()
-   config.encoder = encoder_to_name(config.encoder)
-   return name, config
+   return en:inspect()
 end
 
 function lapi.new_engine(optional_name)	    -- optional manifest? file list? code string?
@@ -155,35 +152,10 @@ end
 -- Matching
 ----------------------------------------------------------------------------------------
 
-local encoder_table =
-   {json = json.encode,
-    color = color_string_from_leaf_nodes,
-    text = common.match_to_text
- }
-
-function name_to_encoder(name)
-   return encoder_table[name]
-end
-
-function encoder_to_name(fcn)
-   for k,v in pairs(encoder_table) do
-      if v==fcn then return k; end
-   end
-   return "<unknown encoder>"
-end
-
 function lapi.configure(en, c)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if type(c)~="table" then
       arg_error("configuration not a table: " .. tostring(c)); end
-   if c.encoder then
-      local encoder_function = name_to_encoder(c.encoder)
-      if not encoder_function then
-	 arg_error("invalid encoder: " .. tostring(c.encoder))
-      else
-	 c.encoder_function = encoder_function
-      end
-   end
    return pcall(en.configure, en, c)
 end
 
@@ -218,8 +190,15 @@ end
 function lapi.set_match_exp_grep_TEMPORARY(en, pattern_exp, encoder_name)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
-   return lapi.configure(en, { pattern = pattern_EXP_to_grep_pattern(pattern_exp, en.env),
-			       encoder = encoder_name });
-end   
+   local pat, msg = pattern_EXP_to_grep_pattern(pattern_exp, en.env);
+   if pattern.is(pat) then
+      en.expression = "grep(" .. pattern_exp .. ")"
+      en.pattern = pat
+      return lapi.configure({encoder=encoder_name})
+   else
+      arg_error(msg)
+   end
+end
+
 
 return lapi
