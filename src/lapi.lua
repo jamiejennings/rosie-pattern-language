@@ -176,9 +176,13 @@ function lapi.configure(en, c)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if type(c)~="table" then
       arg_error("configuration not a table: " .. tostring(c)); end
-   c.encoder_function = name_to_encoder(c.encoder)
-   if not c.encoder_function then
-      arg_error("invalid encoder: " .. tostring(c.encoder));
+   if c.encoder then
+      local encoder_function = name_to_encoder(c.encoder)
+      if not encoder_function then
+	 arg_error("invalid encoder: " .. tostring(c.encoder))
+      else
+	 c.encoder_function = encoder_function
+      end
    end
    return pcall(en.configure, en, c)
 end

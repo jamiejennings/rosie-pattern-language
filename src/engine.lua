@@ -87,8 +87,8 @@ end
 
 local function engine_match(e, input, start)
    start = start or 1
-   if not e.config.pattern then no_pattern(e); end
-   if not e.config.encoder_function then no_encoder(e); end
+   if not pattern.is(e.config.pattern) then no_pattern(e); end
+   if type(e.config.encoder_function)~="function" then no_encoder(e); end
    local result, nextpos = compile.match_peg(e.config.pattern.peg, input, start)
    if result then return (e.config.encoder_function(result)), nextpos;
    else return false, 1; end

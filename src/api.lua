@@ -1,6 +1,6 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- extern-api.lua     Rosie API for external use
+---- api.lua     Rosie API for external use via C library and libffi
 ----
 ---- © Copyright IBM Corporation 2016.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
