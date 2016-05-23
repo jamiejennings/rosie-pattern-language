@@ -61,12 +61,16 @@ local api = {API_VERSION = "0.96 alpha",	    -- api version
 	     NARGS = {}} 			    -- number of args for each api call
 ----------------------------------------------------------------------------------------
 
--- SLOW?
+-- SLOW due to table manipulation??
 local function api_wrap(f)
    api.NARGS[f] = debug.getinfo(f, "u").nparams	    -- number of args for f
    return function(...)
 	     local retvals = { pcall(f, ...) }
-	     return retvals[1], json.encode({ table.unpack(retvals, 2) })
+	     if #retvals<=2 then
+		return retvals[1], json.encode(retvals[2])
+	     else
+		return retvals[1], json.encode({ table.unpack(retvals, 2) })
+	     end
 	  end
 end
 
@@ -74,24 +78,16 @@ local function arg_error(msg)
    error("Argument error: " .. msg, 0)
 end
 
-local function version(verbose)
-   if type(verbose)~="string" then
-      arg_error("verbose flag not a string")
-   end
-   if verbose=="false" then
-      return api.API_VERSION
-   elseif verbose=="true" then
-      local info = {}
-      for k,v in pairs(api) do
-	 if (type(k)=="string") and (type(v)=="string") then
-	    info[k] = v
-	 end
-      end -- loop
-      return info
-   else
-      arg_error('verbose flag not "true" or "false"')
-   end -- switch on verbose
+local function version()
+   local info = {}
+   for k,v in pairs(api) do
+      if (type(k)=="string") and (type(v)=="string") then
+	 info[k] = v
+      end
+   end -- loop
+   return info
 end
+
 
 api.version = api_wrap(version)
 
@@ -102,7 +98,7 @@ api.version = api_wrap(version)
 engine_list = {}
 
 local function engine_from_id(id)
-   return engine_list[id] or arg_error("invalid engine id")
+   return engine_list[id] or arg_error("invalid engine id: " .. tostring(id))
 end
 
 local function delete_engine(id)
@@ -117,6 +113,9 @@ api.delete_engine = api_wrap(delete_engine)
 ----------------------------------------------------------------------------------------
 
 local function inspect_engine(id)
+   if type(id)~="string" then
+      arg_error("engine id not a string")
+   end
    return lapi.inspect_engine(engine_from_id(id))
 end
 
