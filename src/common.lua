@@ -57,6 +57,10 @@ function common.unescape_string(s)
    return (string.gsub(s, '\\(.)', escape_substitutions))
 end
 
+function common.escape_string(s)
+   return (string.format("%q", s)):sub(2,-2)
+end
+
 function common.print_env(env, skip_header, total)
    -- print a sorted list of patterns contained in the flattened table 'env'
    local pattern_list = {}
