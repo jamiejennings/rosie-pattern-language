@@ -12,9 +12,11 @@ check = test.check
 heading = test.heading
 subheading = test.subheading
 
-test.start()
+function invalid_id(msg)
+   return msg:find("invalid engine id")
+end
 
-arg_err_engine_id = json.encode("Argument error: engine id not a string")
+test.start()
 
 ----------------------------------------------------------------------------------------
 heading("Require api")
@@ -69,10 +71,10 @@ check(info.id==eid)
 
 ok, msg = api.inspect_engine()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.inspect_engine("foobar")
 check(not ok)
-check(msg:find("invalid engine id"))
+check(invalid_id(msg))
 
 subheading("delete_engine")
 check(type(api.delete_engine)=="function")
@@ -85,7 +87,7 @@ check(json.decode(msg) == json.null)
 
 ok, msg = api.inspect_engine(json.decode(eid2))
 check(not ok)
-check(msg:find("Argument error: invalid engine id"))
+check(invalid_id(msg))
 check(api.inspect_engine(eid), "other engine with same name still exists")
 
 subheading("get_env")
@@ -99,22 +101,22 @@ check(j["."].type=="alias", "env contains built-in alias '.'")
 check(j["$"].type=="alias", "env contains built-in alias '$'")
 ok, msg = api.get_env()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.get_env("hello")
 check(not ok)
-check(msg=="Argument error: invalid engine id")
+check(invalid_id(msg))
 
 subheading("get_definition")
 check(type(api.get_definition)=="function")
 ok, msg = api.get_definition()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.get_definition("hello")
 check(not ok)
-check(msg=="Argument error: invalid engine id")
+check(invalid_id(msg))
 ok, def = api.get_definition(eid, "$")
 check(ok, "can get a definition for '$'")
-check(def=="alias $ = // built-in RPL pattern //")
+check(json.decode(def)=="alias $ = // built-in RPL pattern //")
 
 ----------------------------------------------------------------------------------------
 heading("Load")
@@ -123,41 +125,43 @@ subheading("load_string")
 check(type(api.load_string)=="function")
 ok, msg = api.load_string()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.load_string("hello")
 check(not ok)
-check(msg=="Argument error: invalid engine id")
+check(invalid_id(msg))
 ok, msg = api.load_string(eid, "foo")
 check(not ok)
-check(1==msg:find("Compile error: reference to undefined identifier foo"))
+check(msg:find("Compile error: reference to undefined identifier foo"))
 ok, msg = api.load_string(eid, 'foo = "a"')
 check(ok)
-check(not msg)
+check(json.decode(msg)==json.null)
 ok, env = api.get_env(eid)
 check(ok)
 j = json.decode(env)
 check(j["foo"].type=="definition", "env contains newly defined identifier")
 ok, msg = api.load_string(eid, 'bar = foo / "1" $')
 check(ok)
-check(not msg)
-ok, env = api.get_env(eid)
+--check(json.decode(msg)==json.null)
+ok, env_js = api.get_env(eid)
 check(ok)
-j = json.decode(env)
-check(j["bar"].type=="definition", "env contains newly defined identifier")
+env = json.decode(env_js)
+check(type(env)=="table")
+check(env["bar"])
+check(env["bar"].type=="definition", "env contains newly defined identifier")
 ok, def = api.get_definition(eid, "bar")
-check(def=='bar = foo / "1" $')
+check(json.decode(def)=='bar = foo / "1" $')
 ok, msg = api.load_string(eid, 'x = //', "syntax error")
 check(not ok)
-check(1==msg:find("Syntax error at line 1: x = //"))
-ok, env = api.get_env(eid)
+check(msg:find("Syntax error at line 1"))
+ok, env_js = api.get_env(eid)
 check(ok)
-j = json.decode(env)
-check(not j["x"])
+env = json.decode(env_js)
+check(not env["x"])
 
 ok, msg = api.load_string(eid, '-- comments and \n -- whitespace\t\n\n',
    "an empty list of ast's is the result of parsing comments and whitespace")
 check(ok)
-check(not msg)
+check(json.decode(msg)==json.null)
 
 g = [[grammar
   S = {"a" B} / {"b" A} / "" 
@@ -167,31 +171,32 @@ end]]
 
 ok, msg = api.load_string(eid, g)
 check(ok)
-check(not msg)
+check(json.decode(msg)==json.null)
 
 ok, def = api.get_definition(eid, "S")
 check(ok)
-check(1==def:find("S = grammar"))
+check(def:find("S = grammar"))
 
-ok, env = api.get_env(eid)
+ok, env_js = api.get_env(eid)
 check(ok)
-check(type(env)=="string", "environment is returned as a JSON string")
-j = json.decode(env)
-check(j["S"].type=="definition")
+check(type(env_js)=="string", "environment is returned as a JSON string")
+env = json.decode(env_js)
+check(env["S"].type=="definition")
 
 
 subheading("load_file")
 check(type(api.load_file)=="function")
 ok, msg = api.load_file()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.load_file("hello")
 check(not ok)
-check(msg=="Argument error: invalid engine id")
+check(invalid_id(msg))
 
 ok, msg = api.load_file(eid, "test/ok.rpl")
 check(ok)
-check(msg:sub(-11)=="test/ok.rpl")
+check(type(msg)=="string")
+check(json.decode(msg):sub(-11)=="test/ok.rpl")
 ok, env = api.get_env(eid)
 check(ok)
 j = json.decode(env)
@@ -199,23 +204,26 @@ check(j["num"].type=="definition")
 check(j["S"].type=="alias")
 ok, def = api.get_definition(eid, "W")
 check(ok)
-check(def=="alias W = !w any")
+check(json.decode(def)=="alias W = !w any")
 ok, msg = api.load_file(eid, "test/undef.rpl")
 check(not ok)
-check(1==msg:find("Compile error: reference to undefined identifier spaces\nAt line 9:"))
-ok, env = api.get_env(eid)
+check(msg:find("Compile error: reference to undefined identifier spaces"))
+check(msg:find("At line 9"))
+ok, env_js = api.get_env(eid)
 check(ok)
-j = json.decode(env)
-check(not j["badword"], "an identifier that didn't compile should not end up in the environment")
-check(j["undef"], "definitions in a file prior to an error will end up in the environment... (sigh)")
-check(not j["undef2"], "definitions in a file after to an error will NOT end up in the environment")
+env = json.decode(env_js)
+check(not env["badword"], "an identifier that didn't compile should not end up in the environment")
+check(env["undef"], "definitions in a file prior to an error will end up in the environment... (sigh)")
+check(not env["undef2"], "definitions in a file after to an error will NOT end up in the environment")
 ok, msg = api.load_file(eid, "test/synerr.rpl")
 check(not ok)
-check(1==msg:find('Syntax error at line 8: // "abc"'))
+msg = json.decode(msg)
+check(msg:find('Syntax error at line 8: // "abc"'))
 check(msg:find('foo = "foobar" // "abc"'))
 
 ok, msg = api.load_file(eid, "./thisfile/doesnotexist")
 check(not ok)
+msg = json.decode(msg)
 check(msg:find("cannot open file"))
 check(msg:find("./thisfile/doesnotexist"))
 
@@ -228,25 +236,25 @@ subheading("load_manifest")
 check(type(api.load_manifest)=="function")
 ok, msg = api.get_definition()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.get_definition("hello")
 check(not ok)
-check(msg=="Argument error: invalid engine id")
+check(invalid_id(msg))
 ok, msg = api.load_manifest(eid, "test/manifest")
 check(ok)
-check(msg:sub(-13)=="test/manifest")
-ok, env = api.get_env(eid)
+check(json.decode(msg):sub(-13)=="test/manifest")
+ok, env_js = api.get_env(eid)
 check(ok)
-j = json.decode(env)
-check(j["manifest_ok"].type=="definition")
+env = json.decode(env_js)
+check(env["manifest_ok"].type=="definition")
 
 ok, msg = api.load_manifest(eid, "test/manifest.err")
 check(not ok)
-check(1==msg:find("Compiler: cannot open file"))
+check(msg:find("Compiler: cannot open file"))
 
 ok, msg = api.load_manifest(eid, "test/manifest.synerr") -- contains a //
 check(not ok)
-check(1==msg:find("Compiler: unreadable file"))
+check(msg:find("Compiler: unreadable file"))
 
 
 ----------------------------------------------------------------------------------------
@@ -299,11 +307,11 @@ subheading("configure")
 check(type(api.configure)=="function")
 ok, msg = api.configure()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 
 ok, msg = api.configure(eid)
 check(not ok)
-check(msg:find("configuration not a"))
+check(msg:find("configuration argument not a string"))
 
 ok, msg = api.configure(eid, json.encode({expression="common.dotted_identifier",
 					  encoder="json"}))
@@ -315,7 +323,7 @@ check(ok)
 ok, msg = api.configure(eid, json.encode({expression="common.dotted_identifier",
 					  encoder="json"}))
 check(ok)
-check(not msg)
+check(json.decode(msg)==json.null)
 
 print(" Need more tests!")
 
@@ -323,35 +331,38 @@ subheading("match")
 check(type(api.match)=="function")
 ok, msg = api.match()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 
 ok, msg = api.match(eid)
 check(not ok)
-check(msg:find("input text not a string"))
+check(msg:find("input argument not a string"))
 
 ok, msg = api.load_manifest(eid, "MANIFEST")
 check(ok)
 
-ok, match, left = api.match(eid, "x.y.z")
+ok, retvals_js = api.match(eid, "x.y.z")
 check(ok)
-check(left==0)
-j = json.decode(match)
-check(j["common.dotted_identifier"].text=="x.y.z")
-check(j["common.dotted_identifier"].subs[2]["common.identifier_plus_plus"].text=="y")
+check(type(retvals_js)=="string")
+retvals = json.decode(retvals_js)
+check(retvals[2]==0)
+match = json.decode(retvals[1])
+check(match["common.dotted_identifier"].text=="x.y.z")
+check(match["common.dotted_identifier"].subs[2]["common.identifier_plus_plus"].text=="y")
 
 ok, msg = api.configure(eid, json.encode{expression='common.number', encoder="json"})
 check(ok)
 
-ok, match, left = api.match(eid, "x.y.z")
+ok, retvals_js = api.match(eid, "x.y.z")
 check(ok, "verifying that the engine exp has been changed by the call to configure")
-check(not match)
-check(not left)
+retvals = json.decode(retvals_js)
+check(not retvals[1])
+check(retvals[2]==5)
 
 subheading("match_file")
 check(type(api.match_file)=="function")
 ok, msg = api.match_file()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.match_file(eid)
 check(not ok)
 check(msg:find(": bad input file name"))
@@ -373,14 +384,16 @@ macosx_log1 = [[
       ]]
 ok, msg = api.configure(eid, json.encode{expression=macosx_log1, encoder="json"})
 check(ok)			    
-ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
+ok, retvals_js = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
+retvals = json.decode(retvals_js)
+c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
 check(c_in==4 and c_out==2 and c_err==2, "ensure processing of first lines of test-input")
 
 local function check_output_file()
    -- check the structure of the output file
    nextline = io.lines("/tmp/out")
-   for i=1,c_out do
+   for i=1, c_out do
       local l = nextline()
       local j = json.decode(l)
       check(j["*"], "the json match in the output file is tagged with a star")
@@ -394,8 +407,10 @@ end
 
 if ok then check_output_file(); end
 
-ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/tmp/err")
+ok, retvals_js = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/tmp/err")
 check(ok)
+retvals = json.decode(retvals_js)
+c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
 check(c_in==4 and c_out==2 and c_err==2, "ensure processing of error lines of test-input")
 
 local function check_error_file()
@@ -419,9 +434,11 @@ end
 
 clear_output_and_error_files()
 io.write("\nTesting output to stdout:\n")
-ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "", "/tmp/err")
+ok, retvals_js = api.match_file(eid, ROSIE_HOME.."/test/test-input", "", "/tmp/err")
 io.write("\nEnd of output to stdout\n")
 check(ok)
+retvals = json.decode(retvals_js)
+c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
 --check(c_in==4 and c_out==0 and c_err==2, "ensure processing of ONLY error lines of test-input")
 
 if ok then
@@ -433,9 +450,11 @@ end
 
 clear_output_and_error_files()
 io.write("\nTesting output to stderr:\n")
-ok, c_in, c_out, c_err = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "")
+ok, retvals_js = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "")
 io.write("\nEnd of output to stderr\n")
 check(ok)
+retvals = json.decode(retvals_js)
+c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
 --check(c_in==4 and c_out==2 and c_err==0, "ensure processing of ONLY matching lines of test-input")
 
 if ok then
@@ -449,10 +468,10 @@ subheading("eval")
 check(type(api.eval)=="function")
 ok, msg = api.eval()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.eval(eid)
 check(not ok)
-check(msg=="Argument error: input text not a string")
+check(json.decode(msg)=="Argument error: input argument not a string")
 
 ok, msg = api.configure(eid, json.encode{expression=".*//", encoder="json"})
 check(not ok)
@@ -460,44 +479,48 @@ check(msg:find('Syntax error at line 1:'))
 
 ok, msg = api.configure(eid, json.encode{expression=".*", encoder="json"})
 check(ok)
-ok, match, leftover, msg = api.eval(eid, "foo")
+ok, retvals_js = api.eval(eid, "foo")
 check(ok)
-check(match)
-check(leftover==0)
-check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+retvals = json.decode(retvals_js)
+check(retvals[1])
+check(retvals[2]==0)
+check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 
 ok, msg = api.configure(eid, json.encode{expression="[:digit:]", encoder="json"})
 check(ok)
-ok, match, leftover, msg = api.eval(eid, "foo")
+ok, retvals_js = api.eval(eid, "foo")
 check(ok)
-check(not match)
-check(leftover==3)
-check(msg:find('FAILED to match against input "foo"'))
+retvals = json.decode(retvals_js)
+check(not retvals[1])
+check(retvals[2]==3)
+check(retvals[3]:find('FAILED to match against input "foo"'))
 
 ok, msg = api.configure(eid, json.encode{expression="[:alpha:]*", encoder="json"})
 check(ok)
-ok, match, leftover, msg = api.eval(eid, "foo56789")
+ok, retvals_js = api.eval(eid, "foo56789")
 check(ok)
-check(match)
-check(leftover==5)
-check(msg:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
+retvals = json.decode(retvals_js)
+check(retvals[1])
+check(retvals[2]==5)
+check(retvals[3]:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
 
 ok, msg = api.configure(eid, json.encode{expression="common.number", encoder="json"})
 check(ok)
-ok, match, leftover, msg = api.eval(eid, "abc.x")
+ok, retvals_js = api.eval(eid, "abc.x")
 check(ok)
-check(match)
-j = json.decode(match)
-check(j["common.number"])
-check(j["common.number"].text=="abc")
-check(leftover==2)
-check(msg:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
+retvals = json.decode(retvals_js)
+check(retvals[1])
+match = json.decode(retvals[1])
+check(match["common.number"])
+check(match["common.number"].text=="abc")
+check(retvals[2]==2)
+check(retvals[3]:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
 
 subheading("eval_file")
 check(type(api.eval_file)=="function")
 ok, msg = api.eval_file()
 check(not ok)
-check(msg==arg_err_engine_id)
+check(invalid_id(msg))
 ok, msg = api.eval_file(eid)
 check(not ok)
 check(msg:find(": bad input file name"))
@@ -512,9 +535,11 @@ check(msg:find("No such file or directory"))
 
 ok, msg = api.configure(eid, json.encode{expression=macosx_log1, encoder="json"})
 check(ok)			    
-ok, c_in, c_out, c_err = api.eval_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
+ok, retvals_js = api.eval_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
-check(c_in==4 and c_out==2 and c_err==0, "ensure that output was written for all lines of test-input")
+retvals = json.decode(retvals_js)
+c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
+check(c_in==4 and c_out==2 and c_err==2, "ensure that output was written for all lines of test-input")
 
 local function check_eval_output_file()
    -- check the structure of the output file: 2 traces of matches, 2 traces of failed matches
@@ -535,10 +560,12 @@ local function check_eval_output_file()
 	 print(l)
 	 check(l:find("FAILED to match against input"), "the eval output's last fail step looks good")
       end   
+      l = nextline()				    -- blank
       if i<3 then
 	 l = nextline();
 	 local t = json.decode(l);		    -- match
       end
+      l = nextline();			    -- blank
    end -- for loop
    check(not nextline(), "exactly 4 eval traces in output file")
 end

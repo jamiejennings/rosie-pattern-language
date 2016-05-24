@@ -88,13 +88,14 @@ local function engine_configure(e, configuration)
       if k=="expression" then
 	 local pat, msg = compile.compile_command_line_expression(v, e.env)
 	 if not pat then return false, msg; end
+	 e.expression = v
 	 e.pattern = pat
       elseif k=="encoder" then
 	 local f = name_to_encoder(v)
 	 if type(f)~="function" then
 	    return false, 'invalid encoder name: "' .. tostring(v) .. '"'
 	 else
-	    e.encoder = k
+	    e.encoder = v
 	    e.encoder_function = f
 	 end
       elseif k=="name" then

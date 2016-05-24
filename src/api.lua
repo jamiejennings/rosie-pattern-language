@@ -7,6 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 local lapi = require "lapi"
+local manifest = require "manifest"
 require "list"
 
 -- local common = require "common"
@@ -102,9 +103,6 @@ local function engine_from_id(id)
 end
 
 local function delete_engine(id)
-   if type(id)~="string" then
-      arg_error("engine id not a string")
-   end
    engine_list[id] = nil;
 end
 
@@ -113,9 +111,6 @@ api.delete_engine = api_wrap(delete_engine)
 ----------------------------------------------------------------------------------------
 
 local function inspect_engine(id)
-   if type(id)~="string" then
-      arg_error("engine id not a string")
-   end
    return lapi.inspect_engine(engine_from_id(id))
 end
 
@@ -152,36 +147,56 @@ api.clear_env = api_wrap(clear_env)
 ----------------------------------------------------------------------------------------
 
 local function load_manifest(id, manifest_file)
-   -- process_manifest does the compute_full_path calculation
-   return manifest.process_manifest(engine_from_id(id), manifest_file)
+   local en = engine_from_id(id)
+   -- N.B. process_manifest does the compute_full_path calculation
+   if type(manifest_file)~="string" then
+      arg_error("manifest filename not a string")
+   end
+   local ok, msg = manifest.process_manifest(en, manifest_file)
+   if not ok then error(msg, 0)
+   else return msg				    -- msg may contain warnings
+   end
 end
+
 
 api.load_manifest = api_wrap(load_manifest)
 
 local function load_file(id, path)
+   local en = engine_from_id(id)
+   if type(path)~="string" then
+      arg_error("path not a string")
+   end
    local full_path = common.compute_full_path(path)
-   local result, msg = compile.compile_file(full_path, (engine_from_id(id)).env)
+   local result, msg = compile.compile_file(full_path, en.env)
    if result then
-      return true, full_path
+      return full_path
    else
-      return false, msg
+      error(msg,0)
    end
 end
 
 api.load_file = api_wrap(load_file)
 
 local function load_string(id, input)
-   return compile.compile(input, (engine_from_id(id)).env)
+   local en = engine_from_id(id)
+   if type(input)~="string" then
+      arg_error("input not a string")
+   end
+   local pat, msg = compile.compile(input, en.env)
+   if not pat then error(msg, 0)
+   else return msg				    -- msg could contain warnings
+   end
 end
 
 api.load_string = api_wrap(load_string)
 
 -- return a human-readable definition of identifier (reconstituted from its ast)
 local function get_definition(id, identifier)
+   local en = engine_from_id(id);
    if type(identifier)~="string" then
       arg_error("identifier argument not a string")
    end
-   local val = (engine_from_id(id)).env[identifier]
+   local val = en.env[identifier]
    if not val then
       error("undefined identifier: " .. identifier, 0)
    else
@@ -217,17 +232,27 @@ local function encoder_to_name(fcn)
 end
 
 local function configure(id, c_string)
-   local ok, c_table = pcall(json.decode, c_string)
-   if ok then 
-      return lapi.configure((engine_from_id(id)), c_table)
+   local en = engine_from_id(id)
+   if type(c_string)~="string" then
+      arg_error("configuration argument not a string")
    end
-   return c_table
+   local ok, c_table = pcall(json.decode, c_string)
+   if (not ok) or type(c_table)~="table" then
+      arg_error("configuration argument not a JSON object")
+   end
+   local ok, msg = lapi.configure(en, c_table)
+   if not ok then error(msg, 0); end
+   return nil
 end
 
 api.configure = api_wrap(configure)
    
 local function match(id, input_text, start)
-   return lapi.match((engine_from_id(id)), input_text, start)
+   local en = engine_from_id(id)
+   if type(input_text)~="string" then
+      arg_error("input argument not a string")
+   end
+   return lapi.match(en, input_text, start)
 end
 
 api.match = api_wrap(match)
@@ -239,7 +264,11 @@ end
 api.match_file = api_wrap(match_file)
 
 local function eval_(id, input_text, start)
-   return lapi.eval(engine_from_id(id), input_text, start)
+   local en = engine_from_id(id)
+   if type(input_text)~="string" then
+      arg_error("input argument not a string")
+   end
+   return lapi.eval(en, input_text, start)
 end
 
 api.eval = api_wrap(eval_)
