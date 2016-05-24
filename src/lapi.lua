@@ -69,12 +69,12 @@ function lapi.new_engine(optional_name)	    -- optional manifest? file list? cod
    return engine(optional_name, compile.new_env())
 end
 
-function lapi.get_env(en)
+function lapi.get_environment(en)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    return compile.flatten_env(en.env)
 end
 
-function lapi.clear_env(en)
+function lapi.clear_environment(en)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    en.env = compile.new_env()
 end
@@ -111,7 +111,7 @@ function lapi.load_string(en, input)
 end
 
 -- get a human-readable definition of identifier (reconstituted from its ast)
-function lapi.get_definition(en, identifier)
+function lapi.get_binding(en, identifier)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    local val = en.env[identifier]
    if not val then
@@ -125,11 +125,7 @@ function lapi.get_definition(en, identifier)
    end
 end
 
-----------------------------------------------------------------------------------------
--- Matching
-----------------------------------------------------------------------------------------
-
-function lapi.configure(en, c)
+function lapi.configure_engine(en, c)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if type(c)~="table" then
       arg_error("configuration not a table: " .. tostring(c)); end
@@ -137,6 +133,9 @@ function lapi.configure(en, c)
 end
 
 ----------------------------------------------------------------------------------------
+-- Matching
+----------------------------------------------------------------------------------------
+
 -- Note: The match and eval functions do not check their arguments, which gives a small
 -- boost in performance.  A Lua program which provides bad arguments to these functions
 -- will be interrupted with a call to error().  The external API does more argument
@@ -171,7 +170,7 @@ function lapi.set_match_exp_grep_TEMPORARY(en, pattern_exp, encoder_name)
    if pattern.is(pat) then
       en.expression = "grep(" .. pattern_exp .. ")"
       en.pattern = pat
-      return lapi.configure({encoder=encoder_name})
+      return lapi.configure_engine({encoder=encoder_name})
    else
       arg_error(msg)
    end

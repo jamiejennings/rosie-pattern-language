@@ -150,7 +150,7 @@ function process_pattern_against_file()
       if OPTION["-grep"] then
 	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern, "json")
       else
-	 success, msg = lapi.configure(CL_ENGINE, {expression=opt_pattern, encoder="json"})
+	 success, msg = lapi.configure_engine(CL_ENGINE, {expression=opt_pattern, encoder="json"})
       end
       if not success then io.write(msg, "\n"); os.exit(-1); end
    end
@@ -166,7 +166,7 @@ function process_pattern_against_file()
    encoder = "color"
    if OPTION["-json"] then encoder = "json"
    elseif OPTION["-nocolor"] then encoder = "text"; end
-   success, msg = lapi.configure(CL_ENGINE, {encoder=encoder})
+   success, msg = lapi.configure_engine(CL_ENGINE, {encoder=encoder})
    if not success then io.write(msg, "\n"); os.exit(-1); end
 
    -- (5) Iterate through the lines in the input file
@@ -210,7 +210,7 @@ if OPTION["-patterns"] then
 	 os.exit(-4)
       end
    end
-   local ok, env = lapi.get_env(CL_ENGINE)
+   local ok, env = lapi.get_environment(CL_ENGINE)
    if not ok then error(env); end		    -- api call failed, env is message
    common.print_env(json.decode(env))		    -- inefficient FIXME!
    os.exit()

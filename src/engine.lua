@@ -146,7 +146,7 @@ end
 local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename)
    local peg = (e.pattern.peg * Cp())
    if type(eval_flag)~="boolean" then engine_error(e, "bad eval flag"); end
-   if not e.encoder then engine_error(e, "output encoder required, but not set"); end
+   if not e.encoder_function then engine_error(e, "output encoder required, but not set"); end
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
 
    local inlines, outlines, errlines = 0, 0, 0;

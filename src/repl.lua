@@ -30,7 +30,7 @@ local repl_patterns = [==[
 repl_engine = lapi.new_engine("repl")
 lapi.load_file(repl_engine, "src/rosie-core.rpl")
 lapi.load_string(repl_engine, repl_patterns)
-lapi.configure(repl_engine, {expression="input", encoder="json"})
+lapi.configure_engine(repl_engine, {expression="input", encoder="json"})
 
 repl_prompt = "Rosie> "
 
@@ -72,7 +72,7 @@ function repl(en)
 	 local _, _, _, subs = common.decode_match(m)
 	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
-	    local def, msg = lapi.get_definition(en, text)
+	    local def, msg = lapi.get_binding(en, text)
 	    if def then io.write(def, "\n")
 	    else
 	       io.write("Repl: ", msg, "\n")
@@ -102,10 +102,10 @@ function repl(en)
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
 	    elseif cname=="patterns" then
-	       local env = lapi.get_env(en)
+	       local env = lapi.get_environment(en)
 	       common.print_env(env)
 	    elseif cname=="clear" then
-	       lapi.clear_env(en)
+	       lapi.clear_environment(en)
 	       io.write("Pattern environment cleared\n")
 	    elseif cname=="match" or cname =="eval" then
 	       local ename, epos, exp = common.decode_match(csubs[1])
@@ -114,7 +114,7 @@ function repl(en)
 	       if ename=="string" then exp = '"'..exp..'"'; end
 	       local tname, tpos, input_text = common.decode_match(csubs[2])
 	       input_text = common.unescape_string(input_text)
-	       local ok, msg = lapi.configure(en, {expression=exp, encoder="json"})
+	       local ok, msg = lapi.configure_engine(en, {expression=exp, encoder="json"})
 	       if not ok then
 		  io.write(msg, "\n");		    -- syntax and compile errors
 	       else

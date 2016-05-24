@@ -10,19 +10,6 @@ local lapi = require "lapi"
 local manifest = require "manifest"
 require "list"
 
--- local common = require "common"
--- local compile = require "compile"
--- require "engine"
--- local manifest = require "manifest"
--- local json = require "cjson"
--- local eval = require "eval"
--- require "color-output"
-
--- temporary:
--- require "grep"
--- lpeg = require "lpeg"
--- Cp = lpeg.Cp
-
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 --
@@ -79,6 +66,9 @@ local function arg_error(msg)
    error("Argument error: " .. msg, 0)
 end
 
+----------------------------------------------------------------------------------------
+-- API and other version information
+
 local function version()
    local info = {}
    for k,v in pairs(api) do
@@ -108,8 +98,6 @@ end
 
 api.delete_engine = api_wrap(delete_engine)
 
-----------------------------------------------------------------------------------------
-
 local function inspect_engine(id)
    return lapi.inspect_engine(engine_from_id(id))
 end
@@ -134,13 +122,17 @@ local function get_env(id)
    return compile.flatten_env((engine_from_id(id)).env)
 end
 
-api.get_env = api_wrap(get_env)
+api.get_environment = api_wrap(get_env)
 
 local function clear_env(id)
    (engine_from_id(id)).env = compile.new_env()
 end
 
-api.clear_env = api_wrap(clear_env)
+api.clear_environment = api_wrap(clear_env)
+
+local function get_binding(id, identifier)
+   return lapi.get_binding(engine_from_id(id), identifier)
+end
 
 ----------------------------------------------------------------------------------------
 -- Loading manifests, files, strings
@@ -157,7 +149,6 @@ local function load_manifest(id, manifest_file)
    else return msg				    -- msg may contain warnings
    end
 end
-
 
 api.load_manifest = api_wrap(load_manifest)
 
@@ -191,7 +182,7 @@ end
 api.load_string = api_wrap(load_string)
 
 -- return a human-readable definition of identifier (reconstituted from its ast)
-local function get_definition(id, identifier)
+local function get_binding(id, identifier)
    local en = engine_from_id(id);
    if type(identifier)~="string" then
       arg_error("identifier argument not a string")
@@ -208,7 +199,7 @@ local function get_definition(id, identifier)
    end
 end
 
-api.get_definition = api_wrap(get_definition)
+api.get_binding = api_wrap(get_binding)
 
 ----------------------------------------------------------------------------------------
 -- Matching
@@ -231,7 +222,7 @@ local function encoder_to_name(fcn)
    return "<unknown>"
 end
 
-local function configure(id, c_string)
+local function configure_engine(id, c_string)
    local en = engine_from_id(id)
    if type(c_string)~="string" then
       arg_error("configuration argument not a string")
@@ -240,12 +231,12 @@ local function configure(id, c_string)
    if (not ok) or type(c_table)~="table" then
       arg_error("configuration argument not a JSON object")
    end
-   local ok, msg = lapi.configure(en, c_table)
+   local ok, msg = lapi.configure_engine(en, c_table)
    if not ok then error(msg, 0); end
    return nil
 end
 
-api.configure = api_wrap(configure)
+api.configure_engine = api_wrap(configure_engine)
    
 local function match(id, input_text, start)
    local en = engine_from_id(id)
