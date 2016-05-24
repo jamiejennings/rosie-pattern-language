@@ -243,7 +243,6 @@ pattern =
    "pattern"
 )
 
-
 common.boundary_identifier = "~"
 
 return common

@@ -821,5 +821,14 @@ function compile.compile_core(filename, env)
    return cinternals.compile_astlist(astlist, false, false, source, env)
 end
 
+----------------------------------------------------------------------------------------
+-- Low level match functions (user level functions use engines)
+----------------------------------------------------------------------------------------
+
+function compile.match_peg(peg, input, start)
+   return (peg * Cp()):match(input, start)
+end
+
+
 compile.cinternals = cinternals
 return compile

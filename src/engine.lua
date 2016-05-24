@@ -15,6 +15,7 @@
 --   config: various configuration settings, including the default pattern to match
 --   id: a string meant to be a unique identifier (currently unique in the Lua state)
 
+local common = require "common"
 local compile = require "compile"
 local eval = require "eval"
 local json = require "cjson"
@@ -86,7 +87,7 @@ end
 local function engine_configure(e, configuration)
    for k,v in pairs(configuration) do
       if k=="expression" then
-	 local pat, msg = compile.compile_command_line_expression(v, e.env)
+	 local pat, msg = compile.compile_match_expression(v, e.env)
 	 if not pat then return false, msg; end
 	 e.expression = v
 	 e.pattern = pat

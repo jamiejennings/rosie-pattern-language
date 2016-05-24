@@ -187,16 +187,7 @@ local function get_binding(id, identifier)
    if type(identifier)~="string" then
       arg_error("identifier argument not a string")
    end
-   local val = en.env[identifier]
-   if not val then
-      error("undefined identifier: " .. identifier, 0)
-   else
-      if pattern.is(val) then
-	 return reconstitute_pattern_definition(identifier, val)
-      else
-	 error("Internal error: object in environment not a pattern: " .. tostring(val))
-      end
-   end
+   return lapi.get_binding(en, identifier)
 end
 
 api.get_binding = api_wrap(get_binding)

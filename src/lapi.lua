@@ -8,6 +8,7 @@
 
 local common = require "common"
 local compile = require "compile"
+local parse = require "parse"
 require "engine"
 local manifest = require "manifest"
 local eval = require "eval"
@@ -45,6 +46,16 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --        - Human interaction / debugging
 --          - CRUD on color assignments for color output?
 
+
+function reconstitute_pattern_definition(id, p)
+   if p then
+      return (((p.alias and "alias ") or "") .. id .. " = " ..
+	   ((p.ast and parse.reveal_ast(p.ast)) or
+	 "// built-in RPL pattern //"))
+   else
+      error("undefined identifier: " .. id)
+   end
+end
 
 ----------------------------------------------------------------------------------------
 local lapi = {}
@@ -118,7 +129,7 @@ function lapi.get_binding(en, identifier)
       return false, "undefined identifier: " .. tostring(identifier)
    else
       if pattern.is(val) then
-	 return common.reconstitute_pattern_definition(identifier, val)
+	 return reconstitute_pattern_definition(identifier, val)
       else
 	 error("Internal error: object in environment not a pattern: " .. tostring(val))
       end
