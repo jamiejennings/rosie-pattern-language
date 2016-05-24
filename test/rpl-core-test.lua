@@ -15,15 +15,17 @@ subheading = test.subheading
 eid = false;
 
 function set_expression(exp)
-   local ok, msg = api.configure(eid, json.encode{expression=exp, encoder="json"})
+   local ok, msg = api.configure_engine(eid, json.encode{expression=exp, encoder=false})
    if not ok then error("Configuration error: " .. msg); end
 end
 
 function check_match(exp, input, expectation, expected_leftover, expected_text)
    expected_leftover = expected_leftover or 0
    set_expression(exp)
-   local ok, m, leftover = api.match(eid, input)
+   local ok, retvals_js = api.match(eid, input)
    check(ok, "failed call to api.match")
+   local retvals = json.decode(retvals_js)
+   local m, leftover = retvals[1], retvals[2]
    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " '" .. input .. "'")
    local fmt = "expected leftover matching %s against '%s' was %d but received %d"
@@ -31,9 +33,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text)
       check(leftover==expected_leftover,
 	    string.format(fmt, exp, input, expected_leftover, leftover))
       if expected_text and m then
-	 local t = json.decode(m)
-	 --local text = t["*"].text
-	 local name, match = next(t)
+	 local name, match = next(m)
 	 local text = match.text
 	 local fmt = "expected text matching %s against '%s' was '%s' but received '%s'"
 	 check(expected_text==text,
@@ -54,14 +54,15 @@ check(api.API_VERSION)
 check(type(api.API_VERSION=="string"))
 
 check(type(api.new_engine)=="function")
-ok, eid = api.new_engine("hello")
+ok, eid_js = api.new_engine("hello")
 check(ok)
+eid = json.decode(eid_js)
 check(type(eid)=="string")
 
 subheading("Setting up assignments")
 ok, msg = api.load_string(eid, 'a = "a"  b = "b"  c = "c"  d = "d"')
 check(ok)
-ok, msg = api.get_definition(eid, "a")
+ok, msg = api.get_binding(eid, "a")
 check(ok)
 
 ----------------------------------------------------------------------------------------
