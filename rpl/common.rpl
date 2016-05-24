@@ -54,7 +54,7 @@ common.identifier_not_word = { {letter {letter / dash_under}* [:digit:] identifi
 -- underlines. Note that we explicitly fail if the first upper case
 -- letter is followed by a lower case one, since most sentences and
 -- proper names start that way.
-common.maybe_identifier = { [:upper:] ![:lower:] {[:upper:] / [:digit:] / dash_under}* }
+common.maybe_identifier = ({ [:upper:] ![:lower:] {[:upper:] / [:digit:] / dash_under}* })
 
 
 
