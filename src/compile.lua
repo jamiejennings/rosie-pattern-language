@@ -649,8 +649,9 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
       warn("Compiler: reassignment to identifier " .. iname)
    end
 
-   local rhs = cinternals.cook_if_needed(subs[2])
---   local rhs = syntax.cooked_to_raw(syntax.cook_if_needed(subs[2]))
+--   local rhs = cinternals.cook_if_needed(subs[2])
+--   local rhs = syntax.cook_if_needed(subs[2])
+   local rhs = syntax.cooked_to_raw(syntax.cook_if_needed(subs[2]))
 
    local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
    -- N.B. If the RHS of the expression is a CHOICE node, and this is NOT AN ALIAS then the value
@@ -755,7 +756,7 @@ function compile.compile_match_expression(source, env)
    local ast_history = {}
 
 --   if compile.parser==parse.core_parse_and_explain then
-   if true then
+   if false then
       local name = common.decode_match(ast)
       if name~="raw" then
 	 table.insert(ast_history, 1, ast)

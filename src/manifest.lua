@@ -16,8 +16,8 @@ local manifest = {}
 
 local mpats = [==[
       -- These patterns define the contents of the Rosie MANIFEST file
-      alias blank = ""
-      alias comment = "--" .*
+      alias blank = {""}
+      alias comment = {"--" .*}
       alias unix_path = { {"../" / "./" / "/"}? {{[:alnum:]/[_%!$@:.,~-/] / "\\ "}+ }+  }
       alias windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] .}* }+ }
       path = unix_path / windows_path
