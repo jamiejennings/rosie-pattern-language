@@ -597,7 +597,22 @@ function cinternals.compile_grammar(a, raw, gmr, source, env)
    end
 end
 
+function cinternals.compile_capture(a, raw, gmr, source, env)
+   assert(a, "did not get ast in compile_capture")
+   local name, pos, text, subs = common.decode_match(a)
+   assert(name=="capture")
+   assert(subs and subs[1] and (not subs[2]), "wrong number of subs in capture ast")
+   assert(compile.expression_p(subs[1]),
+	  "compile_capture called with an ast that is not an expression: " .. (next(subs[1])))
+   local pat = cinternals.compile_exp(subs[1], raw, gmr, source, env)
+   local name, pos, text, subs = common.decode_match(subs[1])
+   pat.name = name
+   pat.peg = C(pat.peg)
+   return pat
+end
+
 cinternals.compile_exp_functions = {"compile_exp";
+			       capture=cinternals.compile_capture;	    
 			       raw=cinternals.compile_group;
 			       cooked=cinternals.compile_group;
 			       choice=cinternals.compile_choice;
@@ -667,25 +682,6 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
    pat.ast = rhs;
    env[iname] = pat
 end
-
--- function cinternals.compile_alias(a, raw, gmr, source, env)
---    assert(a, "did not get ast in compile_alias")
---    local name, pos, text, subs = common.decode_match(a)
---    assert(name=="alias_")
---    assert(next(subs[1])=="identifier")
---    assert(type(subs[2]=="table"))		    -- the right side of the assignment
---    assert(not subs[3])
---    assert(type(source)=="string")
---    local _, pos, alias_name = common.decode_match(subs[1])
---    if env[alias_name] then
---       warn("Compiler: reassignment to alias " .. alias_name)
---    end
---    local rhs = cinternals.cook_if_needed(subs[2])
---    local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
---    pat.alias=true;
---    pat.ast = rhs				    -- expression ast
---    env[alias_name] = pat
--- end
 
 function cinternals.compile_ast(ast, raw, gmr, source, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))

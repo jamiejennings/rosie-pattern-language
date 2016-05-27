@@ -60,7 +60,7 @@ function syntax.generated_ast(node_name, ...)
 end
 
 function syntax.make_transformer(fcn, target_name, recursive)
-   local function transform (ast)
+   local function transform (ast, ...)
       local name, body = next(ast)
       local new = common.create_match(name,
 				      body.pos,
@@ -68,7 +68,7 @@ function syntax.make_transformer(fcn, target_name, recursive)
 				      table.unpack((recursive and map(transform, body.subs))
 						or body.subs))
       if (target_name==nil) or (name==target_name) then
-	 return syntax.validate(fcn(new))
+	 return syntax.validate(fcn(new, ...))
       else
 	 return syntax.validate(new)
       end
@@ -80,7 +80,6 @@ function syntax.compose(f1, ...)
    -- return f1 o f2 o ... fn
    local fcns = {f1, ...}
    local composition = fcns[#fcns]
-   print("Number of functions is ", #fcns)
    for i = (#fcns - 1), 1, -1 do
       local previous = composition
       composition = function(...)
@@ -111,6 +110,20 @@ end
 -- 		    end,
 -- 		    nil,
 -- 		    true)
+
+syntax.capture =
+   syntax.make_transformer(function(ast)
+		       return syntax.generated_ast("capture", ast)
+		    end,
+		    nil,
+		    false)
+
+syntax.sequence =
+   syntax.make_transformer(function(ast1, ast2)
+			      return syntax.generated_ast("sequence", ast1, ast2)
+			   end,
+			   nil,
+			   false)
 
 
 syntax.cook_if_needed =
