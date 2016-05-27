@@ -26,6 +26,7 @@ local lpeg = require "lpeg"
 require "utils"
 require "recordtype"
 local unspecified = recordtype.unspecified
+syntax = require "syntax"
 
 local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt, lpeg.B
@@ -151,7 +152,8 @@ function compile.explain_syntax_error(a, source)
    msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
 
    if esubs then
-      -- We only examine the first sub, assuming there are no others.  Is that right?
+      -- We only examine the first sub for now, assuming there are no others.  Must fix this
+      -- later, although a new syntax error reporting technique is on the TO-DO LIST.
       local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
       if etname=="statement_prefix" then
 	 msg = msg .. "Found start of a new statement inside an expression.\n"
@@ -637,7 +639,7 @@ end
 function cinternals.compile_assignment(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_assignment")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name=="assignment_")
+   assert(name=="assignment_" or name=="alias_")
    assert(next(subs[1])=="identifier")
    assert(type(subs[2])=="table")			    -- the right side of the assignment
    assert(not subs[3])
@@ -648,42 +650,47 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
    end
 
    local rhs = cinternals.cook_if_needed(subs[2])
+--   local rhs = syntax.cooked_to_raw(syntax.cook_if_needed(subs[2]))
 
    local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
-   -- N.B. If the RHS of the expression is a CHOICE node, then the value we compute here for
-   -- pat.peg is only valid when the identifier being bound is later referenced in RAW mode.  If
-   -- the identifier is referenced in COOKED mode, then we must ignore pat.peg and use the
-   -- pat.alternates value to compute the correct peg.  That computation must be done in
-   -- conjunction with match_node_wrap.
-   pat.peg = C(pat.peg)
-   pat.ast = subs[2]				    -- expression ast
+   -- N.B. If the RHS of the expression is a CHOICE node, and this is NOT AN ALIAS then the value
+   -- we compute here for pat.peg is only valid when the identifier being bound is later
+   -- referenced in RAW mode.  If the identifier is referenced in COOKED mode, then we must ignore
+   -- pat.peg and use the pat.alternates value to compute the correct peg.  That computation must
+   -- be done in conjunction with match_node_wrap.
+   if name=="alias_" then
+      pat.alias=true
+   else
+      pat.peg = C(pat.peg)
+   end
+   pat.ast = rhs;
    env[iname] = pat
 end
 
-function cinternals.compile_alias(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_alias")
-   local name, pos, text, subs = common.decode_match(a)
-   assert(name=="alias_")
-   assert(next(subs[1])=="identifier")
-   assert(type(subs[2]=="table"))		    -- the right side of the assignment
-   assert(not subs[3])
-   assert(type(source)=="string")
-   local _, pos, alias_name = common.decode_match(subs[1])
-   if env[alias_name] then
-      warn("Compiler: reassignment to alias " .. alias_name)
-   end
-   local rhs = cinternals.cook_if_needed(subs[2])
-   local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
-   pat.alias=true;
-   pat.ast = rhs				    -- expression ast
-   env[alias_name] = pat
-end
+-- function cinternals.compile_alias(a, raw, gmr, source, env)
+--    assert(a, "did not get ast in compile_alias")
+--    local name, pos, text, subs = common.decode_match(a)
+--    assert(name=="alias_")
+--    assert(next(subs[1])=="identifier")
+--    assert(type(subs[2]=="table"))		    -- the right side of the assignment
+--    assert(not subs[3])
+--    assert(type(source)=="string")
+--    local _, pos, alias_name = common.decode_match(subs[1])
+--    if env[alias_name] then
+--       warn("Compiler: reassignment to alias " .. alias_name)
+--    end
+--    local rhs = cinternals.cook_if_needed(subs[2])
+--    local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
+--    pat.alias=true;
+--    pat.ast = rhs				    -- expression ast
+--    env[alias_name] = pat
+-- end
 
 function cinternals.compile_ast(ast, raw, gmr, source, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
 		      assignment_=cinternals.compile_assignment;
-		      alias_=cinternals.compile_alias;
+		      alias_=cinternals.compile_assignment;
 		      grammar_=cinternals.compile_grammar;
 		      exp=cinternals.compile_exp;
 		      default=cinternals.compile_exp;
@@ -746,13 +753,20 @@ function compile.compile_match_expression(source, env)
    local orig_ast = astlist[1]
    local ast = orig_ast
    local ast_history = {}
-   local name = common.decode_match(ast)
-   if name~="raw" then
+
+--   if compile.parser==parse.core_parse_and_explain then
+   if true then
+      local name = common.decode_match(ast)
+      if name~="raw" then
+	 table.insert(ast_history, 1, ast)
+	 ast = cinternals.append_boundary(ast)
+      end
       table.insert(ast_history, 1, ast)
-      ast = cinternals.append_boundary(ast)
+      ast = cinternals.cook_if_needed(ast)
+   else
+      table.insert(ast_history, 1, ast)
+      ast = syntax.top_level_transform(ast)
    end
-   table.insert(ast_history, 1, ast)
-   ast = cinternals.cook_if_needed(ast)
 
    local c = coroutine.create(cinternals.compile_exp)
    local no_lua_error, result, error_msg = coroutine.resume(c, ast, false, false, source, env)

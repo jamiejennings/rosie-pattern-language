@@ -13,6 +13,7 @@
 -- eval functions MUST BE SEMANTICALLY EQUIVALENT to their counterparts in the compiler.  (In
 -- other words, the interpreter called 'eval' should have the same semantics as the compiler.)
 
+local parse = require "parse"
 local compile = require "compile"
 local cinternals = compile.cinternals
 local common = require "common"

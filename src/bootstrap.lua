@@ -42,11 +42,11 @@ local function rosie_parse(str, pos, tokens)
    return astlist, errlist
 end
 
-local function parse_and_explain(source)
+function parse_and_explain(source)
    assert(type(source)=="string", "Compiler: source argument is not a string: "..tostring(source))
    local astlist, errlist = rosie_parse(source)
    if #errlist~=0 then
-      local msg = ""
+      local msg = "Warning: syntax error reporting is limited at this time\n"
       for _,e in ipairs(errlist) do
 	 msg = msg .. compile.explain_syntax_error(e, source) .. "\n"
       end
@@ -85,6 +85,7 @@ function bootstrap()
    ROSIE_ENGINE.pattern = success;
    ROSIE_ENGINE.encoder = "null/bootstrap";
    ROSIE_ENGINE.encoder_function = function(m) return m; end;
+   compile.parser = parse_and_explain;
    BOOTSTRAP_COMPLETE = true
 end
 

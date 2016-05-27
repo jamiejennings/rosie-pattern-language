@@ -8,165 +8,162 @@
 local common = require "common"			    -- AST functions
 require "list"
 
--- common.create_match("cooked", 1, "(...)", a)
+syntax = {}
 
 local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
 
--- local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
--- function cinternals.append_boundary(a)
---    return common.create_match("sequence", 1, "/generated/", a, looking_at_boundary_ast)
--- end
-   
-function validate(ast)
+local function err(name, msg)
+   error('invalid ast "' .. name .. '" ' .. msg)
+end
+
+function syntax.validate(ast)
+   if ast==nil then return nil; end
    if type(ast)~="table" then
-      return false, "ast not a table";
+      error("argument to validate is not an ast: " .. tostring(ast))
    end
    local name, body = next(ast)
-   if next(ast, name) then
-      return false, "multiple names";
-   elseif type(name)~="string" then
-      return false, "non-string name";
+   if type(name)~="string" then
+      err(tostring(name), "is a non-string name");
+   elseif next(ast, name) then
+      err(name, "multiple names");
    elseif type(body)~="table" then
-      return false, "non-table body";
+      err(name, "has a non-table body");
    else
-      local function err(msg)
-	 error("Invalid AST " .. name .. ": " .. msg)
-      end
       for k,v in pairs(body) do
-	 if type(k)~="string" then return err("non-string key in body");
+	 if type(k)~="string" then err(name, "non-string key in body");
 	 elseif (k=="text") then
-	    if (type(v)~="string") then return err("text value not a string"); end
+	    if (type(v)~="string") then err(name, "text value not a string"); end
 	 elseif (k=="pos") then
-	    if (type(v)~="number") then return err("pos value not a number"); end
+	    if (type(v)~="number") then err(name, "pos value not a number"); end
 	 elseif (k=="subs") then
 	    for i,s in pairs(v) do
 	       if type(i)~="number" then
-		  return err("subs list has a non-numeric key")
+		  err(name, "subs list has a non-numeric key")
 	       end
-	       local ok, msg = validate(s)
+	       local ok, msg = syntax.validate(s)
 	       if not ok then
-		  return err("in sub " .. tostring(i) .. ": " .. msg);
+		  err(name, "in sub " .. tostring(i) .. ": " .. msg);
 	       end
 	    end -- loop through subs
 	 else -- unrecognized key
-	    return false, "unexpected key in body";
+	    err(name, "unexpected key in ast body: " .. tostring(k));
 	 end -- switch on k
       end -- loop through body
    end -- all tests have passed
    return ast;
 end
 
-function generated_ast(node_name, ...)
+function syntax.generated_ast(node_name, ...)
    -- ... are the subs
    return common.create_match(node_name, 0, "*generated*", ...)
 end
 
-function make_transformer(fcn, target_name, recursive)
+function syntax.make_transformer(fcn, target_name, recursive)
    local function transform (ast)
       local name, body = next(ast)
+      local new = common.create_match(name,
+				      body.pos,
+				      body.text,
+				      table.unpack((recursive and map(transform, body.subs))
+						or body.subs))
       if (target_name==nil) or (name==target_name) then
-	 local new = common.create_match(name,
-					 body.pos,
-					 body.text,
-					 table.unpack((recursive and map(transform, body.subs))
-						      or body.subs))
-	 return validate(fcn(new))
+	 return syntax.validate(fcn(new))
       else
-	 return ast
+	 return syntax.validate(new)
       end
    end -- function transform
    return transform
 end
 
--- function make_transformer(fcn, target_name, recursive)
---    local function transform (ast)
---       local name, orig_body = next(ast)
---       if (target_name==nil) or (name==target_name) then
--- 	 local new = validate(fcn(ast))
--- 	 local name, body = next(new)
--- 	 if recursive then
--- 	    local new_subs = 
--- 	       return common.create_match(name,
--- 					  body.pos,
--- 					  body.text,
--- 					  table.unpack(map(transform, body.subs)))
--- 	 else
--- 	    return new
--- 	 end
---       end
---    end -- function transform
---    return transform
--- end
+function syntax.compose(f1, ...)
+   -- return f1 o f2 o ... fn
+   local fcns = {f1, ...}
+   local composition = fcns[#fcns]
+   print("Number of functions is ", #fcns)
+   for i = (#fcns - 1), 1, -1 do
+      local previous = composition
+      composition = function(...)
+		       return fcns[i](previous(...))
+		    end
+   end
+   return composition
+end
+	     
 
 ----------------------------------------------------------------------------------------
 
-cook_if_needed =
-   make_transformer(function(ast)
+-- wraptest =
+--    syntax.make_transformer(function(ast)
+-- 		       return syntax.generated_ast("wrapped", ast)
+-- 		    end,
+-- 		    nil,
+-- 		    false)
+-- wrapchoicetest = 
+--    syntax.make_transformer(function(ast)
+-- 		       return syntax.generated_ast("choice wrapped", ast)
+-- 		    end,
+-- 		    "choice",
+-- 		    true)
+-- recwraptest =
+--    syntax.make_transformer(function(ast)
+-- 		       return syntax.generated_ast("rec wrapped", ast)
+-- 		    end,
+-- 		    nil,
+-- 		    true)
+
+
+syntax.cook_if_needed =
+   syntax.make_transformer(function(ast)
 		       local name, body = next(ast)
 		       if (name=="raw") or (name=="cooked") then
 			  return ast
 		       else
-			  return generated_ast("cooked", ast)
+			  return syntax.generated_ast("cooked", ast)
 		       end
 		    end,
 		    nil,
 		    false)
 
-
-wraptest =
-   make_transformer(function(ast)
-		       return generated_ast("wrapped", ast)
-		    end,
-		    nil,
-		    false)
-
-wrapchoicetest = 
-   make_transformer(function(ast)
-		       return generated_ast("choice wrapped", ast)
-		    end,
-		    "choice",
-		    false)
+syntax.append_boundary =
+   syntax.make_transformer(function(ast)
+			      return syntax.generated_ast("sequence", ast, boundary_ast)
+			   end,
+			   "cooked",
+			   false)
 
 
-
-recwraptest =
-   make_transformer(function(ast)
-		       return generated_ast("rec wrapped", ast)
-		    end,
-		    nil,
-		    true)
-
-
-cooked_to_raw =
-   make_transformer(function(ast)
+syntax.cooked_to_raw =
+   syntax.make_transformer(function(ast)
 		       local _, body = next(ast)
 		       local sub = body.subs[1]
 		       local name, subbody = next(sub)
 		       assert((type(subbody)=="table") and next(subbody), "bad cooked node")
 		       if name=="sequence" then
-			  local s = generated_ast("sequence", sub, boundary_ast)
-			  return generated_ast("raw", s)
+			  local first = subbody.subs[1]
+			  local second = subbody.subs[2]
+			  local s1 = syntax.generated_ast("sequence", first, boundary_ast)
+			  local s2 = syntax.generated_ast("sequence", s1, second)
+			  return syntax.generated_ast("raw", s2)
+		       elseif name=="choice" then
+			  local first = subbody.subs[1]
+			  local second = subbody.subs[2]
+			  local c1 = syntax.generated_ast("sequence", first, boundary_ast)
+			  local c2 = syntax.generated_ast("sequence", second, boundary_ast)
+			  local new_choice = syntax.generated_ast("choice", c1, c2)
+			  return syntax.generated_ast("raw", new_choice)
 		       else
-			  -- other tests? choice?
-			  return generated_ast("raw", sub) -- we lose the original text/pos here
+			  return syntax.generated_ast("raw", table.unpack(body.subs))
 		       end
 		    end,
 		    "cooked",
 		    true)
 
-
---local compile = require "compile"
---local cinternals = compile.cinternals
-
--- Add to the Emacs command 'rosie':
-   -- switch to rosie buffer if it exists
-   -- memo of last rosie home dir used, if need to start rosie
-
--- Add a field to pattern record for "original_ast" where we can store the pre-transformation ast.
+syntax.top_level_transform = 
+   syntax.compose(syntax.cooked_to_raw, syntax.append_boundary, syntax.cook_if_needed)
 
 
---local boundary_ast = cinternals.ENV[common.boundary_identifier].ast
---local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+
 
 function _____cooked_to_raw(a)
    local name, pos, text, subs = common.decode_match(a)
@@ -297,6 +294,6 @@ function _____cooked_to_raw(a)
 end
 
 
-
+return syntax
 
 
