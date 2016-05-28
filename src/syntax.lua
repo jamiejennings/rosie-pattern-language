@@ -54,7 +54,7 @@ function syntax.validate(ast)
    return ast;
 end
 
-function syntax.generated_ast(node_name, ...)
+function syntax.generate(node_name, ...)
    -- ... are the subs
    return common.create_match(node_name, 0, "*generated*", ...)
 end
@@ -62,10 +62,12 @@ end
 function syntax.make_transformer(fcn, target_name, recursive)
    local function transform (ast, ...)
       local name, body = next(ast)
+      local rest = {...}
+      local mapped_transform = function(ast) return transform(ast, table.unpack(rest)); end
       local new = common.create_match(name,
 				      body.pos,
 				      body.text,
-				      table.unpack((recursive and map(transform, body.subs))
+				      table.unpack((recursive and map(mapped_transform, body.subs))
 						or body.subs))
       if (target_name==nil) or (name==target_name) then
 	 return syntax.validate(fcn(new, ...))
@@ -88,39 +90,25 @@ function syntax.compose(f1, ...)
    end
    return composition
 end
-	     
 
 ----------------------------------------------------------------------------------------
 
--- wraptest =
---    syntax.make_transformer(function(ast)
--- 		       return syntax.generated_ast("wrapped", ast)
--- 		    end,
--- 		    nil,
--- 		    false)
--- wrapchoicetest = 
---    syntax.make_transformer(function(ast)
--- 		       return syntax.generated_ast("choice wrapped", ast)
--- 		    end,
--- 		    "choice",
--- 		    true)
--- recwraptest =
---    syntax.make_transformer(function(ast)
--- 		       return syntax.generated_ast("rec wrapped", ast)
--- 		    end,
--- 		    nil,
--- 		    true)
-
 syntax.capture =
    syntax.make_transformer(function(ast)
-		       return syntax.generated_ast("capture", ast)
-		    end,
-		    nil,
-		    false)
+			      -- local name, body = next(ast)
+			      -- if (name=="cooked") then
+			      -- 	 return syntax.generate("cooked",
+			      -- 				     syntax.generate("capture", ast))
+			      -- else
+			      return syntax.generate("capture", ast)
+			   -- end
+			   end,
+			   nil,
+			   false)
 
 syntax.sequence =
    syntax.make_transformer(function(ast1, ast2)
-			      return syntax.generated_ast("sequence", ast1, ast2)
+			      return syntax.generate("sequence", ast1, ast2)
 			   end,
 			   nil,
 			   false)
@@ -131,16 +119,37 @@ syntax.cook_if_needed =
 		       local name, body = next(ast)
 		       if (name=="raw") or (name=="cooked") then
 			  return ast
+		       -- elseif (name=="capture") then
+		       -- 	  local name, body = next(body.subs[1])
+		       -- 	  if (name=="raw") or (name=="cooked") then
+		       -- 	     return ast
+		       -- 	  else
+		       -- 	     -- put the capture INSIDE the cooked group
+		       -- 	     return syntax.generate("cooked", ast)
+		       -- 	  end
 		       else
-			  return syntax.generated_ast("cooked", ast)
+			  return syntax.generate("cooked", ast)
 		       end
 		    end,
 		    nil,
 		    false)
 
+syntax.cook_rhs_if_needed =
+   syntax.make_transformer(function(ast)
+			      local name, body = next(ast)
+			      local lhs = body.subs[1]
+			      local new_rhs = syntax.cook_if_needed(body.subs[2])
+			      local b = syntax.generate("assignment_", lhs, new_rhs)
+			      b.assignment_.text = body.text
+			      b.assignment_.pos = body.pos
+			      return b
+			   end,
+			   "assignment_",
+			   false)
+
 syntax.append_boundary =
    syntax.make_transformer(function(ast)
-			      return syntax.generated_ast("sequence", ast, boundary_ast)
+			      return syntax.generate("sequence", ast, boundary_ast)
 			   end,
 			   "cooked",
 			   false)
@@ -153,158 +162,90 @@ syntax.cooked_to_raw =
 		       local name, subbody = next(sub)
 		       assert((type(subbody)=="table") and next(subbody), "bad cooked node")
 		       if name=="sequence" then
+			  -- Do we need to check to see if 'first' is a predicate (e.g. look ahead
+			  -- or negation)?  
 			  local first = subbody.subs[1]
 			  local second = subbody.subs[2]
-			  local s1 = syntax.generated_ast("sequence", first, boundary_ast)
-			  local s2 = syntax.generated_ast("sequence", s1, second)
-			  return syntax.generated_ast("raw", s2)
+			  local s1 = syntax.generate("sequence", first, boundary_ast)
+			  local s2 = syntax.generate("sequence", s1, second)
+			  return syntax.generate("raw", s2)
 		       elseif name=="choice" then
 			  local first = subbody.subs[1]
 			  local second = subbody.subs[2]
-			  local c1 = syntax.generated_ast("sequence", first, boundary_ast)
-			  local c2 = syntax.generated_ast("sequence", second, boundary_ast)
-			  local new_choice = syntax.generated_ast("choice", c1, c2)
-			  return syntax.generated_ast("raw", new_choice)
+			  local c1 = syntax.generate("sequence", first, boundary_ast)
+			  local c2 = syntax.generate("sequence", second, boundary_ast)
+			  local new_choice = syntax.generate("choice", c1, c2)
+			  return syntax.generate("raw", new_choice)
+		       elseif name=="capture" then
+			  return syntax.generate("sequence",
+						 sub, -- the capture
+						 boundary_ast)
 		       else
-			  return syntax.generated_ast("raw", table.unpack(body.subs))
+			  return body.subs[1]	    -- strip off the "cooked" node
 		       end
 		    end,
 		    "cooked",
 		    true)
 
+syntax.cooked_to_raw_capture =
+   syntax.make_transformer(function(ast)
+		       local _, body = next(ast)
+		       local sub = body.subs[1]
+		       local name, subbody = next(sub)
+		       assert((type(subbody)=="table") and next(subbody), "bad cooked node")
+		       if name=="sequence" then
+			  -- Do we need to check to see if 'first' is a predicate (e.g. look ahead
+			  -- or negation)?  
+			  local first = syntax.capture(subbody.subs[1])
+			  local second = syntax.capture(subbody.subs[2])
+			  local s1 = syntax.generate("sequence", first, boundary_ast)
+			  local s2 = syntax.generate("sequence", s1, second)
+			  return syntax.generate("raw", s2)
+		       elseif name=="choice" then
+			  local first = syntax.capture(subbody.subs[1])
+			  local second = syntax.capture(subbody.subs[2])
+			  local c1 = syntax.generate("sequence", first, boundary_ast)
+			  local c2 = syntax.generate("sequence", second, boundary_ast)
+			  local new_choice = syntax.generate("choice", c1, c2)
+			  return syntax.generate("raw", new_choice)
+		       elseif name=="quantified_exp" then
+			  -- do some involved stuff here
+			  -- which we will skip for now
+			  local s1 = syntax.generate("sequence", syntax.capture(sub), boundary_ast)
+			  return syntax.generate("raw", s1)
+		       -- elseif name=="capture" then
+		       -- 	  return syntax.generate("sequence",
+		       -- 				 sub, -- the capture
+						 -- boundary_ast)
+		       else
+			  return syntax.capture(body.subs[1])
+		       end
+		    end,
+		    "cooked",
+		    true)
+
+syntax.assignment_to_binding =
+   syntax.make_transformer(function(ast)
+			      local name, body = next(ast)
+			      local lhs = body.subs[1]
+			      local rhs = body.subs[2]
+			      local new_rhs = syntax.cook_if_needed(rhs)
+			      assert((next(new_rhs)=="cooked") or (next(new_rhs)=="raw"))
+			      new_rhs = syntax.cooked_to_raw_capture(new_rhs)
+			      local b = syntax.generate("binding", lhs, new_rhs)
+			      b.binding.text = body.text
+			      b.binding.pos = body.pos
+			      return b
+			   end,
+			   "assignment_",
+			   false)
+
 syntax.top_level_transform = 
    syntax.compose(syntax.cooked_to_raw, syntax.append_boundary, syntax.cook_if_needed)
 
 
-
-
-function _____cooked_to_raw(a)
-   local name, pos, text, subs = common.decode_match(a)
-   assert(name == "cooked")
-   assert(#subs == 1)
-   local exp = subs[1]
-   if next(exp)=="sequence" then
-      local name, pos, text, subs = common.decode_match(exp)
-      assert(#subs == 2)			    -- two branches in a sequence
-      local type1 = next(subs[1])
-      if type1=="negation" or type1=="lookat" then
-	 return a				    -- copy of?
-      else
-	 -- make the new tree here
-	 -- !@# What to do with pos and text fields???
-	 return common.create_match("raw",
-				    0,		    -- pos
-				    "",		    -- text
-				    common.create_match("sequence",
-							0,
-							"",
-							subs[1], -- copy of?
-							common.create_match("sequence",
-									    0,
-									    "",
-									    boundary_ast,   -- copy of?
-									    subs[2]	    -- copy of?
-									 )))
-      end
-   elseif next(exp)=="raw" then
-      return a					    -- copy of?
-   elseif next(exp)=="quantified_exp" then
-      local e = subs[1]
-      local q = subs[2]
-      local type1 = next(e)
-      if type1=="raw" or
-	 type1=="charset" or
-	 type1=="named_charset" or
-	 type1=="string" or
-	 type1=="identifier" then
-	 return macro_expand(a)			    -- !@#
-      else
-
-	 -- Compiling quantified expressions is subtle when Rosie is tokenizing, i.e. in "cooked" mode.
-	 --    With a naive approach, this expression will always fail to recognize more than one word:
-	 --                    (","? word)*
-	 --    The reason is that the repetition ends up looking for the token boundary TWICE when the ","?
-	 --    fails.  And (in the absence of punctuation) since the token boundary consumes all whitespace
-	 --    (and must consume something), the second attempt to match boundary will fail because the
-	 --    prior attempt consumed all the whitespace.
-	 -- 
-	 --    Here's the solution:
-	 --      Consider e*, e?, and e{0,m} where m>0.  Call these expressions qe.  When we
-	 --      have a sequence of qe followed by f, what we want to happen in cooked mode is
-	 --      this:
-	 --        match('qe f', "e f") -> match
-	 --        match('qe f', " f") -> no match, strictly speaking
-	 --        match('qe f', "f") -> match
-	 --      I.e. 'e* f' should work like '<e+ boundary f> / f'
-	 --           'e? f' should work like '<e boundary f> / f'
-	 --           'e{0,m} f' should work like '<e{1,m} boundary f> / f'
-	 --      And these can be rewritten as:
-	 --           '<e+ boundary f> / f'      -->  < <e+ boundary>? f >
-	 --           '<e boundary f> / f'       -->  < <e boundary>? f >
-	 --           '<e{1,m} boundary f> / f'  -->  < <e{1,m} boundary>? f >
-	 --      Conclusion: In cooked mode, quantified expressions like qe should compile as:
-	 --         e*     --> <e+ boundary>?
-	 --         e?     --> <e boundary>?
-	 --         e{0,m} --> <e{1,m} boundary>?
-	 --      Of course, the boundary is only necessary when qe appears in the context of a
-	 --      sequence, with terms coming after it.  Are there edge cases where it might be
-	 --      important to match qe without a boundary following it always?  Can't think of any (noting
-	 --      that the end of input is not an issue because boundary checks for that).
-
-	 local qname, qpos, qtext, qsubs = common.decode_match(q)
-
-	 e = macro_expand(e)
-
-	 if qname=="plus" then
-	    -- a => {e boundary}+
-	 elseif qname=="star" then
-	    -- a => {{e boundary}+}?                                 -- yep.
-	 elseif qname=="question" then
-	    -- a => {e boundary}?
-	 elseif qname=="repetition" then
-	    assert(type(qsubs[1])=="table")
-	    assert(qsubs[1], "not getting min clause in cooked_to_raw")
-	    local mname, mpos, mtext = common.decode_match(qsubs[1])
-	    assert(mname=="low")
-	    min = tonumber(mtext) or 0
-	    assert(qsubs[2], "not getting max clause in cooked_to_raw")
-	    local mname, mpos, mtext = common.decode_match(qsubs[2])
-	    max = tonumber(mtext)
-	    if (min < 0) or (max and (max < 0)) or (max and (max < min)) then
-	       explain_repetition_error(a, source)
-	    end
-	    if (not max) then
-	       if (min == 0) then
-		  -- same as star
-		  -- a => {{e boundary}+}?
-	       else
-		  -- min > 0 due to prior checking
-		  assert(min > 0)
-		  -- a => {e boundary}{min,}
-	       end
-	    else
-	       -- here's where things get interesting, because we must see at least min copies of e,
-	       -- and at most max.
-	       a = {}				    -- empty AST
-	       for i=1,min do
-		  -- a = {a {e boundary}}
-	       end -- for
-	       if (min-max) < 0 then
-		  -- a = {a {e boundary}{,max-min}
-	       else
-		  assert(min==max)
-	       end
-	       -- finally, here's the check for "and not looking at another copy of e"
-	       -- a = {a {! a}}
-	    end -- if not max
-	 else					    -- switch on quantifier type
-	    explain_unknown_quantifier(a, source)
-	 end -- switch on quantifier type
-      end -- whether we need to modify a or not
-
-      --   elseif next(exp)== ... then -- what else needs transformation?
-   end			       -- switch on type of a
-end
+-- syntax.assignment_transform = 
+--    syntax.compose(syntax.assignment_to_binding, syntax.cook_rhs_if_needed)
 
 
 return syntax
