@@ -752,7 +752,7 @@ function compile.compile_match_expression(source, env)
    local ast_history = {}
 
 --   if compile.parser==parse.core_parse_and_explain then
-   if false then
+   if true then
       local name = common.decode_match(ast)
       if name~="raw" then
 	 table.insert(ast_history, 1, ast)
