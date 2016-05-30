@@ -664,9 +664,9 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
       warn("Compiler: reassignment to identifier " .. iname)
    end
 
---   local rhs = cinternals.cook_if_needed(subs[2])
---   local rhs = syntax.cook_if_needed(subs[2])
-   local rhs = syntax.cooked_to_raw(syntax.cook_if_needed(subs[2]))
+  local rhs = cinternals.cook_if_needed(subs[2])
+--  local rhs = syntax.cook_if_needed(subs[2])
+--   local rhs = syntax.cooked_to_raw(syntax.cook_if_needed(subs[2]))
 
    local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
    -- N.B. If the RHS of the expression is a CHOICE node, and this is NOT AN ALIAS then the value
