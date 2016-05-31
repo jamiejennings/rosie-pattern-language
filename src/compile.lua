@@ -287,7 +287,7 @@ end
 function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in process_quantified_exp")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name=="quantified_exp")
+   assert(name=="quantified_exp" or name=="cooked_quantified_exp")
    -- Regarding debugging... the quantified exp a[1] fails as soon as:
    -- e^0 == e* can never fail, because it can match the empty string.
    -- e^1 == e+ fails when as soon as the initial attempt to match e fails.
@@ -379,6 +379,12 @@ end
 function cinternals.compile_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_quantified_exp")
    local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, raw, gmr, source, env)
+   return pattern{name=qname, peg=qpeg};
+end
+
+function cinternals.compile_cooked_quantified_exp(a, raw, gmr, source, env)
+   assert(a, "did not get ast in compile_cooked_quantified_exp")
+   local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, false, gmr, source, env)
    return pattern{name=qname, peg=qpeg};
 end
 
@@ -624,6 +630,7 @@ cinternals.compile_exp_functions = {"compile_exp";
 			       named_charset=cinternals.compile_named_charset;
 			       charset=cinternals.compile_charset;
 			       quantified_exp=cinternals.compile_quantified_exp;
+			       cooked_quantified_exp=cinternals.compile_cooked_quantified_exp;
 			       syntax_error=cinternals.compile_syntax_error;
 			    }
 
@@ -683,11 +690,42 @@ function cinternals.compile_assignment(a, raw, gmr, source, env)
    env[iname] = pat
 end
 
+function cinternals.compile_binding(a, raw, gmr, source, env)
+   assert(a, "did not get ast in compile_binding")
+   local name, pos, text, subs = common.decode_match(a)
+   local lhs, rhs = subs[1], subs[2]
+   assert(next(lhs)=="identifier")
+   assert(type(rhs)=="table")			    -- the right side of the assignment
+   assert(not subs[3])
+   assert(type(source)=="string")
+   local _, ipos, iname = common.decode_match(lhs)
+   if env[iname] and not QUIET then
+      warn("Compiler: reassignment to identifier " .. iname)
+   end
+   local rhs_name, rhs_body = next(rhs)
+   local raw_exp = (rhs_name=="raw_exp")
+   if raw_exp then
+      rhs = rhs_body.subs[1]
+      rhs_name, rhs_body = next(rhs)
+   end
+   local pat = cinternals.compile_exp(rhs, true, gmr, source, env)
+   if next(rhs)=="capture" then
+      pat.alias=false
+   else
+      pat.alias=true
+   end
+   pat.ast = rhs;
+   pat.raw = raw_exp;
+   env[iname] = pat
+end
+   
+
 function cinternals.compile_ast(ast, raw, gmr, source, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
 		      assignment_=cinternals.compile_assignment;
 		      alias_=cinternals.compile_assignment;
+		      binding=cinternals.compile_binding;
 		      grammar_=cinternals.compile_grammar;
 		      exp=cinternals.compile_exp;
 		      default=cinternals.compile_exp;

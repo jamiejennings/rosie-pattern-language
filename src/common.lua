@@ -237,6 +237,7 @@ pattern =
       ast=false;			 -- ast that generated this pattern, for pattern debugging
       ast_history={};			 -- history of each transformation
       push_ast=push_ast;
+      raw=false;
 --      source=unspecified;		 -- source (filename, maybe line also?)
 --      uuid=unspecified;
   },

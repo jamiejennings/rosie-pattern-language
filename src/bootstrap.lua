@@ -12,6 +12,7 @@ package.path = ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 local parse = require "parse"
+local syntax = require "syntax"
 local compile = require "compile"
 local common = require "common"
 require "engine"
@@ -39,7 +40,7 @@ local function rosie_parse(str, pos, tokens)
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   return astlist, errlist
+   return map(syntax.to_binding, astlist), errlist
 end
 
 function parse_and_explain(source)

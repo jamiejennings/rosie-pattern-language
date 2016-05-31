@@ -242,10 +242,9 @@ syntax.cooked_to_raw =
    syntax.make_transformer(function(ast)
 			      local name, body = next(ast)
 			      if name=="raw" then
-				 ast = syntax.raw(ast)
-				 -- re-wrap the top level with "raw" so that we know at top level
+				 -- re-wrap the top level with "raw_exp" so that we know at top level
 				 -- not to append a boundary
-				 return syntax.generate("raw", ast)
+				 return syntax.generate("raw_exp", syntax.raw(ast))
 			      else
 				 return syntax.cook(ast)
 			      end
@@ -258,9 +257,17 @@ syntax.to_binding =
 			      assert((name=="assignment_") or (name=="alias_"))
 			      local lhs = body.subs[1]
 			      local rhs = body.subs[2]
-			      local rhs_name = next(rhs)
+			      local original_rhs_name = next(rhs)
 			      if (name=="assignment_") then rhs = syntax.capture(rhs); end
-			      local b = syntax.generate("binding", lhs, syntax.cooked_to_raw(rhs))
+			      local b
+			      if original_rhs_name=="raw" then
+				 -- wrap with "raw_exp" so that we know at top level not to append a boundary
+				 b = syntax.generate("binding",
+						     lhs,
+						     syntax.generate("raw_exp", syntax.raw(rhs)))
+			      else
+				 b = syntax.generate("binding", lhs, syntax.cook(rhs))
+			      end
 			      b.binding.text = body.text
 			      b.binding.pos = body.pos
 			      return b
@@ -275,39 +282,10 @@ syntax.to_binding =
 --   Else we don't have an identifier, so do this:
 --     Transform the exp as we would the rhs of an assignment (which includes capturing a value).
 --     Compile the exp to a pattern.
---     Proceed as above based on whether the pattern is marked "raw" or "cooked".
+--     Proceed as above based on whether the pattern is marked "raw" or not.
 
 syntax.top_level_transform =
    syntax.compose(syntax.cooked_to_raw, syntax.capture)
-
-   -- syntax.make_transformer(function(ast)
-   -- 			      local name, body = next(ast)
-   -- 			      local b
-   -- 			      if name=="binding" then
-   -- 				 b = ast
-   -- 			      else
-   -- 				 local a = syntax.generate("assignment_",
-   -- 							   common.create_match("identifier",
-   -- 									       0,
-   -- 									       "*"),
-   -- 							   ast)
-   -- 				 a.assignment_.text = body.text
-   -- 				 a.assignment_.pos = body.pos
-   -- 				 b = syntax.to_binding(a)
-   -- 			      end
-   -- 			      local name, body = next(b)
-   -- 			      local rhs_name, rhs_body = next(body.subs[2])
-   -- 			      if rhs_name=="raw" then
-   -- 				 body.subs[2] = rhs_body.subs[1] -- strip off "raw"
-   -- 			      else
-   -- 				 body.subs[2] = syntax.append_boundary(body.subs[2])
-   -- 			      end
-   -- 			      return b
-   -- 			   end,
-   -- 			   nil,
-   -- 			   false)
-
-
 
 ---------------------------------------------------------------------------------------------------
 -- Testing
@@ -348,16 +326,19 @@ function syntax.test()
 	 local b = syntax.to_binding(v)
 	 local rhs = b.binding.subs[2]
 	 io.write(parse.reveal_ast(v), "\n===========>  ", parse.reveal_ast(b), "\n")
-	 local v_name, v_body = next(v)
-	 local original_rhs = v_body.subs[2]
-	 local notraw = (next(original_rhs)~="raw")
+	 local rhs_name, rhs_body = next(rhs)
+	 local raw = (rhs_name=="raw_exp")
+	 if raw then
+	    rhs = rhs_body.subs[1]
+	    rhs_name, rhs_body = next(rhs)
+	 end
 	 local top_level
-	 if next(rhs)=="capture" then 		    -- resulted from assignment
+	 if rhs_name=="capture" then 		    -- resulted from assignment
 	    top_level = parse.reveal_ast(rhs)
 	 else					    -- was an alias or other
 	    top_level = parse.reveal_ast(syntax.top_level_transform(rhs))
 	 end
-	 if notraw then
+	 if not raw then
 	    top_level = top_level .. " *BOUNDARY* "
 	 end
 	 io.write("top level =>  ", top_level, "\n")

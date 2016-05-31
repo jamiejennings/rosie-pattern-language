@@ -258,15 +258,17 @@ end
 
 local function reveal_sequence(a)
    assert(a, "did not get ast in reveal_sequence")
-   local function rs(a, str)
+   local function rs(a)
       local name, pos, text, subs = common.decode_match(a)
       local e1, e2 = subs[1], subs[2]
-      local str2
+      local str1, str2
+      if next(e1)=="sequence" then str1 = rs(e1)
+      else str1 = parse.reveal_exp(e1); end
       if next(e2)=="sequence" then str2 = rs(e2)
       else str2 = parse.reveal_exp(e2); end
-      return parse.reveal_exp(e1) .. " " .. str2
+      return str1 .. " " .. str2
    end
-   return "<" .. rs(a, "") .. ">"
+   return "< " .. rs(a) .. " >"
 end
 
 local function reveal_string(a)
@@ -365,7 +367,7 @@ end
 local function reveal_group(a)
    assert(a, "did not get ast in reveal_group")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name=="raw" or name=="cooked")
+   assert(name=="raw" or name=="cooked" or name=="raw_exp")
    local exps = nil
    for i = 1, #subs do
       local item = subs[i]
@@ -374,9 +376,7 @@ local function reveal_group(a)
       end
    end						    -- for each item in group
    if name=="cooked" then return "(" .. exps .. ")";
-   elseif name=="raw" then return "{" .. exps .. "}";
-   else
-      error("Reveal error: Unknown group type: ".. name)
+   else return "{" .. exps .. "}";
    end
 end
 
@@ -412,6 +412,7 @@ parse.reveal_exp = function(a)
 		      capture=reveal_capture;
 		      group=reveal_group;
 		      raw=reveal_group;
+		      raw_exp=reveal_group;
 		      cooked=reveal_group;
 		      choice=reveal_choice;
 		      sequence=reveal_sequence;
