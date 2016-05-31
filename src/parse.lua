@@ -236,7 +236,6 @@ local function reveal_alias(a)
    assert(a, "did not get ast in reveal_alias")
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="alias_")
-   assert(type(1)=="number")
    assert(next(subs[1])=="identifier")
    local fmt = "alias %s = %s"
    local id, e = subs[1], subs[2]
@@ -245,11 +244,29 @@ local function reveal_alias(a)
 			parse.reveal_exp(e))
 end
 
+local function reveal_binding(a)
+   assert(a, "did not get ast in reveal_binding")
+   local name, pos, text, subs = common.decode_match(a)
+   assert(name=="binding")
+   assert(next(subs[1])=="identifier")
+   local fmt = "%s = %s"
+   local id, e = subs[1], subs[2]
+   return string.format(fmt,
+			parse.reveal_exp(id),
+			parse.reveal_exp(e))
+end
+
 local function reveal_sequence(a)
    assert(a, "did not get ast in reveal_sequence")
-   local name, pos, text, subs = common.decode_match(a)
-   local e1, e2 = subs[1], subs[2]
-   return parse.reveal_exp(e1) .. " " .. parse.reveal_exp(e2)
+   local function rs(a, str)
+      local name, pos, text, subs = common.decode_match(a)
+      local e1, e2 = subs[1], subs[2]
+      local str2
+      if next(e2)=="sequence" then str2 = rs(e2)
+      else str2 = parse.reveal_exp(e2); end
+      return parse.reveal_exp(e1) .. " " .. str2
+   end
+   return "<" .. rs(a, "") .. ">"
 end
 
 local function reveal_string(a)
@@ -287,11 +304,7 @@ local function reveal_quantified_exp(a)
    assert(q, "did not get quantifier exp in reveal_quantified_exp")
    local qname, qpos, printable_q = common.decode_match(q)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
-   if qname=="repetition" then
-      return parse.reveal_exp(e) .. reveal_repetition(q)
-   else
-      return parse.reveal_exp(e) .. printable_q
-   end
+   return "<" .. parse.reveal_exp(e) .. ">" .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
 end
 
 local function reveal_named_charset(a)
@@ -343,6 +356,12 @@ local function reveal_choice(a)
    return parse.reveal_exp(subs[1]) .. " / " .. parse.reveal_exp(subs[2]);
 end
 
+local function reveal_capture(a)
+   assert(a, "did not get ast in reveal_capture")
+   local name, pos, text, subs = common.decode_match(a)
+   return "CAP(" .. parse.reveal_exp(subs[1]) .. ")"
+end
+
 local function reveal_group(a)
    assert(a, "did not get ast in reveal_group")
    local name, pos, text, subs = common.decode_match(a)
@@ -390,6 +409,7 @@ end
 
 parse.reveal_exp = function(a)
    local functions = {"reveal_exp";
+		      capture=reveal_capture;
 		      group=reveal_group;
 		      raw=reveal_group;
 		      cooked=reveal_group;
@@ -402,6 +422,7 @@ parse.reveal_exp = function(a)
 		      named_charset=reveal_named_charset;
 		      charset=reveal_charset;
 		      quantified_exp=reveal_quantified_exp;
+		      cooked_quantified_exp=reveal_quantified_exp; -- !@#
 		      syntax_error=parse.reveal_syntax_error;
 		   }
    return common.walk_ast(a, functions);
@@ -411,6 +432,7 @@ function parse.reveal_ast(ast)
    assert(type(ast)=="table", "Reveal: first argument not an ast: "..tostring(ast))
    assert(type(next(ast))=="string", "Reveal: first argument not an ast: "..tostring(ast))
    local functions = {"reveal_ast";
+		      binding=reveal_binding;
 		      assignment_=reveal_assignment;
 		      alias_=reveal_alias;
 		      grammar_=reveal_grammar;

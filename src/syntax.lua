@@ -106,38 +106,34 @@ end
 
 syntax.capture =
    syntax.make_transformer(function(ast)
-			      local name, body = next(ast)
-			      if (name=="cooked") or (name=="raw") then
-				 -- put the capture inside the group instead of outside
-				 local inside = body.subs[1]
-			      	 return syntax.generate(name, syntax.generate("capture", inside))
-			      else
-				 return syntax.generate("capture", ast)
-			      end
+			      return syntax.generate("capture", ast)
 			   end,
 			   nil,
 			   false)
 
-syntax.capture_rhs =
-   syntax.make_transformer(function(ast)
-			      local name, body = next(ast)
-			      local lhs = body.subs[1]
-			      local new_rhs = syntax.capture(body.subs[2])
-			      local b = syntax.generate("assignment_", lhs, new_rhs)
-			      b.assignment_.text = body.text
-			      b.assignment_.pos = body.pos
-			      return b
-			   end,
-			   "assignment_",
-			   false)
-
-syntax.sequence =
-   syntax.make_transformer(function(ast1, ast2)
-			      return syntax.generate("sequence", ast1, ast2)
-			   end,
-			   nil,
-			   false)
-
+---------------------------------------------------------------------------------------------------
+if false then
+   syntax.capture_assignment_rhs =
+      syntax.make_transformer(function(ast)
+				 local name, body = next(ast)
+				 local lhs = body.subs[1]
+				 local new_rhs = syntax.capture(body.subs[2])
+				 local b = syntax.generate("assignment_", lhs, new_rhs)
+				 b.assignment_.text = body.text
+				 b.assignment_.pos = body.pos
+				 return b
+			      end,
+			      "assignment_",
+			      false)
+   
+   syntax.sequence =
+      syntax.make_transformer(function(ast1, ast2)
+				 return syntax.generate("sequence", ast1, ast2)
+			      end,
+			      nil,
+			      false)
+end -- if false
+---------------------------------------------------------------------------------------------------
 
 syntax.append_boundary =
    syntax.make_transformer(function(ast)
@@ -162,33 +158,52 @@ syntax.append_boundary_to_rhs =
 syntax.raw =
    syntax.make_transformer(function(ast)
 			      local name, body = next(ast)
+			      --print("entering syntax.raw", name)
 			      if name=="cooked" then
-				 return syntax.cook(ast)
+				 return syntax.cook(body.subs[1])
 			      elseif name=="raw" then
-				 return body.subs[1] -- strip off the "raw" group
+				 return syntax.raw(body.subs[1]) -- strip off the "raw" group
 			      else
-				 return ast
+				 local new = syntax.generate(name, table.unpack(map(syntax.raw, body.subs)))
+				 new[name].text = body.text
+				 new[name].pos = body.pos
+				 return new
 			      end
 			   end,
-			   nil,
-			   true)
+			   nil,			    -- match all nodes
+			   false)		    -- NOT recursive
+
+function predicate_p(ast)
+   local name, body = next(ast)
+   return ((name=="lookat") or
+	(name=="negation"))
+end
 
 syntax.cook =
    syntax.make_transformer(function(ast)
 			      local name, body = next(ast)
-			      if name=="sequence" then
-				 -- Do we need to check to see if 'first' is a predicate (e.g. look ahead
-				 -- or negation)?  
+			      --print("entering syntax.cook", name)
+			      if name=="raw" then
+				 local raw_exp = syntax.raw(body.subs[1])
+				 local kind = next(raw_exp)
+				 raw_exp[kind].text = body.text
+				 raw_exp[kind].pos = body.pos
+				 return raw_exp
+			      elseif name=="cooked" then
+				 return syntax.cook(body.subs[1]) -- strip off "cooked" node
+			      elseif name=="sequence" then
 				 local first = body.subs[1]
 				 local second = body.subs[2]
-				 local s1 = syntax.generate("sequence", first, boundary_ast)
-				 local s2 = syntax.generate("sequence", s1, second)
+				 -- If the first sequent is a predicate, then no boundary is added
+				 if predicate_p(first) then return ast; end
+				 local s1 = syntax.generate("sequence", syntax.cook(first), boundary_ast)
+				 local s2 = syntax.generate("sequence", s1, syntax.cook(second))
 				 return s2
 			      elseif name=="choice" then
 				 local first = body.subs[1]
 				 local second = body.subs[2]
-				 local c1 = syntax.generate("sequence", first, boundary_ast)
-				 local c2 = syntax.generate("sequence", second, boundary_ast)
+				 local c1 = syntax.generate("sequence", syntax.cook(first), boundary_ast)
+				 local c2 = syntax.generate("sequence", syntax.cook(second), boundary_ast)
 				 local new_choice = syntax.generate("choice", c1, c2)
 				 return new_choice
 			      elseif name=="quantified_exp" then
@@ -199,20 +214,15 @@ syntax.cook =
 				 s1[temp_name].text = body.text
 				 s1[temp_name].pos = body.pos
 				 return s1
-			      elseif name=="cooked" then
-				 return body.subs[1] -- strip out the cooked
-			      elseif name=="raw" then
-				 local raw_exp = syntax.raw(body.subs[1])
-				 local kind = next(raw_exp)
-				 raw_exp[kind].text = body.text
-				 raw_exp[kind].pos = body.pos
-				 return raw_exp
 			      else
-				 return ast
+				 local new = syntax.generate(name, table.unpack(map(syntax.cook, body.subs)))
+				 new[name].text = body.text
+				 new[name].pos = body.pos
+				 return new
 			      end
 			   end,
-			   nil,			    -- match any ast node
-			   true)		    -- recursive
+			   nil,			    -- match all nodes
+			   false)		    -- NOT recursive
 
 syntax.cook_rhs =
    syntax.make_transformer(function(ast)
@@ -240,7 +250,7 @@ syntax.to_binding =
 			      if rhs_name=="raw" then
 				 b = syntax.raw(b)
 			      else
-				 b = syntax.append_boundary_to_rhs(syntax.cook(b))
+				 b = syntax.cook(b)
 			      end
 			      b.binding.text = body.text
 			      b.binding.pos = body.pos
@@ -248,6 +258,9 @@ syntax.to_binding =
 			   end,
 			   {"assignment_", "alias_"},
 			   false)
+
+-- This is applied to expressions at top level
+syntax.top_level_transform = syntax.append_boundary
 
 ---------------------------------------------------------------------------------------------------
 -- Testing
@@ -265,19 +278,45 @@ syntax.assignment_to_alias =
 			   "assignment_",
 			   false)
 
+parse = require "parse" 
 function syntax.test()
    print("Re-loading syntax package...") 
    package.loaded.syntax = false; syntax = require "syntax"
+   print("Assigning a bunch of globals for testing...")
+   -- globals to make it easier to continue testing and debugging manually
    a = compile.parser("int = [:digit:]+")[1]
    b = compile.parser("int = ([:digit:]+)")[1]
    c = compile.parser("int = {[:digit:]+}")[1]
    d = compile.parser("int = {([:digit:] [:digit:])}")[1]
    e = compile.parser("int = ([:digit:] [:digit:])")[1]
-   print("Testing assignment_to_binding on 'a'...")
-   table.print(syntax.to_binding(a))
-   print("Testing alias_to_binding on alias version of 'a'...")
    aa = syntax.assignment_to_alias(a)
-   table.print(syntax.to_binding(aa))
+   bb = syntax.assignment_to_alias(b)
+   cc = syntax.assignment_to_alias(c)
+   dd = syntax.assignment_to_alias(d)
+   ee = syntax.assignment_to_alias(e)
+   local function run(label, lst)
+      print(label)
+      for _,v in ipairs(lst) do
+	 print()
+	 local b = syntax.to_binding(v)
+	 local rhs = b.binding.subs[2]
+	 io.write(parse.reveal_ast(v), "  ===>  ", parse.reveal_ast(b), "\n")
+	 io.write("  at top level: ",
+		  parse.reveal_ast(syntax.top_level_transform(rhs)),
+		  "\n")
+      end
+      print()
+   end
+   run("Assignment tests:", {a, b, c, d, e})
+   run("Alias tests:", {aa, bb, cc, dd, ee})
+
+   local f = io.open(common.compute_full_path("rpl/common.rpl"))
+   local s = f:read("a")
+   f:close()
+   p = parse.parse(s)
+   cmi = p[#p]
+   -- run an entire file
+   run("FILE common.rpl:", p)
 end
 
 return syntax
