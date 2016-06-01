@@ -74,6 +74,10 @@ local repetition = token("repetition",
 -- Statements and Expressions
 ----------------------------------------------------------------------------------------
 
+local negation = token_capture("negation", P"!")
+local lookat = token_capture("lookat", P"@")
+local predicate_symbol = negation + lookat
+
 local quantifier = (star + question + plus + repetition)
 
 local end_token = P"end" * #(locale.space + P(-1))
@@ -95,13 +99,16 @@ local expression = P{"expression";
 				      + V"raw"
 				      + V"cooked"
 				      + character_set
-				      + V"lookat"
-				      + V"negation"));
+				      -- + V"lookat"
+				      -- + V"negation"
+				   + V"predicate"
+			     ));
 	       quantified_exp = token("quantified_exp", (V"plain_exp" * ignore * quantifier));
 	       cooked = token("cooked", P"(" * ignore * V"expression"^1 * ignore * P")");
 	       raw = token("raw", P"{" * ignore * V"expression"^1 * ignore * P"}");
-	       negation = token("negation", ignore * P"!" * (V"quantified_exp" + V"plain_exp"));
-	       lookat = token("lookat", ignore * P"@" * (V"quantified_exp" + V"plain_exp"));
+	       predicate = token("predicate", ignore * predicate_symbol * (V"quantified_exp" + V"plain_exp"));
+--	       negation = token("negation", ignore * P"!" * (V"quantified_exp" + V"plain_exp"));
+--	       lookat = token("lookat", ignore * P"@" * (V"quantified_exp" + V"plain_exp"));
 }
 
 local statement = P{"start";
@@ -173,8 +180,9 @@ function parse.syntax_error_check(ast)
 		      string=none_found;
 		      character=none_found;
 		      sequence=check_two_branches;
-		      negation=check_one_branch;
-		      lookat=check_one_branch;
+		      predicate=check_two_branches;
+		      negation=none_found;  -- was check_one_branch before changing to predicate;
+		      lookat=none_found; -- was check_one_branch;
 		      named_charset=none_found;
 		      charset=check_one_branch;
 		      charlist=check_many_branches;
@@ -200,6 +208,15 @@ local function reveal_identifier(a)
    assert(a, "did not get ast in reveal_identifier")
    local name, pos, text = common.decode_match(a)
    return text
+end
+
+local function reveal_ref(a)
+   assert(a, "did not get ast in reveal_ref")
+   local name, pos, text = common.decode_match(a)
+   if name=="cref" then return "CREF(" .. text .. ")"
+   elseif name=="rref" then return "RREF(" .. text .. ")"
+   else error("Unknown ref type in reveal_ref: " .. tostring(name))
+   end
 end
 
 local function reveal_assignment(a)
@@ -277,16 +294,24 @@ local function reveal_string(a)
    return string.format('%q', text)
 end
 
-local function reveal_negation(a)
-   assert(a, "did not get ast in reveal_negation")
-   local name, pos, text, subs = common.decode_match(a)
-   return "!"..parse.reveal_exp(subs[1])
-end
+-- local function reveal_negation(a)
+--    assert(a, "did not get ast in reveal_negation")
+--    local name, pos, text, subs = common.decode_match(a)
+--    return "!"..parse.reveal_exp(subs[1])
+-- end
 
-local function reveal_lookat(a)
-   assert(a, "did not get ast in reveal_lookat")
+-- local function reveal_lookat(a)
+--    assert(a, "did not get ast in reveal_lookat")
+--    local name, pos, text, subs = common.decode_match(a)
+--    return "@"..parse.reveal_exp(subs[1])
+-- end
+
+local function reveal_predicate(a)
+   assert(a, "did not get ast in reveal_predicate")
    local name, pos, text, subs = common.decode_match(a)
-   return "@"..parse.reveal_exp(subs[1])
+   local pred_type = next(subs[1])
+   local exp = subs[2]
+   return pred_type .. "(" .. parse.reveal_exp(subs[2]) .. ")"
 end
 
 local function reveal_repetition(a)
@@ -410,14 +435,17 @@ end
 parse.reveal_exp = function(a)
    local functions = {"reveal_exp";
 		      capture=reveal_capture;
+		      cref=reveal_ref;
+		      rref=reveal_ref;
+		      predicate=reveal_predicate;
 		      group=reveal_group;
 		      raw=reveal_group;
 		      raw_exp=reveal_group;
 		      cooked=reveal_group;
 		      choice=reveal_choice;
 		      sequence=reveal_sequence;
-		      negation=reveal_negation;
-		      lookat=reveal_lookat;
+		      --negation=reveal_negation;
+		      --lookat=reveal_lookat;
 		      identifier = reveal_identifier;
 		      string=reveal_string;
 		      named_charset=reveal_named_charset;

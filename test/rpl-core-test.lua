@@ -173,6 +173,24 @@ heading("Look-ahead")
 ----------------------------------------------------------------------------------------
 heading("Negative look-ahead")
 ----------------------------------------------------------------------------------------
+check_match('!a', "a", false)
+check_match('!a', "x", true, 1, "")
+check_match('!a', "xyz", true, 3, "")
+check_match('!{a}', "xyz", true, 3, "")
+check_match('!(a)', "xyz", true, 3, "")
+check_match('(!a)', "xyz", true, 3, "")
+check_match('(!{a})', "xyz", true, 3, "")
+check_match('(!(a))', "xyz", true, 3, "")
+
+check_match('!a', "axyz", false)
+check_match('(!a)', "axyz", false, 4, "")
+check_match('{!a}', "axyz", false, 4, "")
+check_match('!(a)', "axyz", false, 4, "")	    -- ???
+check_match('(!(a))', "axyz", false, 4, "")	    -- ???
+check_match('!{a~}', "axyz", true, 4, "")
+check_match('!(a~)', "axyz", true, 4, "")	    -- ???
+
+
 
 ----------------------------------------------------------------------------------------
 heading("Precedence and right association")

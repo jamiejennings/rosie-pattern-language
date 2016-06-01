@@ -413,22 +413,50 @@ function cinternals.compile_identifier(a, raw, gmr, source, env)
 		     ast=val.ast}
    end
 end
-      
-function cinternals.compile_negation(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_negation")
-   local name, pos, text, subs = common.decode_match(a)
-   local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
-   peg = (- peg)
-   return pattern{name=name, peg=peg}
+
+function cinternals.compile_ref(a, raw, gmr, source, env)
+   assert(a, "did not get ast in compile_ref")
+   local reftype, pos, name = common.decode_match(a)
+   local pat = env[name]
+   if (not pat) then explain_undefined_identifier(a, source); end -- throw
+   assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
+   if (reftype=="cref") and (pat.cpeg) then
+      return pattern{name=name, peg=pat.cpeg, ast=val.ast}
+   else
+      return pattern{name=name, peg=pat.peg, ast=val.ast}
+   end
 end
 
-function cinternals.compile_lookat(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_lookat")
+function cinternals.compile_predicate(a, raw, gmr, source, env)
+   assert(a, "did not get ast in compile_predicate")
    local name, pos, text, subs = common.decode_match(a)
-   local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
-   peg = (# peg)
-   return pattern{name=name, peg=peg}
+   local peg = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
+   local pred_clause = subs[1]
+   local pred_name = next(pred_clause)
+   if pred_name=="negation" then peg = (- peg)
+   elseif pred_name=="lookat" then peg = (# peg)
+   else error("Internal compiler error: unknown predicate type: " .. tostring(pred_name))
+   end
+   return pattern{name=pred, peg=peg, ast=a}
 end
+
+-- function cinternals.compile_negation(a, raw, gmr, source, env)
+--    print("INSIDE COMPILE_NEGATION: ", parse.reveal_ast(a))
+--    assert(a, "did not get ast in compile_negation")
+--    local name, pos, text, subs = common.decode_match(a)
+--    local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
+--    peg = (- peg)
+--    return pattern{name=name, peg=peg}
+-- end
+
+-- function cinternals.compile_lookat(a, raw, gmr, source, env)
+--    print("INSIDE COMPILE_LOOKAT: ", parse.reveal_ast(a))
+--    assert(a, "did not get ast in compile_lookat")
+--    local name, pos, text, subs = common.decode_match(a)
+--    local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
+--    peg = (# peg)
+--    return pattern{name=name, peg=peg}
+-- end
 
 function cinternals.compile_sequence(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_sequence")
@@ -439,7 +467,8 @@ function cinternals.compile_sequence(a, raw, gmr, source, env)
    peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
    if raw or
-      next(subs[1])=="negation" or
+      next(subs[1])=="predicate" or
+      next(subs[1])=="negation" or 
       next(subs[1])=="lookat"
    then
       return pattern{name=name, peg=peg1 * peg2}
@@ -494,7 +523,10 @@ function cinternals.compile_choice(a, raw, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    local peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    local peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
-   return pattern{name=name, peg=(peg1+peg2), alternates = { C(peg1), C(peg2) }}
+   return pattern{name=name,
+		  peg=(peg1+peg2),
+--		  cpeg=C(peg1)*...
+		  alternates = { C(peg1), C(peg2) }}
 end
 
 function cinternals.wrap_peg(pat, name, raw)
@@ -605,20 +637,33 @@ end
 
 function cinternals.compile_capture(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_capture")
+   print("compile_capture: " .. parse.reveal_ast(a))
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="capture")
    assert(subs and subs[1] and (not subs[2]), "wrong number of subs in capture ast")
-   assert(compile.expression_p(subs[1]),
+   local captured_exp = subs[1]
+   assert(compile.expression_p(captured_exp),
 	  "compile_capture called with an ast that is not an expression: " .. (next(subs[1])))
-   local pat = cinternals.compile_exp(subs[1], raw, gmr, source, env)
-   local name, pos, text, subs = common.decode_match(subs[1])
+   local pat = cinternals.compile_exp(captured_exp, false, gmr, source, env)
+   local name, pos, text, subs = common.decode_match(captured_exp)
    pat.name = name
-   pat.peg = C(pat.peg)
+   if name=="choice" then
+      print("compile_capture: compiling choice sub-exp:" .. parse.reveal_ast(captured_exp))
+      local c1, c2 = subs[1], subs[2]
+      local pat1 = cinternals.compile_exp(c1, false, gmr, source, env)
+      local pat2 = cinternals.compile_exp(c2, false, gmr, source, env)
+      pat.peg = C(pat1.peg) + C(pat2.peg)
+   else
+      pat.peg = C(pat.peg)
+   end
    return pat
 end
 
 cinternals.compile_exp_functions = {"compile_exp";
-			       capture=cinternals.compile_capture;	    
+				    capture=cinternals.compile_capture;	    
+				    cref=cinternals.compile_ref;
+				    rref=cinternals.compile_ref;
+				    predicate=cinternals.compile_predicate;
 			       raw=cinternals.compile_group;
 			       cooked=cinternals.compile_group;
 			       choice=cinternals.compile_choice;
@@ -653,7 +698,12 @@ function cinternals.cook_if_needed(a)
 end
 
 local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
-local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
+local looking_at_boundary_ast = common.create_match("predicate",
+						    0,
+						    "@/generated/",
+						    common.create_match("lookat", 0, "@/generated/"),
+						    boundary_ast)
+
 function cinternals.append_boundary(a)
    return common.create_match("sequence", 1, "/generated/", a, looking_at_boundary_ast)
 end
@@ -709,7 +759,8 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
       rhs_name, rhs_body = next(rhs)
    end
    local pat = cinternals.compile_exp(rhs, true, gmr, source, env)
-   if next(rhs)=="capture" then
+   --   if syntax.contains_capture(rhs) then
+   if rhs_name=="capture" then
       pat.alias=false
    else
       pat.alias=true
@@ -796,11 +847,16 @@ function compile.compile_match_expression(source, env)
 	 table.insert(ast_history, 1, ast)
 	 ast = cinternals.append_boundary(ast)
       end
-      table.insert(ast_history, 1, ast)
-      ast = cinternals.cook_if_needed(ast)
+      if not syntax.contains_capture(ast) then
+	 table.insert(ast_history, 1, ast)
+	 ast = cinternals.cook_if_needed(ast)
+      end
    else
       table.insert(ast_history, 1, ast)
-      ast = syntax.top_level_transform(ast)
+--      ast = syntax.top_level_transform(ast)
+      if not syntax.contains_capture(ast) then
+	 ast = syntax.capture(ast)
+      end
    end
 
    local c = coroutine.create(cinternals.compile_exp)

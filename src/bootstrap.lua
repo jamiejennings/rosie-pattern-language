@@ -40,7 +40,8 @@ local function rosie_parse(str, pos, tokens)
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   return map(syntax.to_binding, astlist), errlist
+      return astlist, errlist
+--      return map(syntax.to_binding, astlist), errlist
 end
 
 function parse_and_explain(source)
@@ -86,7 +87,10 @@ function bootstrap()
    ROSIE_ENGINE.pattern = success;
    ROSIE_ENGINE.encoder = "null/bootstrap";
    ROSIE_ENGINE.encoder_function = function(m) return m; end;
-   compile.parser = parse_and_explain;
+   -- skip the assignment below to leave the original parser in place
+   if true then
+      compile.parser = parse_and_explain;
+   end
    BOOTSTRAP_COMPLETE = true
 end
 

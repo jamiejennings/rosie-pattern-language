@@ -11,7 +11,14 @@ require "list"
 syntax = {}
 
 local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
-local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
+--local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
+local looking_at_boundary_ast = common.create_match("predicate",
+						    0,
+						    "@/generated/",
+						    common.create_match("lookat", 0, "@/generated/"),
+						    boundary_ast)
+
+
 
 local function err(name, msg)
    error('invalid ast "' .. name .. '" ' .. msg)
@@ -106,6 +113,19 @@ end
 
 syntax.capture =
    syntax.make_transformer(function(ast)
+			      -- local name, body = next(ast)
+			      -- if name=="choice" then
+			      -- 	 local c1 = body.subs[1]
+			      -- 	 local c2 = body.subs[2]
+			      -- 	 local new = syntax.generate("choice",
+			      -- 				     syntax.generate("capture", c1),
+			      -- 				     syntax.generate("capture", c2))
+			      -- 	 new.choice.text = body.text
+			      -- 	 new.choice.pos = body.pos
+			      -- 	 return new
+			      -- else
+			      -- 	 return syntax.generate("capture", ast)
+			      -- end
 			      return syntax.generate("capture", ast)
 			   end,
 			   nil,
@@ -163,6 +183,11 @@ syntax.raw =
 				 return syntax.cook(body.subs[1])
 			      elseif name=="raw" then
 				 return syntax.raw(body.subs[1]) -- strip off the "raw" group
+			      elseif name=="identifier" then
+				 local ref = syntax.generate("rref")
+				 ref.rref.text = body.text
+				 ref.rref.pos = body.pos
+				 return ref
 			      else
 				 local new = syntax.generate(name, table.unpack(map(syntax.raw, body.subs)))
 				 new[name].text = body.text
@@ -191,6 +216,11 @@ syntax.cook =
 				 return raw_exp
 			      elseif name=="cooked" then
 				 return syntax.cook(body.subs[1]) -- strip off "cooked" node
+			      elseif name=="identifier" then
+				 local ref = syntax.generate("cref")
+				 ref.cref.text = body.text
+				 ref.cref.pos = body.pos
+				 return ref
 			      elseif name=="sequence" then
 				 local first = body.subs[1]
 				 local second = body.subs[2]
@@ -202,8 +232,8 @@ syntax.cook =
 			      elseif name=="choice" then
 				 local first = body.subs[1]
 				 local second = body.subs[2]
-				 local c1 = syntax.generate("sequence", syntax.cook(first), boundary_ast)
-				 local c2 = syntax.generate("sequence", syntax.cook(second), boundary_ast)
+				 local c1 = syntax.generate("sequence", syntax.cook(first), looking_at_boundary_ast)
+				 local c2 = syntax.generate("sequence", syntax.cook(second), looking_at_boundary_ast)
 				 local new_choice = syntax.generate("choice", c1, c2)
 				 return new_choice
 			      elseif name=="quantified_exp" then
@@ -287,6 +317,12 @@ syntax.to_binding =
 syntax.top_level_transform =
    syntax.compose(syntax.cooked_to_raw, syntax.capture)
 
+function syntax.contains_capture(ast)
+   local name, body = next(ast)
+   if name=="capture" then return true; end
+   return reduce(or_function, false, map(syntax.contains_capture, body.subs))
+end
+
 ---------------------------------------------------------------------------------------------------
 -- Testing
 ---------------------------------------------------------------------------------------------------
@@ -308,17 +344,22 @@ function syntax.test()
    print("Re-loading syntax package...") 
    package.loaded.syntax = false; syntax = require "syntax"
    print("Assigning a bunch of globals for testing...")
+   parser = parse.parse
    -- globals to make it easier to continue testing and debugging manually
-   a = compile.parser("int = [:digit:]+")[1]
-   b = compile.parser("int = ([:digit:]+)")[1]
-   c = compile.parser("int = {[:digit:]+}")[1]
-   d = compile.parser("int = {([:digit:] [:digit:])}")[1]
-   e = compile.parser("int = ([:digit:] [:digit:])")[1]
+   a = parser("int = [:digit:]+")[1]
+   b = parser("int = ([:digit:]+)")[1]
+   c = parser("int = {[:digit:]+}")[1]
+   d = parser("int = {([:digit:] [:digit:])}")[1]
+   e = parser("int = ([:digit:] [:digit:])")[1]
+   f = parser("foo = . / .")[1]
+   g = parser("foo = {. / .}")[1]
    aa = syntax.assignment_to_alias(a)
    bb = syntax.assignment_to_alias(b)
    cc = syntax.assignment_to_alias(c)
    dd = syntax.assignment_to_alias(d)
    ee = syntax.assignment_to_alias(e)
+   ff = syntax.assignment_to_alias(f)
+   gg = syntax.assignment_to_alias(g)
    local function run(label, lst)
       print(label)
       for _,v in ipairs(lst) do
@@ -329,14 +370,17 @@ function syntax.test()
 	 local rhs_name, rhs_body = next(rhs)
 	 local raw = (rhs_name=="raw_exp")
 	 if raw then
+	    -- strip off the raw wrapper
 	    rhs = rhs_body.subs[1]
 	    rhs_name, rhs_body = next(rhs)
 	 end
 	 local top_level
-	 if rhs_name=="capture" then 		    -- resulted from assignment
+	 -- Need to determine if this binding came from an assignment originally
+	 -- Is this a hack or always true?
+	 if (syntax.contains_capture(rhs)) then
 	    top_level = parse.reveal_ast(rhs)
 	 else					    -- was an alias or other
-	    top_level = parse.reveal_ast(syntax.top_level_transform(rhs))
+	    top_level = parse.reveal_ast(syntax.capture(rhs))
 	 end
 	 if not raw then
 	    top_level = top_level .. " *BOUNDARY* "
@@ -345,8 +389,8 @@ function syntax.test()
       end
       print()
    end
-   run("Assignment tests:", {a, b, c, d, e})
-   run("Alias tests:", {aa, bb, cc, dd, ee})
+   run("Assignment tests:", {a, b, c, d, e, f, g})
+   run("Alias tests:", {aa, bb, cc, dd, ee, ff, gg})
 
    local f = io.open(common.compute_full_path("rpl/common.rpl"))
    local s = f:read("a")
@@ -354,7 +398,7 @@ function syntax.test()
    p = parse.parse(s)
    cmi = p[#p]
    -- run an entire file
-   run("FILE common.rpl:", p)
+--   run("FILE common.rpl:", p)
 end
 
 return syntax
