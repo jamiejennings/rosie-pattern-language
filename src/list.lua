@@ -53,6 +53,14 @@ function list(...)
    return setmetatable({...}, list_metatable)
 end
 
+function append(l1, ...)
+   local result = list(table.unpack(l1))	    -- shallow copy
+   for _, l in ipairs({...}) do
+      table.move(l, 1, #l, #result+1, result)
+   end
+   return result
+end
+
 function and_function(a, b)
    return (a and b)
 end
@@ -99,6 +107,10 @@ end
    
 function list_print(ls)
    print(list_tostring(ls))
+end
+
+function apply(fn, ls)
+   return fn(table.unpack(ls))
 end
 
 function apply_at_i(fn, i, ...)

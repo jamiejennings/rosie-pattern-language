@@ -452,6 +452,7 @@ parse.reveal_exp = function(a)
 		      charset=reveal_charset;
 		      quantified_exp=reveal_quantified_exp;
 		      cooked_quantified_exp=reveal_quantified_exp; -- !@#
+		      raw_quantified_exp=reveal_quantified_exp; -- !@#
 		      syntax_error=parse.reveal_syntax_error;
 		   }
    return common.walk_ast(a, functions);

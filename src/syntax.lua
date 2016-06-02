@@ -111,22 +111,48 @@ end
 
 ----------------------------------------------------------------------------------------
 
+-- return a list of choices
+function syntax.flatten_choice(ast)
+   local name, body = next(ast)
+   if name=="choice" then
+      return apply(append, map(syntax.flatten_choice, body.subs))
+   else
+      return {ast}
+   end
+end
+
+-- take a list of choices and build a binary choice ast
+function syntax.rebuild_choice(choices)
+   if #choices==2 then
+      return syntax.generate("choice", choices[1], choices[2])
+   else
+      return syntax.generate("choice", choices[1], syntax.rebuild_choice(cdr(choices)))
+   end
+end
+		    
 syntax.capture =
    syntax.make_transformer(function(ast)
-			      -- local name, body = next(ast)
-			      -- if name=="choice" then
-			      -- 	 local c1 = body.subs[1]
-			      -- 	 local c2 = body.subs[2]
-			      -- 	 local new = syntax.generate("choice",
-			      -- 				     syntax.generate("capture", c1),
-			      -- 				     syntax.generate("capture", c2))
-			      -- 	 new.choice.text = body.text
-			      -- 	 new.choice.pos = body.pos
-			      -- 	 return new
-			      -- else
-			      -- 	 return syntax.generate("capture", ast)
-			      -- end
-			      return syntax.generate("capture", ast)
+			      local name, body = next(ast)
+			      if name=="identifier" then return ast;
+			      elseif name=="predicate" then return ast;
+			      elseif name=="quantified_exp" then
+--				 local exp, quantifier = body.subs[1], body.subs[2]
+--				 return syntax.generate("quantified_exp", syntax.capture(exp), quantifier)
+				 return syntax.generate("capture", ast)
+			      elseif name=="choice" then
+				 local choices = syntax.flatten_choice(ast)
+				 choices = map(function(c)
+						  return syntax.generate("capture", c)
+					       end,
+					       choices)
+			      	 local new = syntax.rebuild_choice(choices)
+				 assert(next(new)=="choice")
+			      	 new.choice.text = body.text
+			      	 new.choice.pos = body.pos
+			      	 return new
+			      else
+			      	 return syntax.generate("capture", ast)
+			      end
 			   end,
 			   nil,
 			   false)
@@ -239,11 +265,12 @@ syntax.cook =
 			      elseif name=="quantified_exp" then
 				 -- do some involved stuff here
 				 -- which we will skip for now
-				 local temp_name = "cooked_quantified_exp"
-				 local s1 = syntax.generate(temp_name, table.unpack(body.subs))
-				 s1[temp_name].text = body.text
-				 s1[temp_name].pos = body.pos
-				 return s1
+				 local new = syntax.generate("cooked_quantified_exp",
+							     body.subs[1],
+							     body.subs[2])
+				 new.cooked_quantified_exp.text = body.text
+				 new.cooked_quantified_exp.pos = body.pos
+				 return new
 			      else
 				 local new = syntax.generate(name, table.unpack(map(syntax.cook, body.subs)))
 				 new[name].text = body.text

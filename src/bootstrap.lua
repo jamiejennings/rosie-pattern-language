@@ -40,8 +40,8 @@ local function rosie_parse(str, pos, tokens)
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-      return astlist, errlist
---      return map(syntax.to_binding, astlist), errlist
+--      return astlist, errlist
+      return map(syntax.to_binding, astlist), errlist
 end
 
 function parse_and_explain(source)

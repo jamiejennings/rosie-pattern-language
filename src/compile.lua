@@ -287,7 +287,7 @@ end
 function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in process_quantified_exp")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name=="quantified_exp" or name=="cooked_quantified_exp")
+   assert(name=="quantified_exp" or name=="cooked_quantified_exp" or name=="raw_quantified_exp")
    -- Regarding debugging... the quantified exp a[1] fails as soon as:
    -- e^0 == e* can never fail, because it can match the empty string.
    -- e^1 == e+ fails when as soon as the initial attempt to match e fails.
@@ -388,6 +388,12 @@ function cinternals.compile_cooked_quantified_exp(a, raw, gmr, source, env)
    return pattern{name=qname, peg=qpeg};
 end
 
+function cinternals.compile_raw_quantified_exp(a, raw, gmr, source, env)
+   assert(a, "did not get ast in compile_raw_quantified_exp")
+   local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, true, gmr, source, env)
+   return pattern{name=qname, peg=qpeg};
+end
+
 function cinternals.compile_string(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_string")
    local name, pos, text = common.decode_match(a)
@@ -420,11 +426,11 @@ function cinternals.compile_ref(a, raw, gmr, source, env)
    local pat = env[name]
    if (not pat) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
-   if (reftype=="cref") and (pat.cpeg) then
-      return pattern{name=name, peg=pat.cpeg, ast=val.ast}
-   else
-      return pattern{name=name, peg=pat.peg, ast=val.ast}
-   end
+   -- if (reftype=="cref") and (pat.cpeg) then
+   --    return pattern{name=name, peg=pat.cpeg, ast=pat.ast}
+   -- else
+      return pattern{name=name, peg=pat.peg, ast=pat.ast}
+--   end
 end
 
 function cinternals.compile_predicate(a, raw, gmr, source, env)
@@ -466,10 +472,9 @@ function cinternals.compile_sequence(a, raw, gmr, source, env)
    local peg1, peg2
    peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
-   if raw or
-      next(subs[1])=="predicate" or
-      next(subs[1])=="negation" or 
-      next(subs[1])=="lookat"
+   if raw or next(subs[1])=="predicate"
+--      next(subs[1])=="negation" or 
+--      next(subs[1])=="lookat"
    then
       return pattern{name=name, peg=peg1 * peg2}
    else
@@ -647,15 +652,15 @@ function cinternals.compile_capture(a, raw, gmr, source, env)
    local pat = cinternals.compile_exp(captured_exp, false, gmr, source, env)
    local name, pos, text, subs = common.decode_match(captured_exp)
    pat.name = name
-   if name=="choice" then
-      print("compile_capture: compiling choice sub-exp:" .. parse.reveal_ast(captured_exp))
-      local c1, c2 = subs[1], subs[2]
-      local pat1 = cinternals.compile_exp(c1, false, gmr, source, env)
-      local pat2 = cinternals.compile_exp(c2, false, gmr, source, env)
-      pat.peg = C(pat1.peg) + C(pat2.peg)
-   else
-      pat.peg = C(pat.peg)
-   end
+   -- if name=="choice" then
+   --    print("compile_capture: compiling choice sub-exp:" .. parse.reveal_ast(captured_exp))
+   --    local c1, c2 = subs[1], subs[2]
+   --    local pat1 = cinternals.compile_exp(c1, false, gmr, source, env)
+   --    local pat2 = cinternals.compile_exp(c2, false, gmr, source, env)
+   --    pat.peg = C(pat1.peg) + C(pat2.peg)
+   -- else
+--      pat.peg = C(pat.peg)
+--   end
    return pat
 end
 
@@ -668,14 +673,15 @@ cinternals.compile_exp_functions = {"compile_exp";
 			       cooked=cinternals.compile_group;
 			       choice=cinternals.compile_choice;
 			       sequence=cinternals.compile_sequence;
-			       negation=cinternals.compile_negation;
-			       lookat=cinternals.compile_lookat;
+			       --negation=cinternals.compile_negation;
+			       --lookat=cinternals.compile_lookat;
 			       identifier=cinternals.compile_identifier;
 			       string=cinternals.compile_string;
 			       named_charset=cinternals.compile_named_charset;
 			       charset=cinternals.compile_charset;
 			       quantified_exp=cinternals.compile_quantified_exp;
 			       cooked_quantified_exp=cinternals.compile_cooked_quantified_exp;
+			       raw_quantified_exp=cinternals.compile_raw_quantified_exp;
 			       syntax_error=cinternals.compile_syntax_error;
 			    }
 
@@ -759,9 +765,9 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
       rhs_name, rhs_body = next(rhs)
    end
    local pat = cinternals.compile_exp(rhs, true, gmr, source, env)
-   --   if syntax.contains_capture(rhs) then
-   if rhs_name=="capture" then
+   if syntax.contains_capture(rhs) then
       pat.alias=false
+      pat.peg = common.match_node_wrap(C(pat.peg), iname)
    else
       pat.alias=true
    end
@@ -834,30 +840,15 @@ function compile.compile_match_expression(source, env)
       return false, msg
    end
 
-   -- NEW TOP LEVEL TREATMENT
-   -- This transformation of the ast will eventually move into an explicit macro expansion step. 
-   local orig_ast = astlist[1]
-   local ast = orig_ast
-   local ast_history = {}
-
---   if compile.parser==parse.core_parse_and_explain then
-   if true then
-      local name = common.decode_match(ast)
-      if name~="raw" then
-	 table.insert(ast_history, 1, ast)
-	 ast = cinternals.append_boundary(ast)
-      end
-      if not syntax.contains_capture(ast) then
-	 table.insert(ast_history, 1, ast)
-	 ast = cinternals.cook_if_needed(ast)
-      end
-   else
-      table.insert(ast_history, 1, ast)
---      ast = syntax.top_level_transform(ast)
-      if not syntax.contains_capture(ast) then
-	 ast = syntax.capture(ast)
-      end
+   local ast = astlist[1]
+   local orig_ast = ast
+   local name = common.decode_match(ast)
+   if name~="raw" then
+      ast = syntax.append_boundary(ast)
    end
+   -- if not syntax.contains_capture(ast) then
+   --    return false, "expression contains no captures: " .. source
+   -- end
 
    local c = coroutine.create(cinternals.compile_exp)
    local no_lua_error, result, error_msg = coroutine.resume(c, ast, false, false, source, env)
@@ -875,19 +866,18 @@ function compile.compile_match_expression(source, env)
    -- not have to be anonymous
    local kind, pos, id = common.decode_match(orig_ast)
    local pat = env[id]
-   if not (kind=="identifier" and pattern.is(pat) and (not pat.alias)) then
+   if not ((kind=="identifier" or kind=="cref" or kind=="rref") and pattern.is(pat) and (not pat.alias)) then
       -- if the user entered an identifier, then we are all set, unless it is an alias, which
       -- by itself may capture nothing and thus should be handled like any other kind of
       -- expression.  
       -- BUT if the user entered an expression other than an identifier, we should treat it like it
       -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
       -- since that can't be an identifier name 
-      result.peg = C(result.peg)
-      result.peg = cinternals.wrap_peg(result, "*", (kind=="raw"))
+      result.peg = common.match_node_wrap(C(result.peg), "*")
    end
 
    result.ast = ast
-   result.ast_history = ast_history
+--   result.ast_history = ast_history
 
    -- Top-level wrap to turn this into a matchable expression
    result.peg = (result.peg * Cp())
