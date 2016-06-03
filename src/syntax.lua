@@ -201,6 +201,46 @@ syntax.append_boundary_to_rhs =
 			   "binding",
 			   false)
 
+function transform_quantified_exp(ast)
+   local name, body = next(ast)
+   -- local expname, expbody = next(body.subs[1])
+   -- local subexpname, subexpbody
+   -- if expbody.subs[1] then subexpname, subexpbody = next(expbody.subs[1]); end
+   -- local new = ast
+   -- if (expname=="cooked") then
+   --    name = "cooked_quantified_exp"
+   --    new = syntax.generate(name,
+   -- 			    expbody.subs[1],
+   -- 			    body.subs[2])
+   -- elseif ((expname=="capture") and (subexpname=="cooked")) then
+   --    name = "cooked_quantified_exp"
+   --    new = syntax.generate(name,
+   -- 			    syntax.generate("capture",
+   -- 					    subexpbody.subs[1]),
+   -- 			    body.subs[2])
+   -- else
+   --    name = "raw_quantified_exp"
+   --    new = syntax.generate(name, body.subs[1], body.subs[2])
+   -- end
+   -- new[name].text = body.text
+   -- new[name].pos = body.pos
+   -- return new
+   local new = syntax.generate("new_quantified_exp",
+			       body.subs[1],
+			       body.subs[2])
+   new.new_quantified_exp.text = body.text
+   new.new_quantified_exp.pos = body.pos
+   return new
+end
+
+syntax.id_to_ref =
+   syntax.make_transformer(function(ast)
+			      local name, body = next(ast)
+			      return common.create_match("ref", body.pos, body.text)
+			   end,
+			   "identifier",
+			   true)		    -- RECURSIVE
+
 syntax.raw =
    syntax.make_transformer(function(ast)
 			      local name, body = next(ast)
@@ -210,10 +250,9 @@ syntax.raw =
 			      elseif name=="raw" then
 				 return syntax.raw(body.subs[1]) -- strip off the "raw" group
 			      elseif name=="identifier" then
-				 local ref = syntax.generate("rref")
-				 ref.rref.text = body.text
-				 ref.rref.pos = body.pos
-				 return ref
+				 return syntax.id_to_ref(ast)
+			      elseif name=="quantified_exp" then
+				 return transform_quantified_exp(ast)
 			      else
 				 local new = syntax.generate(name, table.unpack(map(syntax.raw, body.subs)))
 				 new[name].text = body.text
@@ -223,12 +262,6 @@ syntax.raw =
 			   end,
 			   nil,			    -- match all nodes
 			   false)		    -- NOT recursive
-
-function predicate_p(ast)
-   local name, body = next(ast)
-   return ((name=="lookat") or
-	(name=="negation"))
-end
 
 syntax.cook =
    syntax.make_transformer(function(ast)
@@ -243,15 +276,12 @@ syntax.cook =
 			      elseif name=="cooked" then
 				 return syntax.cook(body.subs[1]) -- strip off "cooked" node
 			      elseif name=="identifier" then
-				 local ref = syntax.generate("cref")
-				 ref.cref.text = body.text
-				 ref.cref.pos = body.pos
-				 return ref
+				 return syntax.id_to_ref(ast)
 			      elseif name=="sequence" then
 				 local first = body.subs[1]
 				 local second = body.subs[2]
 				 -- If the first sequent is a predicate, then no boundary is added
-				 if predicate_p(first) then return ast; end
+				 if next(first)=="predicate" then return ast; end
 				 local s1 = syntax.generate("sequence", syntax.cook(first), boundary_ast)
 				 local s2 = syntax.generate("sequence", s1, syntax.cook(second))
 				 return s2
@@ -265,19 +295,14 @@ syntax.cook =
 			      elseif name=="quantified_exp" then
 				 -- do some involved stuff here
 				 -- which we will skip for now
-				 local new = syntax.generate("cooked_quantified_exp",
-							     body.subs[1],
-							     body.subs[2])
-				 new.cooked_quantified_exp.text = body.text
-				 new.cooked_quantified_exp.pos = body.pos
-				 return new
-			      else
-				 local new = syntax.generate(name, table.unpack(map(syntax.cook, body.subs)))
-				 new[name].text = body.text
-				 new[name].pos = body.pos
-				 return new
-			      end
-			   end,
+				 return transform_quantified_exp(ast)
+			       else
+				  local new = syntax.generate(name, table.unpack(map(syntax.cook, body.subs)))
+				  new[name].text = body.text
+				  new[name].pos = body.pos
+				  return new
+			       end
+			    end,
 			   nil,			    -- match all nodes
 			   false)		    -- NOT recursive
 
@@ -341,8 +366,47 @@ syntax.to_binding =
 --     Compile the exp to a pattern.
 --     Proceed as above based on whether the pattern is marked "raw" or not.
 
-syntax.top_level_transform =
-   syntax.compose(syntax.cooked_to_raw, syntax.capture)
+-- syntax.top_level_transform =
+--    syntax.compose(syntax.cooked_to_raw, syntax.capture)
+
+function syntax.expression_p(ast)
+   local name, body = next(ast)
+   return ((name=="identifier") or
+	   (name=="raw") or
+	   (name=="raw_exp") or
+	   (name=="cooked") or
+	   (name=="string") or
+	   (name=="quantified_exp") or
+	   (name=="named_charset") or
+	   (name=="charset") or
+	   (name=="choice") or
+	   (name=="sequence") or
+	   (name=="predicate"))
+end
+
+function syntax.top_level_transform(ast)
+   local name, body = next(ast)
+   if name=="identifier" then
+      return syntax.id_to_ref(ast)
+   elseif syntax.expression_p(ast) then
+      local new = syntax.capture(ast)
+      if name=="raw" then
+      	 new = syntax.generate("raw_exp", syntax.raw(new))
+      else
+      	 new = syntax.cook(new)			    -- !@# ADD BOUNDARY HERE?
+      end
+--      local newname = next(new)
+--      new[newname].text = body.text
+--      new[newname].pos = body.pos
+      return new
+   elseif (name=="assignment_") or (name=="alias_") then
+      return syntax.to_binding(ast)
+   elseif (name=="grammar_") then
+      return ast				    -- !@# NEED TO PROCESS THIS AS A BINDING!
+   else
+      error("Error in transform: unrecognized parse result: " .. name)
+   end
+end
 
 function syntax.contains_capture(ast)
    local name, body = next(ast)

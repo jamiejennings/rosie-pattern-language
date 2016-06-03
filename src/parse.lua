@@ -213,8 +213,9 @@ end
 local function reveal_ref(a)
    assert(a, "did not get ast in reveal_ref")
    local name, pos, text = common.decode_match(a)
-   if name=="cref" then return "CREF(" .. text .. ")"
-   elseif name=="rref" then return "RREF(" .. text .. ")"
+--   if name=="cref" then error("TEMPORARY INTERNAL ERROR CREF(" .. text .. ")")
+--   elseif name=="rref" then error("TEMPORARY INTERNAL ERROR RREF(" .. text .. ")")
+   if name=="ref" then return "REF(" .. text .. ")"
    else error("Unknown ref type in reveal_ref: " .. tostring(name))
    end
 end
@@ -331,7 +332,9 @@ local function reveal_quantified_exp(a)
    assert(q, "did not get quantifier exp in reveal_quantified_exp")
    local qname, qpos, printable_q = common.decode_match(q)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
-   return "<" .. parse.reveal_exp(e) .. ">" .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
+   local open, close = "<", ">"
+   if name=="new_quantified_exp" then open, close = "(|", "|)"; end
+   return open .. parse.reveal_exp(e) .. close .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
 end
 
 local function reveal_named_charset(a)
@@ -435,8 +438,7 @@ end
 parse.reveal_exp = function(a)
    local functions = {"reveal_exp";
 		      capture=reveal_capture;
-		      cref=reveal_ref;
-		      rref=reveal_ref;
+		      ref=reveal_ref;
 		      predicate=reveal_predicate;
 		      group=reveal_group;
 		      raw=reveal_group;
@@ -451,6 +453,7 @@ parse.reveal_exp = function(a)
 		      named_charset=reveal_named_charset;
 		      charset=reveal_charset;
 		      quantified_exp=reveal_quantified_exp;
+		      new_quantified_exp=reveal_quantified_exp; -- !@#
 		      cooked_quantified_exp=reveal_quantified_exp; -- !@#
 		      raw_quantified_exp=reveal_quantified_exp; -- !@#
 		      syntax_error=parse.reveal_syntax_error;

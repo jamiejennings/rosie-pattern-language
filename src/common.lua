@@ -238,7 +238,7 @@ pattern =
       ast_history={};			 -- history of each transformation
       push_ast=push_ast;
       raw=false;
-      cpeg=false;				    -- peg to use in cooked mode
+--      cpeg=false;				    -- peg to use in cooked mode
 --      source=unspecified;		 -- source (filename, maybe line also?)
 --      uuid=unspecified;
   },

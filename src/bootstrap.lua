@@ -34,6 +34,7 @@ local function rosie_parse_without_error_check(str, pos, tokens)
    return rosie_parse_without_error_check(str, nextpos, tokens)
 end
 
+
 local function rosie_parse(str, pos, tokens)
    local astlist = rosie_parse_without_error_check(str, pos, tokens)
    local errlist = {};
@@ -41,7 +42,7 @@ local function rosie_parse(str, pos, tokens)
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
 --      return astlist, errlist
-      return map(syntax.to_binding, astlist), errlist
+      return map(syntax.top_level_transform, astlist), errlist
 end
 
 function parse_and_explain(source)
