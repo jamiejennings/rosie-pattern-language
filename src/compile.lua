@@ -387,7 +387,7 @@ end
 
 function cinternals.compile_new_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_cooked_quantified_exp")
-   local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, raw, gmr, source, env)
+   local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, true, gmr, source, env)
    return pattern{name=qname, peg=qpeg, ast=a};
 end
 
@@ -488,6 +488,7 @@ function cinternals.compile_sequence(a, raw, gmr, source, env)
    then
       return pattern{name=name, peg=peg1 * peg2}
    else
+      print("************* adding a boundary to the PEG itself in compile_sequence **************")
       return pattern{name=name, peg=peg1 * boundary * peg2}
    end
 end
@@ -562,7 +563,7 @@ function cinternals.compile_group(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_group")
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="raw" or name=="cooked" or name=="raw_exp")
-   if name=="raw" then raw=true; else raw=false; end
+   if (name=="raw") or (name=="raw_exp") then raw=true; else raw=false; end
    assert(not subs[2])
    local pat = cinternals.compile_exp(subs[1], raw, gmr, source, env)
    return pattern{name=name, peg=pat.peg, ast=pat.ast, alternates=pat.alternates}
@@ -659,7 +660,7 @@ function cinternals.compile_capture(a, raw, gmr, source, env)
    local captured_exp = subs[1]
    assert(compile.expression_p(captured_exp),
 	  "compile_capture called with an ast that is not an expression: " .. (next(subs[1])))
-   local pat = cinternals.compile_exp(captured_exp, false, gmr, source, env)
+   local pat = cinternals.compile_exp(captured_exp, raw, gmr, source, env)
    local name, pos, text, subs = common.decode_match(captured_exp)
    pat.name = name
    -- if name=="choice" then
@@ -772,27 +773,25 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
    end
    local rhs_name, rhs_body = next(rhs)
    local raw_exp = (rhs_name=="raw_exp")
-   if raw_exp then
-      rhs = rhs_body.subs[1]
-      rhs_name, rhs_body = next(rhs)
-   end
+
+   -- if raw_exp then
+   --    rhs = rhs_body.subs[1]
+   --    rhs_name, rhs_body = next(rhs)
+   -- end
+
    -- TESTING: ---------------------------------------------------------
-   local new_qe = false
-   if (rhs_name=="capture") then
-      if next(rhs_body.subs[1])=="new_quantified_exp" then
-	 new_qe = true
-      end
-   end
+   -- local new_qe = false
+   -- if (rhs_name=="capture") then
+   --    if next(rhs_body.subs[1])=="new_quantified_exp" then
+   -- 	 new_qe = true
+   --    end
+   -- end
    -- ------------------------------------------------------------------
+
    local pat = cinternals.compile_exp(rhs, true, gmr, source, env)
    if syntax.contains_capture(rhs) then
       pat.alias=false
-      if new_qe then				    -- !@# TESTING
-	 print("NEW QE BRANCH ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-	 pat.peg = common.match_node_wrap(C(pat.peg), iname)
-      else
-	 pat.peg = common.match_node_wrap(C(pat.peg), iname)
-      end
+      pat.peg = common.match_node_wrap(C(pat.peg), iname)
    else
       pat.alias=true
    end
@@ -869,8 +868,8 @@ function compile.compile_match_expression(source, env)
    local orig_ast = ast
    local name = common.decode_match(ast)
 
-   if (name~="raw") and (name~="raw_exp") then
-      ast = syntax.append_boundary(ast)
+   if ((name~="raw") and (name~="raw_exp") and (name~="ref")) then
+      ast = cinternals.append_boundary(ast)
    end
 
    -- !@# WE SHOULD DO THIS TEST, BUT IT FAILS ON CORE LANGUAGE BECAUSE CURRENTLY THE CORE DOES
@@ -894,7 +893,7 @@ function compile.compile_match_expression(source, env)
    -- now we check to see if the original expression is an identifier, and therefore does
    -- not have to be anonymous
    local kind, pos, id = common.decode_match(orig_ast)
-   print("In compile_match_expression, the original ast is: " .. kind .. "(" .. id .. ")")
+--   print("In compile_match_expression, the original ast is: " .. kind .. "(" .. id .. ")")
    local pat = env[id]
    if not ((kind=="ref" or kind=="identifier") and pattern.is(pat) and (not pat.alias)) then -- !@# remove identifier
       -- if the user entered an identifier, then we are all set, unless it is an alias, which

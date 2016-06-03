@@ -390,14 +390,11 @@ function syntax.top_level_transform(ast)
       return syntax.id_to_ref(ast)
    elseif syntax.expression_p(ast) then
       local new = syntax.capture(ast)
-      if name=="raw" then
+      if (name=="raw") or (name=="string") or (name=="charset") or (name=="named_charset") then
       	 new = syntax.generate("raw_exp", syntax.raw(new))
       else
       	 new = syntax.cook(new)			    -- !@# ADD BOUNDARY HERE?
       end
---      local newname = next(new)
---      new[newname].text = body.text
---      new[newname].pos = body.pos
       return new
    elseif (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
