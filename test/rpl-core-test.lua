@@ -341,7 +341,7 @@ check_match('~(a)*', ' a a   ', true, 0, " a a   ")
 check_match('(~(a)*)', ' a a   ', true, 0, " a a   ")
 ok, msg = api.load_string(eid, "token = { ![:space:] . {!~ .}* }")
 check(ok)
-check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 39, "The")
+check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 39, "The ")
 check_match('token token token', 'The quick, brown fox.\nSentence fragment!!  ', true, 32, "The quick, ") -- NB
 check_match('{(token token token)}', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,") -- NB
 check_match('token{4,}', 'The quick, brown fox.\nSentence fragment!!', false)

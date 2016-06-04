@@ -389,7 +389,7 @@ end
 function syntax.top_level_transform(ast)
    local name, body = next(ast)
    if name=="identifier" then
-      return syntax.id_to_ref(ast)
+      return syntax.append_boundary(syntax.id_to_ref(ast))
    elseif syntax.expression_p(ast) then
       local new = syntax.capture(ast)
       if (name=="raw") or (name=="string") or (name=="charset") or (name=="named_charset") then

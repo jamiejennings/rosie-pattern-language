@@ -441,7 +441,7 @@ function cinternals.compile_ref(a, raw, gmr, source, env)
    -- else
 --      return pattern{name=name, peg=pat.peg, ast=pat.ast}
 --   end
-   return pat
+   return pattern{name=name, peg=pat.peg}
 end
 
 function cinternals.compile_predicate(a, raw, gmr, source, env)
@@ -487,7 +487,7 @@ function cinternals.compile_sequence(a, raw, gmr, source, env)
    then
       return pattern{name=name, peg=peg1 * peg2}
    else
-      print("************* adding a boundary to the PEG itself in compile_sequence **************")
+--      print("************* adding a boundary to the PEG itself in compile_sequence **************")
       return pattern{name=name, peg=peg1 * boundary * peg2}
    end
 end
@@ -766,7 +766,7 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
    assert(not subs[3])
    assert(type(source)=="string")
    local _, ipos, iname = common.decode_match(lhs)
-   print("Compiling BINDING for " .. iname)
+--   print("Compiling BINDING for " .. iname)
    if env[iname] and not QUIET then
       warn("Compiler: reassignment to identifier " .. iname)
    end
@@ -901,7 +901,7 @@ function compile.compile_match_expression(source, env)
       -- BUT if the user entered an expression other than an identifier, we should treat it like it
       -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
       -- since that can't be an identifier name 
-      print("*** WRAPPING NON-IDENTIFIER ENTERED AT TOP LEVEL: " .. id .. " ***")
+--      print("*** WRAPPING NON-IDENTIFIER ENTERED AT TOP LEVEL: " .. id .. " ***")
       result.peg = common.match_node_wrap(C(result.peg), "*")
    end
 
