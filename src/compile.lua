@@ -305,7 +305,8 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
                   and subname~="charset" 
 		  and subname~="named_charset"
 		  and subname~="string" 
-		  and subname~="identifier"
+                  and subname~="identifier"
+                  and subname~="ref"
 	    )
       or subname=="cooked") then
       append_boundary = true;
@@ -482,9 +483,7 @@ function cinternals.compile_sequence(a, raw, gmr, source, env)
    local peg1, peg2
    peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
-   if raw or next(subs[1])=="predicate"
---      next(subs[1])=="negation" or 
---      next(subs[1])=="lookat"
+   if raw or (next(subs[1])=="predicate")
    then
       return pattern{name=name, peg=peg1 * peg2}
    else
@@ -653,7 +652,7 @@ end
 
 function cinternals.compile_capture(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_capture")
---   print("compile_capture: " .. parse.reveal_ast(a))
+--   print("compile_capture: " .. parse.reveal_ast(a) .. " and raw is " .. tostring(raw))
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="capture")
    assert(subs and subs[1] and (not subs[2]), "wrong number of subs in capture ast")
@@ -715,7 +714,7 @@ function cinternals.cook_if_needed(a)
    end
 end
 
-local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
 local looking_at_boundary_ast = common.create_match("predicate",
 						    0,
 						    "@/generated/",
@@ -868,9 +867,9 @@ function compile.compile_match_expression(source, env)
    local orig_ast = ast
    local name = common.decode_match(ast)
 
-   if ((name~="raw") and (name~="raw_exp") and (name~="ref")) then
-      ast = cinternals.append_boundary(ast)
-   end
+   -- if ((name~="raw") and (name~="raw_exp") and (name~="ref")) then
+   --    ast = cinternals.append_boundary(ast)
+   -- end
 
    -- !@# WE SHOULD DO THIS TEST, BUT IT FAILS ON CORE LANGUAGE BECAUSE CURRENTLY THE CORE DOES
    -- NOT USE THE SYNTAX EXPANSION.

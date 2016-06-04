@@ -276,7 +276,8 @@ check_match('{(a)* a? b}', 'a a a ab', true, 0, "a a a ab")
 
 subheading("Testing !a+, which is equivalent to !(a+) or !{a+}")
 check_match('a+', ' b', false)
-check_match('!a+', ' b', true, 2, "")		    -- note boundary added at top level
+check_match('!a+', ' b', true, 1, " ")		    -- note boundary added at top level
+check_match('!a+~', ' b', true, 1, " ")		    -- note boundary added at top level
 check_match('(!a+)', ' b', true, 1, " ")	    -- note boundary added at top level
 check_match('{!a+}', ' b', true, 2, "")
 check_match('!a+', 'b', true, 1, "")
@@ -425,8 +426,15 @@ check_match('{b (a / b)}', 'bb', true)
 check_match('{b (a / b)}', 'b a   x', false)
 check_match('{b (a / b)}', 'ba   x', true, 4)
 
-check_match('{b (a / b)}', 'bax', true, 1)	    -- this is key: no top-level boundary added
+check_match('{b (a / b)}', 'bax', false)	    -- this is key: no top-level boundary added
+check_match('{b {a / b}}', 'bax', true, 1)	    -- this is key: no top-level boundary added
+check_match('{b {a / b}}', 'bax', true, 1)	    -- this is key: no top-level boundary added
+check_match('({b {a / b}})', 'bax', false)
+check_match('({b {a / b}})', 'ba xyz', true, 3)
 check_match('({b (a / b)})', 'bax', false)	    -- this is key: top-level boundary added
+check_match('(b (a / b))', 'bax', false)	    -- this is key: top-level boundary added
+check_match('(b (a / b))', 'b a x', true, 1)	    -- this is key: top-level boundary added
+check_match('(b (a / b))', 'b b', true, 0)	    -- this is key: top-level boundary added
 
 check_match('{b (a)}', 'bax', true, 1)
 check_match('({b (a)})', 'bax', false)

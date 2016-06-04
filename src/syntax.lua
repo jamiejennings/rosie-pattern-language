@@ -10,7 +10,7 @@ require "list"
 
 syntax = {}
 
-local boundary_ast = common.create_match("identifier", 0, common.boundary_identifier)
+local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
 --local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
 local looking_at_boundary_ast = common.create_match("predicate",
 						    0,
@@ -269,9 +269,9 @@ syntax.cook =
 			      --print("entering syntax.cook", name)
 			      if name=="raw" then
 				 local raw_exp = syntax.raw(body.subs[1])
-				 local kind = next(raw_exp)
-				 raw_exp[kind].text = body.text
-				 raw_exp[kind].pos = body.pos
+				 --local kind = next(raw_exp)
+				 --raw_exp[kind].text = body.text
+				 --raw_exp[kind].pos = body.pos
 				 return raw_exp
 			      elseif name=="cooked" then
 				 return syntax.cook(body.subs[1]) -- strip off "cooked" node
@@ -281,7 +281,9 @@ syntax.cook =
 				 local first = body.subs[1]
 				 local second = body.subs[2]
 				 -- If the first sequent is a predicate, then no boundary is added
-				 if next(first)=="predicate" then return ast; end
+				 if next(first)=="predicate" then
+				    return syntax.generate("sequence", syntax.cook(body.subs[1]), syntax.cook(body.subs[2]))
+				 end
 				 local s1 = syntax.generate("sequence", syntax.cook(first), boundary_ast)
 				 local s2 = syntax.generate("sequence", s1, syntax.cook(second))
 				 return s2
@@ -391,11 +393,11 @@ function syntax.top_level_transform(ast)
    elseif syntax.expression_p(ast) then
       local new = syntax.capture(ast)
       if (name=="raw") or (name=="string") or (name=="charset") or (name=="named_charset") then
-      	 new = syntax.generate("raw_exp", syntax.raw(new))
+      	 new = syntax.raw(new)
       else
-      	 new = syntax.cook(new)			    -- !@# ADD BOUNDARY HERE?
+      	 new = syntax.append_boundary(syntax.cook(new))
       end
-      return new
+      return syntax.generate("raw_exp", new)
    elseif (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
    elseif (name=="grammar_") then
