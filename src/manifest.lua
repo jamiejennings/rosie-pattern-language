@@ -36,6 +36,9 @@ local function process_manifest_line(en, line)
    local m = manifest_engine:match(line)
    assert(type(m)=="table", "Uncaught error processing manifest file!")
    local name, pos, text, subs = common.decode_match(m)
+   assert(name=="*")				    -- new Saturday, June 4, 2016
+   assert(subs[1])				    -- new Saturday, June 4, 2016
+   local name, pos, text, subs = common.decode_match(subs[1])
    if subs then
       -- the only sub-match of "line" is "path", because "comment" is an alias
       local name, pos, path = common.decode_match(subs[1])

@@ -32,8 +32,8 @@ common.path = common.unix_path / common.windows_path
 
 alias dash_under = [-_]
 
-alias identifier_char = letter / digit / "_"
-alias identifier_plus_char = letter / digit / dash_under / "$"
+alias identifier_char = { letter / digit / "_" }
+alias identifier_plus_char = { letter / digit / dash_under / "$" }
 
 common.identifier = {letter identifier_char*}
 common.identifier_plus = {letter identifier_plus_char*}

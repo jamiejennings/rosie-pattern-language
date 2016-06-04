@@ -894,6 +894,7 @@ function compile.compile_match_expression(source, env)
    local kind, pos, id = common.decode_match(orig_ast)
 --   print("In compile_match_expression, the original ast is: " .. kind .. "(" .. id .. ")")
    local pat = env[id]
+
    if not ((kind=="ref" or kind=="identifier") and pattern.is(pat) and (not pat.alias)) then -- !@# remove identifier
       -- if the user entered an identifier, then we are all set, unless it is an alias, which
       -- by itself may capture nothing and thus should be handled like any other kind of

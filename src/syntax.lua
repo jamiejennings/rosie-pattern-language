@@ -226,7 +226,7 @@ function transform_quantified_exp(ast)
    -- new[name].pos = body.pos
    -- return new
    local new = syntax.generate("new_quantified_exp",
-			       body.subs[1],
+			       syntax.id_to_ref(body.subs[1]),
 			       body.subs[2])
    new.new_quantified_exp.text = body.text
    new.new_quantified_exp.pos = body.pos

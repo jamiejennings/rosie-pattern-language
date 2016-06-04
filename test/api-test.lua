@@ -152,7 +152,7 @@ ok, def = api.get_binding(eid, "bar")
 check(json.decode(def)=='bar = (foo / "1" $)', "checking binding defn which relies on reveal_ast")
 ok, msg = api.load_string(eid, 'x = //', "syntax error")
 check(not ok)
-check(msg:find("Syntax error at line 1"))
+check(msg:find("Syntax error at line 1"), "Exact message depends on syntax error reporting")
 ok, env_js = api.get_environment(eid)
 check(ok)
 env = json.decode(env_js)
@@ -235,8 +235,8 @@ check(not env["undef2"], "definitions in a file after to an error will NOT end u
 ok, msg = api.load_file(eid, "test/synerr.rpl")
 check(not ok)
 msg = json.decode(msg)
-check(msg:find('Syntax error at line 8: // "abc"'))
-check(msg:find('foo = "foobar" // "abc"'))
+check(msg:find('Syntax error at line 8: // "abc"'), "Exact message depends on syntax error reporting")
+check(msg:find('foo = "foobar" // "abc"'), "relies on reveal_ast")
 
 ok, msg = api.load_file(eid, "./thisfile/doesnotexist")
 check(not ok)
@@ -363,6 +363,8 @@ check(type(retvals_js)=="string")
 retvals = json.decode(retvals_js)
 check(retvals[2]==0)
 match = retvals[1]
+check(match["*"])
+match = retvals[1]["*"].subs[1]
 check(match["common.dotted_identifier"].text=="x.y.z")
 check(match["common.dotted_identifier"].subs[2]["common.identifier_plus_plus"].text=="y")
 
