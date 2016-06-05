@@ -133,32 +133,30 @@ end
 syntax.capture =
    syntax.make_transformer(function(ast)
 			      local name, body = next(ast)
-			      if name=="identifier" then return ast;
-			      elseif name=="predicate" then return ast;
-			      elseif name=="quantified_exp" then
---				 local exp, quantifier = body.subs[1], body.subs[2]
---				 return syntax.generate("quantified_exp", syntax.capture(exp), quantifier)
-				 return syntax.generate("capture", ast)
-			      elseif name=="choice" then
-				 local choices = syntax.flatten_choice(ast)
-				 choices = map(function(c)
-						  return syntax.generate("capture", c)
-					       end,
-					       choices)
-			      	 local new = syntax.rebuild_choice(choices)
-				 assert(next(new)=="choice")
-			      	 new.choice.text = body.text
-			      	 new.choice.pos = body.pos
-			      	 return new
-			      else
+			      -- if name=="identifier" then return ast;
+			      -- elseif name=="predicate" then return ast;
+			      -- elseif name=="quantified_exp" then
+			      -- 	 return syntax.generate("capture", ast)
+			   -- else
+			      -- if name=="choice" then
+			      -- 	 local choices = syntax.flatten_choice(ast)
+			      -- 	 choices = map(function(c)
+			      -- 			  return syntax.generate("capture", c)
+			      -- 		       end,
+			      -- 		       choices)
+			      -- 	 local new = syntax.rebuild_choice(choices)
+			      -- 	 assert(next(new)=="choice")
+			      -- 	 new.choice.text = body.text
+			      -- 	 new.choice.pos = body.pos
+			      -- 	 return new
+			      -- else
 			      	 return syntax.generate("capture", ast)
-			      end
+			      -- end
 			   end,
 			   nil,
 			   false)
 
 ---------------------------------------------------------------------------------------------------
-if false then
    syntax.capture_assignment_rhs =
       syntax.make_transformer(function(ast)
 				 local name, body = next(ast)
@@ -172,6 +170,7 @@ if false then
 			      "assignment_",
 			      false)
    
+if false then
    syntax.sequence =
       syntax.make_transformer(function(ast1, ast2)
 				 return syntax.generate("sequence", ast1, ast2)
@@ -203,28 +202,6 @@ syntax.append_boundary_to_rhs =
 
 function transform_quantified_exp(ast)
    local name, body = next(ast)
-   -- local expname, expbody = next(body.subs[1])
-   -- local subexpname, subexpbody
-   -- if expbody.subs[1] then subexpname, subexpbody = next(expbody.subs[1]); end
-   -- local new = ast
-   -- if (expname=="cooked") then
-   --    name = "cooked_quantified_exp"
-   --    new = syntax.generate(name,
-   -- 			    expbody.subs[1],
-   -- 			    body.subs[2])
-   -- elseif ((expname=="capture") and (subexpname=="cooked")) then
-   --    name = "cooked_quantified_exp"
-   --    new = syntax.generate(name,
-   -- 			    syntax.generate("capture",
-   -- 					    subexpbody.subs[1]),
-   -- 			    body.subs[2])
-   -- else
-   --    name = "raw_quantified_exp"
-   --    new = syntax.generate(name, body.subs[1], body.subs[2])
-   -- end
-   -- new[name].text = body.text
-   -- new[name].pos = body.pos
-   -- return new
    local new = syntax.generate("new_quantified_exp",
 			       syntax.id_to_ref(body.subs[1]),
 			       body.subs[2])

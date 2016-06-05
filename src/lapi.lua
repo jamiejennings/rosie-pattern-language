@@ -119,7 +119,12 @@ end
 
 function lapi.load_string(en, input)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   return compile.compile(input, en.env)
+   local results, msg = compile.compile(input, en.env)
+   if results then
+      return true, msg				    -- msg may contain warnings
+   else
+      return false, msg
+   end
 end
 
 -- get a human-readable definition of identifier (reconstituted from its ast)

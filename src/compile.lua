@@ -436,11 +436,6 @@ function cinternals.compile_ref(a, raw, gmr, source, env)
    local pat = env[name]
    if (not pat) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
-   -- if (reftype=="cref") and (pat.cpeg) then
-   --    return pattern{name=name, peg=pat.cpeg, ast=pat.ast}
-   -- else
---      return pattern{name=name, peg=pat.peg, ast=pat.ast}
---   end
    return pattern{name=name, peg=pat.peg}
 end
 
@@ -662,15 +657,6 @@ function cinternals.compile_capture(a, raw, gmr, source, env)
    local pat = cinternals.compile_exp(captured_exp, raw, gmr, source, env)
    local name, pos, text, subs = common.decode_match(captured_exp)
    pat.name = name
-   -- if name=="choice" then
-   --    print("compile_capture: compiling choice sub-exp:" .. parse.reveal_ast(captured_exp))
-   --    local c1, c2 = subs[1], subs[2]
-   --    local pat1 = cinternals.compile_exp(c1, false, gmr, source, env)
-   --    local pat2 = cinternals.compile_exp(c2, false, gmr, source, env)
-   --    pat.peg = C(pat1.peg) + C(pat2.peg)
-   -- else
---      pat.peg = C(pat.peg)
---   end
    return pat
 end
 
@@ -766,40 +752,26 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
    assert(not subs[3])
    assert(type(source)=="string")
    local _, ipos, iname = common.decode_match(lhs)
---   print("Compiling BINDING for " .. iname)
    if env[iname] and not QUIET then
       warn("Compiler: reassignment to identifier " .. iname)
    end
    local rhs_name, rhs_body = next(rhs)
    local raw_exp = (rhs_name=="raw_exp")
 
-   -- if raw_exp then
-   --    rhs = rhs_body.subs[1]
-   --    rhs_name, rhs_body = next(rhs)
-   -- end
-
-   -- TESTING: ---------------------------------------------------------
-   -- local new_qe = false
-   -- if (rhs_name=="capture") then
-   --    if next(rhs_body.subs[1])=="new_quantified_exp" then
-   -- 	 new_qe = true
-   --    end
-   -- end
-   -- ------------------------------------------------------------------
-
    local pat = cinternals.compile_exp(rhs, true, gmr, source, env)
    if syntax.contains_capture(rhs) then
+      assert(((rhs_name=="capture") or
+              (rhs_name=="raw_exp" and next(rhs_body.subs[1])=="capture")), 
+    	     "Compiling binding for ASSIGNMENT " .. iname .. " but rhs not a capture")
       pat.alias=false
       pat.peg = common.match_node_wrap(C(pat.peg), iname)
    else
       pat.alias=true
    end
    pat.ast = rhs;
-   --pat.raw = raw_exp;
    env[iname] = pat
    return pat
 end
-   
 
 function cinternals.compile_ast(ast, raw, gmr, source, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
@@ -878,7 +850,7 @@ function compile.compile_match_expression(source, env)
    -- end
 
    -- !@# WE SHOULD DO THIS TEST, BUT IT FAILS ON CORE LANGUAGE BECAUSE CURRENTLY THE CORE DOES
-   -- NOT USE THE SYNTAX EXPANSION.
+   -- NOT USE THE SYNTAX EXPANSION, AND ALIASES HAVE NO CAPTURES
    -- if not syntax.contains_capture(ast) then
    --    return false, "expression contains no captures: " .. source
    -- end
