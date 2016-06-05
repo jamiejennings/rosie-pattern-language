@@ -855,5 +855,23 @@ check_match('{{a b}{2,2}}', 'abab!', true, 1)
 check_match('{{a b}{2,2}}', 'ababx', true, 1)
 check_match('{{a b}{2,2}}', 'abab ', true, 1)
 
+heading("Grammars")
+
+-- Grammar matches balanced numbers of a's and b's
+g1 = [[grammar
+  g1 = S$    
+  S = {"a" B} / {"b" A} / "" 
+  A = {"a" S} / {"b" A A}
+  B = {"b" S} / {"a" B B}
+end]]
+
+ok, msg = api.load_string(eid, g1)
+check(ok)
+check_match('g1', "", true)
+check_match('g1', "ab", true)
+check_match('g1', "baab", true)
+check_match('g1', "abb", false)
+check_match('g1', "a", false)
+
 test.finish()
 
