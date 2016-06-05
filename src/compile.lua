@@ -50,9 +50,9 @@ compile.boundary = boundary
 -- Base environment, which can be extended with new_env, but not written to directly,
 -- because it is shared between match engines.
 ----------------------------------------------------------------------------------------
-local ENV = {["."] = pattern{name="."; peg=P(1); alias=true; raw=true};  -- any single character
-             ["$"] = pattern{name="$"; peg=P(-1); alias=true; raw=true}; -- end of input
-             [b_id] = pattern{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
+local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};  -- any single character
+             ["$"] = pattern{name="$"; peg=P(-1); alias=true}; -- end of input
+             [b_id] = pattern{name=b_id; peg=boundary; alias=true}; -- token boundary
        }
 setmetatable(ENV, {__tostring = function(env)
 				   return "<base environment>"
@@ -795,8 +795,9 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
       pat.alias=true
    end
    pat.ast = rhs;
-   pat.raw = raw_exp;
+   --pat.raw = raw_exp;
    env[iname] = pat
+   return pat
 end
    
 
@@ -817,10 +818,8 @@ function cinternals.compile_astlist(astlist, raw, gmr, source, env)
    assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
    assert(type(source)=="string")
    local results = {}
-   for _,ast in ipairs(astlist) do
-      table.insert(results, (cinternals.compile_ast(ast, raw, gmr, source, env)))
-   end
-   return results
+   local run_compiler = function(ast) return cinternals.compile_ast(ast, raw, gmr, source, env); end
+   return map(run_compiler, astlist)
 end
 
 ----------------------------------------------------------------------------------------
@@ -830,16 +829,20 @@ end
 compile.parser = parse.core_parse_and_explain;	    -- note: parser is a dynamic variable
 
 function compile.compile(source, env)
-   local astlist, msg = compile.parser(source)
-   if not astlist then return false, msg; end	    -- errors are explained in msg
+   local astlist, original_astlist = compile.parser(source)
+   if not astlist then return false, original_astlist; end -- original_astlist is msg
    assert(type(astlist)=="table")
+   assert(type(original_astlist)=="table")
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local c = coroutine.create(cinternals.compile_astlist)
-   local no_lua_error, results_or_error, error_msg = coroutine.resume(c, astlist, false, false, source, env)
+   local no_lua_error, results, msg = coroutine.resume(c, astlist, false, false, source, env)
    if no_lua_error then
-      return results_or_error, error_msg
+      if results then
+      	 foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
+      end
+      return results, msg			    -- msg may contain compiler warnings
    else
-      error("Internal error (compiler): " .. tostring(results_or_error) .. " / " .. tostring(error_msg))
+      error("Internal error (compiler): " .. tostring(results) .. " / " .. tostring(msg))
    end
 end
 
@@ -847,9 +850,12 @@ end
 function compile.compile_match_expression(source, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
 
-   local astlist, msg = compile.parser(source)
-   if not astlist then return false, msg; end	    -- errors are explained in msg
+   local astlist, original_astlist = compile.parser(source)
+   if (not astlist) then
+      return false, original_astlist		    -- original_astlist is msg
+   end
    assert(type(astlist)=="table")
+   assert(type(original_astlist)=="table")
 
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
@@ -864,7 +870,7 @@ function compile.compile_match_expression(source, env)
    end
 
    local ast = astlist[1]
-   local orig_ast = ast
+   local orig_ast = original_astlist[1]
    local name = common.decode_match(ast)
 
    -- if ((name~="raw") and (name~="raw_exp") and (name~="ref")) then
@@ -878,20 +884,20 @@ function compile.compile_match_expression(source, env)
    -- end
 
    local c = coroutine.create(cinternals.compile_exp)
-   local no_lua_error, result, error_msg = coroutine.resume(c, ast, false, false, source, env)
-   if not no_lua_error then
-      error("Internal error (compiler): " .. tostring(result) .. " / " .. tostring(error_msg))
+   local no_lua_error, result, msg = coroutine.resume(c, ast, false, false, source, env)
+   if (not no_lua_error) then
+      error("Internal error (compiler): " .. tostring(result) .. " / " .. tostring(msg))
    end
 
    -- one ast will compile to one pattern
    if not (result and pattern.is(result)) then
       -- E.g. an assignment or alias statement won't produce a pattern
-      return false, error_msg
+      return false, msg
    end
 
-   -- now we check to see if the original expression is an identifier, and therefore does
+   -- now we check to see if the expression is an identifier, and therefore does
    -- not have to be anonymous
-   local kind, pos, id = common.decode_match(orig_ast)
+   local kind, pos, id = common.decode_match(ast)
 --   print("In compile_match_expression, the original ast is: " .. kind .. "(" .. id .. ")")
    local pat = env[id]
 
@@ -907,7 +913,7 @@ function compile.compile_match_expression(source, env)
    end
 
    result.ast = ast
---   result.ast_history = ast_history
+   result.original_ast = orig_ast
 
    -- Top-level wrap to turn this into a matchable expression
    result.peg = (result.peg * Cp())
@@ -943,7 +949,8 @@ function compile.compile_core(filename, env)
    -- core_parse_and_explain for parsing the Rosie rpl
    local astlist = parse.core_parse_and_explain(source)
    if not astlist then return nil; end		    -- errors have been explained already
-   return cinternals.compile_astlist(astlist, false, false, source, env)
+   cinternals.compile_astlist(astlist, false, false, source, env)
+   return true
 end
 
 ----------------------------------------------------------------------------------------

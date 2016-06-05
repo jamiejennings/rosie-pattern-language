@@ -402,6 +402,8 @@ function syntax.top_level_transform(ast)
       return syntax.to_binding(ast)
    elseif (name=="grammar_") then
       return ast				    -- !@# NEED TO PROCESS THIS AS A BINDING!
+   elseif (name=="syntax_error") then
+      return ast				    -- errors will be culled out later
    else
       error("Error in transform: unrecognized parse result: " .. name)
    end

@@ -224,9 +224,9 @@ end
 ----------------------------------------------------------------------------------------
 
 -- Before assigning a new (transformed) ast, push the current one onto the history list.
-local function push_ast(pat, ast)
-   table.insert(pat.ast_history, 1, ast)
-end
+-- local function push_ast(pat, ast)
+--    table.insert(pat.ast_history, 1, ast)
+-- end
 
 pattern = 
    recordtype.define(
@@ -235,9 +235,10 @@ pattern =
       alternates=false;			 -- array of 2 lpeg patterns that make up a choice pattern
       alias=false;			 -- is this an alias or not
       ast=false;			 -- ast that generated this pattern, for pattern debugging
-      ast_history={};			 -- history of each transformation
-      push_ast=push_ast;
-      raw=false;
+      original_ast=false;
+--      ast_history={};			 -- history of each transformation
+--      push_ast=push_ast;
+--      raw=false;
 --      cpeg=false;				    -- peg to use in cooked mode
 --      source=unspecified;		 -- source (filename, maybe line also?)
 --      uuid=unspecified;

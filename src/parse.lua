@@ -286,7 +286,7 @@ local function reveal_sequence(a)
       else str2 = parse.reveal_exp(e2); end
       return str1 .. " " .. str2
    end
-   return "< " .. rs(a) .. " >"
+   return "( " .. rs(a) .. " )"
 end
 
 local function reveal_string(a)
@@ -310,9 +310,10 @@ end
 local function reveal_predicate(a)
    assert(a, "did not get ast in reveal_predicate")
    local name, pos, text, subs = common.decode_match(a)
-   local pred_type = next(subs[1])
+   local pred_type, pred_type_body = next(subs[1])
    local exp = subs[2]
-   return pred_type .. "(" .. parse.reveal_exp(subs[2]) .. ")"
+--   return pred_type .. "(" .. parse.reveal_exp(subs[2]) .. ")"
+   return pred_type_body.text .. "(" .. parse.reveal_exp(subs[2]) .. ")"
 end
 
 local function reveal_repetition(a)
@@ -332,7 +333,7 @@ local function reveal_quantified_exp(a)
    assert(q, "did not get quantifier exp in reveal_quantified_exp")
    local qname, qpos, printable_q = common.decode_match(q)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
-   local open, close = "<", ">"
+   local open, close = "(", ")"
    if name=="new_quantified_exp" then open, close = "(|", "|)"; end
    return open .. parse.reveal_exp(e) .. close .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
 end
@@ -498,7 +499,7 @@ function parse.core_parse_and_explain(source)
       end
       return false, msg
    else -- successful parse
-      return astlist
+      return astlist, astlist
    end
 end
 

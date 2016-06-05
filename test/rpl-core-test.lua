@@ -859,7 +859,6 @@ heading("Grammars")
 
 -- Grammar matches balanced numbers of a's and b's
 g1 = [[grammar
-  g1 = S$    
   S = {"a" B} / {"b" A} / "" 
   A = {"a" S} / {"b" A A}
   B = {"b" S} / {"a" B B}
@@ -867,11 +866,21 @@ end]]
 
 ok, msg = api.load_string(eid, g1)
 check(ok)
-check_match('g1', "", true)
-check_match('g1', "ab", true)
-check_match('g1', "baab", true)
-check_match('g1', "abb", false)
-check_match('g1', "a", false)
+check_match('S', "", true)
+check_match('S', "ab", true)
+check_match('S', "baab", true)
+check_match('S', "abb", false)
+check_match('S', "a", true, 1)
+check_match('S', "a#", true, 2)
+
+check_match('S$', "x", false)
+check_match('S$', "a", false)
+check_match('S$', "aabb", true)
+
+check_match('S [:digit:]', "ab 4", true)
+check_match('{S [:digit:]}', "ab 4", false)
+check_match('S [:digit:]', "ab4", false)
+check_match('{S [:digit:]}', "ab4", true)
 
 test.finish()
 

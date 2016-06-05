@@ -41,13 +41,12 @@ local function rosie_parse(str, pos, tokens)
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
---      return astlist, errlist
-      return map(syntax.top_level_transform, astlist), errlist
+   return map(syntax.top_level_transform, astlist), errlist, astlist
 end
 
 function parse_and_explain(source)
    assert(type(source)=="string", "Compiler: source argument is not a string: "..tostring(source))
-   local astlist, errlist = rosie_parse(source)
+   local astlist, errlist, original_astlist = rosie_parse(source)
    if #errlist~=0 then
       local msg = "Warning: syntax error reporting is limited at this time\n"
       for _,e in ipairs(errlist) do
@@ -55,7 +54,7 @@ function parse_and_explain(source)
       end
       return false, msg
    else -- successful parse
-      return astlist
+      return astlist, original_astlist
    end
 end
 
