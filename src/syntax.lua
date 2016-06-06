@@ -180,6 +180,13 @@ if false then
 end -- if false
 ---------------------------------------------------------------------------------------------------
 
+syntax.append_looking_at_boundary =
+   syntax.make_transformer(function(ast)
+			      return syntax.generate("sequence", ast, looking_at_boundary_ast)
+			   end,
+			   nil,
+			   false)
+
 syntax.append_boundary =
    syntax.make_transformer(function(ast)
 			      return syntax.generate("sequence", ast, boundary_ast)
@@ -366,13 +373,13 @@ end
 function syntax.top_level_transform(ast)
    local name, body = next(ast)
    if name=="identifier" then
-      return syntax.append_boundary(syntax.id_to_ref(ast))
+      return syntax.append_looking_at_boundary(syntax.capture(syntax.id_to_ref(ast)))
    elseif syntax.expression_p(ast) then
       local new = syntax.capture(ast)
       if (name=="raw") or (name=="string") or (name=="charset") or (name=="named_charset") then
       	 new = syntax.raw(new)
       else
-      	 new = syntax.append_boundary(syntax.cook(new))
+      	 new = syntax.append_looking_at_boundary(syntax.cook(new))
       end
       return syntax.generate("raw_exp", new)
    elseif (name=="assignment_") or (name=="alias_") then
