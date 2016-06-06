@@ -392,18 +392,6 @@ function cinternals.compile_new_quantified_exp(a, raw, gmr, source, env)
    return pattern{name=qname, peg=qpeg, ast=a};
 end
 
--- function cinternals.compile_cooked_quantified_exp(a, raw, gmr, source, env)
---    assert(a, "did not get ast in compile_cooked_quantified_exp")
---    local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, false, gmr, source, env)
---    return pattern{name=qname, peg=qpeg};
--- end
-
--- function cinternals.compile_raw_quantified_exp(a, raw, gmr, source, env)
---    assert(a, "did not get ast in compile_raw_quantified_exp")
---    local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, true, gmr, source, env)
---    return pattern{name=qname, peg=qpeg};
--- end
-
 function cinternals.compile_string(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_string")
    local name, pos, text = common.decode_match(a)
@@ -451,24 +439,6 @@ function cinternals.compile_predicate(a, raw, gmr, source, env)
    end
    return pattern{name=pred, peg=peg, ast=a}
 end
-
--- function cinternals.compile_negation(a, raw, gmr, source, env)
---    print("INSIDE COMPILE_NEGATION: ", parse.reveal_ast(a))
---    assert(a, "did not get ast in compile_negation")
---    local name, pos, text, subs = common.decode_match(a)
---    local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
---    peg = (- peg)
---    return pattern{name=name, peg=peg}
--- end
-
--- function cinternals.compile_lookat(a, raw, gmr, source, env)
---    print("INSIDE COMPILE_LOOKAT: ", parse.reveal_ast(a))
---    assert(a, "did not get ast in compile_lookat")
---    local name, pos, text, subs = common.decode_match(a)
---    local peg = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
---    peg = (# peg)
---    return pattern{name=name, peg=peg}
--- end
 
 function cinternals.compile_sequence(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_sequence")
@@ -535,7 +505,6 @@ function cinternals.compile_choice(a, raw, gmr, source, env)
    local peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
    return pattern{name=name,
 		  peg=(peg1+peg2),
---		  cpeg=C(peg1)*...
 		  alternates = { C(peg1), C(peg2) }}
 end
 
@@ -571,14 +540,14 @@ end
 function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_grammar")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name=="grammar_")
+   assert(name=="grammar_" or name=="new_grammar")
    assert(type(subs[1])=="table")
    assert(type(source)=="string")
    local gtable = compile.new_env(env)
    local first = subs[1]			    -- first rule in grammar
    assert(first, "not getting first rule in compile_grammar")
    local fname, fpos, ftext = common.decode_match(first)
-   assert(first and (fname=="assignment_" or fname=="alias_"))
+   assert(first and (fname=="assignment_" or fname=="alias_" or fname=="binding"))
 
    local rule, id_node, id, exp_node
    
@@ -608,16 +577,23 @@ function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
       assert(exp_node, "not getting exp_node in compile_grammar")
       -- flags: not raw, inside grammar
       pats[id] = cinternals.compile_exp(exp_node, false, true, source, gtable)
+      if (fname=="binding" and not syntax.contains_capture(exp_node)) then
+	 gtable[id].alias=true;
+      end
    end						    -- for
 
    -- third pass: create the table that will create the LPEG grammar by stripping off the Rosie
-   -- pattern records, and wrapping as needed with Cp and C
+   -- pattern records, and wrapping as needed with lpeg.C
    local t = {}
    for id, pat in pairs(pats) do		    -- for each rule
       if gtable[id].alias then
-	 t[id] = pat.peg
+	    t[id] = pat.peg			    -- the old grammar way
       else
-	 t[id] = C(pat.peg)
+	 if (name=="new_grammar") then
+	    t[id] = common.match_node_wrap(C(pat.peg), id)
+	 else
+	    t[id] = C(pat.peg)			    -- the old grammar way
+	 end
       end
    end						    -- for
    t[1] = start					    -- first rule is start rule
@@ -640,6 +616,10 @@ function cinternals.compile_grammar(a, raw, gmr, source, env)
    if pat then
       if env[name] and not QUIET then
 	 warn("Compiler: reassignment to identifier " .. name)
+      end
+      if next(a)=="new_grammar" then
+	 print("=================================================== Compiling new_grammar: " .. name)
+	 -- pat.peg = common.match_node_wrap(C(pat.peg), name)
       end
       env[name] = pat
    end
@@ -780,6 +760,7 @@ function cinternals.compile_ast(ast, raw, gmr, source, env)
 		      alias_=cinternals.compile_assignment;
 		      binding=cinternals.compile_binding;
 		      grammar_=cinternals.compile_grammar;
+		      new_grammar=cinternals.compile_grammar;
 		      exp=cinternals.compile_exp;
 		      default=cinternals.compile_exp;
 		   }
@@ -829,6 +810,8 @@ function compile.compile_match_expression(source, env)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
 
+   -- After adding support for semi-colons to end statements, can change this restriction to allow
+   -- arbitrary statements, followed by an expression, like scheme's 'begin' form.
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
       for i, a in ipairs(astlist) do
@@ -836,24 +819,23 @@ function compile.compile_match_expression(source, env)
       end
       return false, msg
    elseif not compile.expression_p(astlist[1]) then
-      -- Statements, e.g. assignments, won't produce a pattern
+      -- Statements won't produce a pattern
       local msg = "Error: only expressions can be matched (not statements): " .. source
       return false, msg
    end
 
    local ast = astlist[1]
    local orig_ast = original_astlist[1]
-   local name = common.decode_match(ast)
+   local name, pos, text, subs = common.decode_match(ast)
+   local pat, raw_expression_flag
 
-   -- if ((name~="raw") and (name~="raw_exp") and (name~="ref")) then
-   --    ast = cinternals.append_boundary(ast)
-   -- end
-
-   -- !@# WE SHOULD DO THIS TEST, BUT IT FAILS ON CORE LANGUAGE BECAUSE CURRENTLY THE CORE DOES
-   -- NOT USE THE SYNTAX EXPANSION, AND ALIASES HAVE NO CAPTURES
-   -- if not syntax.contains_capture(ast) then
-   --    return false, "expression contains no captures: " .. source
-   -- end
+   if (name=="ref" or name=="identifier") then
+      pat = env[text]
+      raw_expression_flag = (pattern.is(pat) and pat.ast and (next(pat.ast)=="raw_exp"))
+      if (not raw_expression_flag) then
+	 ast = syntax.append_looking_at_boundary(ast)
+      end
+   end
 
    local c = coroutine.create(cinternals.compile_exp)
    local no_lua_error, result, msg = coroutine.resume(c, ast, false, false, source, env)
@@ -863,35 +845,29 @@ function compile.compile_match_expression(source, env)
 
    -- one ast will compile to one pattern
    if not (result and pattern.is(result)) then
-      -- E.g. an assignment or alias statement won't produce a pattern
       return false, msg
    end
 
-   -- now we check to see if the expression is an identifier, and therefore does
-   -- not have to be anonymous
-   local kind, pos, id = common.decode_match(ast)
---   print("In compile_match_expression, the original ast is: " .. kind .. "(" .. id .. ")")
-   local pat = env[id]
+   result.ast = ast
+   result.original_ast = orig_ast
 
-   if not ((kind=="ref" or kind=="identifier") and pattern.is(pat) and (not pat.alias)) then -- !@# remove identifier
+   -- if the expression was a ref (i.e. an identifier), then it does not have to be anonymous
+
+   if not (pat and (not pat.alias)) then
       -- if the user entered an identifier, then we are all set, unless it is an alias, which
       -- by itself may capture nothing and thus should be handled like any other kind of
       -- expression.  
       -- BUT if the user entered an expression other than an identifier, we should treat it like it
       -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
       -- since that can't be an identifier name 
---      print("*** WRAPPING NON-IDENTIFIER ENTERED AT TOP LEVEL: " .. id .. " ***")
+--print("*** WRAPPING NON-IDENTIFIER ENTERED AT TOP LEVEL: " .. parse.reveal_ast(ast) .. " ***")
       result.peg = common.match_node_wrap(C(result.peg), "*")
+
+   else
+      -- Top-level wrap to turn this into a matchable expression
+--      result.peg = (result.peg * Cp())		    -- !@# is this needed?
    end
-
-   result.ast = ast
-   result.original_ast = orig_ast
-
-   -- Top-level wrap to turn this into a matchable expression
-   result.peg = (result.peg * Cp())
-
    return result
-
 end
    
 function compile.compile_file(filename, env)

@@ -341,9 +341,9 @@ check_match('~(a)*', ' a a   ', true, 3, " a a")
 check_match('(~(a)*)', ' a a   ', true, 3, " a a")
 ok, msg = api.load_string(eid, "token = { ![:space:] . {!~ .}* }")
 check(ok)
-check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 39, "The ")
-check_match('token token token', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,") -- NB
-check_match('{(token token token)}', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,") -- NB
+check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 40, "The")
+check_match('token token token', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,")
+check_match('{(token token token)}', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,")
 check_match('token{4,}', 'The quick, brown fox.\nSentence fragment!!', false)
 check_match('(token){4,}', 'The quick, brown fox.\nSentence fragment!!', true, 0)
 -- The 4th token is a comma in the following match:
@@ -860,9 +860,9 @@ heading("Grammars")
 
 -- Grammar matches balanced numbers of a's and b's
 g1 = [[grammar
-  S = {"a" B} / {"b" A} / "" 
-  A = {"a" S} / {"b" A A}
-  B = {"b" S} / {"a" B B}
+  S = { {"a" B} / {"b" A} / "" }
+  alias A = { {"a" S} / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
 end]]
 
 ok, msg = api.load_string(eid, g1)
@@ -877,6 +877,22 @@ check_match('S', "a#", true, 2)
 check_match('S$', "x", false)
 check_match('S$', "a", false)
 check_match('S$', "aabb", true)
+
+set_expression('S')
+ok, match_js = api.match(eid, "baab!")
+check(ok)
+check(match_js)
+match = json.decode(match_js)
+check(next(match[1])=="S", "the match of a grammar is named for the identifier bound to the grammar")
+check(match[2]==1, "one char left over for this match")
+function collect_names(ast)
+   local name = next(ast)
+   return cons(name, flatten(map(collect_names, ast[name].subs)))
+end
+ids = collect_names(match[1])
+check(member('S', ids))
+check(member('B', ids))
+check(not member('A', ids))			    -- an alias
 
 check_match('S [:digit:]', "ab 4", true)
 check_match('{S [:digit:]}', "ab 4", false)

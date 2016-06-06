@@ -162,3 +162,9 @@ function reduce(fn, init, lst, i)
    end
 end
 
+function flatten(ls)
+   if (not list_p(ls)) then return { ls };
+   elseif null_p(ls) then return ls;
+   else return append(flatten(car(ls)), flatten(cdr(ls)))
+   end
+end

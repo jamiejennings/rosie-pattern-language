@@ -22,6 +22,12 @@ local function red_write(...)
    color_write(io.stdout, "red", str)
 end
 
+local function green_write(...)
+   local str = ""
+   for _,v in ipairs({...}) do str = str .. tostring(v); end
+   color_write(io.stdout, "green", str)
+end
+
 test = {}
 
 local count, fail_count, heading_count, subheading_count, messages
@@ -76,10 +82,12 @@ function test.subheading(label)
 end
 
 function test.finish(optional_msg)
-   io.stdout:write("\n\n** TOTAL ", tostring(count), " tests attempted.\n")
+   local total = "\n\n** TOTAL " .. tostring(count) .. " tests attempted.\n"
    if fail_count == 0 then
-      io.stdout:write("** All tests passed.\n")
+      green_write(total)
+      green_write("** All tests passed.\n")
    else
+      io.stdout:write(total)
       io.stdout:write("** ", tostring(fail_count), " tests failed:\n")
       for _,v in ipairs(messages) do
 	 red_write(v.src, ":", v.l, " ", v.h, ": ", v.sh, ": ", v.m, "\n")

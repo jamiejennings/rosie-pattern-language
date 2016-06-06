@@ -175,7 +175,7 @@ check(json.decode(msg)==json.null)
 
 ok, def = api.get_binding(eid, "S")
 check(ok)
-check(json.decode(def):find("grammar")==1)
+check(json.decode(def):find("new_grammar")==1)
 
 ok, env_js = api.get_environment(eid)
 check(ok)
@@ -363,8 +363,8 @@ check(type(retvals_js)=="string")
 retvals = json.decode(retvals_js)
 check(retvals[2]==0)
 match = retvals[1]
-check(match["*"])
-match = retvals[1]["*"].subs[1]
+--check(match["*"])
+--match = retvals[1]["*"].subs[1]
 check(match["common.dotted_identifier"].text=="x.y.z")
 check(match["common.dotted_identifier"].subs[2]["common.identifier_plus_plus"].text=="y")
 

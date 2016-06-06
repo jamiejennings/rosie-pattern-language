@@ -237,9 +237,9 @@ end
 local function reveal_grammar(a)
    assert(a, "did not get ast in reveal_grammar")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name=="grammar_")
+   assert(name=="grammar_" or name=="new_grammar")
    assert(type(subs[1])=="table")
-   local str = "grammar\n"
+   local str = name .."\n"
    for i = 1, #subs do
       local rule = subs[i]
       assert(rule, "did not get rule in reveal_grammar")
@@ -470,6 +470,7 @@ function parse.reveal_ast(ast)
 		      assignment_=reveal_assignment;
 		      alias_=reveal_alias;
 		      grammar_=reveal_grammar;
+		      new_grammar=reveal_grammar;
 		      exp=parse.reveal_exp;
 		      default=parse.reveal_exp;
 		   }

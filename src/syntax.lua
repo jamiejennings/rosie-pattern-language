@@ -322,7 +322,6 @@ syntax.cooked_to_raw =
 syntax.to_binding = 
    syntax.make_transformer(function(ast)
 			      local name, body = next(ast)
-			      assert((name=="assignment_") or (name=="alias_"))
 			      local lhs = body.subs[1]
 			      local rhs = body.subs[2]
 			      local original_rhs_name = next(rhs)
@@ -373,7 +372,7 @@ end
 function syntax.top_level_transform(ast)
    local name, body = next(ast)
    if name=="identifier" then
-      return syntax.append_looking_at_boundary(syntax.capture(syntax.id_to_ref(ast)))
+      return syntax.id_to_ref(ast)
    elseif syntax.expression_p(ast) then
       local new = syntax.capture(ast)
       if (name=="raw") or (name=="string") or (name=="charset") or (name=="named_charset") then
@@ -385,7 +384,11 @@ function syntax.top_level_transform(ast)
    elseif (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
    elseif (name=="grammar_") then
-      return ast				    -- !@# NEED TO PROCESS THIS AS A BINDING!
+      local new_bindings = map(syntax.to_binding, ast.grammar_.subs)
+      local new = syntax.generate("new_grammar", table.unpack(new_bindings))
+      new.new_grammar.text = ast.grammar_.text
+      new.new_grammar.pos = ast.grammar_.pos
+      return new
    elseif (name=="syntax_error") then
       return ast				    -- errors will be culled out later
    else
