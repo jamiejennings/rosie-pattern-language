@@ -210,9 +210,8 @@ if OPTION["-patterns"] then
 	 os.exit(-4)
       end
    end
-   local ok, env = lapi.get_environment(CL_ENGINE)
-   if not ok then error(env); end		    -- api call failed, env is message
-   common.print_env(json.decode(env))		    -- inefficient FIXME!
+   local env = lapi.get_environment(CL_ENGINE)
+   common.print_env(env)
    os.exit()
 end
 

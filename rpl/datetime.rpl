@@ -48,13 +48,13 @@ alias d = [:digit:]
 
 alias fullyear = {d d d d}
 
-alias date_month = {"0" [1-9]} / {"1" [0-2]}
+alias date_month = { {"0" [1-9]} / {"1" [0-2]} }
 
-alias date_mday = {"0" [1-9]}		-- single digit dates
-                / {[12][0-9]}		-- most of the two digit dates
-                / {"3" [01]}		-- and the rest
+alias date_mday = {  {"0" [1-9]}		-- single digit dates
+                   / {[12][0-9]}		-- most of the two digit dates
+		   / {"3" [01]} }		-- and the rest
 
-alias time_hour = {[01][0-9]} / {"2"[0-3]}
+alias time_hour = { {[01][0-9]} / {"2"[0-3]} }
 
 alias time_minute = {[0-5][0-9]}
 alias time_second = { {{[0-5][0-9]} / "60"} {"." d+}? }     -- time_second must match 60 for leap second
