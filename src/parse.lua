@@ -390,7 +390,7 @@ end
 local function reveal_capture(a)
    assert(a, "did not get ast in reveal_capture")
    local name, pos, text, subs = common.decode_match(a)
-   return "CAP(" .. parse.reveal_exp(subs[1]) .. ")"
+   return "CAPTURE(" .. parse.reveal_exp(subs[1]) .. ", " .. parse.reveal_exp(subs[2]) .. ")"
 end
 
 local function reveal_group(a)

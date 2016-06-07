@@ -298,9 +298,10 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    local epeg = e.peg
    local append_boundary = false
    local subname, subbody = next(subs[1])
-   if subname=="capture" then			    -- !@#
-      subname, subbody = next(subbody.subs[1])
-   end
+   -- if subname=="capture" then			    -- !@#
+   --    print("%%%%%%%%%%%%%%%% Using the IGNORE CAPTURE clause in process_quantified_exp %%%%%%%%%%%%%%%%")
+   --    subname, subbody = next(subbody.subs[1])
+   -- end
    if (((not raw) and subname~="raw" 
                   and subname~="charset" 
 		  and subname~="named_charset"
@@ -590,7 +591,8 @@ function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
 	    t[id] = pat.peg			    -- the old grammar way
       else
 	 if (name=="new_grammar") then
-	    t[id] = common.match_node_wrap(C(pat.peg), id)
+	    --t[id] = common.match_node_wrap(C(pat.peg), id)
+	    t[id]=pat.peg
 	 else
 	    t[id] = C(pat.peg)			    -- the old grammar way
 	 end
@@ -617,10 +619,10 @@ function cinternals.compile_grammar(a, raw, gmr, source, env)
       if env[name] and not QUIET then
 	 warn("Compiler: reassignment to identifier " .. name)
       end
-      if next(a)=="new_grammar" then
-	 print("=================================================== Compiling new_grammar: " .. name)
+--      if next(a)=="new_grammar" then
+	 --print("=================================================== Compiling new_grammar: " .. name)
 	 -- pat.peg = common.match_node_wrap(C(pat.peg), name)
-      end
+--      end
       env[name] = pat
    end
 end
@@ -630,13 +632,35 @@ function cinternals.compile_capture(a, raw, gmr, source, env)
 --   print("compile_capture: " .. parse.reveal_ast(a) .. " and raw is " .. tostring(raw))
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="capture")
-   assert(subs and subs[1] and (not subs[2]), "wrong number of subs in capture ast")
-   local captured_exp = subs[1]
+   assert(subs and subs[1] and subs[2] and (not subs[3]), "wrong number of subs in capture ast")
+   local ref_exp, captured_exp = subs[1], subs[2]
+   local cap_name, cap_pos, cap_text, cap_subs = common.decode_match(captured_exp)
+   local pat
+
    assert(compile.expression_p(captured_exp),
-	  "compile_capture called with an ast that is not an expression: " .. (next(subs[1])))
-   local pat = cinternals.compile_exp(captured_exp, raw, gmr, source, env)
-   local name, pos, text, subs = common.decode_match(captured_exp)
-   pat.name = name
+	  "compile_capture called with an ast that is not an expression: " .. (next(captured_exp)))
+
+   local refname, _, reftext, _ = common.decode_match(ref_exp)
+   assert(refname=="ref")
+   assert(type(reftext)=="string")
+
+   -- if cap_name=="choice" then
+   --    local choices = syntax.flatten_choice(captured_exp)
+   --    choices = map(function(c)
+   -- 		       local pat = cinternals.compile_exp(c, raw, gmr, source, env)
+   -- 		       return common.match_node_wrap(pat.peg, reftext)
+   -- 		    end,
+   -- 		    choices)
+   --    local final_peg = reduce(function(p1, p2) return p1 + p2; end,
+   -- 			       car(choices),
+   -- 			       cdr(choices))
+   --    pat = pattern{name=cap_name, peg=final_peg}
+   -- else
+      pat = cinternals.compile_exp(captured_exp, raw, gmr, source, env)
+--   end
+
+   pat.name = cap_name
+   pat.peg = common.match_node_wrap(C(pat.peg), reftext)
    return pat
 end
 
@@ -744,7 +768,7 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
               (rhs_name=="raw_exp" and next(rhs_body.subs[1])=="capture")), 
     	     "Compiling binding for ASSIGNMENT " .. iname .. " but rhs not a capture")
       pat.alias=false
-      pat.peg = common.match_node_wrap(C(pat.peg), iname)
+      --pat.peg = common.match_node_wrap(C(pat.peg), iname)
    else
       pat.alias=true
    end

@@ -131,7 +131,7 @@ function syntax.rebuild_choice(choices)
 end
 		    
 syntax.capture =
-   syntax.make_transformer(function(ast)
+   syntax.make_transformer(function(ast, id)
 			      local name, body = next(ast)
 			      -- if name=="identifier" then return ast;
 			      -- elseif name=="predicate" then return ast;
@@ -150,13 +150,16 @@ syntax.capture =
 			      -- 	 new.choice.pos = body.pos
 			      -- 	 return new
 			      -- else
-			      	 return syntax.generate("capture", ast)
+			      return syntax.generate("capture",
+						     common.create_match("ref", 0, id),
+						     ast)
 			      -- end
 			   end,
 			   nil,
 			   false)
 
 ---------------------------------------------------------------------------------------------------
+if false then
    syntax.capture_assignment_rhs =
       syntax.make_transformer(function(ast)
 				 local name, body = next(ast)
@@ -170,7 +173,6 @@ syntax.capture =
 			      "assignment_",
 			      false)
    
-if false then
    syntax.sequence =
       syntax.make_transformer(function(ast1, ast2)
 				 return syntax.generate("sequence", ast1, ast2)
@@ -325,7 +327,11 @@ syntax.to_binding =
 			      local lhs = body.subs[1]
 			      local rhs = body.subs[2]
 			      local original_rhs_name = next(rhs)
-			      if (name=="assignment_") then rhs = syntax.capture(rhs); end
+			      if (name=="assignment_") then
+				 local name, pos, text, subs = common.decode_match(lhs)
+				 assert(name=="identifier")
+				 rhs = syntax.capture(rhs, text)
+			      end
 			      local b
 			      if original_rhs_name=="raw" then
 				 -- wrap with "raw_exp" so that we know at top level not to append a boundary
@@ -374,7 +380,7 @@ function syntax.top_level_transform(ast)
    if name=="identifier" then
       return syntax.id_to_ref(ast)
    elseif syntax.expression_p(ast) then
-      local new = syntax.capture(ast)
+      local new = ast--syntax.capture(ast, "*")
       if (name=="raw") or (name=="string") or (name=="charset") or (name=="named_charset") then
       	 new = syntax.raw(new)
       else
@@ -455,11 +461,10 @@ function syntax.test()
 	 end
 	 local top_level
 	 -- Need to determine if this binding came from an assignment originally
-	 -- Is this a hack or always true?
 	 if (syntax.contains_capture(rhs)) then
 	    top_level = parse.reveal_ast(rhs)
 	 else					    -- was an alias or other
-	    top_level = parse.reveal_ast(syntax.capture(rhs))
+	    top_level = parse.reveal_ast(syntax.capture(rhs, "anonymous"))
 	 end
 	 if not raw then
 	    top_level = top_level .. " *BOUNDARY* "

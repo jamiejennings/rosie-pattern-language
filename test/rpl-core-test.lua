@@ -65,10 +65,43 @@ check(ok)
 ok, msg = api.get_binding(eid, "a")
 check(ok)
 
+set_expression('a')
+ok, match_js = api.match(eid, "a")
+check(ok)
+match = json.decode(match_js)
+check(next(match[1])=="a", "the match of an identifier is named for the identifier")
+
+set_expression('(a)')
+ok, match_js = api.match(eid, "a")
+check(ok)
+match = json.decode(match_js)
+check(next(match[1])=="*", "the match of an expression is anonymous")
+subs = match[1]["*"].subs
+check(subs)
+submatchname = next(subs[1])
+check(submatchname=="a", "the only sub of this expression is the identifier in the cooked group")
+
+set_expression('{a}')
+ok, match_js = api.match(eid, "a")
+check(ok)
+match = json.decode(match_js)
+check(next(match[1])=="*", "the match of an expression is anonymous")
+subs = match[1]["*"].subs
+check(subs)
+submatchname = next(subs[1])
+check(submatchname=="a", "the only sub of this expression is the identifier in the raw group")
+
 ----------------------------------------------------------------------------------------
 heading("Literals")
 ----------------------------------------------------------------------------------------
 subheading("Built-ins")
+
+set_expression('.')
+ok, match_js = api.match(eid, "a")
+check(ok)
+match = json.decode(match_js)
+check(next(match[1])=="*", "the match of an alias is anonymous")
+
 check_match(".", "a", true)
 check_match(".", "abcd", false)
 check_match("(.)", "abcd", false)
