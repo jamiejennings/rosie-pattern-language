@@ -109,9 +109,7 @@ local expression = P{"expression";
 	       cooked = token("cooked", P"(" * ignore * V"expression"^1 * ignore * P")");
 	       raw = token("raw", P"{" * ignore * V"expression"^1 * ignore * P"}");
 	       predicate = token("predicate", ignore * predicate_symbol * (V"quantified_exp" + V"plain_exp"));
---	       negation = token("negation", ignore * P"!" * (V"quantified_exp" + V"plain_exp"));
---	       lookat = token("lookat", ignore * P"@" * (V"quantified_exp" + V"plain_exp"));
-}
+	    }
 
 local statement = P{"start";
 	      start = ignore * (V"alias" + V"grammar" + V"assignment");
@@ -174,7 +172,6 @@ function parse.syntax_error_check(ast)
       return parse.syntax_error_check(subs[1])
    end
    local functions = {"syntax_error_check";
-		      --group=check_many_branches;
 		      raw=check_many_branches;
 		      cooked=check_many_branches;
 		      choice=check_two_branches;
@@ -183,8 +180,8 @@ function parse.syntax_error_check(ast)
 		      character=none_found;
 		      sequence=check_two_branches;
 		      predicate=check_two_branches;
-		      negation=none_found;  -- was check_one_branch before changing to predicate;
-		      lookat=none_found; -- was check_one_branch;
+		      negation=none_found;
+		      lookat=none_found;
 		      named_charset=none_found;
 		      charset=check_one_branch;
 		      charlist=check_many_branches;
@@ -244,8 +241,6 @@ end
 local function reveal_ref(a)
    assert(a, "did not get ast in reveal_ref")
    local name, pos, text = common.decode_match(a)
---   if name=="cref" then error("TEMPORARY INTERNAL ERROR CREF(" .. text .. ")")
---   elseif name=="rref" then error("TEMPORARY INTERNAL ERROR RREF(" .. text .. ")")
    if name=="ref" then return "REF(" .. text .. ")"
    else error("Unknown ref type in reveal_ref: " .. tostring(name))
    end
@@ -326,24 +321,11 @@ local function reveal_string(a)
    return string.format('%q', text)
 end
 
--- local function reveal_negation(a)
---    assert(a, "did not get ast in reveal_negation")
---    local name, pos, text, subs = common.decode_match(a)
---    return "!"..parse.reveal_exp(subs[1])
--- end
-
--- local function reveal_lookat(a)
---    assert(a, "did not get ast in reveal_lookat")
---    local name, pos, text, subs = common.decode_match(a)
---    return "@"..parse.reveal_exp(subs[1])
--- end
-
 local function reveal_predicate(a)
    assert(a, "did not get ast in reveal_predicate")
    local name, pos, text, subs = common.decode_match(a)
    local pred_type, pred_type_body = next(subs[1])
    local exp = subs[2]
---   return pred_type .. "(" .. parse.reveal_exp(subs[2]) .. ")"
    return pred_type_body.text .. "(" .. parse.reveal_exp(subs[2]) .. ")"
 end
 
@@ -365,7 +347,6 @@ local function reveal_quantified_exp(a)
    local qname, qpos, printable_q = common.decode_match(q)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
    local open, close = "(", ")"
-   if name=="new_quantified_exp" then open, close = "(|", "|)"; end
    return open .. parse.reveal_exp(e) .. close .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
 end
 

@@ -339,7 +339,6 @@ function cinternals.compile_sequence(a, raw, gmr, source, env)
    then
       return pattern{name=name, peg=peg1 * peg2}
    else
---      print("************* adding a boundary to the PEG itself in compile_sequence **************")
       return pattern{name=name, peg=peg1 * boundary * peg2}
    end
 end
@@ -456,18 +455,7 @@ function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
    -- third pass: create the table that will create the LPEG grammar by stripping off the Rosie
    -- pattern records, and wrapping as needed with lpeg.C
    local t = {}
-   for id, pat in pairs(pats) do		    -- for each rule
-      if gtable[id].alias then
-	    t[id] = pat.peg			    -- the old grammar way
-      else
-	 if (name=="new_grammar") then
-	    --t[id] = common.match_node_wrap(C(pat.peg), id)
-	    t[id]=pat.peg
-	 else
-	    t[id] = C(pat.peg)			    -- the old grammar way
-	 end
-      end
-   end						    -- for
+   for id, pat in pairs(pats) do t[id] = pat.peg; end
    t[1] = start					    -- first rule is start rule
    local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
    if success then
@@ -545,10 +533,6 @@ local looking_at_boundary_ast = common.create_match("predicate",
 						    common.create_match("lookat", 0, "@/generated/"),
 						    boundary_ast)
 
-function cinternals.append_boundary(a)
-   return common.create_match("sequence", 1, "/generated/", a, looking_at_boundary_ast)
-end
-
 function cinternals.compile_binding(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_binding")
    local name, pos, text, subs = common.decode_match(a)
@@ -578,9 +562,9 @@ function cinternals.compile_rhs(a, raw, gmr, source, env, iname)
    local pat = cinternals.compile_exp(a, true, gmr, source, env)
    pat.raw = (rhs_name=="raw_exp")
    if syntax.contains_capture(a) then
-      assert(((rhs_name=="capture") or
-	      (rhs_name=="raw_exp" and next(rhs_body.subs[1])=="capture")), 
-	     "Compiling binding for ASSIGNMENT " .. iname .. " but rhs not a capture")
+      -- assert(((rhs_name=="capture") or
+      -- 	      (rhs_name=="raw_exp" and next(rhs_body.subs[1])=="capture")), 
+      -- 	     "Compiling binding for ASSIGNMENT " .. iname .. " but rhs not a capture")
       pat.alias=false
    else
       pat.alias=true
@@ -612,7 +596,7 @@ end
 -- Top-level interface to compiler
 ----------------------------------------------------------------------------------------
 
-compile.parser = parse.core_parse_and_explain;	    -- note: parser is a dynamic variable
+compile.parser = parse.core_parse_and_explain;	    -- Using this as a dynamic variable
 
 function compile.compile(source, env)
    local astlist, original_astlist = compile.parser(source)
@@ -628,13 +612,12 @@ function compile.compile(source, env)
       end
       return results, msg			    -- msg may contain compiler warnings
    else
-      error("Internal error (compiler): " .. tostring(results) .. " / " .. tostring(msg))
+      error("Internal error (compiler): " .. tostring(results))
    end
 end
 
 function compile.compile_match_expression(source, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-
    local astlist, original_astlist = compile.parser(source)
    if (not astlist) then
       return false, original_astlist		    -- original_astlist is msg
@@ -644,6 +627,7 @@ function compile.compile_match_expression(source, env)
 
    -- After adding support for semi-colons to end statements, can change this restriction to allow
    -- arbitrary statements, followed by an expression, like scheme's 'begin' form.
+
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
       for i, a in ipairs(astlist) do
@@ -651,7 +635,6 @@ function compile.compile_match_expression(source, env)
       end
       return false, msg
    elseif not compile.expression_p(astlist[1]) then
-      -- Statements won't produce a pattern
       local msg = "Error: only expressions can be matched (not statements): " .. source
       return false, msg
    end
@@ -661,13 +644,9 @@ function compile.compile_match_expression(source, env)
    local name, pos, text, subs = common.decode_match(ast)
    local pat, raw_expression_flag
 
-   if (name=="ref") or (name=="identifier") then
+   if (name=="ref") then
       pat = env[text]
-      raw_expression_flag = (((name=="ref") and pattern.is(pat) and pat.raw)
-			     or
-			      -- else name=="identifier"
-			     (pattern.is(pat) and pat.ast and (next(pat.ast)=="raw_exp")) or
-		             (pattern.is(pat) and (not pat.ast) and pat.raw))
+      raw_expression_flag = (pattern.is(pat) and pat.raw)
       if (not raw_expression_flag) then
 	 ast = syntax.append_looking_at_boundary(ast)
       end
@@ -678,30 +657,22 @@ function compile.compile_match_expression(source, env)
    if (not no_lua_error) then
       error("Internal error (compiler): " .. tostring(result) .. " / " .. tostring(msg))
    end
-
-   -- one ast will compile to one pattern
    if not (result and pattern.is(result)) then
+      -- compile-time error
       return false, msg
    end
 
    result.ast = ast
    result.original_ast = orig_ast
 
-   -- if the expression was a ref (i.e. an identifier), then it does not have to be anonymous
-
    if not (pat and (not pat.alias)) then
       -- if the user entered an identifier, then we are all set, unless it is an alias, which
       -- by itself may capture nothing and thus should be handled like any other kind of
       -- expression.  
-      -- BUT if the user entered an expression other than an identifier, we should treat it like it
+      -- if the user entered an expression other than an identifier, we should treat it like it
       -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
       -- since that can't be an identifier name 
---print("*** WRAPPING NON-IDENTIFIER ENTERED AT TOP LEVEL: " .. parse.reveal_ast(ast) .. " ***")
       result.peg = common.match_node_wrap(C(result.peg), "*")
-
-   else
-      -- Top-level wrap to turn this into a matchable expression
---      result.peg = (result.peg * Cp())		    -- !@# is this needed?
    end
    return result
 end
@@ -735,14 +706,6 @@ function compile.compile_core(filename, env)
    if not astlist then return nil; end		    -- errors have been explained already
    cinternals.compile_astlist(astlist, false, false, source, env)
    return true
-end
-
-----------------------------------------------------------------------------------------
--- Low level match functions (user level functions use engines)
-----------------------------------------------------------------------------------------
-
-function compile.match_peg(peg, input, start)
-   return (peg * Cp()):match(input, start)
 end
 
 

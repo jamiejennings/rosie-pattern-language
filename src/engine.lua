@@ -114,7 +114,7 @@ end
 
 local function engine_match(e, input, start)
    start = start or 1
-   local result, nextpos = compile.match_peg(e.pattern.peg, input, start)
+   local result, nextpos = (e.pattern.peg * lpeg.Cp()):match(input, start)
    if result then return (e.encoder_function(result)), nextpos;
    else return false, 1; end
 end
