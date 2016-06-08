@@ -50,7 +50,7 @@ function parse_and_explain(source)
    if #errlist~=0 then
       local msg = "Warning: syntax error reporting is limited at this time\n"
       for _,e in ipairs(errlist) do
-	 msg = msg .. compile.explain_syntax_error(e, source) .. "\n"
+	 msg = msg .. parse.explain_syntax_error(e, source) .. "\n"
       end
       return false, msg
    else -- successful parse

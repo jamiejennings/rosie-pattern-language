@@ -23,8 +23,8 @@ identifier = { { id {[.]id}* }			    -- hierarchical identifier name
 
 alias dquote = { [\"] }
 alias esc =    { [\\] }
-string = { {!{esc/dquote} .} / {esc .} }* 
-alias quoted_string = { dquote string dquote }
+literal = { {!{esc/dquote} .} / {esc .} }* 
+alias quoted_string = { dquote literal dquote }
 
 
 star =     { [*] }

@@ -7,11 +7,6 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
--- TO DO:
--- Clean up the loading of parse_and_explain (right now via rpl-parse)
--- And general cleanup, after so much evolution in the language definition!
-
-
 local compile = {}				    -- exported top level interface
 local cinternals = {}				    -- exported interface to compiler internals
 
@@ -69,9 +64,7 @@ function compile.new_env(base_env)
    local env = {}
    base_env = base_env or ENV
    setmetatable(env, {__index = base_env;
-		      __tostring = function(env)
-				      return "<environment>"
-				   end;})
+		      __tostring = function(env) return "<environment>"; end;})
    return env
 end
 
@@ -95,7 +88,7 @@ function compile.flatten_env(env, output_table)
 end
 
 -- use this print function to see the nested environments
-function compile.print_env_internal(env, skip_header, total)
+function cinternals.print_env(env, skip_header, total)
    -- build a list of patterns that we can sort by name
    local pattern_list = {}
    local n = next(env)
@@ -128,7 +121,7 @@ function compile.print_env_internal(env, skip_header, total)
    local mt = getmetatable(env)
    if mt and mt.__index then
       print("\n----------- Parent environment: -----------\n")
-      compile.print_env_internal(mt.__index, true, total)
+      cinternals.print_env(mt.__index, true, total)
    else
       print()
       print(total .. " patterns loaded")
@@ -136,36 +129,7 @@ function compile.print_env_internal(env, skip_header, total)
 end
 
 ----------------------------------------------------------------------------------------
--- Syntax errors
-----------------------------------------------------------------------------------------
-
-function compile.explain_syntax_error(a, source)
-   local errast = parse.syntax_error_check(a)
-   assert(errast)
-   local name, pos, text, subs = common.decode_match(a)
-   local line, pos, lnum = extract_source_line_from_pos(source, pos)
-
-   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
-
-   local err = parse.syntax_error_check(a)
-   local ename, errpos, etext, esubs = common.decode_match(err)
-   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
-
-   if esubs then
-      -- We only examine the first sub for now, assuming there are no others.  Must fix this
-      -- later, although a new syntax error reporting technique is on the TO-DO LIST.
-      local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
-      if etname=="statement_prefix" then
-	 msg = msg .. "Found start of a new statement inside an expression.\n"
-      else
-	 msg = msg .. "No additional information is available.\n"
-      end
-   end -- if esubs
-   return msg
-end
-
-----------------------------------------------------------------------------------------
--- Compile-time errors
+-- Compile-time error reporting
 ----------------------------------------------------------------------------------------
 
 local function explain_quantified_limitation(a, source, maybe_rule)
@@ -185,16 +149,13 @@ local function explain_repetition_error(a, source)
    assert(a, "did not get ast in explain_repetition_error")
    local name, errpos, text = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
-
    local min = tonumber(rep_args[1]) or 0
    local max = tonumber(rep_args[2])
-
    local msg = "Compile error: integer quantifiers must be positive, and min <= max \n" ..
       "Error is in expression: " .. parse.reveal(a) .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos-1) .. "^"
-
    coroutine.yield(false, msg)			    -- throw
 end
 
@@ -206,7 +167,6 @@ local function explain_undefined_identifier(a, source)
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos-1) .. "^"
-
    coroutine.yield(false, msg)				    -- throw
 end
 
@@ -218,7 +178,6 @@ local function explain_undefined_charset(a, source)
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos-1) .. "^"
-
    coroutine.yield(false, msg)				    -- throw
 end
 
@@ -231,7 +190,6 @@ local function explain_unknown_quantifier(a, source)
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos-1) .. "^"
-
    coroutine.yield(false, msg)				    -- throw
 end
 
@@ -245,94 +203,38 @@ local function matches_empty(peg)
    return result
 end
 
--- THIS RATIONALE NO LONGER APPLIES DUE TO CHANGES IN THE BOUNDARY DEFINITION!
---
-    -- Compiling quantified expressions is subtle when Rosie is tokenizing, i.e. in "cooked" mode.
-    --    With a naive approach, this expression will always fail to recognize more than one word:
-    --                    (","? word)*
-    --    The reason is that the repetition ends up looking for the token boundary TWICE when the ","?
-    --    fails.  And (in the absence of punctuation) since the token boundary consumes all whitespace
-    --    (and must consume something), the second attempt to match boundary will fail because the
-    --    prior attempt consumed all the whitespace.
---
--- INDEED, THE EXPRESSION (","? word)* WORKS GREAT!
--- 
-    --    Here's the solution:
-    --      Consider e*, e?, and e{0,m} where m>0.  Call these expressions qe.  When we
-    --      have a sequence of qe followed by f, what we want to happen in cooked mode is
-    --      this:
-    --        match('qe f', "e f") -> match
-    --        match('qe f', " f") -> no match, strictly speaking
-    --        match('qe f', "f") -> match
-    --      I.e. 'e* f' should work like '<e+ boundary f> / f'
-    --           'e? f' should work like '<e boundary f> / f'
-    --           'e{0,m} f' should work like '<e{1,m} boundary f> / f'
-    --      And these can be rewritten as:
-    --           '<e+ boundary f> / f'      -->  < <e+ boundary>? f >
-    --           '<e boundary f> / f'       -->  < <e boundary>? f >
-    --           '<e{1,m} boundary f> / f'  -->  < <e{1,m} boundary>? f >
-    --      Conclusion: In cooked mode, quantified expressions like qe should compile as:
-    --         e*     --> <e+ boundary>?
-    --         e?     --> <e boundary>?
-    --         e{0,m} --> <e{1,m} boundary>?
-    --      Of course, the boundary is only necessary when qe appears in the context of a
-    --      sequence, with terms coming after it.  Are there edge cases where it might be
-    --      important to match qe without a boundary following it always?  Can't think of any (noting
-    --      that the end of input is not an issue because boundary checks for that).
---
--- AND YES, THERE IS AN EDGE CASE IN WHICH WE WANT TO MATCH qe WITH NO BOUNDARY AFTER:
--- .match {("a")+ "b"}, "a ab"
--- THIS SHOULD PRODUCE A MATCH WHERE THE qe MATCHES "a a" AND THE {} glues it to "b".
+-- Regarding debugging... a quantified exp fails as soon as:
+-- e^0 == e* can never fail, because it can match the empty string.
+-- e^1 == e+ fails when as soon as the initial attempt to match e fails.
+-- e^-1 == e? can never fail because it can match the empty string
+-- e{n,m} == (e * e ...)*e^(m-n) will fail when any of the sequence fails.
 
 function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in process_quantified_exp")
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="new_quantified_exp")
-   -- Regarding debugging... the quantified exp a[1] fails as soon as:
-   -- e^0 == e* can never fail, because it can match the empty string.
-   -- e^1 == e+ fails when as soon as the initial attempt to match e fails.
-   -- e^-1 == e? can never fail because it can match the empty string
-   -- e{n,m} == (e * e ...)*e^(m-n) will fail when any of the sequence fails.
-
-   -- if (((not raw) and subname~="raw" 
-   --                and subname~="charset" 
-   -- 		  and subname~="named_charset"
-   -- 		  and subname~="string" 
-   --                and subname~="identifier"
-   --                and subname~="ref"
-   -- 	    )
-   --    or subname=="cooked") then
-   --    append_boundary = true;
-   -- end
-
    local qpeg, min, max
    local append_boundary = true
    local subname, subbody = next(subs[1])
-
    raw = (subname=="raw_exp")
    if raw then
       subname, subbody = next(subbody.subs[1])
       append_boundary = false
    end
-
    local e = cinternals.compile_exp(subs[1], raw, gmr, source, env)
    local epeg = e.peg
-
    if (not gmr) and matches_empty(epeg) then
       explain_quantified_limitation(a, source);
    end
-
    local q = subs[2]
    assert(q, "not getting quantifier clause in process_quantified_exp")
    local qname, qpos, qtext, qsubs = common.decode_match(q)
    if qname=="plus" then
       if append_boundary then qpeg=(epeg * boundary)^1
-      else qpeg=epeg^1
-      end
+      else qpeg=epeg^1; end
    elseif qname=="star" then
       if append_boundary then qpeg = (epeg * (boundary * epeg)^0)^-1
-      else qpeg=epeg^0
-      end
+      else qpeg=epeg^0; end
    elseif qname=="question" then
       qpeg = epeg^-1
    elseif qname=="repetition" then
@@ -385,42 +287,21 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    return e.peg, qpeg, append_boundary, qname, min, max
 end
 
-function cinternals.compile_quantified_exp(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_quantified_exp")
-   local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, raw, gmr, source, env)
-   return pattern{name=qname, peg=qpeg};
-end
-
 function cinternals.compile_new_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_cooked_quantified_exp")
    local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, true, gmr, source, env)
    return pattern{name=qname, peg=qpeg, ast=a};
 end
 
-function cinternals.compile_string(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_string")
+function cinternals.compile_literal(a, raw, gmr, source, env)
+   assert(a, "did not get ast in compile_literal")
    local name, pos, text = common.decode_match(a)
    local str = common.unescape_string(text)
-   if (not raw) and (locale.space:match(str) or locale.space:match(str, -1)) then
-      warn('Literal string begins or ends with whitespace, outside of raw mode: "'
-	   .. text .. '"')
-   end
+   -- if (not raw) and (locale.space:match(str) or locale.space:match(str, -1)) then
+   --    warn('Literal string begins or ends with whitespace, outside of raw mode: "'
+   -- 	   .. text .. '"')
+   -- end
    return pattern{name=name; peg=P(str)}
-end
-
-function cinternals.compile_identifier(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_identifier")
-   local _, pos, name = common.decode_match(a)
-   local val = env[name]
-   if (not val) then explain_undefined_identifier(a, source); end -- throw
-   assert(pattern.is(val), "Did not get a pattern: "..tostring(val))
-   if val.alias then 
-      return pattern{name=name, peg=val.peg, ast=val.ast}
-   else
-      return pattern{name=name,
-		     peg=cinternals.wrap_peg(val, name, raw), 
-		     ast=val.ast}
-   end
 end
 
 function cinternals.compile_ref(a, raw, gmr, source, env)
@@ -445,14 +326,15 @@ function cinternals.compile_predicate(a, raw, gmr, source, env)
    return pattern{name=pred, peg=peg, ast=a}
 end
 
+-- Sequences from the parser are always binary, i.e. with 2 subs.
+-- Regarding debugging: the failure of subs[1] is fatal for a.
 function cinternals.compile_sequence(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_sequence")
-   -- sequences from the parser are always binary, i.e. with 2 subs.
-   -- Regarding debugging... the failure of subs[1] is fatal for a.
    local name, pos, text, subs = common.decode_match(a)
    local peg1, peg2
    peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
+   if (not raw) then print("********************* NOT raw in compile_sequence ****************"); end
    if raw or (next(subs[1])=="predicate")
    then
       return pattern{name=name, peg=peg1 * peg2}
@@ -501,30 +383,14 @@ function cinternals.compile_charset(a, raw, gmr, source, env)
    end
 end
 
+-- Choice ASTs will have exactly two alternatives
+-- Regarding debugging... 'a' fails only if both alternatives fail
 function cinternals.compile_choice(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_choice")
-   -- Choice ASTs will have exactly two alternatives
-   -- Regarding debugging... 'a' fails only if both alternatives fail
    local name, pos, text, subs = common.decode_match(a)
    local peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    local peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
-   return pattern{name=name,
-		  peg=(peg1+peg2),
-		  alternates = { C(peg1), C(peg2) }}
-end
-
-function cinternals.wrap_peg(pat, name, raw)
-   local peg
-   if pat.alternates and (not raw) then
-      -- The presence of pat.alternates means this pattern came from a CHOICE exp, in which case 
-      -- val.peg already holds the compiler result for this node.  But val.peg was calculated 
-      -- assuming RAW mode.  So if we are NOT in raw mode, then we must finish the compilation in
-      -- a special way.
-      peg = ( common.match_node_wrap(pat.alternates[1], name) * boundary ) + ( common.match_node_wrap(pat.alternates[2], name) * boundary )
-   else
-      peg = common.match_node_wrap(pat.peg, name)
-   end
-   return peg
+   return pattern{name=name, peg=(peg1+peg2)}
 end
 
 function cinternals.compile_group(a, raw, gmr, source, env)
@@ -534,7 +400,7 @@ function cinternals.compile_group(a, raw, gmr, source, env)
    if (name=="raw") or (name=="raw_exp") then raw=true; else raw=false; end
    assert(not subs[2])
    local pat = cinternals.compile_exp(subs[1], raw, gmr, source, env)
-   return pattern{name=name, peg=pat.peg, ast=pat.ast, alternates=pat.alternates}
+   return pattern{name=name, peg=pat.peg, ast=pat.ast}
 end
 
 function cinternals.compile_syntax_error(a, raw, gmr, source, env)
@@ -623,17 +489,12 @@ function cinternals.compile_grammar(a, raw, gmr, source, env)
       if env[name] and not QUIET then
 	 warn("Compiler: reassignment to identifier " .. name)
       end
---      if next(a)=="new_grammar" then
-	 --print("=================================================== Compiling new_grammar: " .. name)
-	 -- pat.peg = common.match_node_wrap(C(pat.peg), name)
---      end
       env[name] = pat
    end
 end
 
 function cinternals.compile_capture(a, raw, gmr, source, env)
    assert(a, "did not get ast in compile_capture")
---   print("compile_capture: " .. parse.reveal_ast(a) .. " and raw is " .. tostring(raw))
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="capture")
    assert(subs and subs[1] and subs[2] and (not subs[3]), "wrong number of subs in capture ast")
@@ -648,21 +509,7 @@ function cinternals.compile_capture(a, raw, gmr, source, env)
    assert(refname=="ref")
    assert(type(reftext)=="string")
 
-   -- if cap_name=="choice" then
-   --    local choices = syntax.flatten_choice(captured_exp)
-   --    choices = map(function(c)
-   -- 		       local pat = cinternals.compile_exp(c, raw, gmr, source, env)
-   -- 		       return common.match_node_wrap(pat.peg, reftext)
-   -- 		    end,
-   -- 		    choices)
-   --    local final_peg = reduce(function(p1, p2) return p1 + p2; end,
-   -- 			       car(choices),
-   -- 			       cdr(choices))
-   --    pat = pattern{name=cap_name, peg=final_peg}
-   -- else
-      pat = cinternals.compile_exp(captured_exp, raw, gmr, source, env)
---   end
-
+   pat = cinternals.compile_exp(captured_exp, raw, gmr, source, env)
    pat.name = cap_name
    pat.peg = common.match_node_wrap(C(pat.peg), reftext)
    return pat
@@ -673,15 +520,11 @@ cinternals.compile_exp_functions = {"compile_exp";
 				    ref=cinternals.compile_ref;
 				    predicate=cinternals.compile_predicate;
 				    raw_exp=cinternals.compile_group;
-				    --raw=cinternals.compile_group;
-				    --cooked=cinternals.compile_group;
 				    choice=cinternals.compile_choice;
 				    sequence=cinternals.compile_sequence;
-				    --identifier=cinternals.compile_identifier;
-				    string=cinternals.compile_string;
+				    literal=cinternals.compile_literal;
 				    named_charset=cinternals.compile_named_charset;
 				    charset=cinternals.compile_charset;
-				    --quantified_exp=cinternals.compile_quantified_exp;
 				    new_quantified_exp=cinternals.compile_new_quantified_exp;
 				    syntax_error=cinternals.compile_syntax_error;
 				 }
@@ -695,15 +538,6 @@ function compile.expression_p(ast)
    return not (not cinternals.compile_exp_functions[name])
 end
 
-function cinternals.cook_if_needed(a)
-   local name = common.decode_match(a)
-   if name~="raw" and name~="cooked" then
-      return common.create_match("cooked", 1, "(...)", a)
-   else
-      return a
-   end
-end
-
 local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
 local looking_at_boundary_ast = common.create_match("predicate",
 						    0,
@@ -713,38 +547,6 @@ local looking_at_boundary_ast = common.create_match("predicate",
 
 function cinternals.append_boundary(a)
    return common.create_match("sequence", 1, "/generated/", a, looking_at_boundary_ast)
-end
-
-function cinternals.compile_assignment(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_assignment")
-   local name, pos, text, subs = common.decode_match(a)
-   assert(name=="assignment_" or name=="alias_")
-   assert(next(subs[1])=="identifier")
-   assert(type(subs[2])=="table")			    -- the right side of the assignment
-   assert(not subs[3])
-   assert(type(source)=="string")
-   local _, ipos, iname = common.decode_match(subs[1])
-   if env[iname] and not QUIET then
-      warn("Compiler: reassignment to identifier " .. iname)
-   end
-
-  local rhs = cinternals.cook_if_needed(subs[2])
---  local rhs = syntax.cook_if_needed(subs[2])
---   local rhs = syntax.cooked_to_raw(syntax.cook_if_needed(subs[2]))
-
-   local pat = cinternals.compile_exp(rhs, raw, gmr, source, env)
-   -- N.B. If the RHS of the expression is a CHOICE node, and this is NOT AN ALIAS then the value
-   -- we compute here for pat.peg is only valid when the identifier being bound is later
-   -- referenced in RAW mode.  If the identifier is referenced in COOKED mode, then we must ignore
-   -- pat.peg and use the pat.alternates value to compute the correct peg.  That computation must
-   -- be done in conjunction with match_node_wrap.
-   if name=="alias_" then
-      pat.alias=true
-   else
-      pat.peg = C(pat.peg)
-   end
-   pat.ast = rhs;
-   env[iname] = pat
 end
 
 function cinternals.compile_binding(a, raw, gmr, source, env)
@@ -759,7 +561,6 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
    if env[iname] and not QUIET then
       warn("Compiler: reassignment to identifier " .. iname)
    end
-
    local pat = cinternals.compile_rhs(rhs, raw, gmr, source, env, iname)
    env[iname] = pat
    return pat
@@ -791,10 +592,7 @@ end
 function cinternals.compile_ast(ast, raw, gmr, source, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
-		      --assignment_=cinternals.compile_assignment;
-		      --alias_=cinternals.compile_assignment;
 		      binding=cinternals.compile_binding;
-		      --grammar_=cinternals.compile_grammar;
 		      new_grammar=cinternals.compile_grammar;
 		      exp=cinternals.compile_exp;
 		      default=cinternals.compile_exp;
@@ -834,7 +632,6 @@ function compile.compile(source, env)
    end
 end
 
--- was compile_command_line_expression
 function compile.compile_match_expression(source, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
 

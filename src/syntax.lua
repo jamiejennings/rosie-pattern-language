@@ -216,7 +216,7 @@ function transform_quantified_exp(ast)
    if name=="raw" 
       or name=="charset" 
       or name=="named_charset"
-      or name=="string" 
+      or name=="literal" 
       or name=="ref"
    then
       new_exp = syntax.generate("raw_exp", syntax.raw(new_exp))
@@ -380,7 +380,7 @@ function syntax.expression_p(ast)
 	   (name=="raw") or
 	   (name=="raw_exp") or
 	   (name=="cooked") or
-	   (name=="string") or
+	   (name=="literal") or
 	   (name=="quantified_exp") or
 	   (name=="named_charset") or
 	   (name=="charset") or
@@ -395,7 +395,7 @@ function syntax.top_level_transform(ast)
       return syntax.id_to_ref(ast)
    elseif syntax.expression_p(ast) then
       local new = ast				    --syntax.capture(ast, "*")?
-      if (name=="raw") or (name=="string") or (name=="charset") or (name=="named_charset") then
+      if (name=="raw") or (name=="literal") or (name=="charset") or (name=="named_charset") then
       	 new = syntax.raw(new)
       else
       	 new = syntax.append_looking_at_boundary(syntax.cook(new))

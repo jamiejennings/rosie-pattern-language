@@ -232,7 +232,7 @@ pattern =
    recordtype.define(
    {  name=unspecified;			 -- for reference, debugging
       peg=unspecified;			 -- lpeg pattern
-      alternates=false;			 -- array of 2 lpeg patterns that make up a choice pattern
+--      alternates=false;			 -- array of 2 lpeg patterns that make up a choice pattern
       alias=false;			 -- is this an alias or not
       ast=false;			 -- ast that generated this pattern, for pattern debugging
       original_ast=false;

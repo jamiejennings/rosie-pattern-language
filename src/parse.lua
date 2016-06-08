@@ -38,7 +38,7 @@ local ignore = (locale.space + (P"--" * ((P(1) - (P"\n"))^0)))^0
 local id_char = locale.alnum + S"_"
 local id = locale.alpha * id_char^0
 local identifier = token_capture("identifier", (id * ("." * id)^0 * (- id_char)) + S".$")
-local literal_string = special_token("string", (P'"' * (C(((1 - S'"\\') + (P'\\' * 1))^0)) * P'"'))
+local literal_string = special_token("literal", (P'"' * (C(((1 - S'"\\') + (P'\\' * 1))^0)) * P'"'))
 local top_level_syntax_error = token("syntax_error", Ct(Cg(ignore*(C(1)-locale.space)^1, "top_level")))
 
 local star = token_capture("star", S"*");
@@ -179,7 +179,7 @@ function parse.syntax_error_check(ast)
 		      cooked=check_many_branches;
 		      choice=check_two_branches;
 		      identifier=none_found;
-		      string=none_found;
+		      literal=none_found;
 		      character=none_found;
 		      sequence=check_two_branches;
 		      predicate=check_two_branches;
@@ -200,6 +200,35 @@ function parse.syntax_error_check(ast)
 		      syntax_error=found_one;
 		   }
    return common.walk_ast(ast, functions)
+end
+
+----------------------------------------------------------------------------------------
+-- Syntax error reporting (default capability)
+----------------------------------------------------------------------------------------
+
+function parse.explain_syntax_error(a, source)
+   local errast = parse.syntax_error_check(a)
+   assert(errast)
+   local name, pos, text, subs = common.decode_match(a)
+   local line, pos, lnum = extract_source_line_from_pos(source, pos)
+
+   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
+
+   local err = parse.syntax_error_check(a)
+   local ename, errpos, etext, esubs = common.decode_match(err)
+   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
+
+   if esubs then
+      -- We only examine the first sub for now, assuming there are no others.  Must fix this
+      -- later, although a new syntax error reporting technique is on the TO-DO LIST.
+      local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
+      if etname=="statement_prefix" then
+	 msg = msg .. "Found start of a new statement inside an expression.\n"
+      else
+	 msg = msg .. "No additional information is available.\n"
+      end
+   end -- if esubs
+   return msg
 end
 
 ----------------------------------------------------------------------------------------
@@ -449,16 +478,14 @@ parse.reveal_exp = function(a)
 		      cooked=reveal_group;
 		      choice=reveal_choice;
 		      sequence=reveal_sequence;
-		      --negation=reveal_negation;
-		      --lookat=reveal_lookat;
 		      identifier = reveal_identifier;
-		      string=reveal_string;
+		      literal=reveal_string;
 		      named_charset=reveal_named_charset;
 		      charset=reveal_charset;
 		      quantified_exp=reveal_quantified_exp;
-		      new_quantified_exp=reveal_quantified_exp; -- !@#
-		      cooked_quantified_exp=reveal_quantified_exp; -- !@#
-		      raw_quantified_exp=reveal_quantified_exp; -- !@#
+		      new_quantified_exp=reveal_quantified_exp;
+		      cooked_quantified_exp=reveal_quantified_exp;
+		      raw_quantified_exp=reveal_quantified_exp;
 		      syntax_error=parse.reveal_syntax_error;
 		   }
    return common.walk_ast(a, functions);
@@ -498,7 +525,7 @@ function parse.core_parse_and_explain(source)
    if #errlist~=0 then
       local msg = "Core parser reports syntax errors:\n"
       for _,e in ipairs(errlist) do
-	 msg = msg .. "\n" .. compile.explain_syntax_error(e, source)
+	 msg = msg .. "\n" .. parse.explain_syntax_error(e, source)
       end
       return false, msg
    else -- successful parse
