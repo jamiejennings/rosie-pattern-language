@@ -210,12 +210,26 @@ syntax.append_boundary_to_rhs =
 			   false)
 
 function transform_quantified_exp(ast)
-   local name, body = next(ast)
-   local new = syntax.generate("new_quantified_exp",
-			       syntax.id_to_ref(body.subs[1]),
-			       body.subs[2])
-   new.new_quantified_exp.text = body.text
-   new.new_quantified_exp.pos = body.pos
+   local new_exp = syntax.id_to_ref(ast.quantified_exp.subs[1])
+   local name, body = next(new_exp)
+   local original_body = body
+   if name=="raw" 
+      or name=="charset" 
+      or name=="named_charset"
+      or name=="string" 
+      or name=="ref"
+   then
+      new_exp = syntax.generate("raw_exp", syntax.raw(new_exp))
+   else
+      while (name=="cooked") do			    -- in case of nested cooked groups
+	 new_exp = body.subs[1]			    -- strip off "cooked"
+	 name, body = next(new_exp)
+      end
+      new_exp = syntax.raw(new_exp)		    -- treat it as raw, because we deal with cooked later
+   end
+   local new = syntax.generate("new_quantified_exp", new_exp, ast.quantified_exp.subs[2])
+   new.new_quantified_exp.text = original_body.text
+   new.new_quantified_exp.pos = original_body.pos
    return new
 end
 

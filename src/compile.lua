@@ -287,32 +287,36 @@ end
 function cinternals.process_quantified_exp(a, raw, gmr, source, env)
    assert(a, "did not get ast in process_quantified_exp")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name:find("quantified_exp"))
+   assert(name=="new_quantified_exp")
    -- Regarding debugging... the quantified exp a[1] fails as soon as:
    -- e^0 == e* can never fail, because it can match the empty string.
    -- e^1 == e+ fails when as soon as the initial attempt to match e fails.
    -- e^-1 == e? can never fail because it can match the empty string
    -- e{n,m} == (e * e ...)*e^(m-n) will fail when any of the sequence fails.
+
+   -- if (((not raw) and subname~="raw" 
+   --                and subname~="charset" 
+   -- 		  and subname~="named_charset"
+   -- 		  and subname~="string" 
+   --                and subname~="identifier"
+   --                and subname~="ref"
+   -- 	    )
+   --    or subname=="cooked") then
+   --    append_boundary = true;
+   -- end
+
    local qpeg, min, max
+   local append_boundary = true
+   local subname, subbody = next(subs[1])
+
+   raw = (subname=="raw_exp")
+   if raw then
+      subname, subbody = next(subbody.subs[1])
+      append_boundary = false
+   end
+
    local e = cinternals.compile_exp(subs[1], raw, gmr, source, env)
    local epeg = e.peg
-   local append_boundary = false
-   local subname, subbody = next(subs[1])
-   -- if subname=="capture" then			    -- !@#
-   --    print("%%%%%%%%%%%%%%%% Using the IGNORE CAPTURE clause in process_quantified_exp %%%%%%%%%%%%%%%%")
-   --    subname, subbody = next(subbody.subs[1])
-   -- end
-   if (((not raw) and subname~="raw" 
-                  and subname~="charset" 
-		  and subname~="named_charset"
-		  and subname~="string" 
-                  and subname~="identifier"
-                  and subname~="ref"
-	    )
-      or subname=="cooked") then
-      append_boundary = true;
-   end
-   -- 
 
    if (not gmr) and matches_empty(epeg) then
       explain_quantified_limitation(a, source);
@@ -668,23 +672,19 @@ cinternals.compile_exp_functions = {"compile_exp";
 				    capture=cinternals.compile_capture;	    
 				    ref=cinternals.compile_ref;
 				    predicate=cinternals.compile_predicate;
-			       raw=cinternals.compile_group;
 				    raw_exp=cinternals.compile_group;
-			       cooked=cinternals.compile_group;
-			       choice=cinternals.compile_choice;
-			       sequence=cinternals.compile_sequence;
-			       --negation=cinternals.compile_negation;
-			       --lookat=cinternals.compile_lookat;
-			       identifier=cinternals.compile_identifier;
-			       string=cinternals.compile_string;
-			       named_charset=cinternals.compile_named_charset;
-			       charset=cinternals.compile_charset;
-			       quantified_exp=cinternals.compile_quantified_exp;
-			       new_quantified_exp=cinternals.compile_new_quantified_exp;
-			       --cooked_quantified_exp=cinternals.compile_cooked_quantified_exp;
-			       --raw_quantified_exp=cinternals.compile_raw_quantified_exp;
-			       syntax_error=cinternals.compile_syntax_error;
-			    }
+				    --raw=cinternals.compile_group;
+				    --cooked=cinternals.compile_group;
+				    choice=cinternals.compile_choice;
+				    sequence=cinternals.compile_sequence;
+				    --identifier=cinternals.compile_identifier;
+				    string=cinternals.compile_string;
+				    named_charset=cinternals.compile_named_charset;
+				    charset=cinternals.compile_charset;
+				    --quantified_exp=cinternals.compile_quantified_exp;
+				    new_quantified_exp=cinternals.compile_new_quantified_exp;
+				    syntax_error=cinternals.compile_syntax_error;
+				 }
 
 function cinternals.compile_exp(a, raw, gmr, source, env)
    return common.walk_ast(a, cinternals.compile_exp_functions, raw, gmr, source, env)
@@ -791,10 +791,10 @@ end
 function cinternals.compile_ast(ast, raw, gmr, source, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
-		      assignment_=cinternals.compile_assignment;
-		      alias_=cinternals.compile_assignment;
+		      --assignment_=cinternals.compile_assignment;
+		      --alias_=cinternals.compile_assignment;
 		      binding=cinternals.compile_binding;
-		      grammar_=cinternals.compile_grammar;
+		      --grammar_=cinternals.compile_grammar;
 		      new_grammar=cinternals.compile_grammar;
 		      exp=cinternals.compile_exp;
 		      default=cinternals.compile_exp;
