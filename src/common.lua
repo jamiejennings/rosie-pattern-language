@@ -236,9 +236,10 @@ pattern =
       alias=false;			 -- is this an alias or not
       ast=false;			 -- ast that generated this pattern, for pattern debugging
       original_ast=false;
+      raw=false;                         -- true if the exp was raw at top level
+      
 --      ast_history={};			 -- history of each transformation
 --      push_ast=push_ast;
---      raw=false;
 --      cpeg=false;				    -- peg to use in cooked mode
 --      source=unspecified;		 -- source (filename, maybe line also?)
 --      uuid=unspecified;

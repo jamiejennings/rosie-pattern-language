@@ -50,9 +50,9 @@ compile.boundary = boundary
 -- Base environment, which can be extended with new_env, but not written to directly,
 -- because it is shared between match engines.
 ----------------------------------------------------------------------------------------
-local ENV = {["."] = pattern{name="."; peg=P(1); alias=true};  -- any single character
-             ["$"] = pattern{name="$"; peg=P(-1); alias=true}; -- end of input
-             [b_id] = pattern{name=b_id; peg=boundary; alias=true}; -- token boundary
+local ENV = {["."] = pattern{name="."; peg=P(1); alias=true; raw=true};  -- any single character
+             ["$"] = pattern{name="$"; peg=P(-1); alias=true; raw=true}; -- end of input
+             [b_id] = pattern{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
        }
 setmetatable(ENV, {__tostring = function(env)
 				   return "<base environment>"
@@ -759,21 +759,32 @@ function cinternals.compile_binding(a, raw, gmr, source, env)
    if env[iname] and not QUIET then
       warn("Compiler: reassignment to identifier " .. iname)
    end
-   local rhs_name, rhs_body = next(rhs)
-   local raw_exp = (rhs_name=="raw_exp")
 
-   local pat = cinternals.compile_exp(rhs, true, gmr, source, env)
-   if syntax.contains_capture(rhs) then
+   local pat = cinternals.compile_rhs(rhs, raw, gmr, source, env, iname)
+   env[iname] = pat
+   return pat
+end
+
+function cinternals.compile_rhs(a, raw, gmr, source, env, iname)
+   assert(type(a)=="table", "did not get ast in compile_rhs: " .. tostring(a))
+   if not compile.expression_p(a) then
+      local msg = string.format('Compile error: expected an expression, but received %q',
+				parse.reveal_ast(a))
+      error(msg)
+   end
+   local rhs_name, rhs_body = next(a)
+   local raw_exp = (rhs_name=="raw_exp")
+   local pat = cinternals.compile_exp(a, true, gmr, source, env)
+   pat.raw = (rhs_name=="raw_exp")
+   if syntax.contains_capture(a) then
       assert(((rhs_name=="capture") or
-              (rhs_name=="raw_exp" and next(rhs_body.subs[1])=="capture")), 
-    	     "Compiling binding for ASSIGNMENT " .. iname .. " but rhs not a capture")
+	      (rhs_name=="raw_exp" and next(rhs_body.subs[1])=="capture")), 
+	     "Compiling binding for ASSIGNMENT " .. iname .. " but rhs not a capture")
       pat.alias=false
-      --pat.peg = common.match_node_wrap(C(pat.peg), iname)
    else
       pat.alias=true
    end
-   pat.ast = rhs;
-   env[iname] = pat
+   pat.ast = a;
    return pat
 end
 
@@ -853,9 +864,13 @@ function compile.compile_match_expression(source, env)
    local name, pos, text, subs = common.decode_match(ast)
    local pat, raw_expression_flag
 
-   if (name=="ref" or name=="identifier") then
+   if (name=="ref") or (name=="identifier") then
       pat = env[text]
-      raw_expression_flag = (pattern.is(pat) and pat.ast and (next(pat.ast)=="raw_exp"))
+      raw_expression_flag = (((name=="ref") and pattern.is(pat) and pat.raw)
+			     or
+			      -- else name=="identifier"
+			     (pattern.is(pat) and pat.ast and (next(pat.ast)=="raw_exp")) or
+		             (pattern.is(pat) and (not pat.ast) and pat.raw))
       if (not raw_expression_flag) then
 	 ast = syntax.append_looking_at_boundary(ast)
       end

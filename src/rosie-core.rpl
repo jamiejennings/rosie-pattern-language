@@ -10,7 +10,7 @@
 alias newline = {"\n"}				    -- raw mode just to suppress compiler warning 
 
 alias comment = { "--" {!newline .}* {newline / $} }
-alias ignore = { [:space:] / comment }*
+alias ignore = { { [:space:] / comment }* }
 
 alias id_char = { [:alnum:] / [_] }
 alias id = { [:alpha:] id_char* }
@@ -36,14 +36,14 @@ keyword = { keyword_list !id_char }
 
 -- it is important that an error consume at least one character
 -- as a tactic, we will skip to eol and try to continue
-rest_of_line = {!newline .}+ ignore
-syntax_error = rest_of_line
+rest_of_line = { {!newline .}+ ignore }
+syntax_error = { rest_of_line }
 
-character = {!esc .} / {esc .}
+character = { {!esc .} / {esc .} }
 range = { character [-] character } 
-charlist = {!"]" character}*
-named_charset = {![:] .}+
-alias full_named_charset = "[:" named_charset ":]"
+charlist = { {!"]" character}* }
+named_charset = { {![:] .}+ }
+alias full_named_charset = { "[:" named_charset ":]" }
 charset = { "[" { range "]" } /
 	        { charlist "]" } / 
  	        syntax_error

@@ -10,6 +10,8 @@
 local common = require "common"
 require "utils"
 
+local syntax = require "syntax"
+
 local parse = {}
 
 local lpeg = require "lpeg"
@@ -500,7 +502,8 @@ function parse.core_parse_and_explain(source)
       end
       return false, msg
    else -- successful parse
-      return astlist, astlist
+      local new_astlist = map(syntax.top_level_transform, astlist)
+      return new_astlist, astlist
    end
 end
 

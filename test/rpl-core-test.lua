@@ -103,7 +103,7 @@ match = json.decode(match_js)
 check(next(match[1])=="*", "the match of an alias is anonymous")
 
 check_match(".", "a", true)
-check_match(".", "abcd", false)
+check_match(".", "abcd", true, 3, "a")
 check_match("(.)", "abcd", false)
 check_match("{.}", "abcd", true, 3, "a")
 check_match(".", "1", true)
