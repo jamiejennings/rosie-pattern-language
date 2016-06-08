@@ -18,12 +18,12 @@ alias letter = [:alpha:]
 
 alias ip_component = digit{1,3}			   -- 1-3 digits
 alias port_spec = { ":" digit+ }		   -- 1 or more digits
-alias dn_start = letter / digit
+alias dn_start = { letter / digit }
 alias dn_rest = {letter / digit / "-"}+
 
 alias dn_component1 = {letter dn_rest*}	                -- must have a letter somewhere
 alias dn_component2 = {{digit/"-"}+ dn_component1}      -- in each component
-alias dn_component = dn_component1 / dn_component2	
+alias dn_component = { dn_component1 / dn_component2 }
 
 
 -- We avoid matching "1.2.3.4.5", which cannot be an ip address, by
@@ -54,7 +54,7 @@ network.host = fqdn
 -- involved than this simple pattern, which will may accept some invalid addresses and may reject
 -- some valid ones.
 
-alias email_char = [:alnum:] / [!#$%^&*()_-+=|\\'`~?/{}{}:;]
+alias email_char = { [:alnum:] / [!#$%^&*()_-+=|\\'`~?/{}{}:;] }
 alias email_alias_part = { email_char {email_char / "."}* }
 network.email_address = { email_alias_part "@" fqdn }
 
