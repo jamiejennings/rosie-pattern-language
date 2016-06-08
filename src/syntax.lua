@@ -133,54 +133,12 @@ end
 syntax.capture =
    syntax.make_transformer(function(ast, id)
 			      local name, body = next(ast)
-			      -- if name=="identifier" then return ast;
-			      -- elseif name=="predicate" then return ast;
-			      -- elseif name=="quantified_exp" then
-			      -- 	 return syntax.generate("capture", ast)
-			   -- else
-			      -- if name=="choice" then
-			      -- 	 local choices = syntax.flatten_choice(ast)
-			      -- 	 choices = map(function(c)
-			      -- 			  return syntax.generate("capture", c)
-			      -- 		       end,
-			      -- 		       choices)
-			      -- 	 local new = syntax.rebuild_choice(choices)
-			      -- 	 assert(next(new)=="choice")
-			      -- 	 new.choice.text = body.text
-			      -- 	 new.choice.pos = body.pos
-			      -- 	 return new
-			      -- else
 			      return syntax.generate("capture",
 						     common.create_match("ref", 0, id),
 						     ast)
-			      -- end
 			   end,
 			   nil,
 			   false)
-
----------------------------------------------------------------------------------------------------
-if false then
-   syntax.capture_assignment_rhs =
-      syntax.make_transformer(function(ast)
-				 local name, body = next(ast)
-				 local lhs = body.subs[1]
-				 local new_rhs = syntax.capture(body.subs[2])
-				 local b = syntax.generate("assignment_", lhs, new_rhs)
-				 b.assignment_.text = body.text
-				 b.assignment_.pos = body.pos
-				 return b
-			      end,
-			      "assignment_",
-			      false)
-   
-   syntax.sequence =
-      syntax.make_transformer(function(ast1, ast2)
-				 return syntax.generate("sequence", ast1, ast2)
-			      end,
-			      nil,
-			      false)
-end -- if false
----------------------------------------------------------------------------------------------------
 
 syntax.append_looking_at_boundary =
    syntax.make_transformer(function(ast)
@@ -225,7 +183,7 @@ function transform_quantified_exp(ast)
 	 new_exp = body.subs[1]			    -- strip off "cooked"
 	 name, body = next(new_exp)
       end
-      new_exp = syntax.raw(new_exp)		    -- treat it as raw, because we deal with cooked later
+      new_exp = syntax.cook(new_exp)		    -- treat it as raw, because we deal with cooked later
    end
    local new = syntax.generate("new_quantified_exp", new_exp, ast.quantified_exp.subs[2])
    new.new_quantified_exp.text = original_body.text

@@ -221,7 +221,7 @@ function cinternals.process_quantified_exp(a, raw, gmr, source, env)
       subname, subbody = next(subbody.subs[1])
       append_boundary = false
    end
-   local e = cinternals.compile_exp(subs[1], raw, gmr, source, env)
+   local e = cinternals.compile_exp(subs[1], true, gmr, source, env)
    local epeg = e.peg
    if (not gmr) and matches_empty(epeg) then
       explain_quantified_limitation(a, source);
@@ -334,13 +334,8 @@ function cinternals.compile_sequence(a, raw, gmr, source, env)
    local peg1, peg2
    peg1 = cinternals.compile_exp(subs[1], raw, gmr, source, env).peg
    peg2 = cinternals.compile_exp(subs[2], raw, gmr, source, env).peg
-   if (not raw) then print("********************* NOT raw in compile_sequence ****************"); end
-   if raw or (next(subs[1])=="predicate")
-   then
-      return pattern{name=name, peg=peg1 * peg2}
-   else
-      return pattern{name=name, peg=peg1 * boundary * peg2}
-   end
+   assert(raw)
+   return pattern{name=name, peg=peg1 * peg2}
 end
    
 function cinternals.compile_named_charset(a, raw, gmr, source, env)
@@ -392,13 +387,12 @@ function cinternals.compile_choice(a, raw, gmr, source, env)
    return pattern{name=name, peg=(peg1+peg2)}
 end
 
-function cinternals.compile_group(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_group")
+function cinternals.compile_raw_exp(a, raw, gmr, source, env)
+   assert(a, "did not get ast in compile_raw_exp")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name=="raw" or name=="cooked" or name=="raw_exp")
-   if (name=="raw") or (name=="raw_exp") then raw=true; else raw=false; end
+   assert(name=="raw_exp")
    assert(not subs[2])
-   local pat = cinternals.compile_exp(subs[1], raw, gmr, source, env)
+   local pat = cinternals.compile_exp(subs[1], true, gmr, source, env)
    return pattern{name=name, peg=pat.peg, ast=pat.ast}
 end
 
@@ -408,28 +402,30 @@ function cinternals.compile_syntax_error(a, raw, gmr, source, env)
 end
 
 function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
-   assert(a, "did not get ast in compile_grammar")
+   assert(a, "did not get ast in compile_grammar_rhs")
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="grammar_" or name=="new_grammar")
    assert(type(subs[1])=="table")
    assert(type(source)=="string")
    local gtable = compile.new_env(env)
    local first = subs[1]			    -- first rule in grammar
-   assert(first, "not getting first rule in compile_grammar")
+   assert(first, "not getting first rule in compile_grammar_rhs")
    local fname, fpos, ftext = common.decode_match(first)
-   assert(first and (fname=="assignment_" or fname=="alias_" or fname=="binding"))
+   assert(first and (fname=="binding"))
 
    local rule, id_node, id, exp_node
    
    -- first pass: collect rule names as V() refs into a new env
    for i = 1, #subs do			    -- for each rule
       local rule = subs[i]
-      assert(rule, "not getting rule in compile_grammar")
+      assert(rule, "not getting rule in compile_grammar_rhs")
       local rname, rpos, rtext, rsubs = common.decode_match(rule)
       local id_node = rsubs[1]			    -- identifier clause
       assert(id_node and next(id_node)=="identifier")
       local iname, ipos, id = common.decode_match(id_node)
-      gtable[id] = pattern{name=id, peg=V(id), alias=(rname=="alias_")}
+      local alias_flag = (not syntax.contains_capture(rsubs[2])) -- was: alias=(rname=="alias_")
+      local raw_flag = (rname=="raw_exp")
+      gtable[id] = pattern{name=id, peg=V(id), alias=alias_flag, raw=raw_flag}
    end						    -- for
 
    -- second pass: compile right hand sides in gtable environment
@@ -437,20 +433,18 @@ function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
    local start
    for i = 1, #subs do			    -- for each rule
       rule = subs[i]
-      assert(rule, "not getting rule in compile_grammar")
+      assert(rule, "not getting rule in compile_grammar_rhs")
       local rname, rpos, rtext, rsubs = common.decode_match(rule)
       id_node = rsubs[1]			    -- identifier clause
-      assert(id_node, "not getting id_node in compile_grammar")
+      assert(id_node, "not getting id_node in compile_grammar_rhs")
       local iname, ipos, id, isubs = common.decode_match(id_node)
       if not start then start=id; end		    -- first rule is start rule
       exp_node = rsubs[2]			    -- expression clause
-      assert(exp_node, "not getting exp_node in compile_grammar")
-      -- flags: not raw, inside grammar
-      pats[id] = cinternals.compile_exp(exp_node, false, true, source, gtable)
-      if (fname=="binding" and not syntax.contains_capture(exp_node)) then
-	 gtable[id].alias=true;
-      end
-   end						    -- for
+      assert(exp_node, "not getting exp_node in compile_grammar_rhs")
+--!@#      -- flags: not raw, inside grammar
+      pats[id] = cinternals.compile_exp(exp_node, true, true, source, gtable) -- was false
+      if (not syntax.contains_capture(exp_node)) then gtable[id].alias=true; end
+   end -- for
 
    -- third pass: create the table that will create the LPEG grammar by stripping off the Rosie
    -- pattern records, and wrapping as needed with lpeg.C
@@ -471,7 +465,7 @@ function cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
 end
 
 function cinternals.compile_grammar(a, raw, gmr, source, env)
-   local name, pat = cinternals.compile_grammar_rhs(a, raw, gmr, source, env)
+   local name, pat = cinternals.compile_grammar_rhs(a, true, gmr, source, env)
    -- if no pattern returned, then errors were already explained
    if pat then
       if env[name] and not QUIET then
@@ -507,7 +501,7 @@ cinternals.compile_exp_functions = {"compile_exp";
 				    capture=cinternals.compile_capture;	    
 				    ref=cinternals.compile_ref;
 				    predicate=cinternals.compile_predicate;
-				    raw_exp=cinternals.compile_group;
+				    raw_exp=cinternals.compile_raw_exp;
 				    choice=cinternals.compile_choice;
 				    sequence=cinternals.compile_sequence;
 				    literal=cinternals.compile_literal;
@@ -581,14 +575,14 @@ function cinternals.compile_ast(ast, raw, gmr, source, env)
 		      exp=cinternals.compile_exp;
 		      default=cinternals.compile_exp;
 		   }
-   return common.walk_ast(ast, functions, raw, gmr, source, env)
+   return common.walk_ast(ast, functions, true, gmr, source, env)
 end
 
 function cinternals.compile_astlist(astlist, raw, gmr, source, env)
    assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
    assert(type(source)=="string")
    local results = {}
-   local run_compiler = function(ast) return cinternals.compile_ast(ast, raw, gmr, source, env); end
+   local run_compiler = function(ast) return cinternals.compile_ast(ast, true, gmr, source, env); end
    return map(run_compiler, astlist)
 end
 
@@ -605,7 +599,7 @@ function compile.compile(source, env)
    assert(type(original_astlist)=="table")
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local c = coroutine.create(cinternals.compile_astlist)
-   local no_lua_error, results, msg = coroutine.resume(c, astlist, false, false, source, env)
+   local no_lua_error, results, msg = coroutine.resume(c, astlist, true, false, source, env)
    if no_lua_error then
       if results then
       	 foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
@@ -653,12 +647,11 @@ function compile.compile_match_expression(source, env)
    end
 
    local c = coroutine.create(cinternals.compile_exp)
-   local no_lua_error, result, msg = coroutine.resume(c, ast, false, false, source, env)
+   local no_lua_error, result, msg = coroutine.resume(c, ast, true, false, source, env)
    if (not no_lua_error) then
       error("Internal error (compiler): " .. tostring(result) .. " / " .. tostring(msg))
    end
-   if not (result and pattern.is(result)) then
-      -- compile-time error
+   if not (result and pattern.is(result)) then      -- compile-time error
       return false, msg
    end
 
