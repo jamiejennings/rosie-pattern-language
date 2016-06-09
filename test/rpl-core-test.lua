@@ -40,6 +40,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text)
 	       string.format(fmt, exp, input, expected_text, text), 1)
       end
    end
+   return retvals
 end
       
 test.start()
@@ -90,6 +91,47 @@ subs = match[1]["*"].subs
 check(subs)
 submatchname = next(subs[1])
 check(submatchname=="a", "the only sub of this expression is the identifier in the raw group")
+
+ok, msg = api.load_string(eid, 'alias plain_old_alias = "p"')
+check(ok)
+
+ok, msg = api.load_string(eid, 'alias alias_a = a')
+check(ok)
+
+ok, msg = api.load_string(eid, 'alternate_a = a')
+check(ok)
+
+ok, msg = api.load_string(eid, 'alternate_to_alias_a = alias_a')
+check(ok)
+
+ok, msg = api.load_string(eid, 'alias alias_alternate_to_alias_a = alias_a')
+check(ok)
+
+subheading("Testing re-assignments")
+
+check_match('plain_old_alias', "x", false, 1)
+result = check_match('plain_old_alias', "p", true)
+check(next(result[1])=="*", "the match of an alias is anonymous")
+
+match = check_match('alias_a', "a", true)
+check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match[1]["*"].subs
+check(#subs==0)
+
+match = check_match('alternate_a', "a", true)
+check(next(match[1])=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
+subs = match[1]["alternate_a"].subs
+check(#subs==0)
+
+match = check_match('alternate_to_alias_a', "a", true)
+check(next(match[1])=="alternate_to_alias_a", 'rhs of an assignment can contain an alias, and it will be captured')
+subs = match[1]["alternate_to_alias_a"].subs
+check(#subs==0)
+
+match = check_match('alias_alternate_to_alias_a', "a", true)
+check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match[1]["*"].subs
+check(#subs==0)
 
 ----------------------------------------------------------------------------------------
 heading("Literals")
@@ -201,7 +243,7 @@ check_match('{a / b} c', " bc", false)
 ----------------------------------------------------------------------------------------
 heading("Look-ahead")
 ----------------------------------------------------------------------------------------
-
+print("Need to write look-ahead tests")
 
 ----------------------------------------------------------------------------------------
 heading("Negative look-ahead")

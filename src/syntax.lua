@@ -21,7 +21,7 @@ local looking_at_boundary_ast = common.create_match("predicate",
 
 
 local function err(name, msg)
-   error('invalid ast "' .. name .. '" ' .. msg)
+   error('invalid ast ' .. name .. ': ' .. msg)
 end
 
 function syntax.validate(ast)
@@ -53,6 +53,8 @@ function syntax.validate(ast)
 		  err(name, "in sub " .. tostring(i) .. ": " .. msg);
 	       end
 	    end -- loop through subs
+	 elseif ((k=="assignment") and (name=="binding")) then
+	    if (type(v)~="boolean") then err(name, "value of the assignment flag not a boolean"); end
 	 else -- unrecognized key
 	    err(name, "unexpected key in ast body: " .. tostring(k));
 	 end -- switch on k
@@ -313,6 +315,7 @@ syntax.to_binding =
 			      else
 				 b = syntax.generate("binding", lhs, syntax.cook(rhs))
 			      end
+			      b.binding.assignment = (name=="assignment_")
 			      b.binding.text = body.text
 			      b.binding.pos = body.pos
 			      return b
@@ -395,67 +398,6 @@ syntax.assignment_to_alias =
 			   end,
 			   "assignment_",
 			   false)
-
-    --parse = require "parse" 
-    -- function syntax.test()
-    --    print("Re-loading syntax package...") 
-    --    package.loaded.syntax = false; syntax = require "syntax"
-    --    print("Assigning a bunch of globals for testing...")
-    --    parser = parse.parse
-    --    -- globals to make it easier to continue testing and debugging manually
-    --    a = parser("int = [:digit:]+")[1]
-    --    b = parser("int = ([:digit:]+)")[1]
-    --    c = parser("int = {[:digit:]+}")[1]
-    --    d = parser("int = {([:digit:] [:digit:])}")[1]
-    --    e = parser("int = ([:digit:] [:digit:])")[1]
-    --    f = parser("foo = . / .")[1]
-    --    g = parser("foo = {. / .}")[1]
-    --    aa = syntax.assignment_to_alias(a)
-    --    bb = syntax.assignment_to_alias(b)
-    --    cc = syntax.assignment_to_alias(c)
-    --    dd = syntax.assignment_to_alias(d)
-    --    ee = syntax.assignment_to_alias(e)
-    --    ff = syntax.assignment_to_alias(f)
-    --    gg = syntax.assignment_to_alias(g)
-    --    local function run(label, lst)
-    -- 	  print(label)
-    -- 	  for _,v in ipairs(lst) do
-    -- 	     print()
-    -- 	     local b = syntax.to_binding(v)
-    -- 	     local rhs = b.binding.subs[2]
-    -- 	     io.write(parse.reveal_ast(v), "\n===========>  ", parse.reveal_ast(b), "\n")
-    -- 	     local rhs_name, rhs_body = next(rhs)
-    -- 	     local raw = (rhs_name=="raw_exp")
-    -- 	     if raw then
-    -- 		-- strip off the raw wrapper
-    -- 		rhs = rhs_body.subs[1]
-    -- 		rhs_name, rhs_body = next(rhs)
-    -- 	     end
-    -- 	     local top_level
-    -- 	     -- Need to determine if this binding came from an assignment originally
-    -- 	     if (syntax.contains_capture(rhs)) then
-    -- 		top_level = parse.reveal_ast(rhs)
-    -- 	     else					    -- was an alias or other
-    -- 		top_level = parse.reveal_ast(syntax.capture(rhs, "anonymous"))
-    -- 	     end
-    -- 	     if not raw then
-    -- 		top_level = top_level .. " *BOUNDARY* "
-    -- 	     end
-    -- 	     io.write("top level =>  ", top_level, "\n")
-    -- 	  end
-    -- 	  print()
-    --    end
-    --    run("Assignment tests:", {a, b, c, d, e, f, g})
-    --    run("Alias tests:", {aa, bb, cc, dd, ee, ff, gg})
-
-    --    local f = io.open(common.compute_full_path("rpl/common.rpl"))
-    --    local s = f:read("a")
-    --    f:close()
-    --    p = parse.parse(s)
-    --    cmi = p[#p]
-    --    -- run an entire file
-    -- --   run("FILE common.rpl:", p)
-    -- end
 
 return syntax
 

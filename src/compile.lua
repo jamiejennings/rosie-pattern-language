@@ -306,7 +306,7 @@ function cinternals.compile_ref(a, gmr, source, env)
    local pat = env[name]
    if (not pat) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
-   return pattern{name=name, peg=pat.peg}
+   return pattern{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast}
 end
 
 function cinternals.compile_predicate(a, gmr, source, env)
@@ -529,11 +529,13 @@ function cinternals.compile_binding(a, gmr, source, env)
    assert(type(rhs)=="table")			    -- the right side of the assignment
    assert(not subs[3])
    assert(type(source)=="string")
+   assert(a.binding and (type(a.binding.assignment)=="boolean"))
    local _, ipos, iname = common.decode_match(lhs)
    if env[iname] and not QUIET then
       warn("Compiler: reassignment to identifier " .. iname)
    end
    local pat = cinternals.compile_rhs(rhs, gmr, source, env, iname)
+   pat.alias = (not a.binding.assignment)
    env[iname] = pat
    return pat
 end
@@ -622,7 +624,7 @@ function compile.compile_match_expression(source, env)
    local ast = astlist[1]
    local orig_ast = original_astlist[1]
    local name, pos, text, subs = common.decode_match(ast)
-   local pat, raw_expression_flag
+   local pat, raw_expression_flag, alias_flag
 
    if (name=="ref") then
       pat = env[text]
@@ -641,6 +643,7 @@ function compile.compile_match_expression(source, env)
       return false, msg
    end
 
+   if pat then result.alias = pat.alias; end
    result.ast = ast
    result.original_ast = orig_ast
 
