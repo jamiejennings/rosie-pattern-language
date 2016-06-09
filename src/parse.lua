@@ -241,7 +241,7 @@ end
 local function reveal_ref(a)
    assert(a, "did not get ast in reveal_ref")
    local name, pos, text = common.decode_match(a)
-   if name=="ref" then return "REF(" .. text .. ")"
+   if name=="ref" then return text
    else error("Unknown ref type in reveal_ref: " .. tostring(name))
    end
 end
@@ -312,7 +312,7 @@ local function reveal_sequence(a)
       else str2 = parse.reveal_exp(e2); end
       return str1 .. " " .. str2
    end
-   return "( " .. rs(a) .. " )"
+   return "(" .. rs(a) .. ")"
 end
 
 local function reveal_string(a)
@@ -326,7 +326,7 @@ local function reveal_predicate(a)
    local name, pos, text, subs = common.decode_match(a)
    local pred_type, pred_type_body = next(subs[1])
    local exp = subs[2]
-   return pred_type_body.text .. "(" .. parse.reveal_exp(subs[2]) .. ")"
+   return pred_type_body.text .. parse.reveal_exp(subs[2])
 end
 
 local function reveal_repetition(a)
@@ -395,14 +395,20 @@ end
 local function reveal_choice(a)
    assert(a, "did not get ast in reveal_choice")
    local name, pos, text, subs = common.decode_match(a)
---   return "(" .. parse.reveal_exp(subs[1]) .. " / " .. parse.reveal_exp(subs[2]) .. ")";
-   return parse.reveal_exp(subs[1]) .. " / " .. parse.reveal_exp(subs[2]);
+   local choices = syntax.flatten_choice(a)
+   local msg = ""
+   local n = #choices
+   for i=1, n do
+      msg = msg .. parse.reveal_exp(choices[i])
+      if i<n then msg = msg .. " / "; end
+   end
+   return msg
 end
 
 local function reveal_capture(a)
    assert(a, "did not get ast in reveal_capture")
    local name, pos, text, subs = common.decode_match(a)
-   return "CAPTURE(" .. parse.reveal_exp(subs[1]) .. ", " .. parse.reveal_exp(subs[2]) .. ")"
+   return "CAPTURE as " .. parse.reveal_exp(subs[1]) .. ": " .. parse.reveal_exp(subs[2]) .. ")"
 end
 
 local function reveal_group(a)
