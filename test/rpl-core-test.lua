@@ -95,16 +95,19 @@ check(submatchname=="a", "the only sub of this expression is the identifier in t
 ok, msg = api.load_string(eid, 'alias plain_old_alias = "p"')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias alias_a = a')
+ok, msg = api.load_string(eid, 'alias alias_to_plain_old_alias = plain_old_alias')
+check(ok)
+
+ok, msg = api.load_string(eid, 'alias alias_to_a = a')
 check(ok)
 
 ok, msg = api.load_string(eid, 'alternate_a = a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alternate_to_alias_a = alias_a')
+ok, msg = api.load_string(eid, 'alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias alias_alternate_to_alias_a = alias_a')
+ok, msg = api.load_string(eid, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
 subheading("Testing re-assignments")
@@ -112,26 +115,36 @@ subheading("Testing re-assignments")
 check_match('plain_old_alias', "x", false, 1)
 result = check_match('plain_old_alias', "p", true)
 check(next(result[1])=="*", "the match of an alias is anonymous")
+check(#result[1]["*"].subs==0, "no subs")
 
-match = check_match('alias_a', "a", true)
+check_match('alias_to_plain_old_alias', "x", false, 1)
+result = check_match('alias_to_plain_old_alias', "p", true)
+check(next(result[1])=="*", "the match of an alias is anonymous")
+check(#result[1]["*"].subs==0, "no subs")
+
+match = check_match('alias_to_a', "a", true)
 check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
 subs = match[1]["*"].subs
-check(#subs==0)
+check(#subs==1)
+check(next(subs[1])=="a")
 
 match = check_match('alternate_a', "a", true)
 check(next(match[1])=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
 subs = match[1]["alternate_a"].subs
-check(#subs==0)
+check(#subs==1)
+check(next(subs[1])=="a")
 
-match = check_match('alternate_to_alias_a', "a", true)
-check(next(match[1])=="alternate_to_alias_a", 'rhs of an assignment can contain an alias, and it will be captured')
-subs = match[1]["alternate_to_alias_a"].subs
-check(#subs==0)
+match = check_match('alternate_to_alias_to_a', "a", true)
+check(next(match[1])=="alternate_to_alias_to_a", 'rhs of an assignment can contain an alias, and it will be captured')
+subs = match[1]["alternate_to_alias_to_a"].subs
+check(#subs==1)
+check(next(subs[1])=="a")
 
-match = check_match('alias_alternate_to_alias_a', "a", true)
+match = check_match('alias_to_alternate_to_alias_to_a', "a", true)
 check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
 subs = match[1]["*"].subs
-check(#subs==0)
+check(#subs==1)
+check(next(subs[1])=="a")
 
 ----------------------------------------------------------------------------------------
 heading("Literals")

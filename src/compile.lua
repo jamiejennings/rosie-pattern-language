@@ -415,10 +415,12 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
       local rule = subs[i]
       assert(rule, "not getting rule in compile_grammar_rhs")
       local rname, rpos, rtext, rsubs = common.decode_match(rule)
+      assert(rname=="binding")
       local id_node = rsubs[1]			    -- identifier clause
       assert(id_node and next(id_node)=="identifier")
       local iname, ipos, id = common.decode_match(id_node)
-      local alias_flag = (not syntax.contains_capture(rsubs[2])) -- was: alias=(rname=="alias_")
+--      local alias_flag = (not syntax.contains_capture(rsubs[2])) -- was: alias=(rname=="alias_")
+      local alias_flag = rule.assignment
       local raw_flag = (rname=="raw_exp")
       gtable[id] = pattern{name=id, peg=V(id), alias=alias_flag, raw=raw_flag}
    end						    -- for
@@ -437,7 +439,6 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
       exp_node = rsubs[2]			    -- expression clause
       assert(exp_node, "not getting exp_node in compile_grammar_rhs")
       pats[id] = cinternals.compile_exp(exp_node, true, source, gtable) -- gmr flag is true 
-      if (not syntax.contains_capture(exp_node)) then gtable[id].alias=true; end
    end -- for
 
    -- third pass: create the table that will create the LPEG grammar by stripping off the Rosie
@@ -550,7 +551,6 @@ function cinternals.compile_rhs(a, gmr, source, env, iname)
    local pat = cinternals.compile_exp(a, gmr, source, env)
    local rhs_name, rhs_body = next(a)
    pat.raw = (rhs_name=="raw_exp")
-   pat.alias = (not syntax.contains_capture(a))
    pat.ast = a;
    return pat
 end

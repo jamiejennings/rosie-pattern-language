@@ -377,27 +377,27 @@ function syntax.top_level_transform(ast)
    end
 end
 
-function syntax.contains_capture(ast)
-   local name, body = next(ast)
-   if name=="capture" then return true; end
-   return reduce(or_function, false, map(syntax.contains_capture, body.subs))
-end
+-- function syntax.contains_capture(ast)
+--    local name, body = next(ast)
+--    if name=="capture" then return true; end
+--    return reduce(or_function, false, map(syntax.contains_capture, body.subs))
+-- end
 
 ---------------------------------------------------------------------------------------------------
 -- Testing
 ---------------------------------------------------------------------------------------------------
-syntax.assignment_to_alias =
-   syntax.make_transformer(function(ast)
-			      local name, body = next(ast)
-			      local lhs = body.subs[1]
-			      local rhs = body.subs[2]
-			      local b = syntax.generate("alias_", lhs, rhs)
-			      b.alias_.text = body.text
-			      b.alias_.pos = body.pos
-			      return b
-			   end,
-			   "assignment_",
-			   false)
+-- syntax.assignment_to_alias =
+--    syntax.make_transformer(function(ast)
+-- 			      local name, body = next(ast)
+-- 			      local lhs = body.subs[1]
+-- 			      local rhs = body.subs[2]
+-- 			      local b = syntax.generate("alias_", lhs, rhs)
+-- 			      b.alias_.text = body.text
+-- 			      b.alias_.pos = body.pos
+-- 			      return b
+-- 			   end,
+-- 			   "assignment_",
+-- 			   false)
 
 return syntax
 
