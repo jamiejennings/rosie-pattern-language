@@ -14,8 +14,8 @@ local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
 --local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
 local looking_at_boundary_ast = common.create_match("predicate",
 						    0,
-						    "@/generated/",
-						    common.create_match("lookat", 0, "@/generated/"),
+						    "*generated*",
+						    common.create_match("lookat", 0, "@"),
 						    boundary_ast)
 
 
