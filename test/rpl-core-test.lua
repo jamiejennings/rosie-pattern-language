@@ -219,6 +219,18 @@ check_match('a / b / c', "c a", true, 2, "c")
 check_match('(a / b / c)', "c a", true, 2, "c")
 check_match('{a / b / c}', "c a", true, 2, "c")
 
+check_match('{{a b} / b / {a c}}', "abK", true, 1)
+check_match('{{a b} / b / {a c}}', "bJ", true, 1)
+check_match('{{a b} / b / {a c}}', "acL", true, 1)
+
+check_match('{{a b} / {b} / {a c}}', "bL", true, 1)
+check_match('{{a b} / b / {a c}}', "bL", true, 1)
+check_match('{a b} / b / {a c}', "bL", false)
+
+check_match('{{a b} / {b} / {a c}}', "bcL", true, 2)
+check_match('{{a b} / (b ~) / {a c}}', "bcL", false)
+check_match('{{a b} / (b ~) / {a c}}', "b.cL", true, 3)
+
 ----------------------------------------------------------------------------------------
 heading("Cooked groups")
 ----------------------------------------------------------------------------------------

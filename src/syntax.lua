@@ -356,7 +356,8 @@ function syntax.top_level_transform(ast)
       return syntax.id_to_ref(ast)
    elseif syntax.expression_p(ast) then
       local new = ast				    --syntax.capture(ast, "*")?
-      if (name=="raw") or (name=="literal") or (name=="charset") or (name=="named_charset") then
+      if ((name=="raw") or (name=="literal") or (name=="charset") or
+          (name=="named_charset") or (name=="predicate")) then
       	 new = syntax.raw(new)
       else
       	 new = syntax.append_looking_at_boundary(syntax.cook(new))

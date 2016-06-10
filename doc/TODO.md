@@ -18,8 +18,8 @@
 - [ ] Use syntax transformation (on ASTs) instead of current code for:
     - [ ] quantified expressions
     - [ ] repetition syntax with one bound, e.g. {5} (meaning {5,5})
-    - [ ] tokenization ("cooked" expressions)
-	- [ ] top-level check for boundary after a cooked top-level expression
+    - [X] tokenization ("cooked" expressions)
+	- [X] top-level check for boundary after a cooked top-level expression
 
 - [ ] Enhance syntax error reporting (do this AFTER the syntax transformation work is done) 
 

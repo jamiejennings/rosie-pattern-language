@@ -419,10 +419,8 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
       local id_node = rsubs[1]			    -- identifier clause
       assert(id_node and next(id_node)=="identifier")
       local iname, ipos, id = common.decode_match(id_node)
---      local alias_flag = (not syntax.contains_capture(rsubs[2])) -- was: alias=(rname=="alias_")
       local alias_flag = rule.assignment
-      local raw_flag = (rname=="raw_exp")
-      gtable[id] = pattern{name=id, peg=V(id), alias=alias_flag, raw=raw_flag}
+      gtable[id] = pattern{name=id, peg=V(id), alias=alias_flag}
    end						    -- for
 
    -- second pass: compile right hand sides in gtable environment
