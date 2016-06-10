@@ -256,7 +256,23 @@ check_match('{a / b} c', " bc", false)
 ----------------------------------------------------------------------------------------
 heading("Look-ahead")
 ----------------------------------------------------------------------------------------
-print("Need to write look-ahead tests")
+check_match('@a', "x", false)
+check_match('@a', "a", true, 1, "")
+check_match('@a', "ayz", true, 3, "")		    -- ???
+check_match('@{a}', "ayz", true, 3, "")
+check_match('@(a)', "ayz", true, 3, "")		    -- ???
+check_match('(@a)', "ayz", true, 3, "")
+check_match('(@{a})', "ayz", true, 3, "")
+check_match('(@(a))', "ayz", true, 3, "")
+
+check_match('@a', "xyz", false)
+check_match('(@a)', "xyz", false, 4, "")
+check_match('{@a}', "axyz", true, 4, "")
+check_match('{@a}', "xyz", false, 4, "")
+check_match('@(a)', "axyz", true, 4, "")	    -- ???
+check_match('(@(a))', "axyz", true, 4, "")	    -- ???
+check_match('@{a~}', "a.xyz", true, 5, "")
+check_match('(@(a~))', "a.xyz", true, 5, "")	    -- ???
 
 ----------------------------------------------------------------------------------------
 heading("Negative look-ahead")
