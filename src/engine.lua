@@ -120,14 +120,8 @@ local function engine_match(e, input, start)
 end
 
 local function engine_eval(e, input, start)
-   start = start or 1
-   local ok, matches, nextpos, trace = eval.eval(e.pattern, input, 1, e.env)
-   -- we are going to avoid relying on the match returned by eval.eval for now, because it isn't
-   -- always right, and we are about to rewrite eval anyway. (Friday, May 20, 2016)
-   local match, nextpos = e:match(input, start)
-   if not ok then return false, matches; end	    -- return message
-   if match then return match, nextpos, trace
-   else return false, 1, trace; end
+--   return matches, nextpos, trace
+   return eval.eval(e.pattern, input, start, e.env, false)
 end
 
 local function open3(e, infilename, outfilename, errfilename)

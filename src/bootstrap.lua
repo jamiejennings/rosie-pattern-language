@@ -6,6 +6,7 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+if not ROSIE_HOME then error("ROSIE_HOME not set.  Exiting..."); os.exit(-1); end
 
 -- Restrict Lua's search for modules and shared objects to just the Rosie install directory
 package.path = ROSIE_HOME .. "/src/?.lua"
@@ -17,8 +18,6 @@ local compile = require "compile"
 local common = require "common"
 require "engine"
 require "os"
-
-if not ROSIE_HOME then error("ROSIE_HOME not set.  Exiting..."); os.exit(-1); end
 
 ----------------------------------------------------------------------------------------
 -- Driver functions for RPL parser written in RPL

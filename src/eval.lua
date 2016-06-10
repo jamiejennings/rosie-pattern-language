@@ -21,16 +21,12 @@ local common = require "common"
 local eval = {}
 
 function eval.match_peg(peg, input, start)
-   local matchtext, maybematch, maybepos = (lpeg.C(peg) * lpeg.Cp()):match(input, start)
+   local results = { (lpeg.C(peg) * lpeg.Cp()):match(input, start) }
+   local matchtext, pos = results[1], results[#results]
    if (not matchtext) then return false, 0; end
    assert(type(matchtext)=="string")
-   if type(maybematch)=="table" then
-      assert(type(maybepos)=="number")
-      return matchtext, maybepos
-   else
-      assert(type(maybematch)=="number")
-      return matchtext, maybematch
-   end
+   assert(type(pos)=="number")
+   return matchtext, pos
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -170,7 +166,7 @@ local function eval_choice(a, input, start, gmr, source, env, indent, fail_outpu
 	 return m, pos, msg
       else
 	 msg = msg .. indent_(indent) .. "First option failed.  Proceeding to alternative.\n"
-	 m, pos, msg = eval_exp(subs[2], input, pos, gmr, source, env, indent,
+	 m, pos, msg = eval_exp(subs[2], input, start, gmr, source, env, indent,
 				fail_output_only, step, msg)
 	 if m then
 	    -- Second alternative succeeded...

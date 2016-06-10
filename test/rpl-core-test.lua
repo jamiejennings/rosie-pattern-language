@@ -1,6 +1,6 @@
 ---- -*- Mode: Lua; -*- 
 ----
----- test-rpl-core.lua
+---- rpl-core-test.lua
 ----
 ---- (c) 2016, Jamie A. Jennings
 ----
@@ -530,7 +530,7 @@ check_match('({b (a)})', 'bax', false)
 check_match('{b (a)}', 'ba x', true, 2)
 
 ----------------------------------------------------------------------------------------
-test.heading("Quantified expressions")
+heading("Quantified expressions")
 ----------------------------------------------------------------------------------------
 subheading("Kleene star")
 check_match('a*', '', true)
