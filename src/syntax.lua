@@ -229,13 +229,11 @@ syntax.cook =
 			      --print("entering syntax.cook", name)
 			      if name=="raw" then
 				 local raw_exp = syntax.raw(body.subs[1])
-				 --local kind = next(raw_exp)
-				 --raw_exp[kind].text = body.text
-				 --raw_exp[kind].pos = body.pos
 				 return raw_exp
 			      elseif name=="cooked" then
 				 return syntax.cook(body.subs[1]) -- strip off "cooked" node
 			      elseif name=="identifier" then
+				 --return syntax.append_looking_at_boundary(syntax.id_to_ref(ast))
 				 return syntax.id_to_ref(ast)
 			      elseif name=="sequence" then
 				 local first = body.subs[1]
@@ -312,6 +310,12 @@ syntax.to_binding =
 				 b = syntax.generate("binding",
 						     lhs,
 						     syntax.generate("raw_exp", syntax.raw(rhs)))
+			      elseif original_rhs_name=="cooked" then
+				 b = syntax.generate("binding", lhs, syntax.append_looking_at_boundary(syntax.cook(rhs)))
+			      elseif original_rhs_name=="ref" then
+				 -- neither cooked nor raw, the rawness of a ref depends on
+				 -- following the reference
+				 b = syntax.generate("binding", lhs, rhs)
 			      else
 				 b = syntax.generate("binding", lhs, syntax.cook(rhs))
 			      end

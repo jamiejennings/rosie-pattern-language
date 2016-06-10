@@ -306,7 +306,7 @@ function cinternals.compile_ref(a, gmr, source, env)
    local pat = env[name]
    if (not pat) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
-   return pattern{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast}
+   return pattern{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw}
 end
 
 function cinternals.compile_predicate(a, gmr, source, env)
@@ -548,7 +548,9 @@ function cinternals.compile_rhs(a, gmr, source, env, iname)
    end
    local pat = cinternals.compile_exp(a, gmr, source, env)
    local rhs_name, rhs_body = next(a)
-   pat.raw = (rhs_name=="raw_exp")
+   pat.raw = ((rhs_name=="raw_exp") or
+	      ((rhs_name=="capture") and (next(rhs_body.subs[2])=="ref") and pat.raw) or
+	      ((rhs_name=="ref") and pat.raw))
    pat.ast = a;
    return pat
 end

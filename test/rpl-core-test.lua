@@ -157,10 +157,20 @@ check(ok)
 match = json.decode(match_js)
 check(next(match[1])=="*", "the match of an alias is anonymous")
 
+check((api.load_string(eid, "dot = .")))
+check((api.load_string(eid, "rawdot = {.}")))
+check((api.load_string(eid, "cookeddot = (.)")))
+
 check_match(".", "a", true)
+check_match("dot", "a", true)
+
 check_match(".", "abcd", true, 3, "a")
+check_match("dot", "abcd", true, 3, "a")
 check_match("(.)", "abcd", false)
+check_match("cookeddot", "abcd", false)
 check_match("{.}", "abcd", true, 3, "a")
+check_match("rawdot", "abcd", true, 3, "a")
+
 check_match(".", "1", true)
 check_match(".", "\n", true)
 check_match(".", "!", true)
