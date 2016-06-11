@@ -157,19 +157,10 @@ check(ok)
 match = json.decode(match_js)
 check(next(match[1])=="*", "the match of an alias is anonymous")
 
-check((api.load_string(eid, "dot = .")))
-check((api.load_string(eid, "rawdot = {.}")))
-check((api.load_string(eid, "cookeddot = (.)")))
-
 check_match(".", "a", true)
-check_match("dot", "a", true)
-
 check_match(".", "abcd", true, 3, "a")
-check_match("dot", "abcd", true, 3, "a")
 check_match("(.)", "abcd", false)
-check_match("cookeddot", "abcd", false)
 check_match("{.}", "abcd", true, 3, "a")
-check_match("rawdot", "abcd", true, 3, "a")
 
 check_match(".", "1", true)
 check_match(".", "\n", true)
@@ -1046,6 +1037,141 @@ check_match('S [:digit:]', "ab 4", true)
 check_match('{S [:digit:]}', "ab 4", false)
 check_match('S [:digit:]', "ab4", false)
 check_match('{S [:digit:]}', "ab4", true)
+
+heading("Things that should be true")
+
+subheading("Raw and cooked versions of . and equiv identifiers")
+
+check((api.load_string(eid, "dot = .")))
+check((api.load_string(eid, "rawdot = {.}")))
+check((api.load_string(eid, "cookeddot = (.)")))
+
+check_match(".", "a", true)
+check_match("dot", "a", true)
+check_match(".", "abc", true, 2, "a")
+check_match("dot", "abc", true, 2, "a")
+check_match(".", "", false)
+check_match("dot", "", false)
+
+check_match("{.}", "a", true)
+check_match("rawdot", "a", true)
+check_match("{.}", "abc", true, 2, "a")
+check_match("rawdot", "abc", true, 2, "a")
+check_match("{.}", "", false)
+check_match("rawdot", "", false)
+
+check_match("(.)", "abcd", false)
+check_match("cookeddot", "abcd", false)
+check_match("(.)", "a.", true, 1, "a")
+check_match("cookeddot", "a.", true, 1, "a")
+check_match("(.)", "a", true, 0, "a")
+check_match("cookeddot", "a", true, 0, "a")
+check_match("(.)", "", false)
+check_match("cookeddot", "", false)
+
+subheading("Raw and cooked versions of the same definition")
+
+check((api.load_manifest(eid, "MANIFEST")))
+
+m = check_match("common.int", "42", true)
+check((not m[1]["*"]) and m[1]["common.int"] and (#m[1]["common.int"].subs==0))
+m = check_match("{common.int}", "42", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (#m[1]["*"].subs[1]["common.int"].subs==0))
+m = check_match("(common.int)", "42", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (#m[1]["*"].subs[1]["common.int"].subs==0))
+
+m = check_match("common.int", "42x", true, 1, "42")
+check((not m[1]["*"]) and m[1]["common.int"] and (#m[1]["common.int"].subs==0))
+m = check_match("{common.int}", "42x", true, 1, "42")
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (#m[1]["*"].subs[1]["common.int"].subs==0))
+m = check_match("(common.int)", "42x", false)
+
+m = check_match("common.int common.word", "42x", false)
+m = check_match("{common.int common.word}", "42x", true, 0, "42x")
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
+      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+m = check_match("(common.int common.word)", "42x", false)
+
+m = check_match("common.int common.word", "42 x", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
+      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+m = check_match("{common.int common.word}", "42 x", false)
+m = check_match("(common.int common.word)", "42 x", true)
+
+check((api.load_string(eid, "int = common.int word = common.word")))
+       
+m = check_match("int", "42", true)
+check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
+m = check_match("{int}", "42", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
+m = check_match("(int)", "42", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
+
+m = check_match("int", "42x", true, 1, "42")
+check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
+m = check_match("{int}", "42x", true, 1, "42")
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
+m = check_match("(int)", "42x", false)
+
+m = check_match("int word", "42x", false)
+m = check_match("{int word}", "42x", true, 0, "42x")
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and
+      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["word"])
+m = check_match("(int word)", "42x", false)
+
+m = check_match("int word", "42 x", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and
+      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["word"])
+m = check_match("{int word}", "42 x", false)
+m = check_match("(int word)", "42 x", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and
+      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["word"])
+
+check((api.load_string(eid, "alias int = common.int alias word = common.word")))
+       
+m = check_match("int", "42", true)
+check(m[1]["*"] and m[1]["*"].subs[1]["common.int"] and (#m[1]["*"].subs[1]["common.int"].subs==0))
+m = check_match("{int}", "42", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (#m[1]["*"].subs[1]["common.int"].subs==0))
+m = check_match("(int)", "42", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (#m[1]["*"].subs[1]["common.int"].subs==0))
+
+m = check_match("int", "42x", true, 1, "42")
+check(m[1]["*"] and m[1]["*"].subs[1]["common.int"] and (#m[1]["*"].subs[1]["common.int"].subs==0))
+m = check_match("{int}", "42x", true, 1, "42")
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (#m[1]["*"].subs[1]["common.int"].subs==0))
+m = check_match("(int)", "42x", false)
+
+m = check_match("int word", "42x", false)
+m = check_match("{int word}", "42x", true, 0, "42x")
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
+      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+m = check_match("(int word)", "42x", false)
+
+m = check_match("int word", "42 x", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
+      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+m = check_match("{int word}", "42 x", false)
+m = check_match("(int word)", "42 x", true)
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
+      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+
+check((api.load_string(eid, "foo = a / b / c")))
+
+check_match("foo", "a!", true, 1, "a")
+check_match("foo", "ax", false)
+check_match("{foo}", "a!", true, 1, "a")
+check_match("{foo}", "ax", false)
+check_match("(foo)", "a!", true, 1, "a")
+check_match("(foo)", "ax", false)
+
+check_match("a / b / c", "a!", true, 1, "a")
+check_match("a / b / c", "ax", false)
+check_match("{a / b / c}", "a!", true, 1, "a")
+check_match("{a / b / c}", "ax", false)		    ------------------
+check_match("(a / b / c)", "a!", true, 1, "a")
+check_match("(a / b / c)", "ax", false)
+
 
 test.finish()
 
