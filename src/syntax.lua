@@ -53,8 +53,8 @@ function syntax.validate(ast)
 		  err(name, "in sub " .. tostring(i) .. ": " .. msg);
 	       end
 	    end -- loop through subs
-	 elseif ((k=="assignment") and (name=="binding")) then
-	    if (type(v)~="boolean") then err(name, "value of the assignment flag not a boolean"); end
+	 elseif ((k=="capture") and (name=="binding")) then
+	    if (type(v)~="boolean") then err(name, "value of the capture flag not a boolean"); end
 	 else -- unrecognized key
 	    err(name, "unexpected key in ast body: " .. tostring(k));
 	 end -- switch on k
@@ -319,7 +319,7 @@ syntax.to_binding =
 			      else
 				 b = syntax.generate("binding", lhs, syntax.cook(rhs))
 			      end
-			      b.binding.assignment = (name=="assignment_")
+			      b.binding.capture = (name=="assignment_")
 			      b.binding.text = body.text
 			      b.binding.pos = body.pos
 			      return b

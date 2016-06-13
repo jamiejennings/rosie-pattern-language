@@ -215,10 +215,10 @@ function cinternals.process_quantified_exp(a, gmr, source, env)
    assert(name=="new_quantified_exp")
    local qpeg, min, max
    local append_boundary = true
-   local subname, subbody = next(subs[1])
-   local raw = (subname=="raw_exp")
+   local expname, expbody = next(subs[1])
+   local raw = (expname=="raw_exp")
    if raw then
-      subname, subbody = next(subbody.subs[1])
+      expname, expbody = next(expbody.subs[1])
       append_boundary = false
    end
    local e = cinternals.compile_exp(subs[1], gmr, source, env)
@@ -419,7 +419,7 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
       local id_node = rsubs[1]			    -- identifier clause
       assert(id_node and next(id_node)=="identifier")
       local iname, ipos, id = common.decode_match(id_node)
-      local alias_flag = rule.assignment
+      local alias_flag = rule.capture
       gtable[id] = pattern{name=id, peg=V(id), alias=alias_flag}
    end						    -- for
 
@@ -528,13 +528,13 @@ function cinternals.compile_binding(a, gmr, source, env)
    assert(type(rhs)=="table")			    -- the right side of the assignment
    assert(not subs[3])
    assert(type(source)=="string")
-   assert(a.binding and (type(a.binding.assignment)=="boolean"))
+   assert(a.binding and (type(a.binding.capture)=="boolean"))
    local _, ipos, iname = common.decode_match(lhs)
    if env[iname] and not QUIET then
       warn("Compiler: reassignment to identifier " .. iname)
    end
    local pat = cinternals.compile_rhs(rhs, gmr, source, env, iname)
-   pat.alias = (not a.binding.assignment)
+   pat.alias = (not a.binding.capture)
    env[iname] = pat
    return pat
 end
@@ -629,9 +629,9 @@ function compile.compile_match_expression(source, env)
    if (name=="ref") then
       pat = env[text]
       raw_expression_flag = (pattern.is(pat) and pat.raw)
-      if (not raw_expression_flag) then
-	 ast = syntax.append_looking_at_boundary(ast)
-      end
+      -- if (not raw_expression_flag) then
+      -- 	 ast = syntax.append_looking_at_boundary(ast)
+      -- end
    end
 
    local c = coroutine.create(cinternals.compile_exp)

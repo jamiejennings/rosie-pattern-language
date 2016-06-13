@@ -56,19 +56,19 @@
 0. `(CHOICE <e1>  <e2>)` :: <input> iff ... **define choice match**
 0. Choices are right associative, and the precedence of choices and sequences is the same
 0. The choice `<e1> / <e2>` is interpreted as `(CHOICE <e1> <e2>)`
-0. The choice `{<e1> / <e2>}` is equivalent to `<e1> / <e2>` (and so on for longer choices).
+0. The choice `{<e1> / <e2>}` == `{<e1>} / {<e2>}` (and so on for longer choices).
 
-0. The choice `(<e1> / <e2>)` is equivalent to `<e1> / <e2>` (and so on for longer choices).
+0. The choice `(<e1> / <e2>)` == `(<e1>) / (<e2>)` (and so on for longer choices).
 
-0. The choice `{(<e1>) / <e2>}` is equivalent to `{<e1> ~} / <e2>`
+0. The choice `{(<e1>) / <e2>}` == `{<e1> ~} / {<e2>}`
 
 0. The expression `{<e1> / <e2> <e3>}` is interpreted as `(CHOICE <e1> (SEQ <e2 <e3>))` (right associativity, equal precedence)
 
 0. The expression `(<e1> / <e2> <e3>)` is interpreted as `(CHOICE <e1> (SEQ <e2 ~ <e3>))`
-0. The expression `(<e1> / <e2> <e3>)` is equivalent to `<e1> / (<e2> <e3>)`
-0. The expression `(<e1> / <e2> <e3>)` is equivalent to `<e1> / {<e2> ~ <e3>}`
+0. The expression `(<e1> / <e2> <e3>)` == `(<e1>) / (<e2> <e3>)`
+0. The expression `(<e1> / <e2> <e3>)` == `(<e1>) / {<e2> ~ <e3>}`
 
-0. The expression `(<e1> / <e2>) <e3>` is equivalent to `{<e1> / <e2>} ~ <e3>`
+0. The expression `(<e1> / <e2>) <e3>` == `{<e1> / <e2>} ~ <e3>`
 0. The expressions `(<e1> / <e2>) <e3>` and `{<e1> / <e2>} <e3>` are interpreted as `(SEQ (CHOICE <e1> <e2>) ~ <e3>)`
 0. The expressions `(<e1> / <e2>) <e3>` and `{<e1> / <e2>} <e3>` are equivalent to `({<e1> / <e2>} <e3>)` (because tokenization is the default)
 0. The expressions `(<e1> / <e2>) <e3>` and `{<e1> / <e2>} <e3>` are equivalent to `{{<e1> / <e2>} ~ <e3>}` (because tokenization is the default)
