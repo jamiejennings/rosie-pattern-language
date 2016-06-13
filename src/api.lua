@@ -46,10 +46,15 @@ local api = {API_VERSION = "0.96 alpha",	    -- api version
 	     RPL_VERSION = "0.96",		    -- language version
 	     ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
 	     ROSIE_HOME = ROSIE_HOME,		    -- install directory
+             HOSTNAME = os.getenv("HOSTNAME"),
+             HOSTTYPE = os.getenv("HOSTTYPE"),
+             OSTYPE = os.getenv("OSTYPE"),
 	     NARGS = {}} 			    -- number of args for each api call
+
+
 ----------------------------------------------------------------------------------------
 
--- SLOW due to table manipulation??
+-- SLOW due to table manipulation??   !@#
 local function api_wrap(f)
    api.NARGS[f] = debug.getinfo(f, "u").nparams	    -- number of args for f
    return function(...)

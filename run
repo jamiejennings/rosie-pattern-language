@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 pushd . > /dev/null
 SCRIPT_PATH="${BASH_SOURCE[0]}";
@@ -20,7 +20,7 @@ if [[ "$1" = "-D" ]]; then
 fi
 
 if ([ -x $SCRIPT_PATH/bin/lua ]) then
-   $SCRIPT_PATH/bin/lua $I -e "ROSIE_HOME=\"$SCRIPT_PATH\"; SCRIPTNAME=\"$0\"" $SCRIPT_PATH/src/run.lua "$@"
+   /usr/bin/env HOSTNAME=$HOSTNAME HOSTTYPE=$HOSTTYPE OSTYPE=$OSTYPE $SCRIPT_PATH/bin/lua $I -e "ROSIE_HOME=\"$SCRIPT_PATH\"; SCRIPTNAME=\"$0\"" $SCRIPT_PATH/src/run.lua "$@"
    else
        echo "$SCRIPT_PATH/bin/lua not found.  Probably need to build Rosie."
 fi
