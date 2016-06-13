@@ -57,10 +57,7 @@
 0. Choices are right associative, and the precedence of choices and sequences is the same
 0. The choice `<e1> / <e2>` is interpreted as `(CHOICE <e1> <e2>)`
 0. The choice `{<e1> / <e2>}` == `{<e1>} / {<e2>}` (and so on for longer choices).
-
 0. The choice `(<e1> / <e2>)` == `(<e1>) / (<e2>)` (and so on for longer choices).
-
-0. The choice `{(<e1>) / <e2>}` == `{<e1> ~} / {<e2>}`
 
 0. The expression `{<e1> / <e2> <e3>}` is interpreted as `(CHOICE <e1> (SEQ <e2 <e3>))` (right associativity, equal precedence)
 

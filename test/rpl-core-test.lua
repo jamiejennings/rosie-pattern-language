@@ -210,9 +210,9 @@ heading("Alternation (choice)")
 check_match('a / b', "", false)
 check_match('a / b', "x", false)
 check_match('a / b', "a", true, 0, "a")
-check_match('a / b', "ab", false)
+check_match('a / b', "ab", true, 1)
 check_match('a / b', "a b", true, 2, "a")
-check_match('a / b', "ba", false)
+check_match('a / b', "ba", true, 1)
 check_match('a / b', "b a", true, 2, "b")
 check_match('a / b', "b b", true, 2, "b")
 check_match('a / b', "b", true, 0, "b")
@@ -229,7 +229,7 @@ check_match('{{a b} / b / {a c}}', "acL", true, 1)
 
 check_match('{{a b} / {b} / {a c}}', "bL", true, 1)
 check_match('{{a b} / b / {a c}}', "bL", true, 1)
-check_match('{a b} / b / {a c}', "bL", false)
+check_match('{a b} / b / {a c}', "bL", true, 1)
 
 check_match('{{a b} / {b} / {a c}}', "bcL", true, 2)
 check_match('{{a b} / (b ~) / {a c}}', "bcL", false)
@@ -326,14 +326,14 @@ heading("Precedence and right association")
 
 subheading("Testing a / b c, which is equivalent to a / (b c)")
 check_match('a / b c', 'a', true, 0, "a")
-check_match('a / b c', 'ac', false)
+check_match('a / b c', 'ac', true, 1)
 
 check_match('a / b c', 'a c', true, 2, "a")
 -- Warning: did not match entire input line
 check_match('a / b c', 'bc', false)
 
 check_match('a / b c', 'b c', true, 0, "b c")
--- [test: [1: b c, 2: [b: [1: b]], 3: [c: [1: c]]]]
+check_match('a / b c', 'b cx', true, 1, "b c")
 
 subheading("Testing a b / c d, which is equivalent to a (b / (c d))")
 check_match('a b / c d', 'a b', true, 0, "a b")
@@ -514,10 +514,10 @@ check_match('"X"~~~~', 'X', true, 0, "X")	    -- idempotent boundary
 
 subheading("Alternation (basic)")
 check_match('{ a / b }', 'ax', true, 1, "a")
-check_match('a / b', 'ax', false)
+check_match('a / b', 'ax', true, 1)
 check_match('a / b', 'a x', true, 2)
 check_match('a / b', 'a', true)
-check_match('(a / b)', 'ax', false)
+check_match('(a / b)', 'ax', true, 1)
 check_match('(a / b)', 'a x', true, 2, "a")
 check_match('{a / b}', 'a x', true, 2, "a")
 check_match('{{a / b}}', 'a x', true, 2, "a")
@@ -564,16 +564,15 @@ check_match('{b (a / b)}', 'bb', true)
 check_match('{b (a / b)}', 'b a   x', false)
 check_match('{b (a / b)}', 'ba   x', true, 4)
 
-check_match('{b (a / b)}', 'bax', false)	    -- this is key: no top-level boundary added
-check_match('{b {a / b}}', 'bax', true, 1)	    -- this is key: no top-level boundary added
-check_match('{b {a / b}}', 'bax', true, 1)	    -- this is key: no top-level boundary added
+check_match('{b (a / b)}', 'bax', true, 1)
+check_match('{b {a / b}}', 'bax', true, 1)
 check_match('({b {a / b}})', 'bax', true, 1)
 check_match('({b {a / b}}~)', 'bax', false)
 check_match('({b {a / b}})', 'ba xyz', true, 4)
-check_match('({b (a / b)})', 'bax', false)	    -- this is key: top-level boundary added
-check_match('(b (a / b))', 'bax', false)	    -- this is key: top-level boundary added
-check_match('(b (a / b))', 'b a x', true, 2)	    -- this is key: top-level boundary added
-check_match('(b (a / b))', 'b b', true, 0)	    -- this is key: top-level boundary added
+check_match('({b (a / b)})', 'bax', true, 1)
+check_match('(b (a / b))', 'bax', false)
+check_match('(b (a / b))', 'b a x', true, 2)
+check_match('(b (a / b))', 'b b', true, 0)
 
 check_match('{b (a)}', 'bax', true, 1)
 check_match('({b (a)})', 'bax', true, 1)
@@ -903,7 +902,7 @@ check_match('(a/b/c)?', '', true)
 check_match('(a/b/c)?', 'a', true)
 check_match('(a/b/c)?', 'b', true)
 check_match('(a/b/c)?', 'c', true)
-check_match('(a/b/c)?', 'ab', true, 2)		    -- matches ""
+check_match('(a/b/c)?', 'ab', true, 1)
 check_match('(a/b/c)?', 'a!', true, 1)
 -- next set same as previous set
 check_match('{a/b/c}?', '', true)
@@ -945,8 +944,8 @@ check_match('(a/b/c){1,2}', 'a b', true)
 check_match('(a/b/c){1,2}', 'c c', true)
 check_match('(a/b/c){1,2}', 'c a', true)
 check_match('(a/b/c){1,2}', 'c a ', true, 1)
-check_match('(a/b/c){1,2}', 'a c!', true, 1)
-check_match('(a/b/c){1,2}', 'a cX', true, 3)
+check_match('(a/b/c){1,2}', 'a c!', true, 1, "a c")
+check_match('(a/b/c){1,2}', 'a cX', true, 1, "a c")
 -- next set same as previous set
 check_match('((a/b/c){1,2})', '', false)
 check_match('((a/b/c){1,2})', 'a', true)
@@ -956,8 +955,8 @@ check_match('((a/b/c){1,2})', 'a b', true)
 check_match('((a/b/c){1,2})', 'c c', true)
 check_match('((a/b/c){1,2})', 'c a', true)
 check_match('((a/b/c){1,2})', 'c a ', true, 1)
-check_match('((a/b/c){1,2})', 'a c!', true, 1)
-check_match('((a/b/c){1,2})', 'a cX', true, 3)
+check_match('((a/b/c){1,2})', 'a c!', true, 1, "a c")
+check_match('((a/b/c){1,2})', 'a cX', true, 1, "a c")
 -- difference
 check_match('{(a/b/c){1,2}}', '', false)
 check_match('{(a/b/c){1,2}}', 'a', true)
@@ -968,7 +967,7 @@ check_match('{(a/b/c){1,2}}', 'c c', true)
 check_match('{(a/b/c){1,2}}', 'c a', true)
 check_match('{(a/b/c){1,2}}', 'c a ', true, 1)
 check_match('{(a/b/c){1,2}}', 'a c!', true, 1)
-check_match('{(a/b/c){1,2}}', 'a cX', true, 3)
+check_match('{(a/b/c){1,2}}', 'a cX', true, 1)
 
 subheading("Raw alternatives with question operator")
 check_match('{a/b/c}{1,2}', '', false)
@@ -1255,11 +1254,11 @@ check(m[1]["foo"]); check(#m[1]["foo"].subs==1); check(m[1]["foo"].subs[1]["a"])
 
 function test_foo()
    check_match("foo", "a!", true, 1, "a");     check_match("(a / b / c)", "a!", true, 1, "a")
-   check_match("foo", "ax", false);            check_match("(a / b / c)", "ax", false)
+   check_match("foo", "ax", true, 1);          check_match("(a / b / c)", "ax", true, 1)
    check_match("{foo}", "a!", true, 1, "a");   check_match("{(a / b / c)}", "a!", true, 1, "a")
-   check_match("{foo}", "ax", false);          check_match("{(a / b / c)}", "ax", false)
+   check_match("{foo}", "ax", true, 1);        check_match("{(a / b / c)}", "ax", true, 1)
    check_match("(foo)", "a!", true, 1, "a");   check_match("((a / b / c))", "a!", true, 1, "a")
-   check_match("(foo)", "ax", false);          check_match("((a / b / c))", "ax", false)
+   check_match("(foo)", "ax", true, 1);        check_match("((a / b / c))", "ax", true, 1)
 
 end
 
@@ -1297,6 +1296,169 @@ check_bc("{b ~ c}")
 check((api.load_string(eid, "foo = a b c*")))
 check_match('a b c*', 'a b x', true, 1, "a b ")
 check_match('foo', 'a b x', true, 1, "a b ")
+
+subheading("Quantified expressions")
+
+function check_qe1(exp)
+   check_match(exp, "a", false)
+   check_match(exp, "aa", true)
+   check_match(exp, "aaax", true, 1)
+   check_match(exp, "aa ax", true, 3)
+end
+
+check_qe1("a{2,3}")
+check_qe1("(a{2,3})")
+check_qe1("{a{2,3}}")
+check_qe1("{a}{2,3}")
+check_qe1("{ {a}{2,3} }")
+
+function check_qe2(exp)
+   check_match(exp, "", true, 0, "")
+   check_match(exp, "b", true, 0, "b")
+   check_match(exp, "bxx", true, 2, "b")
+   check_match(exp, " b", true, 2, "")
+end
+
+check_qe2("b?")
+check_qe2("(b?)")
+check_qe2("{b?}")
+check_qe2("{b}?")
+check_qe2("{ {b}? }")
+
+function check_qe3a(exp)
+   check_match(exp, "a b", true, 0, "a b")
+   check_match(exp, "a b a b a b", true)
+   check_match(exp, "a b a b a b x y", true, 3)
+   check_match(exp, "a bx", false)
+   check_match(exp, "a x", false)
+   check_match(exp, "ab a b a b", false)
+   check_match(exp, "a.b", false)
+end
+
+check_qe3a("(a b)+")
+check_qe3a("((a b)+)")
+check_qe3a("{(a b)+}")
+
+function check_qe3b(exp)
+   check_match(exp, "a b", true, 0, "a b")
+   check_match(exp, "a ba ba b", true)
+   check_match(exp, "a ba ba bx y", true, 3)
+   check_match(exp, "a bx", true, 1)
+   check_match(exp, "a x", false)
+   check_match(exp, "ab a b a b", false)
+   check_match(exp, "a.b", false)
+end
+
+check_qe3b("{(a b)}+")
+check_qe3b("( {(a b)}+ )")
+check_qe3b("{ {(a b)}+ }")
+
+function check_qe4a(exp)
+   check_match(exp, "b", true)
+   check_match(exp, "c b b b b b cx", true, 2)			  -- !@# leftover correct?
+   check_match(exp, "c b b b b b c x", true, 1, "c b b b b b c ") -- !@# trailing space?
+   check_match(exp, "bc", false)
+   check_match(exp, "", false)
+end
+
+check_qe4a("(b/c)+")
+check_qe4a("( (b/c)+ )")
+check_qe4a("{ (b/c)+ }")
+check_qe4a("((b/c))+")
+check_qe4a("({b/c})+ ")
+check_qe4a("{ ({{b/c}})+ }")
+
+function check_qe4b(exp)
+   check_match(exp, "b", true)
+   check_match(exp, "cbbbbbcx", true, 1)
+   check_match(exp, "cbbbbbc x", true, 2)
+   check_match(exp, "c c", true, 2, "c")
+   check_match(exp, "", false)
+end
+
+check_qe4b("{b/c}+")
+check_qe4b("( {b/c}+ )")
+check_qe4b("{ {b/c}+ }")
+
+subheading("Choice")
+
+function check_choice1(exp)
+   check_match(exp, "abc", true, 2)
+   check_match(exp, "bc", true, 1)
+   check_match(exp, "b", true)
+   check_match(exp, "", false)
+   check_match(exp, "c", false)
+end
+
+check_choice1("{a / b}")
+check_choice1("{ {a} / {b} }")
+check_choice1("{ {a} / b }")
+check_choice1("{ {a} / b }")
+check_choice1("{ a / {b} }")
+check_choice1("{ a / {b} }")
+
+function check_choice2(exp)
+   check_match(exp, "abc", false)
+   check_match(exp, "a bc", true, 3, "a")
+   check_match(exp, "b.c", true, 2, "b")
+   check_match(exp, "b", true)
+   check_match(exp, "", false)
+   check_match(exp, "c", false)
+end
+
+check_choice2("{a} / {b}")
+check_choice2("({a} / {b})")
+
+function check_choice3(exp)
+   check_match(exp, "ax", true, 1)
+   check_match(exp, "bca", true, 2)
+   check_match(exp, "a bc", true, 3, "a")
+   check_match(exp, "b.c", true, 2, "b")
+   check_match(exp, "bx", true, 1)
+   check_match(exp, "", false)
+   check_match(exp, "c", false)
+end
+
+check_choice3("{(a) / b}")
+check_choice3("{ a / {b} }")
+
+function check_choice4(exp)
+   check_match(exp, "ax", false)
+   check_match(exp, "bca", true, 2)
+   check_match(exp, "a bc", true, 2, "a ")	    -- !@# trailing space?
+   check_match(exp, "", false)
+   check_match(exp, "c", false)
+end
+
+check_choice4("{(a ~) / b}")
+check_choice4("{ {a ~} / b }")
+
+subheading("Sequences and choices")
+
+function check_chs1(exp)
+   check_match(exp, "a", true)
+   check_match(exp, "b c", true)
+   check_match(exp, "b cx", true, 1)
+   check_match(exp, "bc", false)
+end
+
+check_chs1("a / b c")
+check_chs1("a / (b c)")
+check_chs1("a / {b ~ c}")
+check_chs1("{ a / {b ~ c} }")
+
+function check_chs2(exp)
+   check_match(exp, "a", true)
+   check_match(exp, "b c", false)
+   check_match(exp, "bc", true)
+   check_match(exp, "bcx", true, 1)
+end
+
+check_chs2("{a / b c}")
+check_chs2("({a / b c})")
+check_chs2("a / {b c}")
+check_chs2("(a / {b c})")
+check_chs2("{a / {b c}}")
 
 test.finish()
 
