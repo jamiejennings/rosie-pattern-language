@@ -8,6 +8,8 @@
 
 require "utils"
 
+test.start(test.current_filename())
+
 infilename = "/tmp/rosietestinputfile"
 
 rosie = ROSIE_HOME .. "/run"
@@ -95,3 +97,5 @@ run("common.word", nil, results_common_word)
 run("common.word", true, results_common_word_grep)
 run("common.word basic.network_patterns", nil, results_word_network)
 run("common.number", true, results_common_number)
+
+return test.finish()

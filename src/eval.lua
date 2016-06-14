@@ -23,7 +23,7 @@ local eval = {}
 function eval.match_peg(peg, input, start)
    local results = { (lpeg.C(peg) * lpeg.Cp()):match(input, start) }
    local matchtext, pos = results[1], results[#results]
-   if (not matchtext) then return false, 0; end
+   if (not matchtext) then return false, 1; end
    assert(type(matchtext)=="string")
    assert(type(pos)=="number")
    return matchtext, pos
@@ -133,7 +133,7 @@ local function eval_sequence(a, input, start, gmr, source, env, indent, fail_out
 	 eval_exp(subs[1], input, start, gmr, source, env, indent+delta,
 		  fail_output_only, step, msg)
 
-      if not m then return false, 0, msg; end	    -- Found the match error, so done.
+      if not m then return false, 1, msg; end	    -- Found the match error, so done.
 
       return eval_exp(subs[2], input, pos, gmr, source, env, indent+delta,
 		      fail_output_only, step, msg)
@@ -172,7 +172,7 @@ local function eval_choice(a, input, start, gmr, source, env, indent, fail_outpu
 	    -- Second alternative succeeded...
 	    return m, pos, msg;
 	 else
-	    return false, 0, msg;
+	    return false, 1, msg;
 	 end -- if m (second alternative)
       end -- if m (first alternative)
    end

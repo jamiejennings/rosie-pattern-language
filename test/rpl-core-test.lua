@@ -43,7 +43,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text)
    return retvals
 end
       
-test.start()
+test.start(test.current_filename())
 
 ----------------------------------------------------------------------------------------
 heading("Setting up")
@@ -1573,6 +1573,6 @@ check_idem_etc_raw('{(c){2,4}}', "cc", false)
 check_idem_etc_raw('{(c){2,4}}', "c c", true)
 check_idem_etc_raw('{(c){2,4}}', "c c c c c c", true, 4)
 
-
-test.finish()
-
+-- return the test results in case this file is being called by another one which is collecting
+-- up all the results:
+return test.finish()

@@ -30,10 +30,14 @@ end
 
 test = {}
 
-local count, fail_count, heading_count, subheading_count, messages
+function test.current_filename()
+   return (debug.getinfo(1).source)
+end
+
+local test_filename, count, fail_count, heading_count, subheading_count, messages
 local current_heading, current_subheading
 
-function test.start(optional_msg)
+function test.start(filename, optional_msg)
    count = 0
    fail_count = 0
    heading_count = 0
@@ -41,6 +45,7 @@ function test.start(optional_msg)
    messages = {}
    current_heading = "Heading not assigned"
    current_subheading = "Subheading not assigned"
+   test_filename = filename or "No file name recorded"
    if optional_msg then io.write(optional_msg, "\n"); end
 end
 
@@ -81,19 +86,41 @@ function test.subheading(label)
    io.stdout:write("\n\t", label, " ")
 end
 
-function test.finish(optional_msg)
-   local total = "\n\n** TOTAL " .. tostring(count) .. " tests attempted.\n"
+function test.summarize(label, count, fail_count)
+   label = label or "TOTAL"
+   local total = "\n\n** " .. label .. ": " .. tostring(count) .. " tests attempted.\n"
    if fail_count == 0 then
       green_write(total)
       green_write("** All tests passed.\n")
    else
       io.stdout:write(total)
       io.stdout:write("** ", tostring(fail_count), " tests failed:\n")
-      for _,v in ipairs(messages) do
-	 red_write(v.src, ":", v.l, " ", v.h, ": ", v.sh, ": ", v.m, "\n")
-      end
+   end
+end
+
+function test.finish(optional_msg)
+   test.summarize("TOTAL", count, fail_count)
+   for _,v in ipairs(messages) do
+      red_write(v.src, ":", v.l, " ", v.h, ": ", v.sh, ": ", v.m, "\n")
    end
    if optional_msg then io.write(optional_msg, "\n"); end
+   -- return everything in case a caller wants to compute a grand total
+   return test_filename, count, fail_count, heading_count, subheading_count, messages
+end
+
+function test.print_grand_total(results)
+   local SHORTFILE, FULLFILE, COUNT, FAILCOUNT = 1, 2, 3, 4
+   local count, failcount = 0, 0
+   print()
+   for _,v in ipairs(results) do
+      if #v<=2 then
+	 print("File " .. v[1] .. " did not report results")
+      else
+	 count = count + v[COUNT]
+	 failcount = failcount + v[FAILCOUNT]
+      end
+   end -- for
+   test.summarize("GRAND TOTAL", count, failcount)
 end
 
 return test

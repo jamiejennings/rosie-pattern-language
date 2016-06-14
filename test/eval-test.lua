@@ -51,7 +51,7 @@ print("+------------------------------------------------------------------------
 print("| Note that check_eval sets the global variable 'trace', which can be easily printed |")
 print("+------------------------------------------------------------------------------------+")
 
-test.start()
+test.start(test.current_filename())
 
 ----------------------------------------------------------------------------------------
 heading("Setting up")
@@ -255,4 +255,4 @@ check_eval('({a/b}{3,5})', "baaa", true, {'1..QUANTIFIED EXP (raw): ({a / b}){3,
 check_eval('({a/b}{3,5})', "ba", false, {'1..QUANTIFIED EXP (raw): ({a / b}){3,5}',
 				       'FAILED'})
 
-test.finish()
+return test.finish()
