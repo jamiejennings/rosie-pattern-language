@@ -1398,7 +1398,7 @@ check_choice1("{ a / {b} }")
 check_choice1("{ a / {b} }")
 
 function check_choice2(exp)
-   check_match(exp, "abc", false)
+   check_match(exp, "abc", true, 2)
    check_match(exp, "a bc", true, 3, "a")
    check_match(exp, "b.c", true, 2, "b")
    check_match(exp, "b", true)
@@ -1459,6 +1459,120 @@ check_chs2("({a / b c})")
 check_chs2("a / {b c}")
 check_chs2("(a / {b c})")
 check_chs2("{a / {b c}}")
+
+subheading("Idempotency and impotence for cooked expressions")
+
+function check_idem_etc_cooked(exp, input, expectation, leftover)
+   check_match(exp, input, expectation, leftover)
+   check_match("("..exp..")", input, expectation, leftover)	  -- idempotent
+   check_match("{"..exp.."}", input, expectation, leftover)	  -- no-op
+   check_match("((" .. exp .. "))", input, expectation, leftover) -- idempotent
+end
+
+-- literal
+check_idem_etc_cooked('"foobar"', "foobar", true)
+check_idem_etc_cooked('"foobar"', "foobaZ", false)
+-- identifier
+check_idem_etc_cooked('.', "xyz", true, 2)
+check_idem_etc_cooked('b', "bz", true, 1)
+check_idem_etc_cooked('b', "b!", true, 1)
+-- sequence
+check_idem_etc_cooked('("foo" "bar")', "foo bar", true)
+check_idem_etc_cooked('("foo" "bar")', "foobar", false)
+-- choice
+check_idem_etc_cooked('c / a', "c", true)
+check_idem_etc_cooked('c / a', "a", true)
+check_idem_etc_cooked('c / a', "ac", true, 1)
+check_idem_etc_cooked('c / a', "x", false)
+check_idem_etc_cooked('c / a', "", false)
+-- quant
+check_idem_etc_cooked('c*', "c", true)
+check_idem_etc_cooked('c*', "", true)
+check_idem_etc_cooked('c*', "cccx", true, 1)
+check_idem_etc_cooked('c?', "c", true)
+check_idem_etc_cooked('c?', "", true)
+check_idem_etc_cooked('c?', "x", true, 1)
+check_idem_etc_cooked('c?', "cx", true, 1)
+check_idem_etc_cooked('c+', "c", true)
+check_idem_etc_cooked('c+', "", false)
+check_idem_etc_cooked('c+', "ccccx", true, 1)
+check_idem_etc_cooked('c{2,4}', "c", false)
+check_idem_etc_cooked('c{2,4}', "cc", true)
+check_idem_etc_cooked('c{2,4}', "cccccc", true, 2)
+
+check_idem_etc_cooked('(c)*', "c", true)
+check_idem_etc_cooked('(c)*', "", true)
+check_idem_etc_cooked('(c)*', "cccx", true, 3)
+check_idem_etc_cooked('(c)?', "c", true)
+check_idem_etc_cooked('(c)?', "", true)
+check_idem_etc_cooked('(c)?', "x", true, 1)
+check_idem_etc_cooked('(c)?', "cx", true, 1)
+check_idem_etc_cooked('(c)+', "c", true)
+check_idem_etc_cooked('(c)+', "c c c", true)
+check_idem_etc_cooked('(c)+', "c c cx", true, 2)
+check_idem_etc_cooked('(c)+', "", false)
+check_idem_etc_cooked('(c)+', "ccccx", false)
+check_idem_etc_cooked('(c){2,4}', "c", false)
+check_idem_etc_cooked('(c){2,4}', "cc", false)
+check_idem_etc_cooked('(c){2,4}', "c c", true)
+check_idem_etc_cooked('(c){2,4}', "c c c c c c", true, 4)
+
+subheading("Idempotency and impotence for raw expressions")
+
+function check_idem_etc_raw(exp, input, expectation, leftover)
+   assert(exp:sub(1,1)=="{")
+   check_match("("..exp..")", input, expectation, leftover)	-- no-op
+   check_match("{" .. exp .. "}", input, expectation, leftover) -- idempotent
+end
+
+-- literal
+check_idem_etc_raw('{"foobar"}', "foobar", true)
+check_idem_etc_raw('{"foobar"}', "foobaZ", false)
+-- identifier
+check_idem_etc_raw('{.}', "xyz", true, 2)
+check_idem_etc_raw('{b}', "bz", true, 1)
+check_idem_etc_raw('{b}', "b!", true, 1)
+-- sequence
+check_idem_etc_raw('{("foo" "bar")}', "foo bar", true)
+check_idem_etc_raw('{("foo" "bar")}', "foobar", false)
+-- choice
+check_idem_etc_raw('{c / a}', "c", true)
+check_idem_etc_raw('{c / a}', "a", true)
+check_idem_etc_raw('{c / a}', "ac", true, 1)
+check_idem_etc_raw('{c / a}', "x", false)
+check_idem_etc_raw('{c / a}', "", false)
+-- quant
+check_idem_etc_raw('{c*}', "c", true)
+check_idem_etc_raw('{c*}', "", true)
+check_idem_etc_raw('{c*}', "cccx", true, 1)
+check_idem_etc_raw('{c?}', "c", true)
+check_idem_etc_raw('{c?}', "", true)
+check_idem_etc_raw('{c?}', "x", true, 1)
+check_idem_etc_raw('{c?}', "cx", true, 1)
+check_idem_etc_raw('{c+}', "c", true)
+check_idem_etc_raw('{c+}', "", false)
+check_idem_etc_raw('{c+}', "ccccx", true, 1)
+check_idem_etc_raw('{c{2,4}}', "c", false)
+check_idem_etc_raw('{c{2,4}}', "cc", true)
+check_idem_etc_raw('{c{2,4}}', "cccccc", true, 2)
+
+check_idem_etc_raw('{(c)*}', "c", true)
+check_idem_etc_raw('{(c)*}', "", true)
+check_idem_etc_raw('{(c)*}', "cccx", true, 3)
+check_idem_etc_raw('{(c)?}', "c", true)
+check_idem_etc_raw('{(c)?}', "", true)
+check_idem_etc_raw('{(c)?}', "x", true, 1)
+check_idem_etc_raw('{(c)?}', "cx", true, 1)
+check_idem_etc_raw('{(c)+}', "c", true)
+check_idem_etc_raw('{(c)+}', "c c c", true)
+check_idem_etc_raw('{(c)+}', "c c cx", true, 2)
+check_idem_etc_raw('{(c)+}', "", false)
+check_idem_etc_raw('{(c)+}', "ccccx", false)
+check_idem_etc_raw('{(c){2,4}}', "c", false)
+check_idem_etc_raw('{(c){2,4}}', "cc", false)
+check_idem_etc_raw('{(c){2,4}}', "c c", true)
+check_idem_etc_raw('{(c){2,4}}', "c c c c c c", true, 4)
+
 
 test.finish()
 

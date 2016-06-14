@@ -32,16 +32,18 @@
 0. `(SEQ <e1> <e2>)` :: <input> iff ... **define sequence match**
 0. Sequences are right associative, and the precedence of choices and sequences is the same
 0. The sequence `{<e1> <e2>}` is equivalent to `(SEQ <e1> <e2>)` (and so on for longer sequences), and is called a *untokenized sequence* (or a *raw sequence*)
-0. The sequence `(<e1> <e2>)` is equivalent to `(SEQ <e1> ~ <e2>)` (and so on for longer sequences), and is called a *tokenized sequence* (or a *cooked sequence*)
+0. The sequence `(<e1> <e2>)` is equivalent to `(SEQ (COOK <e1>) ~ (COOK <e2>))` (and so on for longer sequences), and is called a *tokenized sequence* (or a *cooked sequence*)
 0. Sequences are cooked by default
 
 ### Quantified expressions
 
 0. A quantified expression, `<exp> <q>`, is a kind of (parameterized) non-tokenized sequence, denoted in intermediate language by `(QUANT <exp>
 <q>)`, where `<exp>` is the base expression and `<q>` is the quantifier
+0. `<exp><q>` is interpreted as `(QUANT <exp> <q>)`
+0. `(<exp>)<q>` is interpreted as `(QUANT (COOK <exp>) <q>)`
 0. `(QUANT <exp> <q>)` :: <input> iff ... **define quantifier match**
 0. `<exp><q>` means `<exp> <exp> ... <exp>` for the appropriate number of `<exp>`, as per `<q>`
-0. `(<exp>)<q>` means `<exp> ~ <exp> ... ~ <exp>` for the appropriate number of `<exp>`, as per `<q>`
+0. `(<exp>)<q>` means `(<exp>) ~ (<exp>) ... ~ (<exp>)` for the appropriate number of `<exp>`, as per `<q>`
 0. `{<exp>}<q>` == `<exp><q>` == `{<exp><q>}` == `(<exp><q>)` == `(QUANT <exp> <q>)`
 0. Note that `(<exp>)<q>` !== `(<exp><q>)`.
 0. All expressions are considered untokenized except for tokenized expressions `(<exp>)` and not explcitly tokenized sequences `<e1> <e2>`.
@@ -55,20 +57,17 @@
 
 0. `(CHOICE <e1>  <e2>)` :: <input> iff ... **define choice match**
 0. Choices are right associative, and the precedence of choices and sequences is the same
-0. The choice `<e1> / <e2>` is interpreted as `(CHOICE <e1> <e2>)`
+0. The choice `<e1> / <e2>` is interpreted as `(CHOICE (COOK <e1>) (COOK <e2>))` (tokenization is the default)
 0. The choice `{<e1> / <e2>}` == `{<e1>} / {<e2>}` (and so on for longer choices).
 0. The choice `(<e1> / <e2>)` == `(<e1>) / (<e2>)` (and so on for longer choices).
 
 0. The expression `{<e1> / <e2> <e3>}` is interpreted as `(CHOICE <e1> (SEQ <e2 <e3>))` (right associativity, equal precedence)
 
-0. The expression `(<e1> / <e2> <e3>)` is interpreted as `(CHOICE <e1> (SEQ <e2 ~ <e3>))`
-0. The expression `(<e1> / <e2> <e3>)` == `(<e1>) / (<e2> <e3>)`
-0. The expression `(<e1> / <e2> <e3>)` == `(<e1>) / {<e2> ~ <e3>}`
+0. The expression `(<e1> / <e2> <e3>)` is interpreted as `(CHOICE (COOK <e1>) (SEQ (COOK <e2>) ~ (COOK <e3>)))`
+0. The expression `(<e1> / <e2> <e3>)` == `(<e1>) / (<e2> <e3>)` == `(<e1>) / {(<e2>) ~ (<e3>)}`
 
-0. The expression `(<e1> / <e2>) <e3>` == `{<e1> / <e2>} ~ <e3>`
-0. The expressions `(<e1> / <e2>) <e3>` and `{<e1> / <e2>} <e3>` are interpreted as `(SEQ (CHOICE <e1> <e2>) ~ <e3>)`
-0. The expressions `(<e1> / <e2>) <e3>` and `{<e1> / <e2>} <e3>` are equivalent to `({<e1> / <e2>} <e3>)` (because tokenization is the default)
-0. The expressions `(<e1> / <e2>) <e3>` and `{<e1> / <e2>} <e3>` are equivalent to `{{<e1> / <e2>} ~ <e3>}` (because tokenization is the default)
+0. The expression `(<e1> / <e2>) <e3>` is interpreted as `(SEQ (CHOICE (COOK <e1>) (COOK <e2>)) ~ (COOK <e3>))`
+0. The expression `{<e1> / <e2>} <e3>` is interpreted as `(SEQ (CHOICE <e1> <e2>) ~ <e3>)`
 
 ### Idempotency and no-op
 
