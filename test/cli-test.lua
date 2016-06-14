@@ -6,6 +6,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+require "utils"
+
 infilename = "/tmp/rosietestinputfile"
 
 rosie = ROSIE_HOME .. "/run"
@@ -29,20 +31,67 @@ f:close()
 
 print("Input file (" .. infilename .. ") created successfully")
 
-function run(expression, grep_flag)
+function run(expression, grep_flag, expectations)
    local verb = (grep_flag and "Grepping for") or "Matching"
-   print(verb .. " '" .. expression .. "' against fixed input")
+   print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
    local grep = (grep_flag and " -grep") or ""
    local cmd = rosie .. grep .. " '" .. expression .. "' " .. infilename
-   local p, msg = io.popen(cmd)
-   if (not p) then error("Could not start rosie: " .. msg); end
-   local output = p:read("*a")
-   p:close()
-   print(output)
+   local results, status, code = os_execute_capture(cmd, nil, "l")
+   if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
+   local mismatch_flag = false;
+   for i=1, #results do 
+      print(results[i])
+      if expectations then
+	 if results[i]~=expectations[i] then print("Mismatch"); mismatch_flag = true; end
+      end
+   end -- for
+   if expectations then
+      if mismatch_flag then
+	 print("********** SOME MISMATCHED OUTPUT WAS FOUND. **********");
+      else
+	 print("END ----------------- All output matched expectations. -----------------");
+      end
+      if (not (#results==#expectations)) then
+	 print(string.format("********** Mismatched number of results (%d) versus expectations (%d) **********", #results, #expectations))
+      end
+   end -- if expectations
+   return results
 end
 
-run("basic.matchall")
-run("common.word")
-run("common.word", true)
-run("common.word basic.network_patterns")
-run("common.number", true)
+results_basic_matchall = 
+   {"\27[30m#\27[0m ",
+    "\27[30m#\27[0m \27[33mThis\27[0m \27[33mfile\27[0m \27[33mis\27[0m \27[33mautomatically\27[0m \27[33mgenerated\27[0m \27[33mon\27[0m \27[36mOSX\27[0m \27[30m.\27[0m ",
+    "\27[30m#\27[0m ",
+    "\27[33msearch\27[0m \27[31mnc.rr.com\27[0m ",
+    "\27[33mnameserver\27[0m \27[31m10.0.1.1\27[0m ",
+    "\27[33mnameserver\27[0m \27[4m2606\27[0m \27[30m:\27[0m \27[4ma000\27[0m \27[30m:\27[0m \27[4m1120\27[0m \27[30m:\27[0m \27[4m8152\27[0m \27[30m:\27[0m \27[4m2f7\27[0m \27[30m:\27[0m \27[4m6fff\27[0m \27[30m:\27[0m \27[4mfed4\27[0m \27[30m:\27[0m \27[4mdc1f\27[0m ",
+    "\27[32m/usr/share/bin/foo\27[0m ",
+    "\27[31mjjennings@us.ibm.com\27[0m "}
+
+results_common_word =
+   {"\27[33msearch\27[0m ",
+    "\27[33mnameserver\27[0m ",
+    "\27[33mnameserver\27[0m ",
+    "\27[33mjjennings\27[0m "}
+
+results_common_word_grep = 
+   {"\27[33mThis\27[0m \27[33mfile\27[0m \27[33mis\27[0m \27[33mautomatically\27[0m \27[33mgenerated\27[0m \27[33mon\27[0m \27[33mOSX\27[0m ",
+    "\27[33msearch\27[0m \27[33mnc\27[0m \27[33mrr\27[0m \27[33mcom\27[0m ",
+    "\27[33mnameserver\27[0m ",
+    "\27[33mnameserver\27[0m \27[33ma\27[0m \27[33mf\27[0m \27[33mfff\27[0m \27[33mfed\27[0m \27[33mdc\27[0m \27[33mf\27[0m ",
+    "\27[33musr\27[0m \27[33mshare\27[0m \27[33mbin\27[0m \27[33mfoo\27[0m ",
+    "\27[33mjjennings\27[0m \27[33mus\27[0m \27[33mibm\27[0m \27[33mcom\27[0m "}
+
+results_word_network = 
+   {"\27[33msearch\27[0m \27[31mnc.rr.com\27[0m ",
+    "\27[33mnameserver\27[0m \27[31m10.0.1.1\27[0m "}
+
+results_common_number =
+   {"\27[4m10.0\27[0m \27[4m1.1\27[0m ",
+    "\27[4m2606\27[0m \27[4ma000\27[0m \27[4m1120\27[0m \27[4m8152\27[0m \27[4m2f7\27[0m \27[4m6fff\27[0m \27[4mfed4\27[0m \27[4mdc1f\27[0m "}
+
+run("basic.matchall", nil, results_basic_matchall)
+run("common.word", nil, results_common_word)
+run("common.word", true, results_common_word_grep)
+run("common.word basic.network_patterns", nil, results_word_network)
+run("common.number", true, results_common_number)

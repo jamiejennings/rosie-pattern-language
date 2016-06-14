@@ -235,18 +235,33 @@ end
 -- Misc
 ---------------------------------------------------------------------------------------------------
 
+function os_execute_capture(command, mode, readmode)
+   command = "/usr/bin/env "..command
+   local pcall_success, handle, errmsg = pcall(io.popen, command, mode);
+   if not pcall_success then
+      error("Failed call to io.popen.  Is io.popen available on this platform?")
+   end
+   if not handle then
+      error("Failed attempt to execute '" .. command .. "': " .. errmsg) 
+   end
+   readmode = readmode or "a"
+   local results = {}
+   local str = handle:read(readmode)
+   while (str and (str~="")) do
+      table.insert(results, str)
+      str = handle:read(readmode)
+   end
+   local ok, status, code = handle:close()
+   if not ok then
+      error("Command '" .. command .. "' failed, returning:\n" ..
+	    table.tostring{results, status, code})
+   end
+   return results, status, code
+end
+   
+
 function uuid()
-   local pcall_success, handle = pcall(io.popen, "/usr/bin/env uuidgen");
-   if not (pcall_success and handle) then
-      error("Command uuidgen failed.  Either Lua io.popen is not available "..
-	    "on this platform or uuidgen is not installed. Try installing package uuid-runtime.")
-   end
-   local uuid = handle:read()
-   local os_success, _, os_status = handle:close()
-   if not os_success and os_status==0 then
-      error("Command uuidgen failed in some strange way.")
-   end
-   return uuid
+   return os_execute_capture("uuidgen", nil, "l")[1]
 end
 
 function warn(...)
