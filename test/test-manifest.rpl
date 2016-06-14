@@ -1,6 +1,6 @@
 -- -*- Mode: rpl; -*- 
 --
--- manifest-test.rpl   Rosie Pattern Language tests that compile ok
+-- test-manifest.rpl   Rosie Pattern Language tests that compile ok
 --
 -- (c) 2016, Jamie A. Jennings
 --

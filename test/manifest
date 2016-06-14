@@ -1,5 +1,5 @@
 -- comments
 
 test/ok.rpl 					    -- compiles ok
-test/manifest-test.rpl
+test/test-manifest.rpl
       
