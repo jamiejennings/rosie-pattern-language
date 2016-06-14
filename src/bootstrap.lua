@@ -6,18 +6,58 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-if not ROSIE_HOME then error("ROSIE_HOME not set.  Exiting..."); os.exit(-1); end
+-- Find the value of the environment variable "ROSIE_HOME", if it is defined
+if not ((type(os)=="table") and (type(os.getenv)=="function")) then
+   error("Internal error: os functions unavailable; cannot use getenv to find ROSIE_HOME")
+end
+local ok, value = pcall(os.getenv, "ROSIE_HOME")
+if not ok then
+   error("Internal error: call to os.getenv failed")
+end
+if (not value) and (not ROSIE_HOME) then
+   error("ROSIE_HOME not set.  Exiting...")
+end
+
+-- Environment variable, when present, overrides the value of ROSIE_HOME that is calculated in the
+-- shell script ('run') that launches Rosie.
+local SCRIPT_ROSIE_HOME
+if (value and not(value=="")) then
+   SCRIPT_ROSIE_HOME=ROSIE_HOME
+   ROSIE_HOME = value
+end
 
 -- Restrict Lua's search for modules and shared objects to just the Rosie install directory
 package.path = ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
-local parse = require "parse"
-local syntax2 = require "syntax2"
-local compile = require "compile"
-local common = require "common"
-require "engine"
-require "os"
+local function print_rosie_info()
+   local rosie_home_message = ((SCRIPT_ROSIE_HOME and " (from environment variable $ROSIE_HOME)") or
+			       " (calculated by the Rosie 'run' script)")
+   print("Rosie run-time information:")
+   print("  ROSIE_HOME = " .. ROSIE_HOME .. rosie_home_message)
+   if SCRIPT_ROSIE_HOME then print("  ROSIE_HOME, as calculated in the Rosie run script, was: " .. SCRIPT_ROSIE_HOME); end
+   print("  HOSTNAME = " .. os.getenv("HOSTNAME"))
+   print("  HOSTTYPE = " .. os.getenv("HOSTTYPE"))
+   print("  OSTYPE = " .. os.getenv("OSTYPE"))
+end
+
+
+local function load_module(name)
+   local ok, thing = pcall(require, name)
+   if (not ok) then
+      print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME .. "/src")
+      print_rosie_info()
+      os.exit(-1)
+   end
+   return thing
+end
+
+parse = load_module("parse")
+syntax2 = load_module("syntax2")
+compile = load_module("compile")
+common = load_module("common")
+load_module("engine")
+load_module("os")
 
 ----------------------------------------------------------------------------------------
 -- Driver functions for RPL parser written in RPL

@@ -20,7 +20,15 @@ if [[ "$1" = "-D" ]]; then
 fi
 
 if ([ -x $SCRIPT_PATH/bin/lua ]) then
-   /usr/bin/env HOSTNAME=$HOSTNAME HOSTTYPE=$HOSTTYPE OSTYPE=$OSTYPE $SCRIPT_PATH/bin/lua $I -e "ROSIE_HOME=\"$SCRIPT_PATH\"; SCRIPTNAME=\"$0\"" $SCRIPT_PATH/src/run.lua "$@"
+   ROSIE_LUA_PATH=$SCRIPT_PATH;
+   elif ([ -x $ROSIE_HOME/bin/lua ]) then
+	ROSIE_LUA_PATH=$ROSIE_HOME;
    else
-       echo "$SCRIPT_PATH/bin/lua not found.  Probably need to build Rosie."
+       echo "Cannot find Rosie install directory:"
+       echo "  Rosie not found in $SCRIPT_PATH (the directory in which this script resides)"
+       echo "  Rosie not found in $ROSIE_HOME (the value of environment variable 'ROSIE_HOME')"
+       echo "Please either build Rosie, or set the environment variable 'ROSIE_HOME' as needed."
+       exit -1
 fi
+
+/usr/bin/env ROSIE_HOME=$ROSIE_HOME HOSTNAME=$HOSTNAME HOSTTYPE=$HOSTTYPE OSTYPE=$OSTYPE $ROSIE_LUA_PATH/bin/lua $I -e "ROSIE_HOME=\"$ROSIE_LUA_PATH\"; SCRIPTNAME=\"$0\"" $ROSIE_LUA_PATH/src/run.lua "$@"

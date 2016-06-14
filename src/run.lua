@@ -28,7 +28,6 @@ end
 
 -- Start the Rosie Pattern Engine
 dofile(ROSIE_HOME.."/src/bootstrap.lua")
---bootstrap()					    -- now done while loading
 
 local common = require "common"
 local lapi = require "lapi"
@@ -50,7 +49,7 @@ local function valid_option_is(opt)
    return false
 end
 
-local usage_message = "Usage: "..(SCRIPTNAME or "<this script>").." <options> <pattern> <filename>\n"
+local usage_message = "Rosie usage: "..(SCRIPTNAME or "<this script>").." <options> <pattern> <filename>\n"
 usage_message = usage_message .. "Valid <options> are: " .. table.concat(valid_options, " ")
 
 ----------------------------------------------------------------------------------------
@@ -77,7 +76,11 @@ function process_command_line_options()
 	    -- arg starts with a dash but is not a valid option
 	    greeting()
 	    io.write("Rosie: invalid command line option ", v, "\n")
-	    io.write(usage_message, "\n")
+	    if v=="-" then
+	       io.write("Hint: A single dash can replace the manifest filename to prevent a manifest from loading, or\n")
+	       io.write("it can be the last (or only) input file name, which causes input to be read from the stdin.\n")
+	    end
+	    io.write("\n", usage_message, "\n")
 	    os.exit(-1)
 	 end
       end -- if manifest arg
@@ -92,13 +95,26 @@ function process_command_line_options()
       opt_manifest=nil
    end
 
-   if last_option==#arg-2 then
-      opt_pattern = arg[#arg-1]
-      opt_filename = arg[#arg]
-   else
+   -- if last_option==#arg-2 then
+   --    opt_pattern = arg[#arg-1]
+   --    opt_filename = arg[#arg]
+   -- else
+   --    opt_pattern = nil
+   --    opt_filename = nil
+   -- end
+
+   if (last_option+2) > #arg then
+      -- after processing the command line options, there should be at least a pattern and one
+      -- filename left over
       opt_pattern = nil
       opt_filename = nil
+   else
+      opt_pattern = arg[last_option+1]
+      opt_filename = {table.unpack(arg, last_option+2)}
+      --print("Pattern is " .. opt_pattern)
+      --print("Filename table is " .. table.tostring(opt_filename))
    end
+
 end
 
 function help()
@@ -130,7 +146,7 @@ function help()
    print()
 end
 
-function process_pattern_against_file()
+function setup_engine()
    if OPTION["-grep"] and OPTION["-eval"] then
       print("Error: currently, the -grep option and the -eval option are incompatible.  Use one or the other.")
       os.exit(-1)
@@ -154,10 +170,11 @@ function process_pattern_against_file()
       end
       if not success then io.write(msg, "\n"); os.exit(-1); end
    end
+end
 
+function process_pattern_against_file(infilename)
    -- (3) Set up the input, output and error parameters
-   infilename = opt_filename
-   if opt_filename=="-" then infilename = ""; end   -- stdin
+   if infilename=="-" then infilename = ""; end	    -- stdin
    outfilename = ""				    -- stdout
    errfilename = "/dev/null"
    if OPTION["-all"] then errfilename = ""; end	    -- stderr
@@ -232,5 +249,9 @@ if (not opt_pattern) then
    print(usage_message)
 else
    if not QUIET then greeting(); end
-   process_pattern_against_file()
+   setup_engine();
+   for _,fn in ipairs(opt_filename) do
+      if #opt_filename>1 then print(fn .. ":"); end
+      process_pattern_against_file(fn)
+   end
 end

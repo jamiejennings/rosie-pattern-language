@@ -163,7 +163,7 @@ local function explain_undefined_identifier(a, source)
    assert(a, "did not get ast in explain_undefined_identifier")
    local name, errpos, text = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
-   local msg = "Compile error: reference to undefined identifier " .. text .. "\n" ..
+   local msg = "Compile error: reference to undefined identifier: " .. text .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos-1) .. "^"
@@ -174,7 +174,7 @@ local function explain_undefined_charset(a, source)
    assert(a, "did not get ast in explain_undefined_charset")
    local _, errpos, name, subs = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
-   local msg = "Compile error: named charset not defined " .. name .. "\n" ..
+   local msg = "Compile error: named charset not defined: " .. name .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos-1) .. "^"
@@ -186,7 +186,7 @@ local function explain_unknown_quantifier(a, source)
    local name, errpos, text, subs = common.decode_match(a)
    local line, pos, lnum = extract_source_line_from_pos(source, errpos)
    local q = subs[2]				    -- IS THIS RIGHT?
-   local msg = "Compile error: unknown quantifier " .. q .. "\n" ..
+   local msg = "Compile error: unknown quantifier: " .. q .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos-1) .. "^"

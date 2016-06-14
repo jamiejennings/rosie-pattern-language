@@ -13,11 +13,11 @@ require "list"
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 --
---    Consolidated Rosie API
+--  Rosie API:
 --
 --      - Managing the environment
 --        + Obtain/destroy/ping a Rosie engine
---        - Enable/disable informational logging and warnings to stderr
+--        - FUTURE: Enable/disable informational logging and warnings to stderr
 --            (Need to change QUIET to logging level, and make it a thread-local
 --            variable that can be set per invocation of the parser/compiler/etc.)
 --
@@ -35,6 +35,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 --          + eval pattern against string
 --          + eval pattern against file
 --
+--  FUTURE:
 --        - Human interaction / debugging
 --          - CRUD on color assignments for color output?
 -- 
@@ -42,8 +43,8 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 ----------------------------------------------------------------------------------------
 -- Note: NARGS is the number of args to pass to each api function
 
-local api = {API_VERSION = "0.96 alpha",	    -- api version
-	     RPL_VERSION = "0.96",		    -- language version
+local api = {API_VERSION = "0.99a",		    -- api version
+	     RPL_VERSION = "0.99a",		    -- language version
 	     ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
 	     ROSIE_HOME = ROSIE_HOME,		    -- install directory
              HOSTNAME = os.getenv("HOSTNAME"),

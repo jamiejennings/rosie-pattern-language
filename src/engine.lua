@@ -142,7 +142,8 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
    local peg = (e.pattern.peg * Cp())
    if type(eval_flag)~="boolean" then engine_error(e, "bad eval flag"); end
    if not e.encoder_function then engine_error(e, "output encoder required, but not set"); end
-   local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
+   local ok, infile, outfile, errfile = pcall(open3, e, infilename, outfilename, errfilename);
+   if not ok then return false, infile; end	    -- infile is the error message in this case
 
    local inlines, outlines, errlines = 0, 0, 0;
    local trace, nextpos, m;

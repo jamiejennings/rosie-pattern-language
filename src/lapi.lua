@@ -21,32 +21,6 @@ Cp = lpeg.Cp
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
---    Consolidated Rosie API
---
---      - Managing the environment
---        + Obtain/destroy/ping a Rosie engine
---        - Enable/disable informational logging and warnings to stderr
---            (Need to change QUIET to logging level, and make it a thread-local
---            variable that can be set per invocation of the parser/compiler/etc.)
---
---      + Rosie engine functions
---        + RPL related
---          + RPL statement (incremental compilation)
---          + RPL file compilation
---          + RPL manifest processing
---          + Get a copy of the engine environment
---          + Get identifier definition (human readable, reconstituted)
---
---        + Match related
---          + match pattern against string
---          + match pattern against file
---          + eval pattern against string
---          + eval pattern against file
---
---        - Human interaction / debugging
---          - CRUD on color assignments for color output?
-
-
 function reconstitute_pattern_definition(id, p)
    if p then
       return ( --((p.alias and "alias ") or "") .. id .. " = " ..
