@@ -189,8 +189,8 @@ function process_pattern_against_file(infilename)
    -- (5) Iterate through the lines in the input file
    local match_function = lapi.match_file
    if eval then match_function = lapi.eval_file; end
-   local ok, cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename)
-   if not ok then io.write(cin, "\n"); os.exit(-1); end
+   local cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename)
+   if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
 
    -- (6) Print summary
    if not QUIET then
@@ -251,7 +251,7 @@ else
    if not QUIET then greeting(); end
    setup_engine();
    for _,fn in ipairs(opt_filename) do
-      if #opt_filename>1 then print(fn .. ":"); end
+      if (not QUIET) or (#opt_filename>1) then print("\n" .. fn .. ":"); end
       process_pattern_against_file(fn)
    end
 end
