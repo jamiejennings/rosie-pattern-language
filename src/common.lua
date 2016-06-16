@@ -142,7 +142,8 @@ function common.create_match(name, pos, capture, ...)
    local t = {};
    t.pos = pos;
    t.text=capture;
-   t.subs = {...}
+   t.subs = {...};
+   if (not t.subs[1]) then t.subs=nil; end
    return {[name]=t};
 end
 
@@ -155,7 +156,7 @@ end
 
 function common.decode_match(t)
    local name, rest = next(t)
-   return name, rest.pos, rest.text, (rest.subs[1] and rest.subs)
+   return name, rest.pos, rest.text, rest.subs
 end
 
 function common.match_to_text(t)

@@ -8,6 +8,7 @@
 local common = require "common"			    -- AST functions
 require "list"
 
+
 syntax2 = {}
 
 local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
@@ -84,11 +85,18 @@ function syntax2.make_transformer(fcn, target_name, recursive)
       local name, body = next(ast)
       local rest = {...}
       local mapped_transform = function(ast) return transform(ast, table.unpack(rest)); end
-      local new = common.create_match(name,
-				      body.pos,
-				      body.text,
-				      table.unpack((recursive and map(mapped_transform, body.subs))
-						or body.subs))
+      local new
+      if body.subs then
+	 new = common.create_match(name,
+				   body.pos,
+				   body.text,
+				   table.unpack((recursive and map(mapped_transform, body.subs))
+					     or body.subs))
+      else
+	 new = common.create_match(name,
+				   body.pos,
+				   body.text)
+      end
       if target_match(name) then
 	 return syntax2.validate(fcn(new, ...))
       else
@@ -214,7 +222,12 @@ syntax2.raw =
 			      elseif name=="quantified_exp" then
 				 return transform_quantified_exp(ast)
 			      else
-				 local new = syntax2.generate(name, table.unpack(map(syntax2.raw, body.subs)))
+				 local new
+				 if body.subs then
+				    new = syntax2.generate(name, table.unpack(map(syntax2.raw, body.subs)))
+				 else
+				    new = syntax2.generate(name)
+				 end
 				 new[name].text = body.text
 				 new[name].pos = body.pos
 				 return new
@@ -259,7 +272,12 @@ syntax2.cook =
 				 -- which we will skip for now
 				 return transform_quantified_exp(ast)
 			       else
-				  local new = syntax2.generate(name, table.unpack(map(syntax2.cook, body.subs)))
+				 local new
+				 if body.subs then
+				    new = syntax2.generate(name, table.unpack(map(syntax2.cook, body.subs)))
+				 else
+				    new = syntax2.generate(name)
+				 end
 				  new[name].text = body.text
 				  new[name].pos = body.pos
 				  return new

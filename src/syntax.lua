@@ -84,11 +84,18 @@ function syntax.make_transformer(fcn, target_name, recursive)
       local name, body = next(ast)
       local rest = {...}
       local mapped_transform = function(ast) return transform(ast, table.unpack(rest)); end
-      local new = common.create_match(name,
-				      body.pos,
-				      body.text,
-				      table.unpack((recursive and map(mapped_transform, body.subs))
-						or body.subs))
+      local new
+      if body.subs then
+	 new = common.create_match(name,
+				   body.pos,
+				   body.text,
+				   table.unpack((recursive and map(mapped_transform, body.subs))
+					     or body.subs))
+      else
+	 new = common.create_match(name,
+				   body.pos,
+				   body.text)
+      end
       if target_match(name) then
 	 return syntax.validate(fcn(new, ...))
       else
@@ -214,7 +221,12 @@ syntax.raw =
 			      elseif name=="quantified_exp" then
 				 return transform_quantified_exp(ast)
 			      else
-				 local new = syntax.generate(name, table.unpack(map(syntax.raw, body.subs)))
+				 local new
+				 if body.subs then
+				    new = syntax.generate(name, table.unpack(map(syntax.raw, body.subs)))
+				 else
+				    new = syntax.generate(name)
+				 end
 				 new[name].text = body.text
 				 new[name].pos = body.pos
 				 return new
@@ -257,7 +269,12 @@ syntax.cook =
 				 -- which we will skip for now
 				 return transform_quantified_exp(ast)
 			       else
-				  local new = syntax.generate(name, table.unpack(map(syntax.cook, body.subs)))
+				 local new
+				 if body.subs then
+				    new = syntax.generate(name, table.unpack(map(syntax.cook, body.subs)))
+				 else
+				    new = syntax.generate(name)
+				 end
 				  new[name].text = body.text
 				  new[name].pos = body.pos
 				  return new
