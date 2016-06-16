@@ -347,7 +347,11 @@ local function reveal_quantified_exp(a)
    local qname, qpos, printable_q = common.decode_match(q)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
    local open, close = "(", ")"
-   return open .. parse.reveal_exp(e) .. close .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
+   if next(e)=="raw_exp" then
+      return parse.reveal_exp(e) .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
+   else
+      return open .. parse.reveal_exp(e) .. close .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
+   end
 end
 
 local function reveal_named_charset(a)
@@ -408,7 +412,7 @@ end
 local function reveal_capture(a)
    assert(a, "did not get ast in reveal_capture")
    local name, pos, text, subs = common.decode_match(a)
-   return "CAPTURE as " .. parse.reveal_exp(subs[1]) .. ": " .. parse.reveal_exp(subs[2]) .. ")"
+   return "CAPTURE as " .. parse.reveal_exp(subs[1]) .. ": " .. parse.reveal_exp(subs[2])
 end
 
 local function reveal_group(a)

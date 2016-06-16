@@ -30,12 +30,12 @@ end
 
 local thunk, msg = loadfile(ROSIE_HOME .. "/bin/bootstrap.luac")
 if not thunk then
-   io.stderr:write("Warning: bootstrap.luac not available, loading from source\n")
+   io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
    dofile(ROSIE_HOME.."/src/bootstrap.lua")
 else
    local ok, msg = pcall(thunk)
    if not ok then
-      io.stderr:write("Warning: error loading bootstrap.luac, will load from source \n")
+      io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
       io.stderr:write(msg, "\n")
       dofile(ROSIE_HOME.."/src/bootstrap.lua")
    end
@@ -45,6 +45,7 @@ local common = require "common"
 local lapi = require "lapi"
 local json = require "cjson"
 require("repl")
+require "list"
 
 CL_ENGINE, msg = lapi.new_engine("command line engine")
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
@@ -53,7 +54,15 @@ local function greeting()
    io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")
 end
 
-local valid_options = {"-help", "-patterns", "-verbose", "-json", "-nocolor", "-all", "-repl", "-manifest", "-grep", "-eval"}
+local options_without_args = {"-help", "-patterns", "-verbose", "-json", "-nocolor", "-all",
+			      "-repl", "-grep", "-eval" }
+local options_with_args = {"-manifest", "-f", "-e" }
+
+local valid_options = append(options_without_args, options_with_args)
+
+local function option_takes_arg(optname)
+   return member(optname, options_with_args)
+end
 
 local function valid_option_is(opt)
    for i,v in ipairs(valid_options) do
@@ -62,42 +71,66 @@ local function valid_option_is(opt)
    return false
 end
 
-local usage_message = "Rosie usage: "..(SCRIPTNAME or "<this script>").." <options> <pattern> <filename>\n"
+local usage_message = "Rosie usage: "..(SCRIPTNAME or "<this script>").." <options> <pattern> <filename>*\n"
 usage_message = usage_message .. "Valid <options> are: " .. table.concat(valid_options, " ")
 
 ----------------------------------------------------------------------------------------
 -- Option processing
 ----------------------------------------------------------------------------------------
 
+function invalid_option(j)
+   greeting()
+   io.write("Rosie: invalid command line option ", arg[j], "\n")
+   if arg[j]=="-" then
+      io.write("\tHint: A single dash can replace the manifest filename to prevent a manifest from loading, or\n")
+      io.write("\tit can be the last (or only) input file name, which causes input to be read from the stdin.\n")
+   end
+   io.write(usage_message, "\n")
+   os.exit(-1)
+end
+
 function process_command_line_options()
    OPTION = {}				    -- GLOBAL array indexed by option name
    local last_option = 0		    -- index of last command line option found
-   local skip_arg = false
-   for i,v in ipairs(arg) do
-      if skip_arg then
-	 -- previous arg was an option that itself takes an argument, like "-manifest"
-	 skip_arg = false;
-      else
-	 if valid_option_is(v) then
-	    OPTION[v] = arg[i+1] or true;
+   local value
+   local i=1
+   while arg[i] do
+      local v = arg[i]
+      if valid_option_is(v) then
+	 if option_takes_arg(v) then
+	    value = arg[i+1]
+	    last_option = i+1;
+	 else
+	    value = true
 	    last_option = i;
-	    if v=="-manifest" then
-	       last_option = i+1;	      -- only this option takes an arg
-	       skip_arg = true;		      -- skip the next arg, which is the arg to this arg
-	    end
-	 elseif v:sub(1,1)=="-" and i~=#arg then    -- filename, which is always last, can be "-"
-	    -- arg starts with a dash but is not a valid option
-	    greeting()
-	    io.write("Rosie: invalid command line option ", v, "\n")
-	    if v=="-" then
-	       io.write("Hint: A single dash can replace the manifest filename to prevent a manifest from loading, or\n")
-	       io.write("it can be the last (or only) input file name, which causes input to be read from the stdin.\n")
-	    end
-	    io.write("\n", usage_message, "\n")
-	    os.exit(-1)
 	 end
-      end -- if manifest arg
-   end -- for each command line arg
+	 OPTION[v] = value
+      else
+	 break;
+      end
+      i = last_option+1;
+   end -- while
+
+   -- i is now the first non-option argument, which should be a pattern expression
+   if arg[i] then
+      opt_pattern = arg[i]
+      i = i+1
+   end
+
+   -- any remaining args are filenames, only the last of which can be "-"
+   local firstfile = i
+   while arg[i] do
+      local v = arg[i]
+      if (v=="-") and (arg[i+1]) then invalid_option(i); end
+      i = i+1
+   end
+
+   if firstfile==i then
+      -- no files on command line
+      opt_filenames = nil
+   else
+      opt_filenames = {table.unpack(arg, firstfile)}
+   end
 
    opt_manifest = OPTION["-manifest"] or "MANIFEST"
    if opt_manifest==true then
@@ -106,26 +139,6 @@ function process_command_line_options()
       os.exit(-1)
    elseif opt_manifest=="-" then
       opt_manifest=nil
-   end
-
-   -- if last_option==#arg-2 then
-   --    opt_pattern = arg[#arg-1]
-   --    opt_filename = arg[#arg]
-   -- else
-   --    opt_pattern = nil
-   --    opt_filename = nil
-   -- end
-
-   if (last_option+2) > #arg then
-      -- after processing the command line options, there should be at least a pattern and one
-      -- filename left over
-      opt_pattern = nil
-      opt_filename = nil
-   else
-      opt_pattern = arg[last_option+1]
-      opt_filename = {table.unpack(arg, last_option+2)}
-      --print("Pattern is " .. opt_pattern)
-      --print("Filename table is " .. table.tostring(opt_filename))
    end
 
 end
@@ -148,9 +161,11 @@ function help()
    print("                  this feature generates LOTS of output, so best to use it on ONE LINE OF INPUT;")
    print("  -grep           emulate grep, but with RPL, by searching for all occurrences of <pattern> in the input")
    print("  -manifest <fn>  load the manifest file <fn> instead of MANIFEST from the Rosie install directory")
+   print("  -f <fn>         RPL file to load, after manifest (if any) is loaded")
+   print("  -e <rpl>        RPL statements to load, after manifest and RPL file (if any) are loaded")
    print()
    print("  <pattern>       RPL expression, which may be the name of a defined pattern, against which each line will be matched")
-   print("  <fn>            (filename) name of the file of text input, or a dash \"-\" to read from standard input")
+   print("  <fn>+           one or more file names of text input, the last of which may be a dash \"-\" to read from standard input")
    print()
    print("Notes: ")
    print("(1) lines from the input file for which the pattern does NOT match are written to stderr so they can be redirected, e.g. to /dev/null")
@@ -165,7 +180,7 @@ function setup_engine()
       os.exit(-1)
    end
    local eval = OPTION["-eval"]
-   -- (1) Load the manifest
+   -- (1a) Load the manifest
    if opt_manifest then
       local success, msg = lapi.load_manifest(CL_ENGINE, opt_manifest)
       if not success then
@@ -173,8 +188,29 @@ function setup_engine()
 	 os.exit(-4)
       end
    end
+
+   -- (1b) Load an rpl file
+   if OPTION["-f"] then
+      if not QUIET then io.stdout:write("Compiling additional file ", OPTION["-f"], "\n"); end
+      local success, msg = lapi.load_file(CL_ENGINE, OPTION["-f"])
+      if not success then
+	 io.stdout:write(msg, "\n")
+	 os.exit(-4)
+      end
+   end
+
+   -- (1c) Load an rpl string from the command line
+   if OPTION["-e"] then
+      if not QUIET then io.stdout:write(string.format("Compiling additional rpl code %q\n",  OPTION["-e"])); end
+      local success, msg = lapi.load_string(CL_ENGINE, OPTION["-e"])
+      if not success then
+	 io.stdout:write(msg, "\n")
+	 os.exit(-4)
+      end
+   end
+
    -- (2) Compile the expression
-   do 
+   if opt_pattern then
       local success, msg
       if OPTION["-grep"] then
 	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern, "json")
@@ -216,6 +252,13 @@ end
 -- Do stuff
 ----------------------------------------------------------------------------------------
 
+if (not arg[1]) then
+   -- no command line options were supplied
+   greeting()
+   print(usage_message)
+   os.exit(-1)
+end
+
 process_command_line_options()
 
 if OPTION["-verbose"] then
@@ -225,46 +268,36 @@ else
 end
 
 if OPTION["-help"] then
-   if #arg > 1 then print("Warning: ignoring extraneous command line arguments"); end
+   if #arg > 1 then print("Rosie CLI warning: ignoring extraneous command line arguments"); end
    help()
    os.exit()
 end
 
+if not QUIET then greeting(); end
+
+setup_engine();
+
 if OPTION["-patterns"] then
-   greeting();
-   if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if opt_manifest then
-      local success, msg = lapi.load_manifest(CL_ENGINE, opt_manifest)
-      if not success then
-	 io.stdout:write(msg, "\n")
-	 os.exit(-4)
-      end
-   end
+   if QUIET then greeting(); end
    local env = lapi.get_environment(CL_ENGINE)
    common.print_env(env)
    os.exit()
 end
 
-if OPTION["-repl"] then
-   greeting();
-   if opt_pattern then print("Warning: ignoring extraneous command line arguments (pattern and/or filename)"); end
-   if opt_manifest then
-      local ok, msg = lapi.load_manifest(CL_ENGINE, opt_manifest)
-      if not ok then io.write(msg, "\n"); os.exit(-4); end
-   end
-   repl(CL_ENGINE)
-   os.exit()
+if not opt_pattern then print("Rosie CLI warning: missing pattern argument"); end
+
+if opt_filenames then
+   for _,fn in ipairs(opt_filenames) do
+      if (not QUIET) or (#opt_filenames>1) then print("\n" .. fn .. ":"); end
+      process_pattern_against_file(fn)
+   end -- for each file
+else
+   print("Rosie CLI warning: missing filename arguments")
 end
 
-if (not opt_pattern) then
-   greeting()
-   print("Missing pattern and/or filename arguments")
-   print(usage_message)
-else
-   if not QUIET then greeting(); end
-   setup_engine();
-   for _,fn in ipairs(opt_filename) do
-      if (not QUIET) or (#opt_filename>1) then print("\n" .. fn .. ":"); end
-      process_pattern_against_file(fn)
-   end
+if OPTION["-repl"] then
+   if QUIET then greeting(); end
+   repl(CL_ENGINE)
 end
+
+

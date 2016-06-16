@@ -199,10 +199,10 @@ check_eval('a b / c', 'a c', true, {'SEQUENCE: (a ~ b / c)',
 				    'First option failed.  Proceeding to alternative.',
 				    '3...........LITERAL: "c"'})
 
-check_eval('a b / c {3,3}', 'a ccc', true, {'SEQUENCE: (a ~ b / ({c}){3,3})'})
+check_eval('a b / c {3,3}', 'a ccc', true, {'SEQUENCE: (a ~ b / {c}{3,3})'})
 
 
-check_eval('a b / c {3,3}', 'a cc', false, {'SEQUENCE: (a ~ b / ({c}){3,3})',
+check_eval('a b / c {3,3}', 'a cc', false, {'SEQUENCE: (a ~ b / {c}{3,3})',
 					    'FAILED'})
 
 print("\t ** Need more precedence and right association tests! **")
@@ -210,49 +210,49 @@ print("\t ** Need more precedence and right association tests! **")
 ----------------------------------------------------------------------------------------
 heading("Eval quantified expressions")
 ----------------------------------------------------------------------------------------
-check_eval('a*', "", true, {'1..QUANTIFIED EXP (raw): ({a})*',
+check_eval('a*', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
 			    'Matched'})
 
-check_eval('a*', "aaaa", true, {'1..QUANTIFIED EXP (raw): ({a})*',
+check_eval('a*', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
 				'Matched'})
 
 
-check_eval('a+', "", false, {'1..QUANTIFIED EXP (raw): ({a})+',
+check_eval('a+', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
 			     'FAILED'})
 
-check_eval('a+', "a", true, {'1..QUANTIFIED EXP (raw): ({a})+',
+check_eval('a+', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
 			     'Matched'})
 
-check_eval('{a/b}+', "baaa", true, {'1..QUANTIFIED EXP (raw): ({a / b})+',
+check_eval('{a/b}+', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
 				    'Matched "baaa"'})
 
-check_eval('{a/b}{3,5}', "baaa", true, {'1..QUANTIFIED EXP (raw): ({a / b}){3,5}',
+check_eval('{a/b}{3,5}', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 					'Matched'})
 
-check_eval('{a/b}{3,5}', "ba", false, {'1..QUANTIFIED EXP (raw): ({a / b}){3,5}',
+check_eval('{a/b}{3,5}', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 				       'FAILED'})
 
 
-check_eval('(a*)', "", true, {'1..QUANTIFIED EXP (raw): ({a})*',
+check_eval('(a*)', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
 			    'Matched'})
 
-check_eval('(a*)', "aaaa", true, {'1..QUANTIFIED EXP (raw): ({a})*',
+check_eval('(a*)', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
 				'Matched'})
 
 
-check_eval('(a+)', "", false, {'1..QUANTIFIED EXP (raw): ({a})+',
+check_eval('(a+)', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
 			     'FAILED'})
 
-check_eval('(a+)', "a", true, {'1..QUANTIFIED EXP (raw): ({a})+',
+check_eval('(a+)', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
 			     'Matched'})
 
-check_eval('({a/b}+)', "baaa", true, {'1..QUANTIFIED EXP (raw): ({a / b})+',
+check_eval('({a/b}+)', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
 				    'Matched "baaa"'})
 
-check_eval('({a/b}{3,5})', "baaa", true, {'1..QUANTIFIED EXP (raw): ({a / b}){3,5}',
+check_eval('({a/b}{3,5})', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 					'Matched'})
 
-check_eval('({a/b}{3,5})', "ba", false, {'1..QUANTIFIED EXP (raw): ({a / b}){3,5}',
+check_eval('({a/b}{3,5})', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 				       'FAILED'})
 
 return test.finish()
