@@ -113,6 +113,7 @@ function process_command_line_options()
 
    -- i is now the first non-option argument, which should be a pattern expression
    if arg[i] then
+      if arg[i]:sub(1,1)=="-" then invalid_option(i); end
       opt_pattern = arg[i]
       i = i+1
    end
@@ -248,6 +249,50 @@ function process_pattern_against_file(infilename)
    end
 end
 
+function run()
+   process_command_line_options()
+
+   if OPTION["-verbose"] then
+      QUIET = false;
+   else
+      QUIET = true;
+   end
+
+   if OPTION["-help"] then
+      if #arg > 1 then print("Rosie CLI warning: ignoring extraneous command line arguments"); end
+      help()
+      os.exit()
+   end
+
+   if not QUIET then greeting(); end
+
+   setup_engine();
+
+   if OPTION["-patterns"] then
+      if QUIET then greeting(); end
+      local env = lapi.get_environment(CL_ENGINE)
+      common.print_env(env)
+      os.exit()
+   end
+
+   if not opt_pattern then print("Rosie CLI warning: missing pattern argument"); end
+
+   if opt_filenames then
+      for _,fn in ipairs(opt_filenames) do
+	 if (not QUIET) or (#opt_filenames>1) then print("\n" .. fn .. ":"); end
+	 process_pattern_against_file(fn)
+      end -- for each file
+   else
+      print("Rosie CLI warning: missing filename arguments")
+   end
+
+   if OPTION["-repl"] then
+      if QUIET then greeting(); end
+      repl(CL_ENGINE)
+   end
+
+end
+
 ----------------------------------------------------------------------------------------
 -- Do stuff
 ----------------------------------------------------------------------------------------
@@ -256,48 +301,6 @@ if (not arg[1]) then
    -- no command line options were supplied
    greeting()
    print(usage_message)
-   os.exit(-1)
-end
-
-process_command_line_options()
-
-if OPTION["-verbose"] then
-   QUIET = false;
 else
-   QUIET = true;
+   run()
 end
-
-if OPTION["-help"] then
-   if #arg > 1 then print("Rosie CLI warning: ignoring extraneous command line arguments"); end
-   help()
-   os.exit()
-end
-
-if not QUIET then greeting(); end
-
-setup_engine();
-
-if OPTION["-patterns"] then
-   if QUIET then greeting(); end
-   local env = lapi.get_environment(CL_ENGINE)
-   common.print_env(env)
-   os.exit()
-end
-
-if not opt_pattern then print("Rosie CLI warning: missing pattern argument"); end
-
-if opt_filenames then
-   for _,fn in ipairs(opt_filenames) do
-      if (not QUIET) or (#opt_filenames>1) then print("\n" .. fn .. ":"); end
-      process_pattern_against_file(fn)
-   end -- for each file
-else
-   print("Rosie CLI warning: missing filename arguments")
-end
-
-if OPTION["-repl"] then
-   if QUIET then greeting(); end
-   repl(CL_ENGINE)
-end
-
-

@@ -168,3 +168,10 @@ function flatten(ls)
    else return append(flatten(car(ls)), flatten(cdr(ls)))
    end
 end
+
+function reverse(ls)
+   if null_p(ls) then return ls;
+   elseif #ls==1 then return ls;
+   else return append(reverse(cdr(ls)), list(car(ls)))
+   end
+end
