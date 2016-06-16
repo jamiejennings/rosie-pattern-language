@@ -159,6 +159,10 @@ function common.decode_match(t)
    return name, rest.pos, rest.text, rest.subs
 end
 
+function common.subs(match)
+   return (match[(next(match))].subs) or {}
+end
+
 function common.match_to_text(t)
    local name, rest = next(t)
    return rest.text

@@ -23,13 +23,19 @@ function to_list(tbl)
    end
 end
 
-function null_p(ls)
-   if (type(ls)=="table") then return (#ls==0); end
-   error("not a list: " .. tostring(ls))
+function list_p(obj)
+   if (type(obj)=="table") then
+      for k,v in pairs(obj) do
+	 if type(k)~="number" then return false; end
+      end
+      return true
+   end
+   return false
 end
 
-function list_p(obj)
-   return (type(obj)=="table")			    -- an approximation
+function null_p(ls)
+   if list_p(ls) then return (#ls==0); end
+   error("not a list: " .. tostring(ls))
 end
 
 function cons(elt, ls)
@@ -163,9 +169,11 @@ function reduce(fn, init, lst, i)
 end
 
 function flatten(ls)
-   if (not list_p(ls)) then return { ls };
-   elseif null_p(ls) then return ls;
-   else return append(flatten(car(ls)), flatten(cdr(ls)))
+   if null_p(ls) then return ls;
+   elseif list_p(car(ls)) then
+      return append(flatten(car(ls)), flatten(cdr(ls)))
+   else
+      return cons(car(ls), flatten(cdr(ls)))
    end
 end
 
