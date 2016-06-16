@@ -29,7 +29,7 @@ function compile_system()
    luac("repl")
    luac("syntax")
    luac("syntax2")
-   luac("utils")
+   luac("util")
 end
 
 compile_system()

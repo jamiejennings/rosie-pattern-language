@@ -22,6 +22,9 @@ local common = {}				    -- interface
 
 assert(ROSIE_HOME, "The variable ROSIE_HOME is not set in common.lua")
 
+common.dirsep = package.config:sub(1, (package.config:find("\n"))-1)
+assert(#common.dirsep==1, "directory separator should be a forward or a backward slash")
+
 function common.compute_full_path(path)
    local full_path
    if path:sub(1,1)=="." or path:sub(1,1)=="/" then -- WILL BREAK ON WINDOWS
@@ -31,8 +34,7 @@ function common.compute_full_path(path)
       -- construct a path relative to ROSIE_HOME
       full_path = ROSIE_HOME .. "/" .. path
    end
-   full_path = full_path:gsub("\\ ", " ")	    -- unescape a space in the name
-   return full_path
+   return full_path:gsub("\\ ", " ")		    -- unescape a space in the name
 end
 
 local escape_substitutions =			    -- characters that change when escaped are:

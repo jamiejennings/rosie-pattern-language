@@ -36,7 +36,7 @@ repl_prompt = "Rosie> "
 
 local function print_match(m, left, eval_p)
    if m then 
-      io.write(prettify_json(m), "\n")
+      io.write(util.prettify_json(m), "\n")
       if (left > 0) then
 	 print(string.format("Warning: %d unmatched characters at end of input", left))
       end

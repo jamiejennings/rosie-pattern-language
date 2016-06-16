@@ -6,7 +6,7 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-require "utils"
+util = require "util"
 
 test.start(test.current_filename())
 
@@ -38,7 +38,7 @@ function run(expression, grep_flag, expectations)
    print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
    local grep = (grep_flag and " -grep") or ""
    local cmd = rosie .. grep .. " '" .. expression .. "' " .. infilename
-   local results, status, code = os_execute_capture(cmd, nil, "l")
+   local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
    local mismatch_flag = false;
    for i=1, #results do 

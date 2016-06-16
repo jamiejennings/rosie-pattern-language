@@ -1,6 +1,6 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- utils.lua
+---- util.lua
 ----
 ---- © Copyright IBM Corporation 2016.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -10,8 +10,10 @@
 math = require "math"
 lpeg = require "lpeg"
 
+util = {}
+
 -- Split a string into lines, returning them one at a time
-function string_nextline(str)
+function util.string_nextline(str)
    local nextpos = 1
    local endpos = #str
    local up_to_eol = lpeg.C((P(1) - P"\n")^0) * (P("\n") + P(-1)) * lpeg.Cp()
@@ -28,14 +30,14 @@ end
 ----------------------------------------------------------------------------------------
 
 -- Copy all entries in src table to dest table.  If no dest table passed in, create a new one. 
-function copy_table(src, dest)
+function util.copy_table(src, dest)
    dest = dest or {}
    for k,v in pairs(src) do dest[k] = v; end
    return dest
 end
 
 -- Treating tables as lists with integer indicies, append them and produce a new list.
-function table_append(...)
+function util.table_append(...)
    result = {}
    for _,list in ipairs({...}) do
       table.move(list, 1, #list, #result+1, result)
@@ -43,12 +45,12 @@ function table_append(...)
    return result
 end
 
-function pretty_print_table(t, max_item_length, js_style)
+function util.pretty_print_table(t, max_item_length, js_style)
    if not t then
       io.stderr:write("Error: nil table\n");
       return;
    end
-   io.write(table_to_pretty_string(t, max_item_length, js_style), "\n")
+   io.write(util.table_to_pretty_string(t, max_item_length, js_style), "\n")
 end
    
 local function limit(s, max_length)
@@ -67,7 +69,7 @@ local function keys_are_numbers(t)
 end
 
 -- my gosh, this has grown ugly over the years!  must rewrite someday.
-function table_to_pretty_string(t, max_item_length, js_style)
+function util.table_to_pretty_string(t, max_item_length, js_style)
    if not t then
       error("Nil table")
       return;
@@ -118,17 +120,17 @@ function table_to_pretty_string(t, max_item_length, js_style)
 end
 
 if table then
-   table.print = pretty_print_table;
-   table.tostring = table_to_pretty_string;
+   table.print = util.pretty_print_table;
+   table.tostring = util.table_to_pretty_string;
 end
 
 ----------------------------------------------------------------------------------------
 -- JSON printing
 ----------------------------------------------------------------------------------------
 
-function prettify_json(s)
+function util.prettify_json(s)
    local t = json.decode(s)
-   return (t==json.null and "NULL") or table_to_pretty_string(t, nil, true)
+   return (t==json.null and "NULL") or util.table_to_pretty_string(t, nil, true)
 end
 
 
@@ -152,14 +154,12 @@ local function is_leap_year(year)
 end
 
 local mon_lengths = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
---local 
-months_to_days_cumulative = { 0 }
+local months_to_days_cumulative = { 0 }
 for i = 2, 12 do
    months_to_days_cumulative[i] = months_to_days_cumulative[i-1]  + mon_lengths[i-1]
 end
 
---local 
-function day_of_year(year, month, day)
+local function day_of_year(year, month, day)
    local total = months_to_days_cumulative[month]
    if month > 2 and is_leap_year(year) then total = total + 1; end
    return total + day
@@ -183,7 +183,7 @@ end
 -- We rely on the arguments to be within their normal ranges.  The arguments can be strings or
 -- numbers, except for tz_sign, which is always either "-" or "+" or nil.
 -- Return an integer number of milliseconds, ignoring any fractions of a millisecond.
-function time_since_epoch(year, month, day, hour, min, sec, tz_sign, tz_hours, tz_mins)
+function util.time_since_epoch(year, month, day, hour, min, sec, tz_sign, tz_hours, tz_mins)
    -- cast to numbers, in case they were passed as strings such as after parsing
    local year = tonumber(year)
    local month = tonumber(month)
@@ -202,40 +202,42 @@ function time_since_epoch(year, month, day, hour, min, sec, tz_sign, tz_hours, t
    return math.floor(seconds * 1000.0)
 end
 
-function test_time_since_epoch()
-   print("NOT thoroughly testing leap years or timezone offsets (yet)...")
-   assert(time_since_epoch(1970,1,1,0,0,1)==1000)
-   assert(time_since_epoch(1971,1,1,0,0,0)==31536000000)
-   assert(time_since_epoch(1971,2,1,0,0,0)==34214400000)
-   assert(time_since_epoch(1971,2,2,0,0,0)==34300800000)
-   assert(time_since_epoch(1971,2,2,13,0,0)==34347600000)
-   assert(time_since_epoch(1971,2,2,13,50,0)==34350600000)
-   assert(time_since_epoch(1971,2,2,13,50,22)==34350622000)
-   assert(time_since_epoch(1971,2,2,13,50,22.123)==34350622123)
-   assert(time_since_epoch(1971,2,2,13,50,22.1235)==34350622123) -- ignoring 0.5 ms
-   assert(time_since_epoch(1971,2,2,13,50,22.1239)==34350622123) -- ignoring 0.9 ms
+if false then
+   function test_time_since_epoch()
+      print("NOT thoroughly testing leap years or timezone offsets (yet)...")
+      assert(time_since_epoch(1970,1,1,0,0,1)==1000)
+      assert(time_since_epoch(1971,1,1,0,0,0)==31536000000)
+      assert(time_since_epoch(1971,2,1,0,0,0)==34214400000)
+      assert(time_since_epoch(1971,2,2,0,0,0)==34300800000)
+      assert(time_since_epoch(1971,2,2,13,0,0)==34347600000)
+      assert(time_since_epoch(1971,2,2,13,50,0)==34350600000)
+      assert(time_since_epoch(1971,2,2,13,50,22)==34350622000)
+      assert(time_since_epoch(1971,2,2,13,50,22.123)==34350622123)
+      assert(time_since_epoch(1971,2,2,13,50,22.1235)==34350622123) -- ignoring 0.5 ms
+      assert(time_since_epoch(1971,2,2,13,50,22.1239)==34350622123) -- ignoring 0.9 ms
 
-   -- Leap years affect the following cases...
-   assert(time_since_epoch(1980,1,1,00,00,00)==315532800000)
+      -- Leap years affect the following cases...
+      assert(time_since_epoch(1980,1,1,00,00,00)==315532800000)
 
-   -- Time zones affect the following cases...
-   assert(time_since_epoch(1980,1,1,00,00,00,"-",0,0)==315532800000)
-   assert(time_since_epoch(1980,1,1,00,00,00,"-",0,1)==315532860000)
-   assert(time_since_epoch(1980,1,1,00,00,00,"-",1,0)==315536400000)
-   assert(time_since_epoch(1980,1,1,00,00,00,"-",5,0)==315550800000)
-   assert(time_since_epoch(1980,1,1,00,00,00,"+",5,0)==315514800000)
-   assert(time_since_epoch(1980,1,1,00,00,00,"+",5,33)==315516780000)
-   assert(time_since_epoch(2015, 8, 23, 3, 36, 25)==1440300985000)
-   assert(time_since_epoch(2015, 8, 23, 3, 36, 25, "-", 4, 0)==1440315385000)
+      -- Time zones affect the following cases...
+      assert(time_since_epoch(1980,1,1,00,00,00,"-",0,0)==315532800000)
+      assert(time_since_epoch(1980,1,1,00,00,00,"-",0,1)==315532860000)
+      assert(time_since_epoch(1980,1,1,00,00,00,"-",1,0)==315536400000)
+      assert(time_since_epoch(1980,1,1,00,00,00,"-",5,0)==315550800000)
+      assert(time_since_epoch(1980,1,1,00,00,00,"+",5,0)==315514800000)
+      assert(time_since_epoch(1980,1,1,00,00,00,"+",5,33)==315516780000)
+      assert(time_since_epoch(2015, 8, 23, 3, 36, 25)==1440300985000)
+      assert(time_since_epoch(2015, 8, 23, 3, 36, 25, "-", 4, 0)==1440315385000)
 
-   print("Done.")
-end
+      print("Done.")
+   end
+end -- if false
 
 ---------------------------------------------------------------------------------------------------
 -- Misc
 ---------------------------------------------------------------------------------------------------
 
-function os_execute_capture(command, mode, readmode)
+function util.os_execute_capture(command, mode, readmode)
    command = "/usr/bin/env "..command
    local pcall_success, handle, errmsg = pcall(io.popen, command, mode);
    if not pcall_success then
@@ -260,11 +262,11 @@ function os_execute_capture(command, mode, readmode)
 end
    
 
-function uuid()
-   return os_execute_capture("uuidgen", nil, "l")[1]
+function util.uuid()
+   return util.os_execute_capture("uuidgen", nil, "l")[1]
 end
 
-function warn(...)
+function util.warn(...)
    if not QUIET then
       io.stderr:write("Warning: ")
       for _,v in ipairs({...}) do
@@ -274,7 +276,7 @@ function warn(...)
    end
 end
 
-function extract_source_line_from_pos(source, pos)
+function util.extract_source_line_from_pos(source, pos)
    local eol = string.find(source, "\n", pos, true);
    local start;
    local count = 1;
@@ -296,3 +298,20 @@ function extract_source_line_from_pos(source, pos)
    return string.sub(source, start, eol), pos-start, count
 end
       
+function util.split_path(path, optional_separator)
+   optional_separator = optional_separator or package.config:sub(1, (package.config:find("\n"))-1)
+   if #optional_separator~=1 then
+      error(string.format("Separator is not a one character string: %q", optional_separator))
+   end
+   local f = path:gmatch("([^"..common.dirsep.."]*)"..common.dirsep.."?")
+   local results = {}
+   local component = f()
+   while component do
+      if component~="" then table.insert(results, component); end
+      component = f()
+   end
+   return results
+end
+
+	 
+return util

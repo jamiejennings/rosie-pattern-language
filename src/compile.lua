@@ -18,10 +18,10 @@ parse_and_explain = function(...)
 local common = require "common"
 local parse = require "parse"			    -- RPL parser and AST functions
 local lpeg = require "lpeg"
-require "utils"
+local util = require "util"
 require "recordtype"
 local unspecified = recordtype.unspecified
-syntax = require "syntax"
+local syntax = require "syntax"
 
 local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt, lpeg.B
@@ -135,7 +135,7 @@ end
 local function explain_quantified_limitation(a, source, maybe_rule)
    assert(a, "did not get ast in explain_quantified_limitation")
    local name, errpos, text = common.decode_match(a)
-   local line, pos, lnum = extract_source_line_from_pos(source, errpos)
+   local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
    local msg = "Compile error: pattern with quantifier can match the empty string: " ..
       rule_explanation .. "\n" .. parse.reveal_ast(a) .. "\n" ..
@@ -148,7 +148,7 @@ end
 local function explain_repetition_error(a, source)
    assert(a, "did not get ast in explain_repetition_error")
    local name, errpos, text = common.decode_match(a)
-   local line, pos, lnum = extract_source_line_from_pos(source, errpos)
+   local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local min = tonumber(rep_args[1]) or 0
    local max = tonumber(rep_args[2])
    local msg = "Compile error: integer quantifiers must be positive, and min <= max \n" ..
@@ -162,7 +162,7 @@ end
 local function explain_undefined_identifier(a, source)
    assert(a, "did not get ast in explain_undefined_identifier")
    local name, errpos, text = common.decode_match(a)
-   local line, pos, lnum = extract_source_line_from_pos(source, errpos)
+   local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local msg = "Compile error: reference to undefined identifier: " .. text .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
@@ -173,7 +173,7 @@ end
 local function explain_undefined_charset(a, source)
    assert(a, "did not get ast in explain_undefined_charset")
    local _, errpos, name, subs = common.decode_match(a)
-   local line, pos, lnum = extract_source_line_from_pos(source, errpos)
+   local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local msg = "Compile error: named charset not defined: " .. name .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
@@ -184,7 +184,7 @@ end
 local function explain_unknown_quantifier(a, source)
    assert(a, "did not get ast in explain_unknown_quantifier")
    local name, errpos, text, subs = common.decode_match(a)
-   local line, pos, lnum = extract_source_line_from_pos(source, errpos)
+   local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local q = subs[2]				    -- IS THIS RIGHT?
    local msg = "Compile error: unknown quantifier: " .. q .. "\n" ..
       string.format("At line %d:\n", lnum) ..
@@ -462,7 +462,7 @@ function cinternals.compile_grammar(a, gmr, source, env)
    -- if no pattern returned, then errors were already explained
    if pat then
       if env[name] and not QUIET then
-	 warn("Compiler: reassignment to identifier " .. name)
+	 util.warn("Compiler: reassignment to identifier " .. name)
       end
       env[name] = pat
    end
@@ -531,7 +531,7 @@ function cinternals.compile_binding(a, gmr, source, env)
    assert(a.binding and (type(a.binding.capture)=="boolean"))
    local _, ipos, iname = common.decode_match(lhs)
    if env[iname] and not QUIET then
-      warn("Compiler: reassignment to identifier " .. iname)
+      util.warn("Compiler: reassignment to identifier " .. iname)
    end
    local pat = cinternals.compile_rhs(rhs, gmr, source, env, iname)
    pat.alias = (not a.binding.capture)

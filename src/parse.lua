@@ -8,7 +8,7 @@
 
 
 local common = require "common"
-require "utils"
+local util = require "util"
 
 local syntax = require "syntax"
 
@@ -207,7 +207,7 @@ function parse.explain_syntax_error(a, source)
    local errast = parse.syntax_error_check(a)
    assert(errast)
    local name, pos, text, subs = common.decode_match(a)
-   local line, pos, lnum = extract_source_line_from_pos(source, pos)
+   local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
 
    local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
 
