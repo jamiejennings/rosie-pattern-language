@@ -27,14 +27,27 @@ end
 -- end
 
 -- Start the Rosie Pattern Engine
-dofile(ROSIE_HOME.."/src/bootstrap.lua")
+
+local thunk, msg = loadfile(ROSIE_HOME .. "/bin/bootstrap.luac")
+if not thunk then
+   io.stderr:write("Warning: bootstrap.luac not available, loading from source\n")
+   dofile(ROSIE_HOME.."/src/bootstrap.lua")
+else
+   local ok, msg = pcall(thunk)
+   if not ok then
+      io.stderr:write("Warning: error loading bootstrap.luac, will load from source \n")
+      io.stderr:write(msg, "\n")
+      dofile(ROSIE_HOME.."/src/bootstrap.lua")
+   end
+end
 
 local common = require "common"
 local lapi = require "lapi"
 local json = require "cjson"
 require("repl")
 
-CL_ENGINE = lapi.new_engine("command line engine")
+CL_ENGINE, msg = lapi.new_engine("command line engine")
+if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
 
 local function greeting()
    io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")

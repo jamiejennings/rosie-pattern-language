@@ -70,18 +70,19 @@ macosx: PLATFORM=macosx
 # Change the next line to CC=gcc if you prefer to use gcc on MacOSX
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: bin/lua lib/lpeg.so lib/cjson.so test
+macosx: bin/lua lib/lpeg.so lib/cjson.so compile test
 
 linux: PLATFORM=linux
 linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
-linux: bin/lua lib/lpeg.so lib/cjson.so test
+linux: bin/lua lib/lpeg.so lib/cjson.so compile test
 
 bin/lua: $(LUA_DIR)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p bin
 	cp $(LUA_DIR)/src/lua bin
+	cp $(LUA_DIR)/src/luac bin
 
 lib/lpeg.so: $(LPEG_DIR)
 	cd $(LPEG_DIR) && $(MAKE) CC=$(CC) LUADIR=../lua-5.3.2/src $(PLATFORM)
@@ -93,15 +94,19 @@ lib/cjson.so: $(JSON_DIR)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
+compile:
+	bin/lua -e "ROSIE_HOME=\"`pwd`\"" src/rosie-compile.lua
+
 test:
 	@echo "Rosie home is $(HOME)"
-	@RESULT="$(shell ./run 2>&1 >/dev/null)"; \
+	@echo "Attempting to execute $(HOME)/run ..."
+	@RESULT="$(shell $(HOME)/run 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
             echo "Rosie Pattern Engine installed successfully!"; \
             echo "Try this as a test: ./run basic.matchall /etc/resolv.conf"; \
         else \
-            echo "Rosie Pattern Engine test failed."; \
+            echo "Rosie Pattern Engine test FAILED."; \
         fi
 
 

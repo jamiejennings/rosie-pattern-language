@@ -8,6 +8,7 @@
 
 local lapi = require "lapi"
 local manifest = require "manifest"
+local json = require "cjson"
 require "list"
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
