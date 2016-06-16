@@ -67,7 +67,8 @@ end
 local encoder_table =
    {json = json.encode,
     color = color_string_from_leaf_nodes,
-    text = common.match_to_text,
+    text = string_from_leaf_nodes,
+    fulltext = common.match_to_text,
     [false] = function(...) return ...; end
  }
 
@@ -149,20 +150,22 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
    local trace, nextpos, m;
    local encode = e.encoder_function;
    local nextline = infile:lines();
+   local o_write, e_write = outfile.write, errfile.write
+   local match = peg.match
    local l = nextline(); 
    while l do
       if eval_flag then _, _, trace = engine_eval(e, l); end
-      m, nextpos = peg:match(l);
+      m, nextpos = match(peg, l);
       -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
-      if trace then outfile:write(trace, "\n"); end
+      if trace then o_write(outfile, trace, "\n"); end
       if m then
-	 outfile:write(encode(m), "\n")
+	 o_write(outfile, encode(m), "\n")
 	 outlines = outlines + 1
       else --if not eval_flag then
-	 errfile:write(l, "\n")
+	 e_write(errfile, l, "\n")
 	 errlines = errlines + 1
       end
-      if trace then outfile:write("\n"); end
+      if trace then o_write(outfile, "\n"); end
       inlines = inlines + 1
       l = nextline(); 
    end -- while

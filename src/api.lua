@@ -55,7 +55,12 @@ local api = {API_VERSION = "0.99a",		    -- api version
 
 ----------------------------------------------------------------------------------------
 
--- SLOW due to table manipulation??   !@#
+-- Could use this in api_wrap if api_wrap turns out to be slow:
+--
+-- local function encode(success, ...)
+--    return success, json.encode({...})
+-- end
+
 local function api_wrap(f)
    api.NARGS[f] = debug.getinfo(f, "u").nparams	    -- number of args for f
    return function(...)

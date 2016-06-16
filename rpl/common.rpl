@@ -7,10 +7,15 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
-alias any = [:print:]
+alias any = .
 alias whitespace = [:space:]
 alias digit = [:digit:]
 alias letter = [:alpha:]
+
+-- [:graph:] won't match unicode, but these will:
+alias common.graph = {![:space:] .}
+alias common.id_char = [_-] / {![:space:] ![:punct:] .}
+
 
 alias hex_only = { [a-f] / [A-F] }
 alias hex_digits = { digit / [a-f] / [A-F] }
