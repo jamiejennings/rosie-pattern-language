@@ -133,7 +133,7 @@ function process_command_line_options()
       opt_filenames = {table.unpack(arg, firstfile)}
    end
 
-   opt_manifest = OPTION["-manifest"] or "MANIFEST"
+   opt_manifest = OPTION["-manifest"] or "$sys/MANIFEST"
    if opt_manifest==true then
       io.write("Rosie: the manifest command line option requires a filename or - \n")
       io.write(usage_message, "\n")
@@ -161,7 +161,7 @@ function help()
    print("  -eval           output a detailed \"trace\" evaluation of how the pattern processed the input;")
    print("                  this feature generates LOTS of output, so best to use it on ONE LINE OF INPUT;")
    print("  -grep           emulate grep, but with RPL, by searching for all occurrences of <pattern> in the input")
-   print("  -manifest <fn>  load the manifest file <fn> instead of MANIFEST from the Rosie install directory")
+   print("  -manifest <fn>  load the manifest file <fn> instead of MANIFEST from $sys (the Rosie install directory)")
    print("  -f <fn>         RPL file to load, after manifest (if any) is loaded")
    print("  -e <rpl>        RPL statements to load, after manifest and RPL file (if any) are loaded")
    print()

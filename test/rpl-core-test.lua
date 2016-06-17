@@ -1158,7 +1158,7 @@ check_match("cookeddot", "", false)
 
 subheading("Raw and cooked versions of the same definition")
 
-check((api.load_manifest(eid, "MANIFEST")))
+check((api.load_manifest(eid, "$sys/MANIFEST")))
 
 m = check_match("common.int", "42", true)
 check((not m[1]["*"]) and m[1]["common.int"] and (not m[1]["common.int"].subs))

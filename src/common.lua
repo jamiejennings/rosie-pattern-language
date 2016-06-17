@@ -37,7 +37,7 @@ function common.compute_full_path(path, manifest_path)
 	 full_path = ROSIE_HOME .. rest
       elseif sym=="lib" then
 	 if (type(manifest_path)~="string") or (manifest_path=="") then
-	    error("Internal error: bad manifest path argument to compute_full_path: " .. tostring(manifest_path))
+	    return false, "Error: cannot reference $lib outside of a manifest file: " .. path
 	 end
 	 if (manifest_path:sub(-1,-1)==common.dirsep) then
 	    manifest_path = manifest_path:sub(1,-2)
