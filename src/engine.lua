@@ -40,7 +40,9 @@ engine =
       eval_file=false;
       configure=false;
       inspect=false;
---      match_using_exp=false;
+      --
+      compile=false;
+      compile_match_exp=false;
   },
    "engine"
 )

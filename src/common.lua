@@ -262,17 +262,14 @@ pattern =
    recordtype.define(
    {  name=unspecified;			 -- for reference, debugging
       peg=unspecified;			 -- lpeg pattern
---      alternates=false;			 -- array of 2 lpeg patterns that make up a choice pattern
       alias=false;			 -- is this an alias or not
+      raw=false;                         -- true if the exp was raw at top level
       ast=false;			 -- ast that generated this pattern, for pattern debugging
       original_ast=false;
-      raw=false;                         -- true if the exp was raw at top level
       
---      ast_history={};			 -- history of each transformation
---      push_ast=push_ast;
---      cpeg=false;				    -- peg to use in cooked mode
---      source=unspecified;		 -- source (filename, maybe line also?)
+--      source=unspecified;		 -- source (rpl filename and line)
 --      uuid=unspecified;
+
   },
    "pattern"
 )

@@ -316,5 +316,18 @@ function util.split_path(path, optional_separator)
    return path:sub(1,lastpos-1), results[#results], results
 end
 
+function util.readfile(fullpath)
+   local ok, f = pcall(io.open, fullpath);
+   if (not ok) or (not f) then
+      return false, string.format('Error: cannot open file %q', tostring(fullpath))
+   end
+   local data = f:read("a")
+   f:close()
+   if (not data) then
+      return false, string.format('Error: cannot read file %q', fullpath)
+   end
+   return data
+end
+
 	 
 return util

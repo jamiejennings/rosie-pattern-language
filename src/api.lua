@@ -166,16 +166,8 @@ api.load_manifest = api_wrap(load_manifest)
 
 local function load_file(id, path)
    local en = engine_from_id(id)
-   if type(path)~="string" then
-      arg_error("path not a string")
-   end
-   local full_path = common.compute_full_path(path)
-   local result, msg = compile.compile_file(full_path, en.env)
-   if result then
-      return full_path
-   else
-      error(msg,0)
-   end
+   local ok, msg = lapi.load_file(en, path)
+   return (ok and msg) or error(msg,0)		    -- msg is full path of file that was loaded
 end
 
 api.load_file = api_wrap(load_file)

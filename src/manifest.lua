@@ -43,7 +43,9 @@ local function process_manifest_line(en, line, manifest_path)
       if not QUIET then 
 	 io.stderr:write("Compiling ", filename, "\n")
       end
-      local result, msg = compile.compile_file(filename, en.env)
+      local input, msg = util.readfile(filename)
+      if not input then return false, msg; end
+      local result, msg = compile.compile(input, en.env)
       return (not (not result)), msg
    else
       return true

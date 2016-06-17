@@ -246,7 +246,7 @@ check(msg:find("./thisfile/doesnotexist"))
 
 ok, msg = api.load_file(eid, "/etc")
 check(not ok)
-check(msg:find("unreadable file"))
+check(msg:find("cannot read file"))
 check(msg:find("/etc"))
 
 subheading("load_manifest")
@@ -267,11 +267,11 @@ check(env["manifest_ok"].type=="definition")
 
 ok, msg = api.load_manifest(eid, "$sys/test/manifest.err")
 check(not ok)
-check(msg:find("Compiler: cannot open file"))
+check(msg:find("Error: cannot open file"))
 
 ok, msg = api.load_manifest(eid, "$sys/test/manifest.synerr") -- contains a //
 check(not ok)
-check(msg:find("Compiler: unreadable file"))
+check(msg:find("Error: cannot read file"))
 
 
 ----------------------------------------------------------------------------------------
@@ -540,7 +540,7 @@ check(ok)
 retvals = json.decode(retvals_js)
 check(retvals[1])				    -- match string
 check(retvals[2]==2)				    -- leftover
-trace = retvals[3]
+--trace = retvals[3]
 --check(match["common.number"])
 --check(match["common.number"].text=="abc")
 check(retvals[3]:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char

@@ -84,7 +84,9 @@ function lapi.load_file(en, path)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    local full_path, msg = common.compute_full_path(path)
    if not full_path then return false, msg; end
-   local result, msg = compile.compile_file(full_path, en.env)
+   local input, msg = util.readfile(full_path)
+   if not input then return false, msg; end
+   local result, msg = compile.compile(input, en.env)
    if result then
       return true, full_path
    else

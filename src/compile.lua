@@ -297,7 +297,7 @@ function cinternals.compile_literal(a, gmr, source, env)
    assert(a, "did not get ast in compile_literal")
    local name, pos, text = common.decode_match(a)
    local str = common.unescape_string(text)
-   return pattern{name=name; peg=P(str)}
+   return pattern{name=name; peg=P(str); ast=a}
 end
 
 function cinternals.compile_ref(a, gmr, source, env)
@@ -330,7 +330,7 @@ function cinternals.compile_sequence(a, gmr, source, env)
    local peg1, peg2
    peg1 = cinternals.compile_exp(subs[1], gmr, source, env).peg
    peg2 = cinternals.compile_exp(subs[2], gmr, source, env).peg
-   return pattern{name=name, peg=peg1 * peg2}
+   return pattern{name=name, peg=peg1 * peg2, ast=a}
 end
    
 function cinternals.compile_named_charset(a, gmr, source, env)
@@ -340,7 +340,7 @@ function cinternals.compile_named_charset(a, gmr, source, env)
    if not pat then
       explain_undefined_charset(a, source)
    end
-   return pattern{name=name, peg=pat}
+   return pattern{name=name, peg=pat, ast=a}
 end
 
 function cinternals.compile_charset(a, gmr, source, env)
@@ -355,7 +355,9 @@ function cinternals.compile_charset(a, gmr, source, env)
       assert(next(rsubs[2])=="character")
       local cname1, cpos1, ctext1 = common.decode_match(rsubs[1])
       local cname2, cpos2, ctext2 = common.decode_match(rsubs[2])
-      return pattern{name=name, peg=R(common.unescape_string(ctext1)..common.unescape_string(ctext2))}
+      return pattern{name=name,
+		     peg=R(common.unescape_string(ctext1)..common.unescape_string(ctext2)),
+		     ast=a}
    elseif next(subs[1])=="charlist" then
       local exps = "";
       assert(subs[1], "did not get charlist sub in compile_charset")
@@ -366,7 +368,7 @@ function cinternals.compile_charset(a, gmr, source, env)
 	 local cname, cpos, ctext = common.decode_match(v)
 	 exps = exps .. common.unescape_string(ctext)
       end
-      return pattern{name=name, peg=S(exps)}
+      return pattern{name=name, peg=S(exps), ast=a}
    else
       error("Internal error (compiler): Unknown charset type: "..next(subs[1]))
    end
@@ -379,7 +381,7 @@ function cinternals.compile_choice(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    local peg1 = cinternals.compile_exp(subs[1], gmr, source, env).peg
    local peg2 = cinternals.compile_exp(subs[2], gmr, source, env).peg
-   return pattern{name=name, peg=(peg1+peg2)}
+   return pattern{name=name, peg=(peg1+peg2), ast=a}
 end
 
 function cinternals.compile_raw_exp(a, gmr, source, env)
@@ -605,11 +607,8 @@ function compile.compile_match_expression(source, env)
       return false, original_astlist		    -- original_astlist is msg
    end
    assert(type(astlist)=="table")
-   assert(type(original_astlist)=="table")
-
    -- After adding support for semi-colons to end statements, can change this restriction to allow
    -- arbitrary statements, followed by an expression, like scheme's 'begin' form.
-
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
       for i, a in ipairs(astlist) do
@@ -620,56 +619,30 @@ function compile.compile_match_expression(source, env)
       local msg = "Error: only expressions can be matched (not statements): " .. source
       return false, msg
    end
-
-   local ast = astlist[1]
-   local orig_ast = original_astlist[1]
-   local name, pos, text, subs = common.decode_match(ast)
+   -- Check to see if the expression is a reference
+   local name, pos, text, subs = common.decode_match(astlist[1])
    local pat, raw_expression_flag, alias_flag
-
    if (name=="ref") then
       pat = env[text]
       raw_expression_flag = (pattern.is(pat) and pat.raw)
-      -- if (not raw_expression_flag) then
-      -- 	 ast = syntax.append_looking_at_boundary(ast)
-      -- end
    end
-
-   local c = coroutine.create(cinternals.compile_exp)
-   local no_lua_error, result, msg = coroutine.resume(c, ast, false, source, env)
-   if (not no_lua_error) then
-      error("Internal error (compiler): " .. tostring(result) .. " / " .. tostring(msg))
-   end
-   if not (result and pattern.is(result)) then      -- compile-time error
+   -- Compile the expression
+   local results, msg = compile.compile(source, env)
+   if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
       return false, msg
    end
-
+   local result = results[1]
    if pat then result.alias = pat.alias; end
-   result.ast = ast
-   result.original_ast = orig_ast
-
    if not (pat and (not pat.alias)) then
-      -- if the user entered an identifier, then we are all set, unless it is an alias, which
+      -- If the user entered an identifier, then we are all set, unless it is an alias, which
       -- by itself may capture nothing and thus should be handled like any other kind of
       -- expression.  
-      -- if the user entered an expression other than an identifier, we should treat it like it
-      -- is the RHS of an assignment statement.  need to give it a name, so we label it "*"
-      -- since that can't be an identifier name 
+      -- If the user entered an expression other than an identifier, we should treat it like it
+      -- is the RHS of an assignment statement.  Need to give it a name, so we label it "*"
+      -- since that can't be an identifier name.
       result.peg = common.match_node_wrap(C(result.peg), "*")
    end
    return result
-end
-   
-function compile.compile_file(filename, env)
-   local f = io.open(filename);
-   if (not f) then
-      return false, 'Compiler: cannot open file "'..filename..'"'
-   end
-   local source = f:read("a")
-   f:close()
-   if type(source)~="string" then
-      return false, 'Compiler: unreadable file "'..filename..'"'
-   end
-   return compile.compile(source, env)
 end
 
 function compile.compile_core(filename, env)
@@ -682,10 +655,12 @@ function compile.compile_core(filename, env)
       f:close()
    end
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   -- intentionally ignoring the value of compile.parse, we ensure the use of
-   -- core_parse_and_explain for parsing the Rosie rpl
+   -- Intentionally ignoring the value of compile.parse, we ensure the use of
+   -- core_parse_and_explain for parsing the Rosie rpl.
    local astlist = parse.core_parse_and_explain(source)
    if not astlist then return nil; end		    -- errors have been explained already
+   -- No coroutine here for compiling, because if compile_astist throws an error, it's a serious
+   -- bug and nothing else can work.
    cinternals.compile_astlist(astlist, false, source, env)
    return true
 end
