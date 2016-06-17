@@ -12,8 +12,9 @@ json = require "cjson"
 
 local repl_patterns = [==[
       rpl_expression = expression
-      alias validchars = { [:alnum:] / [_%!$@:.,~-] }
-      path = "/"? { validchars+ {"/" validchars+}* }
+      -- alias validchars = { [:alnum:] / [_%!$@:.,~-] }
+      -- path = "/"? { validchars+ {"/" validchars+}* }
+      path = {![:space:] .}+
       load = ".load" path
       manifest = ".manifest" path
       match = ".match" rpl_expression "," quoted_string
