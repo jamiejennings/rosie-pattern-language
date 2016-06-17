@@ -12,10 +12,10 @@ if not ((type(os)=="table") and (type(os.getenv)=="function")) then
 end
 local ok, value = pcall(os.getenv, "ROSIE_HOME")
 if not ok then
-   error("Internal error: call to os.getenv failed")
+   error("Internal error: bootstrap call to os.getenv failed")
 end
 if (not value) and (not ROSIE_HOME) then
-   error("ROSIE_HOME not set.  Exiting...")
+   error("Cannot find ROSIE_HOME.  Exiting...")
 end
 
 -- Environment variable, when present, overrides the value of ROSIE_HOME that is calculated in the

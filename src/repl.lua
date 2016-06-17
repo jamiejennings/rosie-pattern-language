@@ -162,9 +162,10 @@ or an RPL statement.  Commands start with a dot (".") as follows:
     .clear                          clear the pattern environment
     .help                           print this message
 
-    Note on paths to RPL and manifest files:  A path is relative to the Rosie install
-    directory unless it starts with a dot "." (relative to current directory) or a
-    slash "/" (absolute path).    
+    Note on paths to RPL and manifest files:  A filename may begin with $sys, which
+    refers to the Rosie install directory, or $(VAR), which is the value of the environment
+    variable $VAR.  For filenames inside a manifest file, $lib refers to the directory
+    containing the manifest file.
 
     EOF (^D) will exit the read/eval/print loop.
 ]]      
