@@ -18,31 +18,28 @@ local mpats = [==[
       -- These patterns define the contents of the Rosie MANIFEST file
       alias blank = {""}
       alias comment = {"--" .*}
-      alias unix_path = { {"../" / "./" / "/"}? {{[:alnum:]/[_%!$@:.,~-/] / "\\ "}+ }+  }
-      alias windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] .}* }+ }
-      path = unix_path / windows_path
+--      alias unix_path = { {"../" / "./" / "/"}? {{[:alnum:]/[_%!$@:.,~-/] / "\\ "}+ }+  }
+--      alias windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] .}* }+ }
+--      path = unix_path / windows_path
+      path = {![:space:] .}+
       line = comment / (path comment?) / blank
    ]==]
 
-local manifest_engine = engine("manifest", compile.new_env())
+local manifest_engine = engine("manifest")
 local ok, msg = compile.compile(mpats, manifest_engine.env)
 if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
 assert(pattern.is(manifest_engine.env.line))
---local result, msg = compile.compile_command_line_expression('line', manifest_engine.env)
---if not result then error("Internal error: can't compile manifest top level defn: " .. tostring(msg)); end
-manifest_engine:configure({ expression = "line", encoder = false })
+manifest_engine:configure({expression="line", encoder=false})
 
-local function process_manifest_line(en, line)
+local function process_manifest_line(en, line, manifest_path)
    local m = manifest_engine:match(line)
    assert(type(m)=="table", "Uncaught error processing manifest file!")
    local name, pos, text, subs = common.decode_match(m)
---   assert(name=="*")				    -- new Saturday, June 4, 2016
---   assert(subs[1])				    -- new Saturday, June 4, 2016
---   local name, pos, text, subs = common.decode_match(subs[1])
    if subs then
       -- the only sub-match of "line" is "path", because "comment" is an alias
       local name, pos, path = common.decode_match(subs[1])
-      local filename = common.compute_full_path(path)
+      local filename, msg = common.compute_full_path(path, manifest_path)
+      if not filename then return false, msg; end
       if not QUIET then 
 	 io.stderr:write("Compiling ", filename, "\n")
       end
@@ -55,7 +52,8 @@ end
 
 function manifest.process_manifest(en, manifest_filename)
    assert(engine.is(en))
-   local full_path = common.compute_full_path(manifest_filename)
+   local full_path, manifest_path = common.compute_full_path(manifest_filename)
+   if not full_path then return false, manifest_path; end
    local success, nextline = pcall(io.lines, full_path)
    if not success then
       local msg = 'Error opening manifest file "' .. full_path .. '"'
@@ -71,7 +69,7 @@ function manifest.process_manifest(en, manifest_filename)
       return false, msg
    end
    while line and success do
-      success, msg = process_manifest_line(en, line)
+      success, msg = process_manifest_line(en, line, manifest_path)
       line = nextline()
    end
    return success, (success and full_path) or msg

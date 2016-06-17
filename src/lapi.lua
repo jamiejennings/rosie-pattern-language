@@ -69,9 +69,9 @@ end
 -- Loading manifests, files, strings
 ----------------------------------------------------------------------------------------
 
-function lapi.load_manifest(en, manifest_file)
+function lapi.load_manifest(en, full_path)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   local full_path = common.compute_full_path(manifest_file)
+   -- local full_path, proper_path = common.compute_full_path(manifest_file)
    local result, msg = manifest.process_manifest(en, full_path)
    if result then
       return true, full_path

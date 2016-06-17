@@ -7,28 +7,37 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
--- Note: Relative paths are relative to the Rosie install directory.  A path starting with "." is
--- relative to the current directory.
+-- ---------------------------------------------------------------------------------------------------
+-- Valid file name prefixes:
+-- 
+-- $sys = the Rosie install directory
+-- $lib = the directory of the manifest file
+-- $(VAR) = the value of the environment variable $VAR
+--
+-- Otherwise, the filename is simply opened, whether it is relative to the current directory or an
+-- absolute path name.
+-- ---------------------------------------------------------------------------------------------------
+
 
 -- Of general utility:
 
-rpl/common.rpl			-- commonly used patterns like float, word
-rpl/datetime.rpl		-- various dates, times
-rpl/network.rpl			-- ip address, hostname, http commands, email
+$sys/rpl/common.rpl				    -- commonly used patterns like float, word
+$sys/rpl/datetime.rpl				    -- various dates, times
+$sys/rpl/network.rpl				    -- ip address, hostname, http commands, email
 
-rpl/basic.rpl			-- for matching full lines of input against a
-                                -- variety of "basic" patterns of semantic interest
+$sys/rpl/basic.rpl				 -- for matching full lines of input against a
+                                                 -- variety of "basic" patterns of semantic interest
 
-rpl/csv.rpl                     -- CSV file formats
-rpl/json.rpl			-- JSON data format
+$sys/rpl/csv.rpl                     -- CSV file formats
+$sys/rpl/json.rpl		     -- JSON data format
 
 -- Some definitions that are familiar to grep users:
       
-rpl/grep.rpl
+$sys/rpl/grep.rpl
 
 -- Sample patterns for processing log files:
 
-rpl/spark.rpl   	        -- spark logs with python and java entries
+$sys/rpl/spark.rpl   	        -- spark logs with python and java entries
 
 -- Esoteric, perhaps:
-rpl/rosie.rpl
+$sys/rpl/rosie.rpl

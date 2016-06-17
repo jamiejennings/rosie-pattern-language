@@ -303,14 +303,17 @@ function util.split_path(path, optional_separator)
    if #optional_separator~=1 then
       error(string.format("Separator is not a one character string: %q", optional_separator))
    end
-   local f = path:gmatch("([^"..common.dirsep.."]*)"..common.dirsep.."?")
-   local results = {}
-   local component = f()
+   local f = path:gmatch("([^"..common.dirsep.."]*)"..common.dirsep.."()")
+   local results, lastpos = {}, 1
+   local component, nextpos = f()
    while component do
-      if component~="" then table.insert(results, component); end
-      component = f()
+      table.insert(results, component);
+      lastpos = nextpos
+      component, nextpos = f()
    end
-   return results
+   table.insert(results, path:sub(lastpos))
+   -- return the proper path, the base name, and a table of all the components
+   return path:sub(1,lastpos-1), results[#results], results
 end
 
 	 

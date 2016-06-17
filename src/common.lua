@@ -25,16 +25,39 @@ assert(ROSIE_HOME, "The variable ROSIE_HOME is not set in common.lua")
 common.dirsep = package.config:sub(1, (package.config:find("\n"))-1)
 assert(#common.dirsep==1, "directory separator should be a forward or a backward slash")
 
-function common.compute_full_path(path)
+function common.compute_full_path(path, manifest_path)
    local full_path
-   if path:sub(1,1)=="." or path:sub(1,1)=="/" then -- WILL BREAK ON WINDOWS
-      -- absolute path or relative to current directory
-      full_path = path
-   else
-      -- construct a path relative to ROSIE_HOME
-      full_path = ROSIE_HOME .. "/" .. path
+   if (type(path)~="string") or (path=="") then
+      error("Internal error: bad path argument to compute_full_path: " .. tostring(path))
    end
-   return full_path:gsub("\\ ", " ")		    -- unescape a space in the name
+   if path:sub(1,1)=="$" then
+      local sym = path:match("$([^" .. common.dirsep .. "]*)")
+      local rest = path:match("$[^" .. common.dirsep .. "]*(.*)")
+      if sym=="sys" then
+	 full_path = ROSIE_HOME .. rest
+      elseif sym=="lib" then
+	 if (type(manifest_path)~="string") or (manifest_path=="") then
+	    error("Internal error: bad manifest path argument to compute_full_path: " .. tostring(manifest_path))
+	 end
+	 if (manifest_path:sub(-1,-1)==common.dirsep) then
+	    manifest_path = manifest_path:sub(1,-2)
+	 end
+	 full_path = manifest_path .. rest
+      elseif (#sym>2) and (sym:sub(1,1)=="(") and (sym:sub(-1,-1)==")") then
+	 local env_value = os.getenv(sym:sub(2,-2))
+	 if (not env_value) or (env_value=="") then
+	    return false, string.format("Environment variable %q not set", sym:sub(2,-2))
+	 end
+	 full_path = env_value .. rest
+      else -- sym is not any of the valid things
+	 return false, string.format("Invalid file path syntax: %s", path)
+      end
+   else -- path does NOT start with $
+      full_path = path
+   end
+   full_path = (full_path:gsub("\\ ", " "))	    -- unescape any spaces in the name
+   local proper_path, base_name, splits = util.split_path(full_path)
+   return full_path, proper_path, base_name
 end
 
 local escape_substitutions =			    -- characters that change when escaped are:
