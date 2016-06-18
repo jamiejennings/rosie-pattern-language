@@ -267,13 +267,11 @@ function util.uuid()
 end
 
 function util.warn(...)
-   if not QUIET then
-      io.stderr:write("Warning: ")
-      for _,v in ipairs({...}) do
-	 io.stderr:write(tostring(v))
-      end
-      io.stderr:write("\n")
+   io.stderr:write("Warning: ")
+   for _,v in ipairs({...}) do
+      io.stderr:write(tostring(v))
    end
+   io.stderr:write("\n")
 end
 
 function util.extract_source_line_from_pos(source, pos)

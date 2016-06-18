@@ -12,9 +12,7 @@ json = require "cjson"
 
 local repl_patterns = [==[
       rpl_expression = expression
-      -- alias validchars = { [:alnum:] / [_%!$@:.,~-] }
-      -- path = "/"? { validchars+ {"/" validchars+}* }
-      path = {![:space:] .}+
+      path = {![:space:] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path
       manifest = ".manifest" path
       match = ".match" rpl_expression "," quoted_string
@@ -22,7 +20,7 @@ local repl_patterns = [==[
       on_off = "on" / "off"
       debug = ".debug" on_off?
       patterns = ".patterns"
-      clear = ".clear"
+      clear = ".clear" identifier?
       help = ".help"
       command = load / manifest / match / eval / debug / patterns / clear / help
       input = command / statement / identifier
@@ -106,8 +104,15 @@ function repl(en)
 	       local env = lapi.get_environment(en)
 	       common.print_env(env)
 	    elseif cname=="clear" then
-	       lapi.clear_environment(en)
-	       io.write("Pattern environment cleared\n")
+	       if csubs and csubs[1] then
+		  local name, pos, id, subs = common.decode_match(csubs[1])
+		  assert(name=="identifier")
+		  if en.env[id] then en.env[id] = nil -- abstraction breakage?
+		  else io.write("Repl: undefined identifier: ", id, "\n"); end
+	       else -- no identifier followed the clear command
+		  lapi.clear_environment(en)
+		  io.write("Pattern environment cleared\n")
+	       end
 	    elseif cname=="match" or cname =="eval" then
 	       local ename, epos, exp = common.decode_match(csubs[1])
 	       -- parsing strips the quotes off when exp is only a literal string, but compiler

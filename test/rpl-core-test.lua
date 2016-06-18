@@ -57,7 +57,7 @@ check(type(api.API_VERSION=="string"))
 check(type(api.new_engine)=="function")
 ok, eid_js = api.new_engine("hello")
 check(ok)
-eid = json.decode(eid_js)
+eid = json.decode(eid_js)[1]
 check(type(eid)=="string")
 
 subheading("Setting up assignments")

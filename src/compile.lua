@@ -463,10 +463,10 @@ function cinternals.compile_grammar(a, gmr, source, env)
    local name, pat = cinternals.compile_grammar_rhs(a, gmr, source, env)
    -- if no pattern returned, then errors were already explained
    if pat then
-      if env[name] and not QUIET then
-	 util.warn("Compiler: reassignment to identifier " .. name)
-      end
+      local msg
+      if env[name] then msg = "Warning: reassignment to identifier " .. name; end
       env[name] = pat
+      return pat, msg
    end
 end
 
@@ -532,13 +532,12 @@ function cinternals.compile_binding(a, gmr, source, env)
    assert(type(source)=="string")
    assert(a.binding and (type(a.binding.capture)=="boolean"))
    local _, ipos, iname = common.decode_match(lhs)
-   if env[iname] and not QUIET then
-      util.warn("Compiler: reassignment to identifier " .. iname)
-   end
    local pat = cinternals.compile_rhs(rhs, gmr, source, env, iname)
    pat.alias = (not a.binding.capture)
+   local msg
+   if env[iname] then msg = "Warning: reassignment to identifier " .. iname; end
    env[iname] = pat
-   return pat
+   return pat, msg
 end
 
 function cinternals.compile_rhs(a, gmr, source, env, iname)
@@ -576,16 +575,18 @@ end
 local function compile_astlist(astlist, source, env)
    assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
    assert(type(source)=="string")
-   local results = {}
-   local run_compiler = function(ast) return cinternals.compile_ast(ast, source, env); end
-   return map(run_compiler, astlist)
+   local results, messages = {}, {}
+   for i,a in ipairs(astlist) do
+      results[i], messages[i] = cinternals.compile_ast(a, source, env)
+   end
+   return results, messages
 end
 
 function cinternals.compile_astlist(astlist, source, env)
  local c = coroutine.create(compile_astlist)
- local no_lua_error, results, msg = coroutine.resume(c, astlist, source, env)
+ local no_lua_error, results, messages = coroutine.resume(c, astlist, source, env)
    if no_lua_error then
-      return results, msg                           -- msg may contain compiler warnings
+      return results, messages			    -- messages may contain compiler warnings
    else
       error("Internal error (compiler): " .. tostring(results))
    end
@@ -599,12 +600,13 @@ function compile.compile_source(source, env)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local results, message = cinternals.compile_astlist(astlist, source, env)
+   local results, messages = cinternals.compile_astlist(astlist, source, env)
    if results then
       foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
-      return results, message			    -- message may contain compiler warnings
+      return results, table.concat(messages, "\n")  -- message may contain compiler warnings
    else
-      return false, message			    -- message is a string in this case
+      assert(type(messages)=="string")
+      return false, messages			    -- message is a string in this case
    end
 end
 
@@ -629,10 +631,9 @@ function compile.compile_match_expression(source, env)
    end
    -- Check to see if the expression is a reference
    local name, pos, text, subs = common.decode_match(astlist[1])
-   local pat, raw_expression_flag, alias_flag
+   local pat
    if (name=="ref") then
       pat = env[text]
-      raw_expression_flag = (pattern.is(pat) and pat.raw)
    end
    -- Compile the expression
    local results, msg = compile.compile_source(source, env)
@@ -667,11 +668,11 @@ function compile.compile_core(filename, env)
    -- core_parse_and_explain for parsing the Rosie rpl.
    local astlist, msg = parse.core_parse_and_explain(source)
    if not astlist then error("Error parsing core rpl definition: " .. msg); end
-   local results, message = cinternals.compile_astlist(astlist, source, env)
+   local results, messages = cinternals.compile_astlist(astlist, source, env)
    if not results then
-      error("Error compiling core rpl definition: " .. message)
+      error("Error compiling core rpl definition: " .. messages)
    else
-      return true
+      return true, table.concat(messages, "\n")
    end
 end
 

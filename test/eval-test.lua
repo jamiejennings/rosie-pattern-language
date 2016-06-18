@@ -59,13 +59,13 @@ heading("Setting up")
 api = require "api"
 
 check(type(api)=="table")
-check(api.version)
-check(type(api.version=="function"))
+check(api.info)
+check(type(api.info=="function"))
 
 check(type(api.new_engine)=="function")
 ok, eid_js = api.new_engine("hello")
 check(ok)
-eid = json.decode(eid_js)
+eid = json.decode(eid_js)[1]
 check(type(eid)=="string")
 
 subheading("Setting up assignments")

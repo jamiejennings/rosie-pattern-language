@@ -56,21 +56,14 @@ local api = {API_VERSION = "0.99a",		    -- api version
 
 ----------------------------------------------------------------------------------------
 
--- Could use this in api_wrap if api_wrap turns out to be slow:
---
--- local function encode(success, ...)
---    return success, json.encode({...})
--- end
+local function encode_retvals(success, ...)
+   return success, json.encode({...})
+end
 
 local function api_wrap(f)
    api.NARGS[f] = debug.getinfo(f, "u").nparams	    -- number of args for f
    return function(...)
-	     local retvals = { pcall(f, ...) }
-	     if #retvals<=2 then
-		return retvals[1], json.encode(retvals[2])
-	     else
-		return retvals[1], json.encode({ table.unpack(retvals, 2) })
-	     end
+	     return encode_retvals(pcall(f, ...))
 	  end
 end
 
@@ -79,9 +72,10 @@ local function arg_error(msg)
 end
 
 ----------------------------------------------------------------------------------------
--- API and other version information
+-- API info, including version information
+----------------------------------------------------------------------------------------
 
-local function version()
+local function info()
    local info = {}
    for k,v in pairs(api) do
       if (type(k)=="string") and (type(v)=="string") then
@@ -92,7 +86,7 @@ local function version()
 end
 
 
-api.version = api_wrap(version)
+api.info = api_wrap(info)
 
 ----------------------------------------------------------------------------------------
 -- Managing the environment (collection of engines)
@@ -117,12 +111,19 @@ end
 api.inspect_engine = api_wrap(inspect_engine)
 
 local function new_engine(name)			    -- optional manifest? file list? code string?
+   name = name or ""
    if type(name)~="string" then
       arg_error("engine name not a string")
    end
    local en = engine(name)
-   if engine_list[en.id] then
-      error("Internal error: duplicate engine ids: " .. en.id)
+   local id = en.id
+   if engine_list[id] then
+      en.id = en.id .. os.tmpname():sub(-6)
+      if engine_list[en.id] then
+	 error("Internal error: duplicate engine ids: " .. en.id)
+      else
+	 util.warn("duplicate engine ids: " .. id .. " --> " .. en.id)
+      end
    end
    engine_list[en.id] = en
    return en.id
