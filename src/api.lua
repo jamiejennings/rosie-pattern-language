@@ -177,7 +177,7 @@ local function load_string(id, input)
    if type(input)~="string" then
       arg_error("input not a string")
    end
-   local pat, msg = compile.compile(input, en.env)
+   local pat, msg = compile.compile_source(input, en.env)
    if not pat then error(msg, 0)
    else return msg				    -- msg could contain warnings
    end

@@ -26,7 +26,7 @@ local mpats = [==[
    ]==]
 
 local manifest_engine = engine("manifest")
-local ok, msg = compile.compile(mpats, manifest_engine.env)
+local ok, msg = compile.compile_source(mpats, manifest_engine.env)
 if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
 assert(pattern.is(manifest_engine.env.line))
 manifest_engine:configure({expression="line", encoder=false})
@@ -45,7 +45,7 @@ local function process_manifest_line(en, line, manifest_path)
       end
       local input, msg = util.readfile(filename)
       if not input then return false, msg; end
-      local result, msg = compile.compile(input, en.env)
+      local result, msg = compile.compile_source(input, en.env)
       return (not (not result)), msg
    else
       return true

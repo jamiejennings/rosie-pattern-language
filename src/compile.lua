@@ -557,7 +557,7 @@ function cinternals.compile_rhs(a, gmr, source, env, iname)
    return pat
 end
 
-function cinternals.compile_ast(ast, gmr, source, env)
+function cinternals.compile_ast(ast, source, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
 		      binding=cinternals.compile_binding;
@@ -565,38 +565,46 @@ function cinternals.compile_ast(ast, gmr, source, env)
 		      exp=cinternals.compile_exp;
 		      default=cinternals.compile_exp;
 		   }
-   return common.walk_ast(ast, functions, gmr, source, env)
+   return common.walk_ast(ast, functions, false, source, env)
 end
 
-function cinternals.compile_astlist(astlist, gmr, source, env)
-   assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
-   assert(type(source)=="string")
-   local results = {}
-   local run_compiler = function(ast) return cinternals.compile_ast(ast, gmr, source, env); end
-   return map(run_compiler, astlist)
-end
 
 ----------------------------------------------------------------------------------------
 -- Top-level interface to compiler
 ----------------------------------------------------------------------------------------
 
+local function compile_astlist(astlist, source, env)
+   assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
+   assert(type(source)=="string")
+   local results = {}
+   local run_compiler = function(ast) return cinternals.compile_ast(ast, source, env); end
+   return map(run_compiler, astlist)
+end
+
+function cinternals.compile_astlist(astlist, source, env)
+ local c = coroutine.create(compile_astlist)
+ local no_lua_error, results, msg = coroutine.resume(c, astlist, source, env)
+   if no_lua_error then
+      return results, msg                           -- msg may contain compiler warnings
+   else
+      error("Internal error (compiler): " .. tostring(results))
+   end
+end
+
 compile.parser = parse.core_parse_and_explain;	    -- Using this as a dynamic variable
 
-function compile.compile(source, env)
+function compile.compile_source(source, env)
    local astlist, original_astlist = compile.parser(source)
    if not astlist then return false, original_astlist; end -- original_astlist is msg
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local c = coroutine.create(cinternals.compile_astlist)
-   local no_lua_error, results, msg = coroutine.resume(c, astlist, false, source, env)
-   if no_lua_error then
-      if results then
-      	 foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
-      end
-      return results, msg			    -- msg may contain compiler warnings
+   local results, message = cinternals.compile_astlist(astlist, source, env)
+   if results then
+      foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
+      return results, message			    -- message may contain compiler warnings
    else
-      error("Internal error (compiler): " .. tostring(results))
+      return false, message			    -- message is a string in this case
    end
 end
 
@@ -627,7 +635,7 @@ function compile.compile_match_expression(source, env)
       raw_expression_flag = (pattern.is(pat) and pat.raw)
    end
    -- Compile the expression
-   local results, msg = compile.compile(source, env)
+   local results, msg = compile.compile_source(source, env)
    if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
       return false, msg
    end
@@ -657,12 +665,14 @@ function compile.compile_core(filename, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    -- Intentionally ignoring the value of compile.parse, we ensure the use of
    -- core_parse_and_explain for parsing the Rosie rpl.
-   local astlist = parse.core_parse_and_explain(source)
-   if not astlist then return nil; end		    -- errors have been explained already
-   -- No coroutine here for compiling, because if compile_astist throws an error, it's a serious
-   -- bug and nothing else can work.
-   cinternals.compile_astlist(astlist, false, source, env)
-   return true
+   local astlist, msg = parse.core_parse_and_explain(source)
+   if not astlist then error("Error parsing core rpl definition: " .. msg); end
+   local results, message = cinternals.compile_astlist(astlist, source, env)
+   if not results then
+      error("Error compiling core rpl definition: " .. message)
+   else
+      return true
+   end
 end
 
 
