@@ -23,7 +23,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 function reconstitute_pattern_definition(id, p)
    if p then
-      return ( ((p.alias and "alias ") or "") .. id .. " = " ..
+      return ( --((p.alias and "alias ") or "") .. id .. " = " ..
 	       ((p.original_ast and parse.reveal_ast(p.original_ast)) or
 	        (p.ast and parse.reveal_ast(p.ast)) or
 	      "// built-in RPL pattern //"))
