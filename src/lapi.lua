@@ -72,12 +72,8 @@ end
 function lapi.load_manifest(en, full_path)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    -- local full_path, proper_path = common.compute_full_path(manifest_file)
-   local result, msg = manifest.process_manifest(en, full_path)
-   if result then
-      return true, full_path
-   else
-      return false, msg
-   end
+   local ok, messages, full_path = manifest.process_manifest(en, full_path)
+   return ok, common.compact_messages(messages), full_path
 end
 
 function lapi.load_file(en, path)
@@ -86,22 +82,14 @@ function lapi.load_file(en, path)
    if not full_path then return false, msg; end
    local input, msg = util.readfile(full_path)
    if not input then return false, msg; end
-   local result, msg = compile.compile_source(input, en.env)
-   if result then
-      return true, full_path
-   else
-      return false, msg
-   end
+   local result, messages = compile.compile_source(input, en.env)
+   return result, common.compact_messages(messages), full_path
 end
 
 function lapi.load_string(en, input)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   local results, msg = compile.compile_source(input, en.env)
-   if results then
-      return true, msg				    -- msg may contain warnings
-   else
-      return false, msg
-   end
+   local results, messages = compile.compile_source(input, en.env)
+   return results, common.compact_messages(messages)
 end
 
 -- get a human-readable definition of identifier (reconstituted from its ast)

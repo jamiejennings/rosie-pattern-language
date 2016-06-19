@@ -183,9 +183,9 @@ function setup_engine()
    local eval = OPTION["-eval"]
    -- (1a) Load the manifest
    if opt_manifest then
-      local success, msg = lapi.load_manifest(CL_ENGINE, opt_manifest)
+      local success, messages = lapi.load_manifest(CL_ENGINE, opt_manifest)
       if not success then
-	 io.stdout:write(msg, "\n")
+	 for _,msg in ipairs(messages) do if msg then io.stdout:write(msg, "\n"); end; end
 	 os.exit(-4)
       end
    end

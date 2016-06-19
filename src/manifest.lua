@@ -42,10 +42,10 @@ local function process_manifest_line(en, line, manifest_path)
       end
       local input, msg = util.readfile(filename)
       if not input then return false, msg; end
-      local result, msg = compile.compile_source(input, en.env)
-      return (not (not result)), msg
+      local results, messages = compile.compile_source(input, en.env)
+      return (not (not results)), messages
    else
-      return true
+      return true				    -- no file name on this line
    end
 end
 
@@ -67,11 +67,18 @@ function manifest.process_manifest(en, manifest_filename)
       local msg = 'Error reading manifest file "' .. full_path .. '": ' .. line	
       return false, msg
    end
+   local all_messages = {}
    while line and success do
-      success, msg = process_manifest_line(en, line, manifest_path)
+      success, messages = process_manifest_line(en, line, manifest_path)
+      if not success then return success, messages; end
+      if messages then
+	 for _, msg in ipairs(messages) do
+	    if msg then table.insert(all_messages, m); end;
+	 end -- for
+      end
       line = nextline()
-   end
-   return success, (success and full_path) or msg
+   end -- while line and success
+   return success, all_messages, full_path
 end
 
 return manifest

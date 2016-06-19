@@ -1,6 +1,6 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- bootstrap.lua      Bootstrap Rosie by using the native Lua parser to parse rosie-core.rpl
+---- bootstrap.lua      Bootstrap Rosie by using the native Lua parser to parse rpl-core.rpl
 ----
 ---- © Copyright IBM Corporation 2016.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -119,7 +119,7 @@ function bootstrap()
 
    -- Create a matching engine for processing Rosie Pattern Language files
    ROSIE_ENGINE = engine("RPL engine")
-   compile.compile_core(ROSIE_HOME.."/src/rosie-core.rpl", ROSIE_ENGINE.env)
+   compile.compile_core(ROSIE_HOME.."/src/rpl-core.rpl", ROSIE_ENGINE.env)
    local success, result = compile.compile_match_expression('rpl', ROSIE_ENGINE.env)
    if not success then error("Bootstrap error: could not compile rosie core rpl: " .. tostring(result)); end
    ROSIE_ENGINE.expression = 'rpl';

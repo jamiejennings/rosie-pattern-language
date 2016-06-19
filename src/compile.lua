@@ -578,6 +578,7 @@ local function compile_astlist(astlist, source, env)
    local results, messages = {}, {}
    for i,a in ipairs(astlist) do
       results[i], messages[i] = cinternals.compile_ast(a, source, env)
+      if not messages[i] then messages[i] = false; end -- keep messages a proper list: no nils
    end
    return results, messages
 end
@@ -603,7 +604,7 @@ function compile.compile_source(source, env)
    local results, messages = cinternals.compile_astlist(astlist, source, env)
    if results then
       foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
-      return results, table.concat(messages, "\n")  -- message may contain compiler warnings
+      return results, messages  -- message may contain compiler warnings
    else
       assert(type(messages)=="string")
       return false, messages			    -- message is a string in this case
@@ -672,7 +673,7 @@ function compile.compile_core(filename, env)
    if not results then
       error("Error compiling core rpl definition: " .. messages)
    else
-      return true, table.concat(messages, "\n")
+      return true, messages
    end
 end
 

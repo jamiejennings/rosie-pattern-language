@@ -157,9 +157,10 @@ local function load_manifest(id, manifest_file)
    if type(manifest_file)~="string" then
       arg_error("manifest filename not a string")
    end
-   local ok, msg = manifest.process_manifest(en, manifest_file)
-   if not ok then error(msg, 0)
-   else return msg				    -- msg may contain warnings
+   -- return ok, messages table, and full_path
+   local ok, messages, full_path = manifest.process_manifest(en, manifest_file)
+   if not ok then error(messages, 0)
+   else return messages, full_path
    end
 end
 
@@ -167,8 +168,12 @@ api.load_manifest = api_wrap(load_manifest)
 
 local function load_file(id, path)
    local en = engine_from_id(id)
-   local ok, msg = lapi.load_file(en, path)
-   return (ok and msg) or error(msg,0)		    -- msg is full path of file that was loaded
+   local ok, messages, full_path = lapi.load_file(en, path)
+   if ok then
+      return messages, full_path
+   else
+      error(messages,0)
+   end
 end
 
 api.load_file = api_wrap(load_file)
@@ -178,9 +183,11 @@ local function load_string(id, input)
    if type(input)~="string" then
       arg_error("input not a string")
    end
-   local pat, msg = compile.compile_source(input, en.env)
-   if not pat then error(msg, 0)
-   else return msg				    -- msg could contain warnings
+   local results, messages = lapi.load_string(en, input)
+   if results then
+      return messages
+   else
+      error(messages, 0)
    end
 end
 

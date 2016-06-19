@@ -27,7 +27,7 @@ local repl_patterns = [==[
 ]==]
 
 repl_engine = lapi.new_engine("repl")
-lapi.load_file(repl_engine, "src/rosie-core.rpl")
+lapi.load_file(repl_engine, "src/rpl-core.rpl")
 lapi.load_string(repl_engine, repl_patterns)
 lapi.configure_engine(repl_engine, {expression="input", encoder="json"})
 
@@ -83,16 +83,17 @@ function repl(en)
 	    local cname, cpos, ctext, csubs = common.decode_match(subs[1])
 	    if cname=="load" or cname=="manifest" then
 	       local pname, ppos, path = common.decode_match(csubs[1])
-	       local results, msg
+	       local ok, messages, full_path
 	       if cname=="load" then 
-		  results, msg = lapi.load_file(en, path)
+		  ok, messages, full_path = lapi.load_file(en, path)
 	       else -- manifest command
-		  results, msg = lapi.load_manifest(en, path)
+		  ok, messages, full_path = lapi.load_manifest(en, path)
 	       end
-	       if results then
-		  io.write("Loaded ", msg, "\n")
+	       if ok then
+		  for _, msg in ipairs(messages) do if msg then io.write(msg); end; end
+		  io.write("Loaded ", full_path, "\n")
 	       else
-		  io.write(msg, "\n")
+		  io.write(messages, "\n")
 	       end
 	    elseif cname=="debug" then
 	       if csubs then
@@ -143,8 +144,10 @@ function repl(en)
 	       io.write("Repl: unimplemented command\n")
 	    end -- switch on command
 	 elseif name=="alias_" or name=="assignment_" or name=="grammar_" then
-	    local result, msg = lapi.load_string(en, text);
-	    if not result then io.write(msg, "\n"); end
+	    local ok, messages = lapi.load_string(en, text);
+	    if not ok then io.write(messages, "\n")
+	    else for _, msg in ipairs(messages) do if msg then io.write(msg); end; end
+	    end
 	 else
 	    io.write("Repl: internal error\n")
 	 end -- switch on type of input received

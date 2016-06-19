@@ -60,6 +60,16 @@ function common.compute_full_path(path, manifest_path)
    return full_path, proper_path, base_name
 end
 
+function common.compact_messages(tbl)
+   if type(tbl)~="table" then return tbl; end	    -- mellifluous
+   local only_strings = {}
+   for _, msg in ipairs(tbl) do
+      if msg then table.insert(only_strings, msg); end
+   end
+   if not next(only_strings) then return nil;
+   else return only_strings; end
+end
+
 local escape_substitutions =			    -- characters that change when escaped are:
    setmetatable(
    { a = "\a";					    -- bell
