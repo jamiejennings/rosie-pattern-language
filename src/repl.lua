@@ -90,7 +90,7 @@ function repl(en)
 		  ok, messages, full_path = lapi.load_manifest(en, path)
 	       end
 	       if ok then
-		  for _, msg in ipairs(messages) do if msg then io.write(msg); end; end
+		  if messages then foreach(print, messages); end
 		  io.write("Loaded ", full_path, "\n")
 	       else
 		  io.write(messages, "\n")

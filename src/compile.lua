@@ -343,32 +343,45 @@ function cinternals.compile_named_charset(a, gmr, source, env)
    return pattern{name=name, peg=pat, ast=a}
 end
 
+function cinternals.compile_range_charset(a, gmr, source, env)
+   assert(a, "did not get ast in compile_range_charset")
+   local rname, rpos, rtext, rsubs = common.decode_match(a)
+   assert(not rsubs[3])
+   assert(next(rsubs[1])=="character")
+   assert(next(rsubs[2])=="character")
+   local cname1, cpos1, ctext1 = common.decode_match(rsubs[1])
+   local cname2, cpos2, ctext2 = common.decode_match(rsubs[2])
+   return pattern{name=name,
+		  peg=R(common.unescape_string(ctext1)..common.unescape_string(ctext2)),
+		  ast=a}
+end
+
+function cinternals.compile_charlist(a, gmr, source, env)
+   assert(a, "did not get ast in compile_charlist")
+   local clname, clpos, cltext, clsubs = common.decode_match(a)
+   local exps = "";
+   for i = 1, #clsubs do
+      local v = clsubs[i]
+      assert(next(v)=="character", "did not get character sub in compile_charlist")
+      local cname, cpos, ctext = common.decode_match(v)
+      exps = exps .. common.unescape_string(ctext)
+   end
+   return pattern{name=name, peg=S(exps), ast=a}
+end
+
+-- function cinternals.compile_charset_exp(a, gmr, source, env)
+--    assert(a, "did not get ast in compile_charset_exp")
+--    local name, pos, text = common.decode_match(a)
+--    ...
+-- end
+
 function cinternals.compile_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_charset")
    local name, pos, text, subs = common.decode_match(a)
    if next(subs[1])=="range" then
-      local r = subs[1]
-      assert(r, "did not get range ast in compile_charset")
-      local rname, rpos, rtext, rsubs = common.decode_match(r)
-      assert(not rsubs[3])
-      assert(next(rsubs[1])=="character")
-      assert(next(rsubs[2])=="character")
-      local cname1, cpos1, ctext1 = common.decode_match(rsubs[1])
-      local cname2, cpos2, ctext2 = common.decode_match(rsubs[2])
-      return pattern{name=name,
-		     peg=R(common.unescape_string(ctext1)..common.unescape_string(ctext2)),
-		     ast=a}
+      return cinternals.compile_range_charset(subs[1], gmr, source, env)
    elseif next(subs[1])=="charlist" then
-      local exps = "";
-      assert(subs[1], "did not get charlist sub in compile_charset")
-      local clname, clpos, cltext, clsubs = common.decode_match(subs[1])
-      for i = 1, #clsubs do
-	 local v = clsubs[i]
-	 assert(next(v)=="character", "did not get character sub in compile_charset")
-	 local cname, cpos, ctext = common.decode_match(v)
-	 exps = exps .. common.unescape_string(ctext)
-      end
-      return pattern{name=name, peg=S(exps), ast=a}
+      return cinternals.compile_charlist(subs[1], gmr, source, env)
    else
       error("Internal error (compiler): Unknown charset type: "..next(subs[1]))
    end
