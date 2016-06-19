@@ -12,7 +12,6 @@ require "list"
 syntax2 = {}
 
 local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
---local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
 local looking_at_boundary_ast = common.create_match("predicate",
 						    0,
 						    "*generated*",
@@ -314,6 +313,17 @@ syntax2.cooked_to_raw =
 			   nil,
 			   false)
 
+function syntax2.expand_charset_exp(ast)
+   local name, pos, text, subs = common.decode_match(ast)
+   assert(name=="charset_exp")
+   assert(subs and subs[1])
+   if subs[2] then
+      return syntax.generate("raw_exp", syntax2.rebuild_choice(subs))
+   else
+      return syntax.generate("raw_exp", subs[1])
+   end
+end
+   
 function syntax2.expand_rhs(ast, original_rhs_name)
    local name, body = next(ast)
    if original_rhs_name=="raw" then
@@ -329,6 +339,8 @@ function syntax2.expand_rhs(ast, original_rhs_name)
       return ast(ast)
    elseif name=="capture" then
       return syntax.generate("capture", body.subs[1], syntax2.expand_rhs(body.subs[2]))
+   elseif name=="charset_exp" then
+      return syntax2.expand_charset_exp(ast)
    elseif syntax2.expression_p(ast) then
       local new = ast
       if ((name=="raw") or (name=="literal") or (name=="charset") or
@@ -374,9 +386,6 @@ syntax2.to_binding =
 --     Compile the exp to a pattern.
 --     Proceed as above based on whether the pattern is marked "raw" or not.
 
--- syntax2.top_level_transform =
---    syntax2.compose(syntax2.cooked_to_raw, syntax2.capture)
-
 function syntax2.expression_p(ast)
    local name, body = next(ast)
    return ((name=="identifier") or
@@ -387,6 +396,7 @@ function syntax2.expression_p(ast)
 	   (name=="quantified_exp") or
 	   (name=="named_charset") or
 	   (name=="charset") or
+	   (name=="charset_exp") or
 	   (name=="choice") or
 	   (name=="sequence") or
 	   (name=="predicate"))
@@ -408,28 +418,6 @@ function syntax2.top_level_transform(ast)
       return syntax2.expand_rhs(ast, (next(ast)))
    end
 end
-
--- function syntax2.contains_capture(ast)
---    local name, body = next(ast)
---    if name=="capture" then return true; end
---    return reduce(or_function, false, map(syntax2.contains_capture, body.subs))
--- end
-
----------------------------------------------------------------------------------------------------
--- Testing
----------------------------------------------------------------------------------------------------
--- syntax2.assignment_to_alias =
---    syntax2.make_transformer(function(ast)
--- 			      local name, body = next(ast)
--- 			      local lhs = body.subs[1]
--- 			      local rhs = body.subs[2]
--- 			      local b = syntax2.generate("alias_", lhs, rhs)
--- 			      b.alias_.text = body.text
--- 			      b.alias_.pos = body.pos
--- 			      return b
--- 			   end,
--- 			   "assignment_",
--- 			   false)
 
 return syntax2
 

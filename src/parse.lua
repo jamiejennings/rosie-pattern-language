@@ -183,7 +183,8 @@ function parse.syntax_error_check(ast)
 		      negation=none_found;
 		      lookat=none_found;
 		      named_charset=none_found;
-		      charset=check_one_branch;
+		      --charset_exp=check_many_branches;
+		      charset=check_one_branch;	    -- USED ONLY IN CORE
 		      charlist=check_many_branches;
 		      range=check_two_branches;
 		      quantified_exp=check_two_branches;

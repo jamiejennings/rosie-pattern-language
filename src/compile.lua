@@ -369,12 +369,6 @@ function cinternals.compile_charlist(a, gmr, source, env)
    return pattern{name=name, peg=S(exps), ast=a}
 end
 
--- function cinternals.compile_charset_exp(a, gmr, source, env)
---    assert(a, "did not get ast in compile_charset_exp")
---    local name, pos, text = common.decode_match(a)
---    ...
--- end
-
 function cinternals.compile_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_charset")
    local name, pos, text, subs = common.decode_match(a)
@@ -514,7 +508,9 @@ cinternals.compile_exp_functions = {"compile_exp";
 				    sequence=cinternals.compile_sequence;
 				    literal=cinternals.compile_literal;
 				    named_charset=cinternals.compile_named_charset;
-				    charset=cinternals.compile_charset;
+				    range=cinternals.compile_range_charset;
+				    charlist=cinternals.compile_charlist;
+				    charset=cinternals.compile_charset; -- ONLY USED IN CORE
 				    new_quantified_exp=cinternals.compile_new_quantified_exp;
 				    syntax_error=cinternals.compile_syntax_error;
 				 }

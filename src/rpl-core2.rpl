@@ -1,0 +1,94 @@
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- rpl-core.rpl       Rosie Pattern Language definition for Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+
+alias newline = {"\n"}				    -- raw mode just to suppress compiler warning 
+
+alias comment = { "--" {!newline .}* {newline / $} }
+alias ignore = { { [:space:] / comment }* }
+
+alias id_char = { [:alnum:] / [_] }
+alias id = { [:alpha:] id_char* }
+
+identifier = { { id {[.]id}* }			    -- hierarchical identifier name
+	       / [.]				    -- a single dot
+	       / [$]				    -- a single dollar sign
+	       / [~]				    -- a single tilde
+	    }
+
+alias dquote = { [\"] }
+alias esc =    { [\\] }
+literal = { {!{esc/dquote} .} / {esc .} }* 
+alias quoted_string = { dquote literal dquote }
+
+
+star =     { [*] }
+question = { [?] }
+plus =     { [+] }
+alias end_token = { "end" !id_char }
+alias keyword_list = { "alias" / "grammar" / "end" }
+keyword = { keyword_list !id_char }
+
+-- it is important that an error consume at least one character
+-- as a tactic, we will skip to eol and try to continue
+rest_of_line = { {!newline .}+ ignore }
+syntax_error = { rest_of_line }
+
+character = { {!esc .} / {esc .} }
+range = { character [-] character } 
+charlist = { {!"]" character}* }
+named_charset = { {![:] .}+ }
+alias one_charset = { "[" { ":" named_charset ":]" } /
+	                  { range "]" } /
+		          { charlist "]" } /
+		          syntax_error
+		    }
+charset_exp = { "[" one_charset+ "]" }
+
+low =  { [:digit:]* }				    -- an int or nothing
+high = { [:digit:]* }
+repetition = { "{" ignore low ignore "," ignore high ignore "}" }
+	          
+
+alias quantifier = star / question / plus / repetition
+
+assignment_prefix = identifier ignore "="
+statement_prefix = {keyword / assignment_prefix}
+
+alias slash =         { [/] }
+alias open =          { [(] }
+alias openraw =       { [{] }
+alias close =         { [)] }
+alias closeraw =      { [}] }
+
+negation = { [!] }
+lookat = { [@] }
+alias predicate_symbol = { negation / lookat }
+	    
+grammar
+   alias expression = {ignore { syntax_error / choice / sequence / quantified_exp / plain_exp} }
+   syntax_error = { statement_prefix rest_of_line }
+   choice = { {quantified_exp / plain_exp} ignore slash expression }
+   sequence = { {quantified_exp / plain_exp} {ignore !statement_prefix expression}+ }
+   alias plain_exp = { ignore 
+		       { identifier / quoted_string / raw / cooked / charset_exp / predicate } }
+   quantified_exp = { plain_exp ignore quantifier }
+   cooked = { open expression+ ignore close }
+   raw = { openraw expression+ ignore closeraw }
+   predicate = { predicate_symbol ignore {quantified_exp / plain_exp} }
+end
+
+grammar
+   alias statement = { alias_ / grammar_ / assignment_ }
+   alias_ = { "alias" ignore identifier ignore "=" expression }
+   grammar_ = { "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token }
+   --   assignment_ = { identifier ignore "=" { expression / syntax_error } }
+   assignment_ = { identifier ignore "=" expression }
+end
+
+rpl = {ignore {statement / expression / syntax_error}}
