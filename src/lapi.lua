@@ -128,8 +128,8 @@ function lapi.match(en, input_text, start)
    return result, (#input_text - nextpos + 1)
 end
 
-function lapi.match_file(en, infilename, outfilename, errfilename)
-   return en:match_file(infilename, outfilename, errfilename)
+function lapi.match_file(en, infilename, outfilename, errfilename, wholefileflag)
+   return en:match_file(infilename, outfilename, errfilename, wholefileflag)
 end
 
 function lapi.eval(en, input_text, start)
@@ -139,8 +139,8 @@ function lapi.eval(en, input_text, start)
    return result, leftover, trace
 end
 
-function lapi.eval_file(en, infilename, outfilename, errfilename)
-   return en:eval_file(infilename, outfilename, errfilename)
+function lapi.eval_file(en, infilename, outfilename, errfilename, wholefileflag)
+   return en:eval_file(infilename, outfilename, errfilename, wholefileflag)
 end
 
 ----------------------------------------------------------------------------------------

@@ -208,23 +208,6 @@ api.get_binding = api_wrap(get_binding)
 -- Matching
 ----------------------------------------------------------------------------------------
 
-local encoder_table =
-   {json = json.encode,
-    color = color_string_from_leaf_nodes,
-    text = function(t) local k,v = next(t); assert(type(v)=="table"); return (v and v.text) or ""; end,
- }
-
-local function name_to_encoder(name)
-   return encoder_table[name]
-end
-
-local function encoder_to_name(fcn)
-   for k,v in pairs(encoder_table) do
-      if v==fcn then return k; end
-   end
-   return "<unknown>"
-end
-
 local function configure_engine(id, c_string)
    local en = engine_from_id(id)
    if type(c_string)~="string" then
@@ -251,8 +234,11 @@ end
 
 api.match = api_wrap(match)
 
-local function match_file(id, infilename, outfilename, errfilename)
-   return lapi.match_file((engine_from_id(id)), infilename, outfilename, errfilename)
+local function match_file(id, infilename, outfilename, errfilename, wholefileflag)
+   if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
+      arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
+   end
+   return lapi.match_file((engine_from_id(id)), infilename, outfilename, errfilename, wholefileflag)
 end
 
 api.match_file = api_wrap(match_file)
@@ -267,8 +253,11 @@ end
 
 api.eval = api_wrap(eval_)
 
-local function eval_file(id, infilename, outfilename, errfilename)
-   return lapi.eval_file(engine_from_id(id), infilename, outfilename, errfilename)
+local function eval_file(id, infilename, outfilename, errfilename, wholefileflag)
+   if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
+      arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
+   end
+   return lapi.eval_file(engine_from_id(id), infilename, outfilename, errfilename, wholefileflag)
 end
 
 api.eval_file = api_wrap(eval_file)

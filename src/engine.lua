@@ -69,7 +69,7 @@ end
 local encoder_table =
    {json = json.encode,
     color = color_string_from_leaf_nodes,
-    text = string_from_leaf_nodes,
+    nocolor = string_from_leaf_nodes,
     fulltext = common.match_to_text,
     [false] = function(...) return ...; end
  }
@@ -141,7 +141,7 @@ local function open3(e, infilename, outfilename, errfilename)
    return infile, outfile, errfile
 end
 
-local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename)
+local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename, wholefileflag)
    local peg = (e.pattern.peg * Cp())
    if type(eval_flag)~="boolean" then engine_error(e, "bad eval flag"); end
    if not e.encoder_function then engine_error(e, "output encoder required, but not set"); end
@@ -151,7 +151,17 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
    local inlines, outlines, errlines = 0, 0, 0;
    local trace, nextpos, m;
    local encode = e.encoder_function;
-   local nextline = infile:lines();
+   local nextline
+   if wholefileflag then
+      nextline = function()
+		    if wholefileflag then
+		       wholefileflag = false;
+		       return infile:read("a")
+		    end
+		 end
+   else
+      nextline = infile:lines();
+   end
    local o_write, e_write = outfile.write, errfile.write
    local match = peg.match
    local l = nextline(); 
@@ -175,12 +185,12 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
    return inlines, outlines, errlines
 end
 
-local function engine_match_file(e, infilename, outfilename, errfilename)
-   return engine_process_file(e, false, infilename, outfilename, errfilename)
+local function engine_match_file(e, infilename, outfilename, errfilename, wholefileflag)
+   return engine_process_file(e, false, infilename, outfilename, errfilename, wholefileflag)
 end
 
-local function engine_eval_file(e, infilename, outfilename, errfilename)
-   return engine_process_file(e, true, infilename, outfilename, errfilename)
+local function engine_eval_file(e, infilename, outfilename, errfilename, wholefileflag)
+   return engine_process_file(e, true, infilename, outfilename, errfilename, wholefileflag)
 end
 
 ----------------------------------------------------------------------------------------

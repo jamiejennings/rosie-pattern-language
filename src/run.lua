@@ -54,9 +54,9 @@ local function greeting()
    io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")
 end
 
-local options_without_args = {"-help", "-patterns", "-verbose", "-json", "-nocolor", "-all",
-			      "-repl", "-grep", "-eval" }
-local options_with_args = {"-manifest", "-f", "-e" }
+local options_without_args = {"-help", "-patterns", "-verbose", "-all",
+			      "-repl", "-grep", "-eval", "-wholefile" }
+local options_with_args = {"-manifest", "-f", "-e", "-encode"}
 
 local valid_options = append(options_without_args, options_with_args)
 
@@ -230,16 +230,14 @@ function process_pattern_against_file(infilename)
    if OPTION["-all"] then errfilename = ""; end	    -- stderr
 
    -- (4) Set up what kind of encoding we want done on the output
-   encoder = "color"
-   if OPTION["-json"] then encoder = "json"
-   elseif OPTION["-nocolor"] then encoder = "text"; end
+   encoder = OPTION["-encode"] or "color"
    success, msg = lapi.configure_engine(CL_ENGINE, {encoder=encoder})
-   if not success then io.write(msg, "\n"); os.exit(-1); end
+   if not success then io.write("Engine configuration error: ", msg, "\n"); os.exit(-1); end
 
    -- (5) Iterate through the lines in the input file
    local match_function = lapi.match_file
    if eval then match_function = lapi.eval_file; end
-   local cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename)
+   local cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename, OPTION["-wholefile"])
    if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
 
    -- (6) Print summary
