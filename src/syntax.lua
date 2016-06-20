@@ -341,6 +341,8 @@ function syntax.expand_rhs(ast, original_rhs_name)
       return syntax.generate("capture", body.subs[1], syntax.expand_rhs(body.subs[2]))
    elseif name=="charset_exp" then
       return syntax.expand_charset_exp(ast)
+   elseif name=="syntax_error" then
+      return ast
    elseif syntax.expression_p(ast) then
       local new = ast
       if ((name=="raw") or (name=="literal") or (name=="charset") or
