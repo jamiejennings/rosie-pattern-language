@@ -1,0 +1,71 @@
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- language-comments.rpl
+----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+-- require "csv"
+
+alias dquoted_field = {csv.escaped_dquote / {!csv.dquote .}}*
+alias squoted_field = {csv.escaped_squote / {!csv.squote .}}*
+
+alias dq = {csv.dquote dquoted_field csv.dquote}
+alias sq = {csv.squote squoted_field csv.squote}
+
+alias string_constant = dq / sq
+
+comment = {!"\n" .}*
+alias hash_comment = {[:space:]* "#" comment "\n"?}
+alias hash_skip = { string_constant / {!"#" .} }*
+
+----------------------------------------------------------------------------------------
+-- Ruby
+----------------------------------------------------------------------------------------
+
+-- useful patterns to search for: ruby.line_comment, ruby.any_comment
+
+alias ruby.line_comment = hash_comment*
+alias ruby.any_comment = { hash_skip hash_comment }*
+
+----------------------------------------------------------------------------------------
+-- Python
+----------------------------------------------------------------------------------------
+
+-- useful patterns to search for: py.line_comment, py.any_comment
+alias py.line_comment = hash_comment*
+alias py.any_comment = { hash_skip hash_comment }*
+
+----------------------------------------------------------------------------------------
+-- Perl
+----------------------------------------------------------------------------------------
+
+-- useful patterns to search for: pl.line_comment, pl.any_comment
+alias pl.line_comment = hash_comment*
+alias pl.any_comment = { hash_skip hash_comment }*
+
+----------------------------------------------------------------------------------------
+-- javascript, Java, C, and more
+----------------------------------------------------------------------------------------
+
+-- useful patterns to search for: js.line_comment, js.block_comment, js.any_comment
+
+alias js.comment_char = "//"
+alias js.line_comment = {[:space:]* js.comment_char comment "\n"?}+
+
+alias js.start_comment = "/*"
+alias js.end_comment = "*/"
+alias js.any_comment_start = js.comment_char / js.start_comment
+
+alias js.block_comment_skip = {!js.start_comment .}*
+
+js.comment_block = {!js.end_comment .}*
+
+alias js.block_comment_full = { js.start_comment
+				js.comment_block
+				js.end_comment 
+			     }
+alias js.block_comment = { js.block_comment_skip js.block_comment_full }+
+alias js.skip = { string_constant / {!js.any_comment_start .} }*
+alias js.any_comment = { js.skip {js.line_comment / js.block_comment_full} }+
