@@ -217,6 +217,30 @@ local function eval_charset(a, input, start, gmr, source, env, indent, fail_outp
    return m, pos, msg
 end
 
+local function eval_charlist(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
+   local name, pos, text, subs = common.decode_match(a)
+   msg = msg .. step_(indent, step,
+		      "CHARACTER SET: ",
+		      parse.reveal_ast(a),
+		      " (a set of " .. #subs .. " characters)")
+   local pat = cinternals.compile_charlist(a, gmr, source, env)
+   local m, pos = eval.match_peg(pat.peg, input, start) 
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+   return m, pos, msg
+end
+
+local function eval_range(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
+   local name, pos, text, subs = common.decode_match(a)
+   msg = msg .. step_(indent, step,
+		      "CHARACTER SET: ",
+		      parse.reveal_ast(a),
+		      " (a character range)")
+   local pat = cinternals.compile_range_charset(a, gmr, source, env)
+   local m, pos = eval.match_peg(pat.peg, input, start) 
+   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+   return m, pos, msg
+end
+
 local function eval_named_charset(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "NAMED CHARSET: ", parse.reveal_ast(a))
    local pat = cinternals.compile_named_charset(a, gmr, source, env)
@@ -271,6 +295,8 @@ eval_exp = function(ast, input, start, gmr, source, env, indent, fail_output_onl
 			 ref=eval_ref;
 			 literal=eval_literal;
 			 named_charset=eval_named_charset;
+			 charlist=eval_charlist;
+			 range=eval_range;
 			 charset=eval_charset;
 			 new_quantified_exp=eval_quantified_exp;
 			 new_grammar=eval_grammar;

@@ -8,20 +8,20 @@
 
 
 alias any = .
-alias whitespace = [:space:]
-alias digit = [:digit:]
-alias letter = [:alpha:]
+alias whitespace = [[:space:]]
+alias digit = [[:digit:]]
+alias letter = [[:alpha:]]
 
--- [:graph:] won't match unicode, but these will:
-alias common.graph = {![:space:] .}
-alias common.id_char = [_-] / {![:space:] ![:punct:] .}
+-- [[:graph:]] won't match unicode, but these will:
+alias common.graph = {![[:space:]] .}
+alias common.id_char = [[_-]] / {![[:space:]] ![[:punct:]] .}
 
 
-alias hex_only = { [a-f] / [A-F] }
-alias hex_digits = { digit / [a-f] / [A-F] }
+alias hex_only = { [[a-f]] / [[A-F]] }
+alias hex_digits = { digit / [[a-f]] / [[A-F]] }
 --alias common.hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
-common.int = { [+-]? digit+ !hex_only}	     -- at least one digit, and not a hex number
-common.float = { [+-]? digit+ "." digit+ }  -- float with digits on either side of radix
+common.int = { [[+-]]? digit+ !hex_only}	     -- at least one digit, and not a hex number
+common.float = { [[+-]]? digit+ "." digit+ }  -- float with digits on either side of radix
 common.hex = hex_digits+ 		     --  use with care! will match words and decimal numbers
 common.denoted_hex = { "0x" common.hex }
 common.number =  ~ (common.denoted_hex /  common.float / common.int / common.hex)~
@@ -29,13 +29,13 @@ common.number =  ~ (common.denoted_hex /  common.float / common.int / common.hex
 common.word = letter+
 
 -- This definition is essentially what grok uses, which isn't great:
--- common.unix_path = { "/" ([:alnum:]/[_%!$@:.,~-])+ / ".." / "." }+
+-- common.unix_path = { "/" ([[:alnum:]]/[[_%!$@:.,~-]])+ / ".." / "." }+
 
-alias common.unix_path = { {".." / "."}? {"/" {[:alnum:]/[_%!$@:.,~-]}+ }+  }
-alias common.windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] any}* }+ }
+alias common.unix_path = { {".." / "."}? {"/" {[[:alnum:]]/[[_%!$@:.,~-]]}+ }+  }
+alias common.windows_path = { {[[:alpha:]]+ ":"}? {"\\" {![[\\?*]] any}* }+ }
 common.path = common.unix_path / common.windows_path
 
-alias dash_under = [-_]
+alias dash_under = [[-_]]
 
 alias identifier_char = { letter / digit / "_" }
 alias identifier_plus_char = { letter / digit / dash_under / "$" }
@@ -52,14 +52,14 @@ common.dotted_identifier = { common.identifier_plus_plus { "." common.identifier
 -- starts with a letter and contains a digit, or starts with a letter
 --and contains a dash/under (otherwise, all the identifier_plus
 --characters are allowed) 
-common.identifier_not_word = { {letter {letter / dash_under}* [:digit:] identifier_plus_char*}
+common.identifier_not_word = { {letter {letter / dash_under}* [[:digit:]] identifier_plus_char*}
                                / {letter {letter / digit}* dash_under identifier_plus_char*} }
 
 -- Upper case words which may also contain digits, dashes,
 -- underlines. Note that we explicitly fail if the first upper case
 -- letter is followed by a lower case one, since most sentences and
 -- proper names start that way.
-common.maybe_identifier = { [:upper:] ![:lower:] {[:upper:] / [:digit:] / dash_under}* } ~
+common.maybe_identifier = { [[:upper:]] ![[:lower:]] {[[:upper:]] / [[:digit:]] / dash_under}* } ~
 
 
 

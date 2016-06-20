@@ -313,18 +313,22 @@ syntax.cooked_to_raw =
 			   nil,
 			   false)
 
-function syntax.expand_charset_exp(ast)
-   local name, pos, text, subs = common.decode_match(ast)
-   assert(name=="charset_exp")
-   assert(subs and subs[1])
-   if subs[2] then
-      return syntax.generate("raw_exp", syntax.rebuild_choice(subs))
-   else
-      return syntax.generate("raw_exp", subs[1])
-   end
-end
+syntax.expand_charset_exp =
+   syntax.make_transformer(function(ast)
+			      local name, pos, text, subs = common.decode_match(ast)
+			      assert(name=="charset_exp")
+			      assert(subs and subs[1])
+			      if subs[2] then
+				 return syntax.generate("raw_exp", syntax.rebuild_choice(subs))
+			      else
+				 return syntax.generate("raw_exp", subs[1])
+			      end
+			   end,
+			   "charset_exp",	    -- applies only to these nodes
+			   true)		    -- recursive
    
 function syntax.expand_rhs(ast, original_rhs_name)
+   ast = syntax.expand_charset_exp(ast)
    local name, body = next(ast)
    if original_rhs_name=="raw" then
       -- wrap with "raw_exp" so that we know at top level not to append a boundary
@@ -339,8 +343,6 @@ function syntax.expand_rhs(ast, original_rhs_name)
       return ast(ast)
    elseif name=="capture" then
       return syntax.generate("capture", body.subs[1], syntax.expand_rhs(body.subs[2]))
-   elseif name=="charset_exp" then
-      return syntax.expand_charset_exp(ast)
    elseif name=="syntax_error" then
       return ast
    elseif syntax.expression_p(ast) then

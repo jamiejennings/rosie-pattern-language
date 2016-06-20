@@ -25,11 +25,11 @@
 -- field will contain the matched (JSON) string from the input, as always.
 ---------------------------------------------------------------------------------------------------
 
-alias json.string = "\""  {"\\\"" / {! [\"] .}}* "\""
+alias json.string = "\""  {"\\\"" / {! [[\"]] .}}* "\""
 
-alias json.int = { [-]? {[1-9][0-9]+} / [0-9] }
-alias json.frac = { [.] [0-9]+ }
-alias json.exp = { [eE] [+-]? [0-9]+ }
+alias json.int = { [[-]]? {[[1-9]][[0-9]]+} / [[0-9]] }
+alias json.frac = { [[.]] [[0-9]]+ }
+alias json.exp = { [[eE]] [[+-]]? [[0-9]]+ }
 alias json.number = { json.int json.frac? json.exp? }
 
 alias json.true = "true"

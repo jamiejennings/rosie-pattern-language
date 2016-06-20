@@ -12,9 +12,9 @@
 -- [2] RFC3696 Application Techniques for Checking and Transformation of Names
 -- (https:--tools.ietf.org/html/rfc3696)
 
-alias any = [:print:]
-alias digit = [:digit:]
-alias letter = [:alpha:]
+alias any = [[:print:]]
+alias digit = [[:digit:]]
+alias letter = [[:alpha:]]
 
 alias ip_component = digit{1,3}			   -- 1-3 digits
 alias port_spec = { ":" digit+ }		   -- 1 or more digits
@@ -44,7 +44,7 @@ alias fqdn_core = {dn_component {"." dn_component}+ port_spec?}
 -- We try to avoid thinking that a dotted identifier is a hostname, e.g. this:
 -- CentOS-6.5-x86_64-heat-swcfg_fcr01a.dal09.softlayer.com_port
 
-alias fqdn =  { ![-_] fqdn_core {!"_"} }	    -- Note that [-_] is a set of two chars, - and _
+alias fqdn =  { ![[-_]] fqdn_core {!"_"} }	    -- Note that [[-_]] is a set of two chars, - and _
 network.fqdn = fqdn
 network.host = fqdn
 
@@ -54,7 +54,7 @@ network.host = fqdn
 -- involved than this simple pattern, which will may accept some invalid addresses and may reject
 -- some valid ones.
 
-alias email_char = { [:alnum:] / [!#$%^&*()_-+=|\\'`~?/{}{}:;] }
+alias email_char = { [[:alnum:]] / [[!#$%^&*()_-+=|\\'`~?/{}{}:;]] }
 alias email_alias_part = { email_char {email_char / "."}* }
 network.email_address = { email_alias_part "@" fqdn }
 

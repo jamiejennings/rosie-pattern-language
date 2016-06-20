@@ -405,13 +405,13 @@ ok, msg = api.match_file(eid, "thisfiledoesnotexist", "", "")
 check(ok, "can't match against nonexistent file")
 check(msg:find("No such file or directory"))
 
-macosx_log1 = [[
+macosx_log1 = [=[
       basic.datetime_patterns{2,2}
       common.identifier_plus_plus
       common.dotted_identifier
-      "[" [:digit:]+ "]"
-      "(" common.dotted_identifier {"["[:digit:]+"]"}? "):" .*
-      ]]
+      "[" [[:digit:]]+ "]"
+      "(" common.dotted_identifier {"["[[:digit:]]+"]"}? "):" .*
+      ]=]
 ok, msg = api.configure_engine(eid, json.encode{expression=macosx_log1, encoder="json"})
 check(ok)			    
 ok, retvals_js = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
@@ -526,7 +526,7 @@ check(retvals[1])
 check(retvals[2]==0)
 check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 
-ok, msg = api.configure_engine(eid, json.encode{expression="[:digit:]", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression="[[:digit:]]", encoder="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "foo")
 check(ok)
@@ -535,7 +535,7 @@ check(not retvals[1])
 check(retvals[2]==3)
 check(retvals[3]:find('FAILED to match against input "foo"'))
 
-ok, msg = api.configure_engine(eid, json.encode{expression="[:alpha:]*", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression="[[:alpha:]]*", encoder="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "foo56789")
 check(ok)
@@ -577,7 +577,7 @@ if ok then
    check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 end
 
-ok, msg = api.configure_engine(eid, json.encode{expression="[:digit:]", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression="[[:digit:]]", encoder="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "foo")
 check(ok)

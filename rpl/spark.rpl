@@ -7,7 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
-spark.filename = {[:alnum:]/[_%!$@.,~-]}+
+spark.filename = {[[:alnum:]]/[[_%!$@.,~-]]}+
 
 spark.command = "Spark Command:" .*
 spark.using_message = "Using" .*
@@ -17,21 +17,21 @@ spark.ignore = "="* $
 spark.message = .*
 spark.typical = datetime.simple_slash_date datetime.simple_time common.maybe_identifier common.identifier_plus_plus ":" spark.message
 
-spark.py_identifier = {![:space:] .}*
+spark.py_identifier = {![[:space:]] .}*
 
 spark.driver_stacktrace = "Driver stacktrace:"
 spark.caused_by = "Caused by:" common.dotted_identifier
-spark.and_more = [:space:]* "..." common.int "more"
+spark.and_more = [[:space:]]* "..." common.int "more"
 
 spark.py_traceback_start = "Traceback" .*
-spark.py_traceback_file = [:space:]* "File" {"\"" common.path "\", line"} common.int ", in" spark.py_identifier
+spark.py_traceback_file = [[:space:]]* "File" {"\"" common.path "\", line"} common.int ", in" spark.py_identifier
 spark.py_line = " "{4,} spark.message
 spark.py_java_exception_start = ":" common.dotted_identifier ":" {!{common.dotted_identifier $} .}* common.dotted_identifier $
 
 spark.java_exception_start = common.dotted_identifier
 alias spark.fn_or_native = (spark.filename ":" common.int) / "Native Method"
 spark.exception_start = common.dotted_identifier ":" spark.message
-spark.exception_at = [:space:]* "at" { common.dotted_identifier "(" spark.fn_or_native ")" }
+spark.exception_at = [[:space:]]* "at" { common.dotted_identifier "(" spark.fn_or_native ")" }
 
 spark.patterns = spark.typical /
                  spark.py_traceback_file / 

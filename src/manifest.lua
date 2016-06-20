@@ -18,7 +18,7 @@ local mpats = [==[
       -- These patterns define the contents of the Rosie MANIFEST file
       alias blank = {""}
       alias comment = {"--" .*}
-      path = {![:space:] {"\\ " / .}}+		    -- escaped spaces allowed
+      path = {![[:space:]] {"\\ " / .}}+	    -- escaped spaces allowed
       line = comment / (path comment?) / blank
    ]==]
 

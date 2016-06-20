@@ -6,7 +6,7 @@
 --
 
 undef = "foobar"				    -- this will end up in the env
-badword = [:alpha:] spaces			    -- 'spaces' not defined
+badword = [[:alpha:]] spaces			    -- 'spaces' not defined
 undef2 = "baz"					    -- this won't end up in the env
 
 

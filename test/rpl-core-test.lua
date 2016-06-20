@@ -474,7 +474,7 @@ check_match('{(a)*}', ' a a   ', true, 7, "")
 subheading("Explicit boundary pattern")
 check_match('~(a)*', ' a a   ', true, 3, " a a")
 check_match('(~(a)*)', ' a a   ', true, 3, " a a")
-ok, msg = api.load_string(eid, "token = { ![:space:] . {!~ .}* }")
+ok, msg = api.load_string(eid, "token = { ![[:space:]] . {!~ .}* }")
 check(ok)
 check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 40, "The")
 check_match('token token token', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,")
@@ -1120,10 +1120,10 @@ check(member('g1', ids))
 check(member('B', ids))
 check(not member('A', ids))			    -- an alias
 
-check_match('g1 [:digit:]', "ab 4", true)
-check_match('{g1 [:digit:]}', "ab 4", true)	    -- because g1 is defined to end on a boundary
-check_match('g1 [:digit:]', "ab4", false)
-check_match('{g1 [:digit:]}', "ab4", false)
+check_match('g1 [[:digit:]]', "ab 4", true)
+check_match('{g1 [[:digit:]]}', "ab 4", true)	    -- because g1 is defined to end on a boundary
+check_match('g1 [[:digit:]]', "ab4", false)
+check_match('{g1 [[:digit:]]}', "ab4", false)
 
 heading("Invariants")
 

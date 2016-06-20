@@ -183,7 +183,7 @@ function parse.syntax_error_check(ast)
 		      negation=none_found;
 		      lookat=none_found;
 		      named_charset=none_found;
-		      --charset_exp=check_many_branches;
+		      charset_exp=check_many_branches;
 		      charset=check_one_branch;	    -- USED ONLY IN CORE
 		      charlist=check_many_branches;
 		      range=check_two_branches;
@@ -375,6 +375,21 @@ local function reveal_charlist(a)
    return exps
 end
 
+local function reveal_range(a)
+   assert(a, "did not get ast in reveal_range")
+   local name, pos, text, subs = common.decode_match(a)
+   assert(name=="range")
+   local rname, rpos, rtext, rsubs = common.decode_match(subs[1])
+   assert(rsubs[1], "did not get low sub in reveal_range")
+   assert(rsubs[2], "did not get high sub in reveal_range")
+   local lowname, lowpos, lowtext = common.decode_match(rsubs[1])
+   local hiname, hipos, hitext = common.decode_match(rsubs[2])
+   assert(lowname=="character")
+   assert(hiname=="character")
+   assert(not rsubs[3])
+   return "[" ..  lowtext.. "-" .. hitext .. "]"
+end
+
 local function reveal_charset(a)
    assert(a, "did not get ast in reveal_charset")
    local name, pos, text, subs = common.decode_match(a)
@@ -474,6 +489,8 @@ parse.reveal_exp = function(a)
 		      literal=reveal_string;
 		      named_charset=reveal_named_charset;
 		      charset=reveal_charset;
+		      charlist=reveal_charlist;
+		      range=reveal_range;
 		      quantified_exp=reveal_quantified_exp;
 		      new_quantified_exp=reveal_quantified_exp;
 		      cooked_quantified_exp=reveal_quantified_exp;

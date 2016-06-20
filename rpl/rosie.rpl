@@ -9,7 +9,7 @@
 -- rosie.token will match a token (given the way Rosie tokenizes as it goes) if there is a token.
 -- rosie.tokens will advance to the next token and match all of them.
 
-rosie.token = { ![:space:] . {!~ .}* }
+rosie.token = { ![[:space:]] . {!~ .}* }
 rosie.tokens = {~ rosie.token}*
 
 -- Rationale:
@@ -25,7 +25,7 @@ rosie.tokens = {~ rosie.token}*
 --                                        { . {!~ .}*}
 -- And since any character except whitespace can conceivably start a token, a good definition for a
 -- single token is:
---                                  { ![:space:] . {!~ .}* }
+--                                  { ![[:space:]] . {!~ .}* }
 -- I.e. "as long as we're not looking at whitespace, consume characters until the next token
 -- boundary."  This definition will fail at the end of input as well as when looking at whitespace,
 -- which seems like the right thing.

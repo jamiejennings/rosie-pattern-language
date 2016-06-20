@@ -120,7 +120,7 @@ function bootstrap()
 
    -- Create a matching engine for processing Rosie Pattern Language files
    ROSIE_ENGINE = engine("RPL engine")
-   compile.compile_core(ROSIE_HOME.."/src/rpl-core.rpl", ROSIE_ENGINE.env)
+   compile.compile_core(ROSIE_HOME.."/src/rpl-core2.rpl", ROSIE_ENGINE.env)
    local success, result = compile.compile_match_expression('rpl', ROSIE_ENGINE.env)
    if not success then error("Bootstrap error: could not compile rosie core rpl: " .. tostring(result)); end
    ROSIE_ENGINE.expression = 'rpl';

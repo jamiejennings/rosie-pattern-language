@@ -12,7 +12,7 @@ json = require "cjson"
 
 local repl_patterns = [==[
       rpl_expression = expression
-      path = {![:space:] {"\\ " / .}}+		    -- escaped spaces allowed
+      path = {![[:space:]] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path
       manifest = ".manifest" path
       match = ".match" rpl_expression "," quoted_string
@@ -27,7 +27,7 @@ local repl_patterns = [==[
 ]==]
 
 repl_engine = lapi.new_engine("repl")
-lapi.load_file(repl_engine, "src/rpl-core.rpl")
+lapi.load_file(repl_engine, "src/rpl-in-rpl-1.rpl")
 lapi.load_string(repl_engine, repl_patterns)
 lapi.configure_engine(repl_engine, {expression="input", encoder="json"})
 
