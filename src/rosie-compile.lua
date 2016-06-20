@@ -28,7 +28,6 @@ function compile_system()
    luac("recordtype")
    luac("repl")
    luac("syntax")
-   luac("syntax2")
    luac("util")
 end
 

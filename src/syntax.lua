@@ -8,10 +8,10 @@
 local common = require "common"			    -- AST functions
 require "list"
 
+
 syntax = {}
 
 local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
---local looking_at_boundary_ast = common.create_match("lookat", 0, "@/generated/", boundary_ast)
 local looking_at_boundary_ast = common.create_match("predicate",
 						    0,
 						    "*generated*",
@@ -260,8 +260,10 @@ syntax.cook =
 			      elseif name=="choice" then
 				 local first = body.subs[1]
 				 local second = body.subs[2]
-				 local c1 = syntax.generate("sequence", syntax.cook(first), looking_at_boundary_ast)
-				 local c2 = syntax.generate("sequence", syntax.cook(second), looking_at_boundary_ast)
+				 -- local c1 = syntax.generate("sequence", syntax.cook(first), looking_at_boundary_ast)
+				 -- local c2 = syntax.generate("sequence", syntax.cook(second), looking_at_boundary_ast)
+				 local c1 = syntax.cook(first)
+				 local c2 = syntax.cook(second)
 				 local new_choice = syntax.generate("choice", c1, c2)
 				 return new_choice
 			      elseif name=="quantified_exp" then
@@ -310,6 +312,49 @@ syntax.cooked_to_raw =
 			   end,
 			   nil,
 			   false)
+
+function syntax.expand_charset_exp(ast)
+   local name, pos, text, subs = common.decode_match(ast)
+   assert(name=="charset_exp")
+   assert(subs and subs[1])
+   if subs[2] then
+      return syntax.generate("raw_exp", syntax.rebuild_choice(subs))
+   else
+      return syntax.generate("raw_exp", subs[1])
+   end
+end
+   
+function syntax.expand_rhs(ast, original_rhs_name)
+   local name, body = next(ast)
+   if original_rhs_name=="raw" then
+      -- wrap with "raw_exp" so that we know at top level not to append a boundary
+      return syntax.generate("raw_exp", syntax.raw(ast))
+   elseif original_rhs_name=="cooked" then
+	 return syntax.cook(ast)
+   elseif original_rhs_name=="identifier" then
+      -- neither cooked nor raw, the rawness of a ref depends on
+      -- following the reference
+      return syntax.id_to_ref(ast)
+   elseif name=="ref" then
+      return ast(ast)
+   elseif name=="capture" then
+      return syntax.generate("capture", body.subs[1], syntax.expand_rhs(body.subs[2]))
+   elseif name=="charset_exp" then
+      return syntax.expand_charset_exp(ast)
+   elseif syntax.expression_p(ast) then
+      local new = ast
+      if ((name=="raw") or (name=="literal") or (name=="charset") or
+          (name=="named_charset") or (name=="predicate")) then
+      	 new = syntax.raw(new)
+      else
+      	 new = syntax.cook(new)
+      end
+      return syntax.generate("raw_exp", new)
+   else
+      error("Error in transform: unrecognized parse result: " .. name)
+   end
+end
+
 syntax.to_binding = 
    syntax.make_transformer(function(ast)
 			      local name, body = next(ast)
@@ -319,30 +364,18 @@ syntax.to_binding =
 			      if (name=="assignment_") then
 				 local name, pos, text, subs = common.decode_match(lhs)
 				 assert(name=="identifier")
-				 rhs = syntax.capture(rhs, text)
-			      end
-			      local b
-			      if original_rhs_name=="raw" then
-				 -- wrap with "raw_exp" so that we know at top level not to append a boundary
-				 b = syntax.generate("binding",
-						     lhs,
-						     syntax.generate("raw_exp", syntax.raw(rhs)))
-			      elseif original_rhs_name=="cooked" then
-				 b = syntax.generate("binding", lhs, syntax.append_looking_at_boundary(syntax.cook(rhs)))
-			      elseif original_rhs_name=="ref" then
-				 -- neither cooked nor raw, the rawness of a ref depends on
-				 -- following the reference
-				 b = syntax.generate("binding", lhs, rhs)
+				 rhs = syntax.capture(syntax.expand_rhs(rhs, original_rhs_name), text)
 			      else
-				 b = syntax.generate("binding", lhs, syntax.cook(rhs))
+				 rhs = syntax.expand_rhs(rhs, original_rhs_name)
 			      end
+			      local b = syntax.generate("binding", lhs, rhs)
 			      b.binding.capture = (name=="assignment_")
 			      b.binding.text = body.text
 			      b.binding.pos = body.pos
 			      return b
 			   end,
-			   {"assignment_", "alias_"},
-			   false)
+			    {"assignment_", "alias_"},
+			    false)
 
 -- At top level:
 --   If the exp to match is an identifier, then look it up in the env.
@@ -352,9 +385,6 @@ syntax.to_binding =
 --     Transform the exp as we would the rhs of an assignment (which includes capturing a value).
 --     Compile the exp to a pattern.
 --     Proceed as above based on whether the pattern is marked "raw" or not.
-
--- syntax.top_level_transform =
---    syntax.compose(syntax.cooked_to_raw, syntax.capture)
 
 function syntax.expression_p(ast)
    local name, body = next(ast)
@@ -366,6 +396,7 @@ function syntax.expression_p(ast)
 	   (name=="quantified_exp") or
 	   (name=="named_charset") or
 	   (name=="charset") or
+	   (name=="charset_exp") or
 	   (name=="choice") or
 	   (name=="sequence") or
 	   (name=="predicate"))
@@ -373,18 +404,7 @@ end
 
 function syntax.top_level_transform(ast)
    local name, body = next(ast)
-   if name=="identifier" then
-      return syntax.id_to_ref(ast)
-   elseif syntax.expression_p(ast) then
-      local new = ast				    --syntax.capture(ast, "*")?
-      if ((name=="raw") or (name=="literal") or (name=="charset") or
-          (name=="named_charset") or (name=="predicate")) then
-      	 new = syntax.raw(new)
-      else
-      	 new = syntax.append_looking_at_boundary(syntax.cook(new))
-      end
-      return syntax.generate("raw_exp", new)
-   elseif (name=="assignment_") or (name=="alias_") then
+   if (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
    elseif (name=="grammar_") then
       local new_bindings = map(syntax.to_binding, ast.grammar_.subs)
@@ -395,31 +415,9 @@ function syntax.top_level_transform(ast)
    elseif (name=="syntax_error") then
       return ast				    -- errors will be culled out later
    else
-      error("Error in transform: unrecognized parse result: " .. name)
+      return syntax.expand_rhs(ast, (next(ast)))
    end
 end
-
--- function syntax.contains_capture(ast)
---    local name, body = next(ast)
---    if name=="capture" then return true; end
---    return reduce(or_function, false, map(syntax.contains_capture, body.subs))
--- end
-
----------------------------------------------------------------------------------------------------
--- Testing
----------------------------------------------------------------------------------------------------
--- syntax.assignment_to_alias =
---    syntax.make_transformer(function(ast)
--- 			      local name, body = next(ast)
--- 			      local lhs = body.subs[1]
--- 			      local rhs = body.subs[2]
--- 			      local b = syntax.generate("alias_", lhs, rhs)
--- 			      b.alias_.text = body.text
--- 			      b.alias_.pos = body.pos
--- 			      return b
--- 			   end,
--- 			   "assignment_",
--- 			   false)
 
 return syntax
 

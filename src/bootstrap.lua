@@ -46,6 +46,7 @@ local function load_module(name)
    local ok, thing = pcall(require, name)
    if (not ok) then
       print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME .. "/src")
+      print("Reported error was: " .. tostring(thing))
       print_rosie_info()
       os.exit(-1)
    end
@@ -53,7 +54,7 @@ local function load_module(name)
 end
 
 parse = load_module("parse")
-syntax2 = load_module("syntax2")
+syntax = load_module("syntax")
 compile = load_module("compile")
 common = load_module("common")
 load_module("engine")
@@ -80,7 +81,7 @@ local function rosie_parse(str, pos, tokens)
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   return map(syntax2.top_level_transform, astlist), errlist, astlist
+   return map(syntax.top_level_transform, astlist), errlist, astlist
 end
 
 function parse_and_explain(source)
