@@ -24,7 +24,7 @@ common.int = { [[+-]]? digit+ !hex_only}	     -- at least one digit, and not a h
 common.float = { [[+-]]? digit+ "." digit+ }  -- float with digits on either side of radix
 common.hex = hex_digits+ 		     --  use with care! will match words and decimal numbers
 common.denoted_hex = { "0x" common.hex }
-common.number =  ~ (common.denoted_hex /  common.float / common.int / common.hex)~
+common.number =  (common.denoted_hex /  common.float / common.int / common.hex)
 
 common.word = letter+
 
