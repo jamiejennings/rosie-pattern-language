@@ -41,7 +41,7 @@ syntax_error = { rest_of_line }
 
 character = { {!esc .} / {esc .} }
 range = { character [[-]] !"]]" character } 
-charlist = { {!"]" character}* }
+charlist = { {!"]" character}+ }		    -- cannot be empty
 named_charset = { {![[:]] .}+ }
 alias one_charset = { "[" { ":" named_charset ":]" } /
 	                  { range "]" } /

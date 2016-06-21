@@ -19,25 +19,26 @@ function set_expression(exp)
    if not ok then error("Configuration error: " .. msg); end
 end
 
-function check_match(exp, input, expectation, expected_leftover, expected_text)
+function check_match(exp, input, expectation, expected_leftover, expected_text, addlevel)
    expected_leftover = expected_leftover or 0
+   addlevel = addlevel or 0
    set_expression(exp)
    local ok, retvals_js = api.match(eid, input)
    check(ok, "failed call to api.match")
    local retvals = json.decode(retvals_js)
    local m, leftover = retvals[1], retvals[2]
    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
-	 ((m and "matched") or "did NOT match") .. " '" .. input .. "'", 1)
+	 ((m and "matched") or "did NOT match") .. " '" .. input .. "'", 1+addlevel)
    local fmt = "expected leftover matching %s against '%s' was %d but received %d"
    if expectation then
       check(leftover==expected_leftover,
-	    string.format(fmt, exp, input, expected_leftover, leftover), 1)
+	    string.format(fmt, exp, input, expected_leftover, leftover), 1+addlevel)
       if expected_text and m then
 	 local name, match = next(m)
 	 local text = match.text
 	 local fmt = "expected text matching %s against '%s' was '%s' but received '%s'"
 	 check(expected_text==text,
-	       string.format(fmt, exp, input, expected_text, text), 1)
+	       string.format(fmt, exp, input, expected_text, text), 1+addlevel)
       end
    end
    return retvals
@@ -1076,6 +1077,67 @@ check_match('{{a b}{2,2}}', 'abab!', true, 1)
 check_match('{{a b}{2,2}}', 'ababx', true, 1)
 check_match('{{a b}{2,2} ~}', 'ababx', false)
 check_match('{{a b}{2,2}}', 'abab ', true, 1)
+
+heading("Character sets")
+
+subheading("Rejecting illegal expressions")
+for _, exp in ipairs{"[:alpha:]",		    -- OLD syntax (pre v0.99)
+		     "[]",			    -- used to be allowed
+		     "[[]]",			    -- no longer allowed
+                     "[]]",			    -- the rest are other syntax errors
+                     "[[]",
+                     "[[abc][]]",
+		     "[:alpha]"} do
+   ok, msg = api.configure_engine(eid, json.encode({expression=exp}))
+   check(not ok)
+   check(msg:find("Syntax error at line 1"))
+end
+
+subheading("Named character sets")
+
+function test_charsets(exp, true_inputs, false_inputs)
+   map(function(input) return check_match(exp, input, true, nil, nil, 2); end, true_inputs)
+   map(function(input) return check_match(exp, input, false, nil, nil, 2); end, false_inputs)
+end
+
+
+test_charsets("[[:print:]]", {"a", "1", "#", " "}, {"\t", "\b"})
+test_charsets("[[:graph:]]", {"a", "1", "#"}, {" ", "\t", "\b"})
+test_charsets("[[:upper:]]", {"A", "Q"}, {"a", "q", " ", "!", "0", "\b"})
+test_charsets("[[:lower:]]", {"a", "m"}, {"A", "M", "!", "0", " "})
+test_charsets("[[:alpha:]]", {"A", "z"}, {" ", "!", "0", "\\b"})
+test_charsets("[[:alnum:]]", {"A", "0", "e"}, {" ", "!", "\\b"})
+test_charsets("[[:digit:]]", {"0", "9"}, {"a", " ", "!"})
+test_charsets("[[:xdigit:]]", {"a", "A", "f", "F", "1", "9"}, {"g", " ", "!"})
+test_charsets("[[:space:]]", {" ", "\t", "\n", "\r"}, {"A", "0", "\b"})
+test_charsets("[[:punct:]]", {"!", "&", "."}, {"a", "X", "0", " ", "\b"})
+test_charsets("[[:cntrl:]]", {"\b", "\r"}, {"a", "X", "0", " "})
+
+subheading("Character ranges")
+test_charsets("[[a-z]]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
+test_charsets("[[a-a]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
+test_charsets("[[b-a]]", {}, {"a", "b", "c", "y", "z", " ", "X", "0", "!"}) -- !@# could war
+test_charsets("[[$-&]]", {"$", "%", "&"}, {"^", "-", "z", " ", "X", "0", "!"})
+test_charsets("[[--.]]", {"-", "."}, {"+", "/", "z", " ", "X", "0", "!"})
+test_charsets("[[\\[-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})
+
+subheading("Character lists")
+test_charsets("[[\\[\\]-]]", {"]", "[", "-"}, {"+", "/", "z", " ", "X", "0", "!"})
+test_charsets("[[\\]]]", {"]"}, {"[", "-", "+", "/", "z", " ", "X", "0", "!"})
+test_charsets("[[aa]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
+test_charsets("[[abczyx]]", {"a", "b", "c", "x", "y", "z"}, {"r", "d", "m", " ", "X", "0", "!"})
+test_charsets("[[-]]", {"-"}, {"b", "y", "z", " ", "X", "0", "!"})
+test_charsets("[[ \t]]", {" ", "\t"}, {"\n", "b", "y", "z", "X", "0", "!"})
+test_charsets("[[!#$%^&*()_-+=|\\\\'`~?/{}{}:;]]", 
+	      {"!", "#", "$", "%", "^", "&", "*", "(", ")", "_", "-", "+", "=", "|", "\\", "'", "`", "~", "?", "/", "{", "}", "{", "}", ":", ";"},
+	      {"a", "Z", " ", "\r", "\n"})
+
+subheading("Combinations")
+test_charsets("[[:digit:][a]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})
+test_charsets("[[a][:digit:]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})
+test_charsets("[[a][:digit:][F-H]]", {"F", "G", "H", "a", "1", "9"}, {"f", "g", "h", "b", "y", "z", " ", "X", "!"})
+test_charsets("[[:alpha:][$][2-4]]", {"F", "G", "H", "a", "2", "4", "$"}, {"5", " ", "1", "!"})
+
 
 heading("Grammars")
 
