@@ -100,9 +100,7 @@ local expression = P{"expression";
 				      + literal_string
 				      + V"raw"
 				      + V"cooked"
-				      + character_set
-				      -- + V"lookat"
-				      -- + V"negation"
+				      + (P"[" * character_set * P"]")
 				   + V"predicate"
 			     ));
 	       quantified_exp = token("quantified_exp", (V"plain_exp" * ignore * quantifier));

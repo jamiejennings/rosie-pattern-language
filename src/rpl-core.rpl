@@ -10,26 +10,26 @@
 alias newline = {"\n"}				    -- raw mode just to suppress compiler warning 
 
 alias comment = { "--" {!newline .}* {newline / $} }
-alias ignore = { { [:space:] / comment }* }
+alias ignore = { { [[:space:]] / comment }* }
 
-alias id_char = { [:alnum:] / [_] }
-alias id = { [:alpha:] id_char* }
+alias id_char = { [[:alnum:]] / [[_]] }
+alias id = { [[:alpha:]] id_char* }
 
-identifier = { { id {[.]id}* }			    -- hierarchical identifier name
-	       / [.]				    -- a single dot
-	       / [$]				    -- a single dollar sign
-	       / [~]				    -- a single tilde
+identifier = { { id {[[.]]id}* }			    -- hierarchical identifier name
+	       / [[.]]				    -- a single dot
+	       / [[$]]				    -- a single dollar sign
+	       / [[~]]				    -- a single tilde
 	    }
 
-alias dquote = { [\"] }
-alias esc =    { [\\] }
+alias dquote = { [[\"]] }
+alias esc =    { [[\\]] }
 literal = { {!{esc/dquote} .} / {esc .} }* 
 alias quoted_string = { dquote literal dquote }
 
 
-star =     { [*] }
-question = { [?] }
-plus =     { [+] }
+star =     { [[*]] }
+question = { [[?]] }
+plus =     { [[+]] }
 alias end_token = { "end" !id_char }
 alias keyword_list = { "alias" / "grammar" / "end" }
 keyword = { keyword_list !id_char }
@@ -40,17 +40,18 @@ rest_of_line = { {!newline .}+ ignore }
 syntax_error = { rest_of_line }
 
 character = { {!esc .} / {esc .} }
-range = { character [-] character } 
+range = { character [[-]] !"]]" character } 
 charlist = { {!"]" character}* }
-named_charset = { {![:] .}+ }
-alias full_named_charset = { "[:" named_charset ":]" }
-charset = { "[" { range "]" } /
-	        { charlist "]" } / 
- 	        syntax_error
-	        }
+named_charset = { {![[:]] .}+ }
+alias one_charset = { "[" { ":" named_charset ":]" } /
+	                  { range "]" } /
+		          { charlist "]" } /
+		          syntax_error
+		    }
+charset_exp = { "[" one_charset+ "]" }
 
-low =  { [:digit:]* }				    -- an int or nothing
-high = { [:digit:]* }
+low =  { [[:digit:]]* }				    -- an int or nothing
+high = { [[:digit:]]* }
 repetition = { "{" ignore low ignore "," ignore high ignore "}" }
 	          
 
@@ -59,14 +60,14 @@ alias quantifier = star / question / plus / repetition
 assignment_prefix = identifier ignore "="
 statement_prefix = {keyword / assignment_prefix}
 
-alias slash =         { [/] }
-alias open =          { [(] }
-alias openraw =       { [{] }
-alias close =         { [)] }
-alias closeraw =      { [}] }
+alias slash =         { [[/]] }
+alias open =          { [[(]] }
+alias openraw =       { [[{]] }
+alias close =         { [[)]] }
+alias closeraw =      { [[}]] }
 
-negation = { [!] }
-lookat = { [@] }
+negation = { [[!]] }
+lookat = { [[@]] }
 alias predicate_symbol = { negation / lookat }
 	    
 grammar
@@ -75,13 +76,11 @@ grammar
    choice = { {quantified_exp / plain_exp} ignore slash expression }
    sequence = { {quantified_exp / plain_exp} {ignore !statement_prefix expression}+ }
    alias plain_exp = { ignore 
-		       { identifier / quoted_string / raw / cooked / full_named_charset / charset / predicate } }
+		       { identifier / quoted_string / raw / cooked / charset_exp / predicate } }
    quantified_exp = { plain_exp ignore quantifier }
    cooked = { open expression+ ignore close }
    raw = { openraw expression+ ignore closeraw }
    predicate = { predicate_symbol ignore {quantified_exp / plain_exp} }
---   negation = { neg ignore {quantified_exp / plain_exp} }
---   lookat = { lookat_symbol ignore {quantified_exp / plain_exp} }
 end
 
 grammar
