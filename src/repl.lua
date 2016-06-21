@@ -141,7 +141,6 @@ function repl(en)
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
-		     print("EXPRESSION IS: " .. exp_string)
 		     local astlist, original_astlist = parse_and_explain(exp_string)
 		     if not astlist then
 			io.write(original_astlist, "\n") -- error message
