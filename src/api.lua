@@ -132,13 +132,13 @@ end
 api.new_engine = api_wrap(new_engine)
 
 local function get_env(id)
-   return compile.flatten_env((engine_from_id(id)).env)
+   return common.flatten_env((engine_from_id(id)).env)
 end
 
 api.get_environment = api_wrap(get_env)
 
 local function clear_env(id)
-   (engine_from_id(id)).env = compile.new_env()
+   (engine_from_id(id)).env = common.new_env()
 end
 
 api.clear_environment = api_wrap(clear_env)

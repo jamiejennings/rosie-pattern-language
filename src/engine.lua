@@ -204,7 +204,7 @@ end
 
 engine.create_function =
    function(_new, name, initial_env)
-      initial_env = initial_env or compile.new_env()
+      initial_env = initial_env or common.new_env()
       -- assigning a unique instance id should be part of the recordtype module
       local params = {name=name,
 		      env=initial_env,

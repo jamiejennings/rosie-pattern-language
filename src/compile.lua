@@ -32,101 +32,13 @@ local locale = lpeg.locale()
 -- Boundary for tokenization... this is going to be customizable, but hard-coded for now
 ----------------------------------------------------------------------------------------
 
-local b_id = common.boundary_identifier
-
 local boundary = locale.space^1 + #locale.punct
               + (lpeg.B(locale.punct) * #(-locale.punct))
 	      + (lpeg.B(locale.space) * #(-locale.space))
 	      + P(-1)
 	      + (- B(1))
+
 compile.boundary = boundary
-
-----------------------------------------------------------------------------------------
--- Base environment, which can be extended with new_env, but not written to directly,
--- because it is shared between match engines.
-----------------------------------------------------------------------------------------
-local ENV = {["."] = pattern{name="."; peg=P(1); alias=true; raw=true};  -- any single character
-             ["$"] = pattern{name="$"; peg=P(-1); alias=true; raw=true}; -- end of input
-             [b_id] = pattern{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
-       }
-setmetatable(ENV, {__tostring = function(env)
-				   return "<base environment>"
-				end;
-		   __newindex = function(env, key, value)
-				   error('Compiler: base environment is read-only, '
-					 .. 'cannot assign "' .. key .. '"')
-				end;
-		})
-
-cinternals.ENV = ENV
-
-function compile.new_env(base_env)
-   local env = {}
-   base_env = base_env or ENV
-   setmetatable(env, {__index = base_env;
-		      __tostring = function(env) return "<environment>"; end;})
-   return env
-end
-
-function compile.flatten_env(env, output_table)
-   output_table = output_table or {}
-   local kind, color
-   for item, value in pairs(env) do
-      if not output_table[item] then
-	 kind = (value.alias and "alias") or "definition"
-	 if colormap then color = colormap[item] or ""; else color = ""; end;
-	 output_table[item] = {type=kind, color=color}
-      end
-   end
-   local mt = getmetatable(env)
-   if mt and mt.__index then
-      -- there is a parent environment
-      return compile.flatten_env(mt.__index, output_table)
-   else
-      return output_table
-   end
-end
-
--- use this print function to see the nested environments
-function cinternals.print_env(env, skip_header, total)
-   -- build a list of patterns that we can sort by name
-   local pattern_list = {}
-   local n = next(env)
-   while n do
-      table.insert(pattern_list, n)
-      n = next(env, n);
-   end
-   table.sort(pattern_list)
-   local patterns_loaded = #pattern_list
-   total = (total or 0) + patterns_loaded
-
-   local fmt = "%-30s %-15s %-8s"
-
-   if not skip_header then
-      print();
-      print(string.format(fmt, "Pattern", "Kind", "Color"))
-      print("------------------------------ --------------- --------")
-   end
-
-   local kind, color;
-   for _,v in ipairs(pattern_list) do 
-      local kind = (v.alias and "alias") or "definition";
-      if colormap then color = colormap[v] or ""; else color = ""; end;
-      print(string.format(fmt, v, kind, color))
-   end
-
-   if patterns_loaded==0 then
-      print("<empty>");
-   end
-   local mt = getmetatable(env)
-   if mt and mt.__index then
-      print("\n----------- Parent environment: -----------\n")
-      cinternals.print_env(mt.__index, true, total)
-   else
-      print()
-      print(total .. " patterns loaded")
-   end
-end
 
 ----------------------------------------------------------------------------------------
 -- Compile-time error reporting
@@ -335,24 +247,37 @@ end
    
 function cinternals.compile_named_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_named_charset")
-   local name, pos, text = common.decode_match(a)
+   local name, pos, text, subs = common.decode_match(a)
+   local complement
+   if subs then					    -- subs not present from core parser
+      complement = (next(subs[1])=="complement")
+      if complement then assert(subs[2] and (next(subs[2])=="name")); end
+      name, pos, text, subs = common.decode_match((complement and subs[2]) or subs[1])
+   end
    local pat = locale[text]
    if not pat then
       explain_undefined_charset(a, source)
    end
-   return pattern{name=name, peg=pat, ast=a}
+   return pattern{name=name, peg=((complement and 1-pat) or pat), ast=a}
 end
 
 function cinternals.compile_range_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_range_charset")
    local rname, rpos, rtext, rsubs = common.decode_match(a)
-   assert(not rsubs[3])
-   assert(next(rsubs[1])=="character")
-   assert(next(rsubs[2])=="character")
-   local cname1, cpos1, ctext1 = common.decode_match(rsubs[1])
-   local cname2, cpos2, ctext2 = common.decode_match(rsubs[2])
+   assert(rsubs and rsubs[1])
+   local complement = (next(rsubs[1])=="complement")
+   if complement then
+      assert(rsubs[2] and (next(rsubs[2])=="character"))
+      assert(rsubs[3] and (next(rsubs[3])=="character"))
+   else
+      assert(next(rsubs[1])=="character")
+      assert(rsubs[2] and (next(rsubs[2])=="character"))
+   end
+   local cname1, cpos1, ctext1 = common.decode_match(rsubs[(complement and 2) or 1])
+   local cname2, cpos2, ctext2 = common.decode_match(rsubs[(complement and 3) or 2])
+   peg = R(common.unescape_string(ctext1)..common.unescape_string(ctext2))
    return pattern{name=name,
-		  peg=R(common.unescape_string(ctext1)..common.unescape_string(ctext2)),
+		  peg=(complement and (1-peg)) or peg,
 		  ast=a}
 end
 
@@ -360,13 +285,15 @@ function cinternals.compile_charlist(a, gmr, source, env)
    assert(a, "did not get ast in compile_charlist")
    local clname, clpos, cltext, clsubs = common.decode_match(a)
    local exps = "";
-   for i = 1, #clsubs do
+   assert((type(clsubs)=="table") and clsubs[1], "no sub-matches in charlist!")
+   local complement = (next(clsubs[1])=="complement")
+   for i = (complement and 2) or 1, #clsubs do
       local v = clsubs[i]
       assert(next(v)=="character", "did not get character sub in compile_charlist")
       local cname, cpos, ctext = common.decode_match(v)
       exps = exps .. common.unescape_string(ctext)
    end
-   return pattern{name=name, peg=S(exps), ast=a}
+   return pattern{name=name, peg=((complement and (1-S(exps))) or S(exps)), ast=a}
 end
 
 function cinternals.compile_charset(a, gmr, source, env)
@@ -411,7 +338,7 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
    assert(name=="grammar_" or name=="new_grammar")
    assert(type(subs[1])=="table")
    assert(type(source)=="string")
-   local gtable = compile.new_env(env)
+   local gtable = common.new_env(env)
    local first = subs[1]			    -- first rule in grammar
    assert(first, "not getting first rule in compile_grammar_rhs")
    local fname, fpos, ftext = common.decode_match(first)

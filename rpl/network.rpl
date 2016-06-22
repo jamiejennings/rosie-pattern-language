@@ -54,7 +54,7 @@ network.host = fqdn
 -- involved than this simple pattern, which will may accept some invalid addresses and may reject
 -- some valid ones.
 
-alias email_char = { [:alnum:] / [!#$%^&*()_-+=|\\'`~?/{}{}:;] }
+alias email_char = { [:alnum:] / [!#$%\^&*()_-+=|\\'`~?/{}{}:;] }
 alias email_alias_part = { email_char {email_char / "."}* }
 network.email_address = { email_alias_part "@" fqdn }
 

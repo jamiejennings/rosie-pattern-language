@@ -11,6 +11,8 @@ require "list"
 
 syntax = {}
 
+-- When a syntax transformation uses the boundary, it uses a reference to the boundary
+-- identifier so that it gets the current value of the boundary pattern.
 local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
 local looking_at_boundary_ast = common.create_match("predicate",
 						    0,
@@ -18,7 +20,13 @@ local looking_at_boundary_ast = common.create_match("predicate",
 						    common.create_match("lookat", 0, "@"),
 						    boundary_ast)
 
-
+-- When a syntax transformation uses dot or end_of_line, it uses the values from the initial
+-- environment. 
+local initial_environment = common.new_env()
+local dot = initial_environment[common.any_char_identifier]
+assert(pattern.is(dot))
+local end_of_line = initial_environment[common.end_of_input_identifier]
+assert(pattern.is(end_of_line))
 
 local function err(name, msg)
    error('invalid ast ' .. name .. ': ' .. msg)
@@ -316,7 +324,6 @@ syntax.cooked_to_raw =
 syntax.expand_charset_exp =
    syntax.make_transformer(function(ast)
 			      local name, pos, text, subs = common.decode_match(ast)
-			      assert(name=="charset_exp")
 			      assert(subs and subs[1])
 			      if subs[2] then
 				 return syntax.generate("raw_exp", syntax.rebuild_choice(subs))

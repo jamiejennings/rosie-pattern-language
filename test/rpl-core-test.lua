@@ -30,7 +30,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text, 
    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " '" .. input .. "'", 1+addlevel)
    local fmt = "expected leftover matching %s against '%s' was %d but received %d"
-   if expectation then
+   if m then
       check(leftover==expected_leftover,
 	    string.format(fmt, exp, input, expected_leftover, leftover), 1+addlevel)
       if expected_text and m then
@@ -1082,12 +1082,21 @@ heading("Character sets")
 
 subheading("Rejecting illegal expressions")
 for _, exp in ipairs{"[]]",
+		     "[^]",
+		     "[xyz^]",
+		     "[[abc] / [def]]",
+		     "[[a-z] misplaced_identifier [def]]",
+		     "[[a-z] [def]",		    -- no final closing bracket
 		     "[]",			    -- this was legal before v0.99?
                      "[[abc][]]"} do
    ok, msg = api.configure_engine(eid, json.encode({expression=exp}))
    check(not ok, "this expression was expected to fail: " .. exp)
-   check(msg:find("Syntax error at line 1"))
+   check(msg:find("Syntax error at line 1"), "Did not get syntax error for exp " ..
+      exp .. ".  Message was: " .. msg)
 end
+ok, msg = api.configure_engine(eid, json.encode{expression="[:foobar:]"})
+check(not ok)
+check(msg:find("named charset not defined"))
 
 subheading("Named character sets")
 
@@ -1130,7 +1139,8 @@ test_charsets("[[--.]]", {"-", "."}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\[-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})
 
 subheading("Character lists")
-test_charsets("[[]", {"["}, {"]", "+", "/", "z", " ", "X", "0", "!"}) -- a single open bracket
+test_charsets('["]', {'"'}, {"b", "y", "z", " ", "X", "0", "!"})
+test_charsets("[\\[]", {"["}, {"]", "+", "/", "z", " ", "X", "0", "!"}) -- a single open bracket
 test_charsets("[\\]]", {"]"}, {"[", "+", "/", "z", " ", "X", "0", "!"}) -- a single close bracket
 test_charsets("[[\\[\\]-]]", {"]", "[", "-"}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\]]]", {"]"}, {"[", "-", "+", "/", "z", " ", "X", "0", "!"})
@@ -1139,14 +1149,34 @@ test_charsets("[aa]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[abczyx]]", {"a", "b", "c", "x", "y", "z"}, {"r", "d", "m", " ", "X", "0", "!"})
 test_charsets("[[-]]", {"-"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[ \t]]", {" ", "\t"}, {"\n", "b", "y", "z", "X", "0", "!"})
-test_charsets("[[!#$%^&*()_-+=|\\\\'`~?/{}{}:;]]", 
+test_charsets("[[!#$%\\^&*()_-+=|\\\\'`~?/{}{}:;]]", 
 	      {"!", "#", "$", "%", "^", "&", "*", "(", ")", "_", "-", "+", "=", "|", "\\", "'", "`", "~", "?", "/", "{", "}", "{", "}", ":", ";"},
 	      {"a", "Z", " ", "\r", "\n"})
+
+subheading("Complements")
+test_charsets("[^a]", {"b", "y", "z", "^", " ", "X", "0", "!"}, {"a"})
+test_charsets("[^abc]", {"d", "y", "z", "^", " ", "X", "0", "!"}, {"a", "b", "c"})
+test_charsets("[:^digit:]", {"a", " ", "!"}, {"0", "9"})
+test_charsets("[[:^space:]]", {"A", "0", "\b"}, {" ", "\t", "\n", "\r"})
+test_charsets("[^a-z]", {" ", "X", "0", "!"}, {"a", "b", "y", "z"})
+test_charsets("[^ab-z]", {"c", "d", " ", "X", "0", "!"}, {"a", "b", "-", "z"}) -- NOT a range!
 
 subheading("Combinations")
 test_charsets("[[:digit:][a]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})
 test_charsets("[[a][:digit:]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})
 test_charsets("[[a][:digit:][F-H]]", {"F", "G", "H", "a", "1", "9"}, {"f", "g", "h", "b", "y", "z", " ", "X", "!"})
+test_charsets("[[:alpha:][$][2-4]]", {"F", "G", "H", "a", "2", "4", "$"}, {"5", " ", "1", "!"})
+test_charsets("[[:^space:][\\n]]", {"A", "0", "\b", "\n"}, {" ", "\t", "\r"})
+
+subheading("Whitespace and comments")
+test_charsets("[[:digit:]  [a]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})
+test_charsets([==[ [[a]
+		    [:digit:]
+		 ] ]==], {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})
+test_charsets([==[ [[a]        -- a one-char list
+		    [:digit:]  -- a named set
+		    [F-H]      -- and a range, all with comments in between
+	   ] ]==], {"F", "G", "H", "a", "1", "9"}, {"f", "g", "h", "b", "y", "z", " ", "X", "!"})
 test_charsets("[[:alpha:][$][2-4]]", {"F", "G", "H", "a", "2", "4", "$"}, {"5", " ", "1", "!"})
 
 

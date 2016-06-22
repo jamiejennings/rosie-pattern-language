@@ -52,17 +52,17 @@ end
 
 function lapi.new_engine(optional_name)	    -- optional manifest? file list? code string?
    optional_name = (optional_name and tostring(optional_name)) or "<anonymous>"
-   return engine(optional_name, compile.new_env())
+   return engine(optional_name, common.new_env())
 end
 
 function lapi.get_environment(en)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   return compile.flatten_env(en.env)
+   return common.flatten_env(en.env)
 end
 
 function lapi.clear_environment(en)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   en.env = compile.new_env()
+   en.env = common.new_env()
 end
 
 ----------------------------------------------------------------------------------------

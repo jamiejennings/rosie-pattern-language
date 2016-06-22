@@ -39,19 +39,21 @@ keyword = { keyword_list !id_char }
 rest_of_line = { {!newline .}+ ignore }
 syntax_error = { rest_of_line }
 
-character = { {!esc .} / {esc .} }
-range = { character [[-]] !"]" character } 
-charlist = { {!"]" character}+ }		    -- cannot be empty
-named_charset = { {![[:]] .}+ }
+complement = "^"
+character = { {!esc !"[" !"^" !"]" .} / {esc .} }
+range = { complement? character [[-]] !"]" character } 
+charlist = { complement? {!"]" character}+ }		    -- cannot be empty
+name = {!":" .}+
+named_charset = { complement? name } 
 alias one_charset = { "[" { ":" named_charset ":]" } /
 	                  { range "]" } /
 		          { charlist "]" } /
 		          syntax_error
 		    }
-charset_exp = { "[" ignore (one_charset ignore)+ "]" } / one_charset
+charset_exp = { "[" complement? ignore (one_charset ignore)+ "]" } / one_charset
 
-low =  { [[:digit:]]* }				    -- an int or nothing
-high = { [[:digit:]]* }
+low =  [[:digit:]]*				    -- an int or nothing
+high = [[:digit:]]* 
 repetition = { "{" ignore low ignore "," ignore high ignore "}" }
 	          
 

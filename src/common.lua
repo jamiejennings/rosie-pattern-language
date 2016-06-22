@@ -70,7 +70,7 @@ function common.compact_messages(tbl)
    else return only_strings; end
 end
 
-local escape_substitutions =			    -- characters that change when escaped are:
+common.escape_substitutions =			    -- characters that change when escaped are:
    setmetatable(
    { a = "\a";					    -- bell
      b = "\b";					    -- backspace
@@ -89,7 +89,7 @@ local escape_substitutions =			    -- characters that change when escaped are:
 function common.unescape_string(s)
    -- the only escape character is \
    -- a literal backslash is obtained using \\
-   return (string.gsub(s, '\\(.)', escape_substitutions))
+   return (string.gsub(s, '\\(.)', common.escape_substitutions))
 end
 
 function common.escape_string(s)
@@ -284,6 +284,110 @@ pattern =
    "pattern"
 )
 
-common.boundary_identifier = "~"
+---------------------------------------------------------------------------------------------------
+-- Environment functions and initial environment
+---------------------------------------------------------------------------------------------------
+
+local b_id, dot_id, eol_id = "~", ".", "$"
+
+common.boundary_identifier = b_id
+common.any_char_identifier = dot_id
+common.end_of_input_identifier = eol_id
+
+----------------------------------------------------------------------------------------
+-- Boundary for tokenization... this is going to be customizable, but hard-coded for now
+----------------------------------------------------------------------------------------
+
+local locale = lpeg.locale()
+local boundary = locale.space^1 + #locale.punct
+              + (lpeg.B(locale.punct) * #(-locale.punct))
+	      + (lpeg.B(locale.space) * #(-locale.space))
+	      + lpeg.P(-1)
+	      + (- lpeg.B(1))
+
+-- Base environment, which can be extended with new_env, but not written to directly,
+-- because it is shared between match engines:
+
+local ENV = {[dot_id] = pattern{name=dot_id; peg=lpeg.P(1); alias=true; raw=true};  -- any single character
+             [eol_id] = pattern{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
+             [b_id] = pattern{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
+       }
+setmetatable(ENV, {__tostring = function(env)
+				   return "<base environment>"
+				end;
+		   __newindex = function(env, key, value)
+				   error('Compiler: base environment is read-only, '
+					 .. 'cannot assign "' .. key .. '"')
+				end;
+		})
+
+function common.new_env(base_env)
+   local env = {}
+   base_env = base_env or ENV
+   setmetatable(env, {__index = base_env;
+		      __tostring = function(env) return "<environment>"; end;})
+   return env
+end
+
+function common.flatten_env(env, output_table)
+   output_table = output_table or {}
+   local kind, color
+   for item, value in pairs(env) do
+      if not output_table[item] then
+	 kind = (value.alias and "alias") or "definition"
+	 if colormap then color = colormap[item] or ""; else color = ""; end;
+	 output_table[item] = {type=kind, color=color}
+      end
+   end
+   local mt = getmetatable(env)
+   if mt and mt.__index then
+      -- there is a parent environment
+      return common.flatten_env(mt.__index, output_table)
+   else
+      return output_table
+   end
+end
+
+-- use this print function to see the nested environments
+function common.print_env_internal(env, skip_header, total)
+   -- build a list of patterns that we can sort by name
+   local pattern_list = {}
+   local n = next(env)
+   while n do
+      table.insert(pattern_list, n)
+      n = next(env, n);
+   end
+   table.sort(pattern_list)
+   local patterns_loaded = #pattern_list
+   total = (total or 0) + patterns_loaded
+
+   local fmt = "%-30s %-15s %-8s"
+
+   if not skip_header then
+      print();
+      print(string.format(fmt, "Pattern", "Kind", "Color"))
+      print("------------------------------ --------------- --------")
+   end
+
+   local kind, color;
+   for _,v in ipairs(pattern_list) do 
+      local kind = (v.alias and "alias") or "definition";
+      if colormap then color = colormap[v] or ""; else color = ""; end;
+      print(string.format(fmt, v, kind, color))
+   end
+
+   if patterns_loaded==0 then
+      print("<empty>");
+   end
+   local mt = getmetatable(env)
+   if mt and mt.__index then
+      print("\n----------- Parent environment: -----------\n")
+      common.print_env_internal(mt.__index, true, total)
+   else
+      print()
+      print(total .. " patterns loaded")
+   end
+end
+
 
 return common

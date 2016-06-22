@@ -185,6 +185,7 @@ function parse.syntax_error_check(ast)
 		      charset=check_one_branch;	    -- USED ONLY IN CORE
 		      charlist=check_many_branches;
 		      range=check_two_branches;
+		      complement=none_found;
 		      quantified_exp=check_two_branches;
 		      plus=none_found;
 		      question=none_found;
@@ -367,10 +368,9 @@ local function reveal_charlist(a)
    for i = 1, #subs do
       assert(subs[i], "did not get a character ast in reveal_charlist")
       local cname, cpos, ctext = common.decode_match(subs[i])
-      assert(cname=="character")
       exps = exps .. ctext
    end
-   return exps
+   return "[" .. exps .. "]"
 end
 
 local function reveal_range(a)
@@ -391,23 +391,28 @@ end
 local function reveal_charset(a)
    assert(a, "did not get ast in reveal_charset")
    local name, pos, text, subs = common.decode_match(a)
-   -- empty character lists are allowed
-   if not(1) then return "[]"
-   elseif next(subs[1])=="range" then
-      local rname, rpos, rtext, rsubs = common.decode_match(subs[1])
-      assert(rsubs[1], "did not get low sub in reveal_charset")
-      assert(rsubs[2], "did not get high sub in reveal_charset")
-      local lowname, lowpos, lowtext = common.decode_match(rsubs[1])
-      local hiname, hipos, hitext = common.decode_match(rsubs[2])
-      assert(lowname=="character")
-      assert(hiname=="character")
-      assert(not rsubs[3])
-      return "[" ..  lowtext.. "-" .. hitext .. "]"
+   if next(subs[1])=="range" then
+      return reveal_range(subs[1])
    elseif next(subs[1])=="charlist" then
-      return "["..reveal_charlist(subs[1]).."]"
+      return reveal_charlist(subs[1])
    else
       error("Reveal error: Unknown charset type: ".. next(subs[1]))
    end
+end
+
+local function reveal_charset_exp(a)
+   assert(a, "did not get ast in reveal_charset_exp")
+   local name, pos, text, subs = common.decode_match(a)
+   local retval = ""
+   for _,sub in ipairs(subs) do
+      local name, pos, text, subs = common.decode_match(sub)
+      if name=="range" then retval = retval .. reveal_range(sub)
+      elseif name=="charlist" then retval = retval .. reveal_charlist(sub)
+      elseif name=="named_charset" then retval = retval .. reveal_named_charset(sub)
+      else error("Reveal error: Unknown charset expression type: ".. name)
+      end
+   end -- for
+   return "[" .. retval .. "]"
 end
 
 local function reveal_choice(a)
@@ -487,6 +492,7 @@ parse.reveal_exp = function(a)
 		      literal=reveal_string;
 		      named_charset=reveal_named_charset;
 		      charset=reveal_charset;
+		      charset_exp=reveal_charset_exp;
 		      charlist=reveal_charlist;
 		      range=reveal_range;
 		      quantified_exp=reveal_quantified_exp;
