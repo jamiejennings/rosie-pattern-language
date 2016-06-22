@@ -56,7 +56,7 @@ check(api.API_VERSION)
 check(type(api.API_VERSION=="string"))
 
 check(type(api.new_engine)=="function")
-ok, eid_js = api.new_engine("hello")
+ok, eid_js = api.new_engine(json.encode{name="rpl core test"})
 check(ok)
 eid = json.decode(eid_js)[1]
 check(type(eid)=="string")

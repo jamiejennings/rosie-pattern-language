@@ -48,11 +48,12 @@ function lapi.inspect_engine(en)
    return en:inspect()
 end
 
--- !@# Change optional-name to configuration table
-
-function lapi.new_engine(optional_name)	    -- optional manifest? file list? code string?
-   optional_name = (optional_name and tostring(optional_name)) or "<anonymous>"
-   return engine(optional_name, common.new_env())
+function lapi.new_engine(optional_cfg)
+   optional_cfg = optional_cfg or {}
+   if not optional_cfg.name then optional_cfg.name = "<anonymous>"; end
+   local en = engine(optional_cfg.name, common.new_env())
+   en:configure(optional_cfg)
+   return en
 end
 
 function lapi.get_environment(en)

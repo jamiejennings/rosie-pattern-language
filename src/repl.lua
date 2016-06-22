@@ -31,7 +31,7 @@ local repl_patterns = [==[
       input = command / statement / identifier
 ]==]
 
-repl_engine = lapi.new_engine("repl")
+repl_engine = lapi.new_engine({name="repl"})
 lapi.load_file(repl_engine, "src/rpl-core.rpl")
 lapi.load_string(repl_engine, repl_patterns)
 

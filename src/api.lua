@@ -110,12 +110,15 @@ end
 
 api.inspect_engine = api_wrap(inspect_engine)
 
-local function new_engine(name)			    -- optional manifest? file list? code string?
-   name = name or ""
-   if type(name)~="string" then
-      arg_error("engine name not a string")
+local function new_engine(config_string)
+   if type(config_string)~="string" then
+      arg_error("engine configuration not a json-encoded object")
    end
-   local en = engine(name)
+   local ok, c_table = pcall(json.decode, config_string)
+   if not ok then
+      arg_error("engine configuration not a valid json object")
+   end
+   local en = engine("<anonymous>")
    local id = en.id
    if engine_list[id] then
       en.id = en.id .. os.tmpname():sub(-6)
@@ -126,6 +129,8 @@ local function new_engine(name)			    -- optional manifest? file list? code stri
       end
    end
    engine_list[en.id] = en
+   ok, msg = lapi.configure_engine(en, c_table)
+   if not ok then arg_error(msg); end
    return en.id
 end
 

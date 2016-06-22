@@ -47,7 +47,7 @@ local json = require "cjson"
 require("repl")
 require "list"
 
-CL_ENGINE, msg = lapi.new_engine("command line engine")
+CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
 
 local function greeting()
