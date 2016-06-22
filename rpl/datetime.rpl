@@ -41,30 +41,30 @@
 -- T and Z may be lowercase.
 -- The "T" separator in the date-time rule can be a space instead.
  
-alias d = [[:digit:]]
+alias d = [:digit:]
 
 -- ---------------------------------------------------------------------------------------------------
 -- RFC3339 datetime
 
 alias fullyear = {d d d d}
 
-alias date_month = { {"0" [[1-9]]} / {"1" [[0-2]]} }
+alias date_month = { {"0" [1-9]} / {"1" [0-2]} }
 
-alias date_mday = {  {"0" [[1-9]]}		-- single digit dates
-                   / {[[12]][[0-9]]}		-- most of the two digit dates
-		   / {"3" [[01]]} }		-- and the rest
+alias date_mday = {  {"0" [1-9]}		-- single digit dates
+                   / {[12][0-9]}		-- most of the two digit dates
+		   / {"3" [01]} }		-- and the rest
 
-alias time_hour = { {[[01]][[0-9]]} / {"2"[[0-3]]} }
+alias time_hour = { {[01][0-9]} / {"2"[0-3]} }
 
-alias time_minute = {[[0-5]][[0-9]]}
-alias time_second = { {{[[0-5]][[0-9]]} / "60"} {"." d+}? }     -- time_second must match 60 for leap second
-alias time_numoffset = { [[+-]] time_hour ":" time_minute }
-alias time_offset = { [[Zz]] / time_numoffset }
+alias time_minute = {[0-5][0-9]}
+alias time_second = { {{[0-5][0-9]} / "60"} {"." d+}? }     -- time_second must match 60 for leap second
+alias time_numoffset = { [+-] time_hour ":" time_minute }
+alias time_offset = { [Zz] / time_numoffset }
 alias partial_time = {time_hour ":" time_minute ":" time_second}
 
 datetime.full_date_RFC3339 = {fullyear "-" date_month "-" date_mday}
 datetime.full_time_RFC3339 = {partial_time time_offset}
-datetime.datetime_RFC3339 = {datetime.full_date_RFC3339 [[Tt]] datetime.full_time_RFC3339}
+datetime.datetime_RFC3339 = {datetime.full_date_RFC3339 [Tt] datetime.full_time_RFC3339}
 
 -- Examples from RFC3339
 -- 
@@ -99,24 +99,24 @@ datetime.datetime_RFC3339 = {datetime.full_date_RFC3339 [[Tt]] datetime.full_tim
 -- Note: In the spec, FWS means "folded whitespace", and matches any
 -- amount of whitespace, including none at all.  
 -- 
---    date-time   =   [[ day-of-week "," ]] date FWS time [[CFWS]]
---    day-of-week =   ([[FWS]] day-name) / obs-day-of-week
+--    date-time   =   [ day-of-week "," ] date FWS time [CFWS]
+--    day-of-week =   ([FWS] day-name) / obs-day-of-week
 --    day-name    =   "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
 --    date        =   day month year
 --    year        =   4*DIGIT / obs-year
 --    month       =   (FWS month-name FWS) / obs-month
 --    month-name  =   "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / 
 --                    "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
---    day         =   ([[FWS]] 1*2DIGIT) / obs-day
+--    day         =   ([FWS] 1*2DIGIT) / obs-day
 --    time        =   time-of-day FWS zone
---    time-of-day =   hour ":" minute [[ ":" second ]]
+--    time-of-day =   hour ":" minute [ ":" second ]
 --    hour        =   2DIGIT / obs-hour
 --    minute      =   2DIGIT / obs-minute
 --    second      =   2DIGIT / obs-second
 --    zone        =   (( "+" / "-" ) 4DIGIT) / obs-zone
 
 
-alias numeric_zone_RFC2822 = { [[+-]] d d d d }
+alias numeric_zone_RFC2822 = { [+-] d d d d }
 
 alias obsolete_zone_RFC2822 = "UTC" / "UT" / "GMT" / "CET" / "EST" / "EDT" / 
                               "CST" / "CDT" / "MST" / "MDT" / "PST" / "PDT" 
@@ -137,7 +137,7 @@ alias day_of_week_RFC2822 = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun
 
 -- strict defn of date is this: 
 -- date_RFC2822 = day_RFC2822 month_RFC2822 year_RFC2822
-datetime.date_RFC2822 = { day_of_week_RFC2822 [[:space:]]* ","}? day_RFC2822 month_RFC2822 year_RFC2822
+datetime.date_RFC2822 = { day_of_week_RFC2822 [:space:]* ","}? day_RFC2822 month_RFC2822 year_RFC2822
 datetime.datetime_RFC2822 = datetime.date_RFC2822 datetime.time_RFC2822
 
 

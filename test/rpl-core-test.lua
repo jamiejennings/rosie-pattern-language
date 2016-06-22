@@ -1081,15 +1081,11 @@ check_match('{{a b}{2,2}}', 'abab ', true, 1)
 heading("Character sets")
 
 subheading("Rejecting illegal expressions")
-for _, exp in ipairs{"[:alpha:]",		    -- OLD syntax (pre v0.99)
-		     "[]",			    -- used to be allowed
-		     "[[]]",			    -- no longer allowed
-                     "[]]",			    -- the rest are other syntax errors
-                     "[[]",
-                     "[[abc][]]",
-		     "[:alpha]"} do
+for _, exp in ipairs{"[]]",
+		     "[]",			    -- this was legal before v0.99?
+                     "[[abc][]]"} do
    ok, msg = api.configure_engine(eid, json.encode({expression=exp}))
-   check(not ok)
+   check(not ok, "this expression was expected to fail: " .. exp)
    check(msg:find("Syntax error at line 1"))
 end
 
@@ -1102,19 +1098,31 @@ end
 
 
 test_charsets("[[:print:]]", {"a", "1", "#", " "}, {"\t", "\b"})
+test_charsets("[:print:]", {"a", "1", "#", " "}, {"\t", "\b"})
 test_charsets("[[:graph:]]", {"a", "1", "#"}, {" ", "\t", "\b"})
+test_charsets("[:graph:]", {"a", "1", "#"}, {" ", "\t", "\b"})
 test_charsets("[[:upper:]]", {"A", "Q"}, {"a", "q", " ", "!", "0", "\b"})
+test_charsets("[:upper:]", {"A", "Q"}, {"a", "q", " ", "!", "0", "\b"})
 test_charsets("[[:lower:]]", {"a", "m"}, {"A", "M", "!", "0", " "})
+test_charsets("[:lower:]", {"a", "m"}, {"A", "M", "!", "0", " "})
 test_charsets("[[:alpha:]]", {"A", "z"}, {" ", "!", "0", "\\b"})
+test_charsets("[:alpha:]", {"A", "z"}, {" ", "!", "0", "\\b"})
 test_charsets("[[:alnum:]]", {"A", "0", "e"}, {" ", "!", "\\b"})
+test_charsets("[:alnum:]", {"A", "0", "e"}, {" ", "!", "\\b"})
 test_charsets("[[:digit:]]", {"0", "9"}, {"a", " ", "!"})
+test_charsets("[:digit:]", {"0", "9"}, {"a", " ", "!"})
 test_charsets("[[:xdigit:]]", {"a", "A", "f", "F", "1", "9"}, {"g", " ", "!"})
+test_charsets("[:xdigit:]", {"a", "A", "f", "F", "1", "9"}, {"g", " ", "!"})
 test_charsets("[[:space:]]", {" ", "\t", "\n", "\r"}, {"A", "0", "\b"})
+test_charsets("[:space:]", {" ", "\t", "\n", "\r"}, {"A", "0", "\b"})
 test_charsets("[[:punct:]]", {"!", "&", "."}, {"a", "X", "0", " ", "\b"})
+test_charsets("[:punct:]", {"!", "&", "."}, {"a", "X", "0", " ", "\b"})
 test_charsets("[[:cntrl:]]", {"\b", "\r"}, {"a", "X", "0", " "})
+test_charsets("[:cntrl:]", {"\b", "\r"}, {"a", "X", "0", " "})
 
 subheading("Character ranges")
 test_charsets("[[a-z]]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
+test_charsets("[a-z]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[[a-a]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[b-a]]", {}, {"a", "b", "c", "y", "z", " ", "X", "0", "!"}) -- !@# could war
 test_charsets("[[$-&]]", {"$", "%", "&"}, {"^", "-", "z", " ", "X", "0", "!"})
@@ -1122,9 +1130,12 @@ test_charsets("[[--.]]", {"-", "."}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\[-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})
 
 subheading("Character lists")
+test_charsets("[[]", {"["}, {"]", "+", "/", "z", " ", "X", "0", "!"}) -- a single open bracket
+test_charsets("[\\]]", {"]"}, {"[", "+", "/", "z", " ", "X", "0", "!"}) -- a single close bracket
 test_charsets("[[\\[\\]-]]", {"]", "[", "-"}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\]]]", {"]"}, {"[", "-", "+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[aa]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
+test_charsets("[aa]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[abczyx]]", {"a", "b", "c", "x", "y", "z"}, {"r", "d", "m", " ", "X", "0", "!"})
 test_charsets("[[-]]", {"-"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[ \t]]", {" ", "\t"}, {"\n", "b", "y", "z", "X", "0", "!"})

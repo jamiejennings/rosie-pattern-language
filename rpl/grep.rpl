@@ -9,16 +9,16 @@
 
 alias any = .					 --  just for readability
 
-alias d = [[:digit:]]
+alias d = [:digit:]
 alias D = !d any
-alias w = [[:alnum:]] / "_"
+alias w = [:alnum:] / "_"
 alias W = !w any
-alias s = [[:space:]]
+alias s = [:space:]
 alias S = !s any
 
 
-int = { [[+-]]? d+ }				 -- at least one digit
-float = { [[+-]]? d+ "." d+ }			 -- float with digits on either side of radix
+int = { [+-]? d+ }				 -- at least one digit
+float = { [+-]? d+ "." d+ }			 -- float with digits on either side of radix
 num = float / int
 
 word = w+

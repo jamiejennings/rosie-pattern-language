@@ -34,13 +34,13 @@ alias end_token = { "end" !id_char }
 alias keyword_list = { "alias" / "grammar" / "end" }
 keyword = { keyword_list !id_char }
 
--- it is important that an error consume at least one character
--- as a tactic, we will skip to eol and try to continue
+-- it is important that an error consume at least one character here.
+-- as a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
 rest_of_line = { {!newline .}+ ignore }
 syntax_error = { rest_of_line }
 
 character = { {!esc .} / {esc .} }
-range = { character [[-]] !"]]" character } 
+range = { character [[-]] !"]" character } 
 charlist = { {!"]" character}+ }		    -- cannot be empty
 named_charset = { {![[:]] .}+ }
 alias one_charset = { "[" { ":" named_charset ":]" } /
@@ -48,7 +48,7 @@ alias one_charset = { "[" { ":" named_charset ":]" } /
 		          { charlist "]" } /
 		          syntax_error
 		    }
-charset_exp = { "[" one_charset+ "]" }
+charset_exp = { "[" ignore (one_charset ignore)+ "]" } / one_charset
 
 low =  { [[:digit:]]* }				    -- an int or nothing
 high = { [[:digit:]]* }

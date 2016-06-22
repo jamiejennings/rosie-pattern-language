@@ -17,7 +17,7 @@ alias sq = {csv.squote squoted_field csv.squote}
 alias string_constant = dq / sq
 
 comment = {!"\n" .}*
-alias hash_comment = {[[:space:]]* "#" comment "\n"?}
+alias hash_comment = {[:space:]* "#" comment "\n"?}
 alias hash_skip = { string_constant / {!"#" .} }*
 
 ----------------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ alias pl.any_comment = { hash_skip hash_comment }*
 -- useful patterns to search for: js.line_comment, js.block_comment, js.any_comment
 
 alias js.comment_char = "//"
-alias js.line_comment = {[[:space:]]* js.comment_char comment "\n"?}+
+alias js.line_comment = {[:space:]* js.comment_char comment "\n"?}+
 
 alias js.start_comment = "/*"
 alias js.end_comment = "*/"

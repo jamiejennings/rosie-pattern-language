@@ -18,7 +18,7 @@ alias basic.element = common.number / common.maybe_identifier / common.identifie
 alias basic.element_quoted = "\"" basic.element "\""
 alias basic.element_bracketed = "[" basic.element "]"
 
-basic.unmatched = {![[:space:]] any}+
+basic.unmatched = {![:space:] any}+
 
 basic.datetime_patterns =
    datetime.datetime_RFC3339 / 
@@ -42,12 +42,12 @@ basic.network_patterns =
    network.fqdn / 
    network.email_address
 
-basic.punctuation = [[:punct:]]
+basic.punctuation = [:punct:]
 
 
 basic.matchall = ( basic.datetime_patterns / basic.network_patterns /
                    basic.element / basic.element_quoted / basic.element_bracketed /
-                   [[:space:]]+ /
+                   [:space:]+ /
 		   basic.punctuation / 
 		   basic.unmatched
 		)+
