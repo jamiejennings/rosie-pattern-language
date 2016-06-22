@@ -1161,12 +1161,18 @@ test_charsets("[[:^space:]]", {"A", "0", "\b"}, {" ", "\t", "\n", "\r"})
 test_charsets("[^a-z]", {" ", "X", "0", "!"}, {"a", "b", "y", "z"})
 test_charsets("[^ab-z]", {"c", "d", " ", "X", "0", "!"}, {"a", "b", "-", "z"}) -- NOT a range!
 
-subheading("Combinations")
+subheading("Unions")
 test_charsets("[[:digit:][a]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})
 test_charsets("[[a][:digit:]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})
 test_charsets("[[a][:digit:][F-H]]", {"F", "G", "H", "a", "1", "9"}, {"f", "g", "h", "b", "y", "z", " ", "X", "!"})
 test_charsets("[[:alpha:][$][2-4]]", {"F", "G", "H", "a", "2", "4", "$"}, {"5", " ", "1", "!"})
 test_charsets("[[:^space:][\\n]]", {"A", "0", "\b", "\n"}, {" ", "\t", "\r"})
+
+subheading("Complements of unions")
+test_charsets("[^[:digit:]]", {"d", " ", "e", "X", "!"}, {"1", "0", "9"})
+test_charsets("[^[c]]", {"d", " ", "e", "X", "4", "!"}, {"c"})
+test_charsets("[^[a-c]]", {"d", " ", "e", "X", "4", "!"}, {"a", "b", "c"})
+test_charsets("[^[a-c][d][:space:]]", {"e", "X", "4", "!"}, {"a", "b", "c", "d", " ", "\t"})
 
 subheading("Whitespace and comments")
 test_charsets("[[:digit:]  [a]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})

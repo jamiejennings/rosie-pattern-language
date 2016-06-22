@@ -20,17 +20,8 @@ local looking_at_boundary_ast = common.create_match("predicate",
 						    common.create_match("lookat", 0, "@"),
 						    boundary_ast)
 
--- When a syntax transformation uses dot or end_of_line, it uses the values from the initial
--- environment. 
-local initial_environment = common.new_env()
-local dot = initial_environment[common.any_char_identifier]
-assert(pattern.is(dot))
-local end_of_line = initial_environment[common.end_of_input_identifier]
-assert(pattern.is(end_of_line))
-
-local function err(name, msg)
-   error('invalid ast ' .. name .. ': ' .. msg)
-end
+local dot_ast = common.create_match("ref", 0, common.any_char_identifier)
+local eol_ast = common.create_match("ref", 0, common.end_of_input_identifier)
 
 function syntax.validate(ast)
    if ast==nil then return nil; end
@@ -325,11 +316,23 @@ syntax.expand_charset_exp =
    syntax.make_transformer(function(ast)
 			      local name, pos, text, subs = common.decode_match(ast)
 			      assert(subs and subs[1])
+			      local complement = (next(subs[1])=="complement")
+			      if complement then subs=cdr(subs); end
+			      assert(subs and subs[1])
+			      local exp 
 			      if subs[2] then
-				 return syntax.generate("raw_exp", syntax.rebuild_choice(subs))
+				 exp = syntax.rebuild_choice(subs)
 			      else
-				 return syntax.generate("raw_exp", subs[1])
+				 exp = subs[1]
 			      end
+			      if complement then
+			      	 exp = syntax.generate("sequence",
+						       syntax.generate("predicate",
+								       common.create_match("negation", 0, "!"),
+								       exp),
+						       dot_ast)
+			      end
+			      return exp
 			   end,
 			   "charset_exp",	    -- applies only to these nodes
 			   true)		    -- recursive
@@ -406,8 +409,10 @@ function syntax.expression_p(ast)
 	   (name=="literal") or
 	   (name=="quantified_exp") or
 	   (name=="named_charset") or
-	   (name=="charset") or
+	   (name=="range") or
+	   (name=="charlist") or
 	   (name=="charset_exp") or
+--	   (name=="charset") or			    -- only used by core
 	   (name=="choice") or
 	   (name=="sequence") or
 	   (name=="predicate"))
