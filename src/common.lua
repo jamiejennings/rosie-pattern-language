@@ -305,6 +305,8 @@ local boundary = locale.space^1 + #locale.punct
 	      + lpeg.P(-1)
 	      + (- lpeg.B(1))
 
+common.boundary = boundary
+
 -- Base environment, which can be extended with new_env, but not written to directly,
 -- because it is shared between match engines:
 

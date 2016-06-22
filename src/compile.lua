@@ -27,18 +27,7 @@ local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt, lpeg.B
 
 local locale = lpeg.locale()
-
-----------------------------------------------------------------------------------------
--- Boundary for tokenization... this is going to be customizable, but hard-coded for now
-----------------------------------------------------------------------------------------
-
-local boundary = locale.space^1 + #locale.punct
-              + (lpeg.B(locale.punct) * #(-locale.punct))
-	      + (lpeg.B(locale.space) * #(-locale.space))
-	      + P(-1)
-	      + (- B(1))
-
-compile.boundary = boundary
+local boundary = common.boundary
 
 ----------------------------------------------------------------------------------------
 -- Compile-time error reporting
