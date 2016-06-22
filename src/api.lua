@@ -129,8 +129,10 @@ local function new_engine(config_string)
       end
    end
    engine_list[en.id] = en
-   ok, msg = lapi.configure_engine(en, c_table)
-   if not ok then arg_error(msg); end
+   if (c_table~=json.null) then
+      ok, msg = lapi.configure_engine(en, c_table)
+      if not ok then arg_error(msg); end
+   end
    return en.id
 end
 
