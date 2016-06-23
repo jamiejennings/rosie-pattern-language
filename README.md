@@ -84,7 +84,7 @@ And since the JSON can be long, perhaps display just one line of output, as in t
 
 ### Sample patterns are in the rpl directory
 
-The file `./MANIFEST` lists the Rosie Pattern Language files that Rosie compiles
+The file `MANIFEST` lists the Rosie Pattern Language files that Rosie compiles
 on startup.  These files are typically in the `rpl` directory, but could be
 anywhere.  Browse the `rpl` directory to see how patterns are written.
 
@@ -137,7 +137,7 @@ so much output is generated.
 ### Adding new patterns for Rosie to load on start-up
 
 When Rosie starts, all the Rosie Pattern Language (rpl) files listed in
-`./MANIFEST ` are loaded.  You can write your own patterns and add your
+`MANIFEST ` are loaded.  You can write your own patterns and add your
 pattern file to the end of the manifest, so that Rosie will load them.
 (Currently, this is the only way to add new patterns.)
 
