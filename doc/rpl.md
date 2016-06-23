@@ -280,7 +280,7 @@ In PEG patterns, quantifiers like `*` are greedy and will eat up as much input a
 
 To write a PEG pattern that consumes characters (`.`) up until the string "ear" is seen, write:
 
-``` 
+```json 
 { !"ear" . }*
 ```
 
