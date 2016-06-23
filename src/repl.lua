@@ -14,7 +14,7 @@ local repl_patterns = [==[
       rpl_expression = expression
       rpl_exp_placeholder = {!"," {charset_exp/quoted_string/.}}+
       comma = ","
-      parsed_args = rpl_exp_placeholder comma? quoted_string?
+      parsed_args = rpl_exp_placeholder? comma? quoted_string?
       path = {![[:space:]] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path?
       manifest = ".manifest" path?
@@ -24,7 +24,8 @@ local repl_patterns = [==[
       on_off = "on" / "off"
       debug = ".debug" on_off?
       patterns = ".patterns"
-      clear = ".clear" identifier?
+      star = "*"
+      clear = ".clear" (identifier / star)?
       help = ".help"
       badcommand = {"." .*}
       command = load / manifest / match / eval / debug / patterns / clear / help / badcommand
@@ -81,6 +82,8 @@ function repl(en)
 	       io.write("Repl: ", msg, "\n")
 	       if text=="help" then
 		  io.write("  Hint: use .help to get help\n")
+	       elseif (text=="exit") or (text=="quit") then
+		  io.write("  Hint: use ^D (control-D) to exit\n")
 	       end
 	    end
 	 elseif name=="command" then
@@ -115,12 +118,17 @@ function repl(en)
 	    elseif cname=="clear" then
 	       if csubs and csubs[1] then
 		  local name, pos, id, subs = common.decode_match(csubs[1])
-		  assert(name=="identifier")
-		  if en.env[id] then en.env[id] = nil -- abstraction breakage?
-		  else io.write("Repl: undefined identifier: ", id, "\n"); end
-	       else -- no identifier followed the clear command
-		  lapi.clear_environment(en)
-		  io.write("Pattern environment cleared\n")
+		  if (name=="identifier") then
+		     if en.env[id] then en.env[id] = nil -- abstraction breakage?
+		     else io.write("Repl: undefined identifier: ", id, "\n"); end
+		  elseif (name=="star") then
+		     lapi.clear_environment(en)
+		     io.write("Pattern environment cleared\n")
+		  else
+		     io.write("Repl: internal error while processing clear command\n")
+		  end
+	       else -- missing argument
+		  io.write("Error: supply the identifier to clear, or * for all\n")
 	       end
 	    elseif cname=="match" or cname =="eval" then
 	       if (not csubs) or (not csubs[1]) then
@@ -130,6 +138,9 @@ function repl(en)
 		  assert(ename=="args")
 		  lapi.configure_engine(repl_engine, {expression='parsed_args'})
 		  local m, msg = lapi.match(repl_engine, argtext)
+		  -- if not m then
+		  --    io.write("Error: missing expression to match and/or input string\n")
+		  --    else
 		  assert(next(m)=="parsed_args")
 		  local msubs = m and m.parsed_args.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
@@ -191,23 +202,25 @@ function repl(en)
 end
 
 local help_text = [[
-      Help
-      At the prompt, you may enter a command, an identifier name (to see its definition),
-      or an RPL statement.  Commands start with a dot (".") as follows:
+   Rosie Help
 
-   .load path                      load RPL file (see note below)
-   .manifest path                  load manifest file (see note below)
-   .match exp, quoted_string       match RPL expression against (quoted) input data
-   .eval exp, quoted_string        show full evaluation (trace)
-   .debug {on|off}                 show debug state; with an argument, set it
-   .patterns                       list patterns in the environment
-   .clear                          clear the pattern environment
-   .help                           print this message
+   At the prompt, you may enter a command, an identifier name (to see its
+   definition), or an RPL statement.  Commands start with a dot (".") as
+   follows:
 
-   Note on paths to RPL and manifest files:  A filename may begin with $sys, which
-   refers to the Rosie install directory, or $(VAR), which is the value of the environment
-   variable $VAR.  For filenames inside a manifest file, $lib refers to the directory
-   containing the manifest file.
+   .load path                    load RPL file (see note below)
+   .manifest path                load manifest file (see note below)
+   .match exp, quoted_string     match RPL exp against (quoted) input data
+   .eval exp, quoted_string      show full evaluation (trace)
+   .debug {on|off}               show debug state; with an argument, set it
+   .patterns                     list patterns in the environment
+   .clear <id>                   clear the pattern definition of <id>, * for all
+   .help                         print this message
+
+   Note on paths to RPL and manifest files: A filename may begin with $sys,
+   which refers to the Rosie install directory, or $(VAR), which is the value of
+   the environment variable $VAR.  For filenames inside a manifest file, $lib
+   refers to the directory containing the manifest file.
 
    EOF (^D) will exit the read/eval/print loop.
 ]]      
