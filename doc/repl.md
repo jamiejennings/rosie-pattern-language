@@ -6,7 +6,7 @@ In the [Rosie Command Line Interface documentation](cli.md) you will find the
 `-repl` switch, which starts the interactive read/eval/print loop after
 processing any other command line options.  For example:
 
-```bash 
+```
 jjennings$ ./run -repl
 Rosie CLI warning: missing pattern argument
 Rosie CLI warning: missing filename arguments
