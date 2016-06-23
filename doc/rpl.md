@@ -280,7 +280,7 @@ In PEG patterns, quantifiers like `*` are greedy and will eat up as much input a
 
 To write a PEG pattern that consumes characters (`.`) up until the string "ear" is seen, write:
 
-```json 
+```
 { !"ear" . }*
 ```
 
@@ -288,7 +288,7 @@ The part of the pattern inside the braces is read as "while not looking at _ear_
 
 But this is not quite enough, because this pattern will consume characters as long as it does not see "ear", so words that do not contain "ear" at all will match!  We want to make sure our match includes "ear", and includes it at the end of the line.  So we write this:
 
-```json 
+```
 {{!"ear" .}* "ear"}$
 ``` 
 
