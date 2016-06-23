@@ -10,7 +10,7 @@
 
 ### Running Rosie
 
-The `run` script in the Rosie install directory starts the command line interface (CLI), which can be used to match rpl pattern expressions against files of data.  (To match against a single string, use the [interactive read-eval-print loop (repl)](doc/repl.md).)
+The `run` script in the Rosie install directory starts the command line interface (CLI), which can be used to match rpl pattern expressions against files of data.  (To match against a single string, use the [interactive read-eval-print loop (repl)](repl.md).)
 
 The Rosie Pattern Engine reads input files one line at a time, and tries to match each line against the pattern expression given on the command line.
 
