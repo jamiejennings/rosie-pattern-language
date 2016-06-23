@@ -53,6 +53,9 @@ Blog posts on Rosie:
 For an introduction to Rosie and explanations of the key concepts, see
 [Rosie's _raison d'etre_](doc/raisondetre.md).
 
+Rosie's internal components, as well as the utilities needed to build Rosie are
+listed [here](doc/arch.md).
+
 ## A quick test
 
 For a quick test of Rosie's capabilities, use the Rosie Pattern Engine to look
@@ -127,7 +130,7 @@ names as well as email addresses, domain names, and ip addresses.
 ### Pattern debugging on the command line
 
 Interactive pattern debugging can be done using the read-eval-print loop (see
-[interactive pattern development](doc/repl.md).  But debugging output can also
+[interactive pattern development](doc/repl.md)).  But debugging output can also
 be generated at the command line.
 
 The `-debug` command line option generates verbose output about every step of
