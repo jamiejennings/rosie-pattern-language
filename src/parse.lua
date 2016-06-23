@@ -377,15 +377,19 @@ local function reveal_range(a)
    assert(a, "did not get ast in reveal_range")
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="range")
-   local rname, rpos, rtext, rsubs = common.decode_match(subs[1])
-   assert(rsubs[1], "did not get low sub in reveal_range")
-   assert(rsubs[2], "did not get high sub in reveal_range")
-   local lowname, lowpos, lowtext = common.decode_match(rsubs[1])
-   local hiname, hipos, hitext = common.decode_match(rsubs[2])
+   assert(subs and subs[1])
+   local complement = (next(subs[1])=="complement")
+   local offset = 0
+   if complement then
+      assert(subs[2] and subs[3])
+      offset = 1
+   end
+   local lowname, lowpos, lowtext = common.decode_match(subs[1+offset])
+   local hiname, hipos, hitext = common.decode_match(subs[2+offset])
    assert(lowname=="character")
    assert(hiname=="character")
-   assert(not rsubs[3])
-   return "[" ..  lowtext.. "-" .. hitext .. "]"
+   assert(not subs[3+offset])
+   return "[" ..  ((complement and "^") or "") .. lowtext.. "-" .. hitext .. "]"
 end
 
 local function reveal_charset(a)
@@ -403,16 +407,24 @@ end
 local function reveal_charset_exp(a)
    assert(a, "did not get ast in reveal_charset_exp")
    local name, pos, text, subs = common.decode_match(a)
+   assert(subs and subs[1])
+   local complement = (next(subs[1])=="complement")
+   local offset = 0
+   if complement then
+      assert(subs[2])
+      offset = 1
+   end
    local retval = ""
-   for _,sub in ipairs(subs) do
-      local name, pos, text, subs = common.decode_match(sub)
+   for i=1+offset,#subs do
+      local sub = subs[i]
+      local name = next(sub)
       if name=="range" then retval = retval .. reveal_range(sub)
       elseif name=="charlist" then retval = retval .. reveal_charlist(sub)
       elseif name=="named_charset" then retval = retval .. reveal_named_charset(sub)
       else error("Reveal error: Unknown charset expression type: ".. name)
       end
    end -- for
-   return "[" .. retval .. "]"
+   return "[" .. ((complement and "^") or "") .. retval .. "]"
 end
 
 local function reveal_choice(a)

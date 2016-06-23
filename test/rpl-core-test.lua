@@ -1160,6 +1160,13 @@ test_charsets("[:^digit:]", {"a", " ", "!"}, {"0", "9"})
 test_charsets("[[:^space:]]", {"A", "0", "\b"}, {" ", "\t", "\n", "\r"})
 test_charsets("[^a-z]", {" ", "X", "0", "!"}, {"a", "b", "y", "z"})
 test_charsets("[^ab-z]", {"c", "d", " ", "X", "0", "!"}, {"a", "b", "-", "z"}) -- NOT a range!
+test_charsets("[^[:^digit:]]+", {"0", "123"}, {"", " ", "d", "@"})
+test_charsets("{[^[:^digit:]]}+", {"0", "123"}, {"", " ", "d", "@"})
+test_charsets("([^[:^digit:]])+", {"0", "1 2 3"}, {"", " ", "d", "@"})
+test_charsets("[^[:^alpha:]]+", {"a", "XYZ"}, {"", " ", "3", "@"})
+test_charsets("{[^[:^alpha:]]}+", {"a", "XYZ"}, {"", " ", "3", "@"})
+test_charsets("([^[:^alpha:]])+", {"a", "X Y Z"}, {"", " ", "3", "@"})
+
 
 subheading("Unions")
 test_charsets("[[:digit:][a]]", {"a", "1", "9"}, {"b", "y", "z", " ", "X", "!"})

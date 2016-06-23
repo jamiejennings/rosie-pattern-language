@@ -332,7 +332,7 @@ syntax.expand_charset_exp =
 								       exp),
 						       dot_ast)
 			      end
-			      return exp
+			      return syntax.generate("raw", exp)    -- not raw_exp!
 			   end,
 			   "charset_exp",	    -- applies only to these nodes
 			   true)		    -- recursive
@@ -341,7 +341,6 @@ function syntax.expand_rhs(ast, original_rhs_name)
    ast = syntax.expand_charset_exp(ast)
    local name, body = next(ast)
    if original_rhs_name=="raw" then
-      -- wrap with "raw_exp" so that we know at top level not to append a boundary
       return syntax.generate("raw_exp", syntax.raw(ast))
    elseif original_rhs_name=="cooked" then
 	 return syntax.cook(ast)
@@ -357,8 +356,10 @@ function syntax.expand_rhs(ast, original_rhs_name)
       return ast
    elseif syntax.expression_p(ast) then
       local new = ast
-      if ((name=="raw") or (name=="literal") or (name=="charset") or
-          (name=="named_charset") or (name=="predicate")) then
+      if ((name=="raw") or (name=="literal") or
+          (name=="charset") or (name=="charset_exp") or
+          (name=="named_charset") or (name=="range") or (name=="charlist") or 
+          (name=="predicate")) then
       	 new = syntax.raw(new)
       else
       	 new = syntax.cook(new)

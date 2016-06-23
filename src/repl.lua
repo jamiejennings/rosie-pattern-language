@@ -62,7 +62,7 @@ function repl(en)
    local s = io.stdin:read("l")
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
-      lapi.configure_engine(repl_engine, {expression="input", encoder=false})
+      lapi.configure_engine(repl_engine, {expression="input", encode=false})
       local m, left = lapi.match(repl_engine, s)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
@@ -152,7 +152,7 @@ function repl(en)
 			if ename=="string" then exp = '"'..exp..'"'; end
 			local tname, tpos, input_text = common.decode_match(msubs[3])
 			input_text = common.unescape_string(input_text)
-			local ok, msg = lapi.configure_engine(en, {expression=exp, encoder="json"})
+			local ok, msg = lapi.configure_engine(en, {expression=exp, encode="json"})
 			if not ok then
 			   io.write(msg, "\n");		    -- syntax and compile errors
 			else

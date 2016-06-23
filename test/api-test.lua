@@ -179,6 +179,18 @@ check(ok)
 env = json.decode(env_js)[1]
 check(not env["x"])
 
+for _, exp in ipairs{"[0-9]", "[abcdef123]", "[:alpha:]", 
+		     "[^0-9]", "[^abcdef123]", "[:^alpha:]", 
+		     "[^[a][b]]"} do
+   ok, msg = api.load_string(eid, 'cs = '..exp)
+   check(ok)
+   ok, msg = api.get_binding(eid, "cs")
+   check(ok, "failed to get binding for cs when it is bound to " .. exp)
+   check(json.decode(msg)[1]:find(exp, 1, true), "failed to observe this in binding of cs: " .. exp)
+end
+
+
+
 ok, msg = api.load_string(eid, '-- comments and \n -- whitespace\t\n\n',
    "an empty list of ast's is the result of parsing comments and whitespace")
 check(ok)
@@ -361,6 +373,10 @@ ok, msg = api.configure_engine(eid, json.encode({expression="common.dotted_ident
 					  encode=false}))
 check(ok)
 check(#json.decode(msg)==0)
+
+ok, msg = api.get_binding(eid, "hex_only")	    -- common.rpl
+check(ok)
+check(json.decode(msg)[1]:find("hex_only = {[[a-f]] / [[A-F]]}", 1, true))
 
 print(" Need more configuration tests!")
 
