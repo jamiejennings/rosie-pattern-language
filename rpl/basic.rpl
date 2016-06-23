@@ -12,7 +12,7 @@
 -- requires common, datetime, network
 
 
-alias basic.element = common.number / common.maybe_identifier / common.identifier_not_word /
+alias basic.element = (common.number ~) / common.maybe_identifier / common.identifier_not_word /
                       common.word / common.path
 
 alias basic.element_quoted = "\"" basic.element "\""

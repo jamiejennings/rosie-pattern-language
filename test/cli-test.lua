@@ -7,6 +7,8 @@
 ---- AUTHOR: Jamie A. Jennings
 
 util = require "util"
+require "test-functions"
+check = test.check
 
 test.start(test.current_filename())
 
@@ -34,6 +36,8 @@ f:close()
 print("Input file (" .. infilename .. ") created successfully")
 
 function run(expression, grep_flag, expectations)
+   test.heading(expression)
+   test.subheading((grep_flag and "Using grep option") or "No grep option")
    local verb = (grep_flag and "Grepping for") or "Matching"
    print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
    local grep = (grep_flag and " -grep") or ""
@@ -56,6 +60,7 @@ function run(expression, grep_flag, expectations)
       if (not (#results==#expectations)) then
 	 print(string.format("********** Mismatched number of results (%d) versus expectations (%d) **********", #results, #expectations))
       end
+      check((not mismatch_flag), "Mismatched output compared to expectations", 1)
    end -- if expectations
    return results
 end
@@ -96,6 +101,6 @@ run("basic.matchall", nil, results_basic_matchall)
 run("common.word", nil, results_common_word)
 run("common.word", true, results_common_word_grep)
 run("common.word basic.network_patterns", nil, results_word_network)
-run("common.number", true, results_common_number)
+run("~common.number~", true, results_common_number)
 
 return test.finish()
