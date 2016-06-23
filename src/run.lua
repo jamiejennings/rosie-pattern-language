@@ -60,6 +60,30 @@ local options_with_args = {"-manifest", "-f", "-e", "-encode"}
 
 local valid_options = append(options_without_args, options_with_args)
 
+local help_messages =
+   { ["-help"] = {"prints this message"},
+     ["-verbose"] = {"output warnings and other informational messages"},
+     ["-repl"] = {"start Rosie in the interactive mode (read-eval-print loop)"},
+     ["-patterns"] = {"print list of available patterns"},
+     ["-encode"] = {"encode output in <arg> format: color (default), nocolor,",
+		    "fulltext, or json"},
+     ["-wholefile"] = {"read the whole input file into memory as a single string,",
+		       "instead of line by line"},
+     ["-all"] = {"write matches to stdout and non-matching lines to stderr"},
+     ["-eval"] = {"output a detailed \"trace\" evaluation of how the pattern",
+		  "processed the input; this feature generates LOTS of output,",
+		  "so best to use it on ONE LINE OF INPUT"},
+     ["-grep"] = {"emulate grep (weakly), but with RPL, by searching for all",
+		  "occurrences of <pattern> in the input"},
+     ["-manifest"] = {"load the manifest file <arg> instead of MANIFEST from $sys",
+		      "(the Rosie install directory); use a single dash '-' to",
+		      "load no manifest file"},
+     ["-f"] = {"load the RPL file <arg>, after manifest (if any) is loaded;",
+	       "use a single dash '-' to read from the stdin"},
+     ["-e"] = {"compile the RPL statements in <arg>, after manifest and",
+	       "RPL file (if any) are loaded"},
+  }
+
 local function option_takes_arg(optname)
    return member(optname, options_with_args)
 end
@@ -150,28 +174,28 @@ function help()
    print("Rosie help:")
    print(usage_message)
    print()
-   print("  -help           prints this message")
-   print("  -verbose        output warnings and other informational messages")
-   print("  -repl           start Rosie in the interactive mode (read-eval-print loop)")
-   print("  -patterns       read manifest file, compile patterns, show pattern list (but process no input)")
-   print("  -json           produce output in JSON instead of color text")
-   print("                  (the default is terminal window output, with recognized items shown in color")
-   print("  -nocolor        output the matching text only (no escape sequences for color)")
-   print("  -all            output everything: matches to stdout and non-matching lines to stderr")
-   print("  -eval           output a detailed \"trace\" evaluation of how the pattern processed the input;")
-   print("                  this feature generates LOTS of output, so best to use it on ONE LINE OF INPUT;")
-   print("  -grep           emulate grep, but with RPL, by searching for all occurrences of <pattern> in the input")
-   print("  -manifest <fn>  load the manifest file <fn> instead of MANIFEST from $sys (the Rosie install directory)")
-   print("  -f <fn>         RPL file to load, after manifest (if any) is loaded")
-   print("  -e <rpl>        RPL statements to load, after manifest and RPL file (if any) are loaded")
+   local line
+   for _, cmd in ipairs(valid_options) do
+      if member(cmd, options_without_args) then
+	 line = string.format("%-18s %s", cmd, help_messages[cmd][1])
+      else
+	 line = string.format("%-18s %s", cmd .. " <arg>", help_messages[cmd][1])
+      end
+      print(line)
+      for i=2,#help_messages[cmd] do
+	 print("                   " .. help_messages[cmd][i])
+      end
+   end -- for each cmd
    print()
-   print("  <pattern>       RPL expression, which may be the name of a defined pattern, against which each line will be matched")
-   print("  <fn>+           one or more file names of text input, the last of which may be a dash \"-\" to read from standard input")
+   print("<pattern>            RPL expression, which may be the name of a defined pattern,")
+   print("                     against which each line will be matched")
+   print("<filename>+          one or more file names to process, the last of which may be")
+   print("                     a dash \"-\" to read from standard input")
    print()
    print("Notes: ")
-   print("(1) lines from the input file for which the pattern does NOT match are written to stderr so they can be redirected, e.g. to /dev/null")
+   print("(1) lines from the input file for which the pattern does NOT match are written")
+   print("    to stderr so they can be redirected, e.g. to /dev/null")
    print("(2) the -eval option currently does not work with the -grep option")
-   print("(3) to load no manifest file at all, supply a single dash as the filename argument: -manifest -")
    print()
 end
 
