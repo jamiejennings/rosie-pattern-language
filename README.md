@@ -1,20 +1,23 @@
-# This is Rosie Pattern Language v0.92f
+# This is Rosie Pattern Language
 
 ### Rosie will tidy up raw data (text), recognize key pieces of data, and create JSON structured output
 
 #### Better than regex
 
-Like a supercharged version of Regular Expressions (regex), Rosie matches input text
-against predefined patterns.
+Rosie is a supercharged alternative to Regular Expressions (regex), matching
+patterns against any input text.  Rosie ships with hundreds of sample patterns
+for timestamps, network addresses, email addresses, CSV files, and many more.
 
-Unlike most regex tools, Rosie will also generate structured (JSON) output, and
-will soon do all kinds of other things to the input data as it is being parsed.
+Unlike most regex tools, Rosie can generate structured (JSON) output.  And,
+Rosie has an interactive pattern development mode to help write and debug
+patterns. 
+
 
 #### Small and fast
 
 The Rosie Pattern Engine takes less than 400KB (yes, *kilobytes*) of disk space, and around 2MB of
-memory.  Typical log files are parsed at around 50,000 lines/second on my 4-year
-old MacBook Pro, where similar solutions do not achieve 10,000 lines/second.
+memory.  Typical log files are parsed at around 40,000 lines/second on my 4-year
+old MacBook Pro, where other (popular) solutions do not achieve 10,000 lines/second.
 
 For the PL and comp sci geeks among us, some technical notes are [here](doc/geek.md).
 
@@ -28,6 +31,12 @@ You should see this message if all went well: `Rosie Pattern Engine installed su
 
 #### Docs
 
+Rosie documentation:
+* [Command Line Interface documentation](doc/cli.md)
+* [Rosie Pattern Language Reference](doc/rpl.md)
+* [Interactive read-eval-print loop (repl)](doc/repl.md)
+
+
 Blog posts on Rosie:
 * [Project Overview](https://developer.ibm.com/open/rosie-pattern-language/)
 * [Introduction](https://developer.ibm.com/open/2016/02/20/world-data-science-needs-rosie-pattern-language/)
@@ -35,12 +44,8 @@ Blog posts on Rosie:
 * Parsing CSV files (forthcoming)
 * Generating patterns automatically (forthcoming)
 
-To write patterns in Rosie Pattern Language, see [the RPL documentation](doc/rpl.md).
-
 For an introduction to Rosie and explanations of the key concepts, see
 [Rosie's _raison d'etre_](doc/raisondetre.md).
-
-The [interactive read-eval-print loop (repl)](doc/repl.md) is documented separately.
 
 ### A quick test
 
@@ -61,11 +66,11 @@ Unparsed data is shown in black text.  To see which colors correspond to which
 RPL patterns, type `./run -patterns` to see all defined and loaded patterns and
 the color (if any) that is assigned to them for output at the terminal.
 
-To see the JSON version of this output, try adding the JSON flag (and perhaps
-displaying just one line of output, as in this example):
+To see the JSON version of this output, use the `-encode` flag to specify JSON.
+And since the JSON can be long, perhaps display just one line of output, as in this example:
 
 ```
-./run -json basic.matchall /var/log/system.log | head -1
+./run -encode json basic.matchall /var/log/system.log | head -1
 ```
 
 
@@ -91,7 +96,7 @@ bash-3.2$ ./run 'network.ip_address common.word' /etc/hosts
 And the same command but with JSON output:
 
 ``` 
-bash-3.2$ ./run -json 'network.ip_address common.word' /etc/hosts 
+bash-3.2$ ./run -encode json 'network.ip_address common.word' /etc/hosts 
 {"*":{"1":{"network.ip_address":{"text":"127.0.0.1","pos":1}},"2":{"common.word":{"text":"localhost","pos":11}},"text":"127.0.0.1\tlocalhost","pos":1}}
 {"*":{"1":{"network.ip_address":{"text":"255.255.255.255","pos":1}},"2":{"common.word":{"text":"broadcasthost","pos":17}},"text":"255.255.255.255\tbroadcasthost","pos":1}}
 ``` 

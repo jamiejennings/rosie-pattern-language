@@ -8,7 +8,7 @@
 ### If you are a (possible) user of the Rosie Pattern Engine (and RPL)...
 
 * [Language reference](rpl.md)
-* Command line interface (forthcoming)
+* [Command line interface](cli.md)
 * [Read/eval/print loop](repl.md)
 * API (forthcoming)
 

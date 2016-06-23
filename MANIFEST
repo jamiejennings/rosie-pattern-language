@@ -39,5 +39,9 @@ $sys/rpl/grep.rpl
 
 $sys/rpl/spark.rpl   	        -- spark logs with python and java entries
 
+-- Parsing comments of various kinds out of source code:
+$sys/rpl/language-comments.rpl
+
 -- Esoteric, perhaps:
+
 $sys/rpl/rosie.rpl

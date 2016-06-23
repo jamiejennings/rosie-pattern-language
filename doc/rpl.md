@@ -4,9 +4,11 @@
 <!--  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  -->
 <!--  AUTHOR: Jamie A. Jennings                                                -->
 
+# Rosie Pattern Language v0.99
 
+## This is the pattern language reference
 
-# Rosie Pattern Language v0.91
+The [Command Line Interface documentation](doc/cli.md) and information about the [Interactive read-eval-print loop (repl)](doc/repl.md) are other places to look for information about how to use Rosie.
 
 ## How to install new patterns
 
@@ -16,17 +18,27 @@ Rpl files contain Rosie Pattern Language, which Rosie compiles.  When Rosie star
 
 Usually, the default manifest loads these rpl files: (your distribution may differ)
 
-| File              |  Contents |
-| ----------------- | --------- |
-| rpl/common.rpl    | commonly used patterns for numbers, words, identifiers, pathnames |
-| rpl/datetime.rpl  | dates and times in a variety of formats |
-| rpl/network.rpl	| ip address, hostname, http commands, email addresses |
-| rpl/syslog.rpl	| patterns for the kind of syslog entries produced by Service Exchange |
-| rpl/basic.rpl		| patterns for finding a variety of "basic" patterns of semantic interest in arbitrary input |
-| rpl/grep.rpl		| patterns familiar to users of the unix grep utility |
+| File                           |  Contents |
+| ------------------------------ | --------- |
+| $sys/rpl/basic.rpl	         | patterns for finding a variety of "basic" patterns of semantic interest in arbitrary input |
+| $sys/rpl/common.rpl            | commonly used patterns for numbers, words, identifiers, pathnames |
+| $sys/rpl/csv.rpl		         | patterns for reading csv-formatted files |
+| $sys/rpl/datetime.rpl          | dates and times in a variety of formats |
+| $sys/rpl/grep.rpl		         | a few patterns familiar to users of the unix grep utility |
+| $sys/rpl/language-comments.rpl | extract comments from source code in various languages |
+| $sys/rpl/network.rpl	         | ip address, hostname, http commands, email addresses |
+| $sys/rpl/spark.rpl             | syslog, java exception, and python traceback patterns |
+| $sys/rpl/syslog.rpl            | patterns for the kind of syslog entries produced by Service Exchange |
 
-A good first experiment when using Rosie is to match the pattern `basic.matchall` against an arbitrary input file.
+In file names, the following prefixes are valid and expanded by Rosie when present:
 
+| Prefix   | Meaning   | Notes  |
+| -------- | --------- | ------ |
+| $sys     | Rosie install directory                | valid on the command line and in manifest files |
+| $lib     | directory containing the manifest file | valid only inside a manifest file |
+| $(VAR)   | insert the value of the environment variable $VAR | valid on the command line and in manifest files |
+
+Note that file names can contain embedded spaces as long as they are escaped with a backslash, `'\ '`.
 
 ## RPL reference
 
@@ -57,8 +69,8 @@ When `common.int` is matched against input "421", Rosie will output:
 {"common.int":{"1":{"d":{"pos":1,"text":"4"}},"2":{"d":{"pos":2,"text":"2"}},"3":{"d":{"pos":3,"text":"1"}},"pos":1,"text":"421"}}
 ```
 
-This is the default behavior because Rosie assumes that if you gave a pattern
-(like `[:digit:]`) a name (like `d`), then you must care a lot about this thing
+This is the default behavior because Rosie assumes that if you gave a name (like `d`) to a pattern 
+(like `[:digit:]`), then you must care a lot about this thing
 called `d` and you want to see all of its components.  When that is not the case, use `alias`.
 
 So, in this example, unless you care about the individual digits, you should
@@ -104,7 +116,7 @@ Grammars can have mutually recursive rules.  PEGs allow you to define grammars f
 	Rosie>
     ``` 
 
-**IMPORTANT NOTE:** Debugging grammars using the `-debug` command line option is not currently supported.  Even worse, the syntax error reporting for grammars is atrocious.  This is on the TO DO list.
+**IMPORTANT NOTE:** Debugging grammars using the `-debug` command line option is not currently supported.  Even worse, the syntax error reporting for grammars is atrocious.  This is on the TO DO list and will be addressed soon.
 
 
 ### Expressions
@@ -113,7 +125,7 @@ Here are some key things to remember:
 
 * To match a literal string, enclose it in double quotes.  Outside of quotes you can use identifiers to which you have already assigned patterns, aliases, or grammars.
 * Normally, Rosie looks for word boundaries automatically.  A word boundary can be whitespace (which is consumed and discarded) or punctuation.  To proceed character by character instead, put curly braces `{...}` around your expression, which puts Rosie in "raw mode".
-* Choices are made with the slash `\` operator, not a vertical bar, because PEGs use an _ordered choice_.  See [below](#regex_vs_rpl) for more.
+* Choices are made with the forward slash `/` operator, not a vertical bar, because PEGs use an _ordered choice_.  See [below](#regex_vs_rpl) for more.
 
 Rosie's pattern expressions are as follows (note the similarity to regexes):
 
@@ -129,21 +141,26 @@ Rosie's pattern expressions are as follows (note the similarity to regexes):
 |  `@pat`         | Looking at `pat` (predicate: consumes no input)                       |
 |  `p / q`        | Ordered choice between `p` and `q`     |
 |  `p q`          | Sequence of `p` followed by `q`     |
-|  `(...)`         | _Cooked group_, the default mode, in which Rosie divides the input into tokens automatically |
-|  `{...}`         | _Raw group_, which tells Rosie to process character by character |
+|  `(...)`         | _Cooked group_, the default mode, in which Rosie automatically looks for token boundaries between pattern elements |
+|  `{...}`         | _Raw group_, which tells Rosie to match the pattern exactly as written, without looking for token boundaries |
 |  `[:name:]`      | Named character classes are from the POSIX standard:  alpha, xdigit, digit, print, cntrl, lower, space, alnum, upper, punct, graph  |
 |  `[x-y]`         | Range character class, from character x to character y  |
 |  `[...]`      | List character class, which matches any of the characters listed (in place of `...`) |
+|  `[:^name:]`     | Complement of a named character class |
+|  `[^x-y]`        | Complement of a range character class |
+|  `[^...]`        | Complement of a list character class, matching any character that is NOT one of the ones listed in place of `...` |
+|  `[cs1 cs2 ...]` | Union of one or more character sets `cs1`, `cs2`, etc. (E.g. `[[a-f][0-9]]`) |
+|  `[^ cs1 cs2 ...]` | Complement of a union of character sets |
 
 
 **NOTES:**
 1. The "quantified expressions" `pat?`, `pat*`, `pat+`, and `pat?` are _greedy_.  They will consume as many repetitions as possible, always.
 2. The two grouping constructs (raw and cooked) are used in the way that parentheses are usually used in programming: to force the order of operations that you want.  So if you want "a or b, followed by c", write `(a / b) c` or `{ {a / b} c }`.
-3. Inside of quotation marks, the only special character is `\` (backslash), which is the escape character.  Inside of a character set (in square brackets `[]`), the only special character is `-`, which is only special when it is the middle of three characters, specifying a character range.
+3. Inside of quotation marks, the only special character is `\` (backslash), which is the escape character.  Inside of a character set (in square brackets `[]`), the special characters are `-` (which is only special when it is the middle of three characters, specifying a character range) and square brackets `[` `]` and caret `^`.  These characters must be escaped to use them literally within a character set, e.g. a class containing a single right bracket and a caret is `[\]\^]`.
 
 ### Matches/Captures
 
-The real output of Rosie is structured in a way that mirrors the pattern that was matched.  You can see the structure if you look at the JSON output from Rosie.  (On a terminal, the default is for Rosie to print the matched pieces of input in color.  Use the `-json` flag to get JSON instead.)  There will be one JSON structure for each line in the input, and each structure is called a *match*.  A match contains the name of the pattern that generated it, the starting position in the input of the matched text, the matched text itself, and any *sub-matches*.  Sub-matches have the same structure as matches.
+The real output of Rosie is structured in a way that mirrors the pattern that was matched.  You can see the structure if you look at the JSON output from Rosie.  (On a terminal, the default is for Rosie to print the matched pieces of input in color.  Use the `-encode json` option to get JSON instead.)  There will be one JSON structure for each line in the input, and each structure is called a *match*.  A match contains the name of the pattern that generated it, the starting position in the input of the matched text, the matched text itself, and any *sub-matches*.  Sub-matches have the same structure as matches; i.e. matches have a tree structure.
 
 A match output by Rosie is kind of like a capture in regex.  Except way cooler, because a match has the recursive structure of a parse tree. (In the language of compilers, Rosie's output is an *abstract syntax tree*.)
 
@@ -165,13 +182,13 @@ alert = down_message delay
 
 
 
-## If you know regex already, this is RPL <a name="regex_vs_rpl"></a>
+## If you know regex already, this is RPL <a name="regex_vs_rpl"></a> 
 
 ### Anchors
 
 * A Rosie pattern begins matching at the start of the input line, so there is no `^` (caret) anchor in RPL.  To skip over characters, you have to be explicit in your pattern about what to skip.  See [below](#find_patterns) for more.
 * A Rosie pattern will match successfully even if the entire input is not consumed.  To force a match of the complete input line, use the `$` anchor at the end of your pattern to mark the end of the input line.
-* Rosie automatically tokenizes the input in a way similar to the "word boundary" (\b) anchor in regex, so there is no word boundary anchor in Rosie.  (You could, of course, write one.)
+* Rosie automatically tokenizes the input in a way similar to the "word boundary" (\b) anchor in regex.  There is a Rosie identifier `~` that refers to the boundary definition used by Rosie.  You can use it explictly as needed, e.g. `~common.number~` matches the pattern `common.number` (from [rpl/common.rpl](../rpl/common.rpl)) only when there is a token boundary before and after it.
 
 ### Ordered choice
 
@@ -221,7 +238,7 @@ But `a b` will **not** match the input "ab".  Neither will `(a b)`, because pare
 	* looking behind at whitespace but ahead at non-whitespace, or
 	* at the end of the input"
 
-If you wanted to match "ab", then you do not want to match `a` and `b` as separate tokens, but instead as raw characters.  You need the raw mode expression `{a b}` to match "ab", which will produce this output:
+If you wanted to match "ab", then you do not want to match `a` and `b` as separate tokens, but instead as raw characters.  You need the untokenized "raw mode" expression `{a b}` to match "ab", which will produce this output:
 
 ``` 
 [*: 
@@ -239,7 +256,9 @@ If you wanted to match "ab", then you do not want to match `a` and `b` as separa
 
 When you quantify a simple expression using `*`, `+`, `?`, or `{n,m}`, Rosie will treat the expression as if it were raw.  So `"foo"+` will match "foofoofoo" and not "foo foo foo".  You can force a tokenized match using a cooked group: `("foo")+` will match "foo foo foo".  Most of the time, quantified expressions are used in character-oriented syntactic patterns, so the default usually _does the right thing_.
 
-But for that occasion when you want to match exactly two ip addresses separated by whitespace, be sure to write `(network.ip_address){2,2}`.
+But for that occasion when you want to match exactly two ip addresses separated by whitespace, be sure to write `(network.ip_address){2,2}`.  The right way to read this expression is to remember that the repetition operator (`{2,2}` in this example) causes Rosie to look for a sequence.  Since the pattern `(network.ip_address)` is inside a tokenized group (i.e. the parentheses), the overall pattern has the same meaning as `network.ip_address ~ network.ip_address`.
+
+By contrast, the untokenized expression `network.ip_address{2,2}` means `network.ip_address network.ip_address` (with no boundary check in between).
 
 ### Greedy quantifiers
 
@@ -343,13 +362,13 @@ Rosie> .match [:space:]* common.number, "   123"
           subs: 
            [1: [common.hex: 
                  [pos: 4, 
-                  subs: 
-                   [], 
                   text: "123"]]], 
           text: "123"]]], 
   text: "   123"]]
 Rosie> 
 ```
 
-**Note: The default behavior in this case may change with Rosie Pattern Engine v1.0.**
+A compact alternative to `[:space:]*` is to use the Rosie boundary identifier, `~`, to skip ahead to the next token boundary, consuming whitespace on the way.
+
+
 
