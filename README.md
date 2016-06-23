@@ -1,8 +1,8 @@
 # This is Rosie Pattern Language
 
-### Rosie will tidy up raw data (text), recognize key pieces of data, and create JSON structured output
+## Rosie will tidy up raw data (text), recognize key pieces of data, and create JSON structured output
 
-#### Better than regex
+### Better than regex
 
 Rosie is a supercharged alternative to Regular Expressions (regex), matching
 patterns against any input text.  Rosie ships with hundreds of sample patterns
@@ -13,7 +13,7 @@ Rosie has an interactive pattern development mode to help write and debug
 patterns. 
 
 
-#### Small and fast
+### Small and fast
 
 The Rosie Pattern Engine takes less than 400KB (yes, *kilobytes*) of disk space, and around 2MB of
 memory.  Typical log files are parsed at around 40,000 lines/second on my 4-year
@@ -21,7 +21,7 @@ old MacBook Pro, where other (popular) solutions do not achieve 10,000 lines/sec
 
 For the PL and comp sci geeks among us, some technical notes are [here](doc/geek.md).
 
-### How to build: clone the repo, and type 'make'
+## How to build: clone the repo, and type 'make'
 
 After cloning the repository, there is just one step: `make <platform>` where
 `<platform>` is, e.g. `macosx` or `linux`.  The `makefile` will download the
@@ -29,7 +29,13 @@ needed prerequisites and compile them.
 
 You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
 
-#### Docs
+## Current status
+
+The current release is the "version 1.0 candidate".  The RPL language syntax and
+semantics are stable, as is the (relatively new) API.  The current release is
+labeled "v0.99x" where x begins with "a" and will be advanced as bugs are fixed.
+
+## Docs
 
 Rosie documentation:
 * [Command Line Interface documentation](doc/cli.md)
@@ -47,7 +53,7 @@ Blog posts on Rosie:
 For an introduction to Rosie and explanations of the key concepts, see
 [Rosie's _raison d'etre_](doc/raisondetre.md).
 
-### A quick test
+## A quick test
 
 For a quick test of Rosie's capabilities, use the Rosie Pattern Engine to look
 for a basic set of patterns in any text file on your system.  Good candidates
@@ -171,6 +177,7 @@ make | processes makefile to build Rosie
 cc   | on MacOSX, the compiler that is part of Apple's developer tools
 gcc  | on Linux, the GNU C compiler that is most prevalent
 curl | a utility used here to download files
+sed  | text editing utility used in the makefile to edit the Lua makefile
 
 Note: You can override the choice of compiler on the command line, if (for
 example) you want to use `gcc` on MacOSX:
