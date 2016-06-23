@@ -14,7 +14,7 @@ The `run` script in the Rosie install directory starts the command line interfac
 
 The Rosie Pattern Engine reads input files one line at a time, and tries to match each line against the pattern expression given on the command line.
 
-A good way to run Rosie is to define an alias.  In the bash shell, you can write:
+A good way to run Rosie is to define an alias.  In the bash shell, you can write (substituting your Rosie install directory for mine):
 
 ```
 alias rosie='/Users/jjennings/Dev/rosie-pattern-language/run'
