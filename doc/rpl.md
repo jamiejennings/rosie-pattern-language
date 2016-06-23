@@ -8,7 +8,7 @@
 
 ## This is the pattern language reference
 
-The [Command Line Interface documentation](doc/cli.md) and information about the [Interactive read-eval-print loop (repl)](doc/repl.md) are other places to look for information about how to use Rosie.
+The [Command Line Interface documentation](cli.md) and information about the [Interactive read-eval-print loop (repl)](repl.md) are other places to look for information about how to use Rosie.
 
 ## How to install new patterns
 
