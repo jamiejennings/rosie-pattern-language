@@ -12,9 +12,8 @@ json = require "cjson"
 
 local repl_patterns = [==[
       rpl_expression = expression
-      rpl_exp_placeholder = {!"," {charset_exp/quoted_string/.}}+
-      comma = ","
-      parsed_args = rpl_exp_placeholder? comma? quoted_string?
+      rpl_exp_placeholder = {!{quoted_string $} .}+
+      parsed_args = rpl_exp_placeholder? quoted_string?
       path = {![[:space:]] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path?
       manifest = ".manifest" path?
@@ -144,10 +143,8 @@ function repl(en)
 		  assert(next(m)=="parsed_args")
 		  local msubs = m and m.parsed_args.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
-		     io.write("Expected a match expression, a comma, and a quoted input string\n")
-		  elseif (not msubs[2]) or (not msubs[2].comma) then
-		     io.write("Missing comma to separate the match expression from the quoted input string\n")
-		  elseif (not msubs[3]) or (not msubs[3].literal) then
+		     io.write("Expected a match expression follwed by a quoted input string\n")
+		  elseif (not msubs[2]) or (not msubs[2].literal) then
 		     io.write("Missing quoted string (after the match expression)\n")
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
@@ -160,8 +157,8 @@ function repl(en)
 			-- needs them there.  this is inelegant.  sigh
 			assert((type(astlist)=="table") and astlist[1])
 			local ename, epos, exp = common.decode_match(original_astlist[1])
-			if ename=="string" then exp = '"'..exp..'"'; end
-			local tname, tpos, input_text = common.decode_match(msubs[3])
+			if ename=="literal" then exp = '"'..exp..'"'; end
+			local tname, tpos, input_text = common.decode_match(msubs[2])
 			input_text = common.unescape_string(input_text)
 			local ok, msg = lapi.configure_engine(en, {expression=exp, encode="json"})
 			if not ok then
@@ -191,7 +188,8 @@ function repl(en)
 	 elseif name=="alias_" or name=="assignment_" or name=="grammar_" then
 	    local ok, messages = lapi.load_string(en, text);
 	    if not ok then io.write(messages, "\n")
-	    else for _, msg in ipairs(messages) do if msg then io.write(msg); end; end
+	    elseif messages then
+	       for _, msg in ipairs(messages) do if msg then io.write(msg); end; end
 	    end
 	 else
 	    io.write("Repl: internal error\n")
@@ -210,8 +208,8 @@ local help_text = [[
 
    .load path                    load RPL file (see note below)
    .manifest path                load manifest file (see note below)
-   .match exp, quoted_string     match RPL exp against (quoted) input data
-   .eval exp, quoted_string      show full evaluation (trace)
+   .match exp quoted_string      match RPL exp against (quoted) input data
+   .eval exp quoted_string       show full evaluation (trace)
    .debug {on|off}               show debug state; with an argument, set it
    .patterns                     list patterns in the environment
    .clear <id>                   clear the pattern definition of <id>, * for all
