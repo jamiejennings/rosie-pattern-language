@@ -15,7 +15,7 @@ subheading = test.subheading
 eid = false;
 
 function set_expression(exp)
-   local ok, msg = api.configure_engine(eid, json.encode{expression=exp, encoder=false})
+   local ok, msg = api.configure_engine(eid, json.encode{expression=exp, encode=false})
    if not ok then error("Configuration error: " .. msg); end
 end
 

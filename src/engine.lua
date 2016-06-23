@@ -29,8 +29,8 @@ engine =
       env=false;
       id=unspecified;
       --
-      encoder=false;
-      encoder_function=false;
+      encode=false;
+      encode_function=false;
       expression=false;
       pattern=false;
       --
@@ -60,13 +60,13 @@ local function no_pattern(e)
    engine_error(e, "no pattern configured")
 end
 
-local function no_encoder(e)
-   engine_error(e, "no encoder configured")
+local function no_encode(e)
+   engine_error(e, "no encode configured")
 end
 
 ----------------------------------------------------------------------------------------
 
-local encoder_table =
+local encode_table =
    {json = json.encode,
     color = color_string_from_leaf_nodes,
     nocolor = string_from_leaf_nodes,
@@ -74,15 +74,15 @@ local encoder_table =
     [false] = function(...) return ...; end
  }
 
-function name_to_encoder(name)
-   return encoder_table[name]
+function name_to_encode(name)
+   return encode_table[name]
 end
 
-function encoder_to_name(fcn)
-   for k,v in pairs(encoder_table) do
+function encode_to_name(fcn)
+   for k,v in pairs(encode_table) do
       if v==fcn then return k; end
    end
-   return "<unknown encoder>"
+   return "<unknown encode type>"
 end
 
 ----------------------------------------------------------------------------------------
@@ -94,13 +94,13 @@ local function engine_configure(e, configuration)
 	 if not pat then return false, msg; end
 	 e.expression = v
 	 e.pattern = pat
-      elseif k=="encoder" then
-	 local f = name_to_encoder(v)
+      elseif k=="encode" then
+	 local f = name_to_encode(v)
 	 if type(f)~="function" then
-	    return false, 'invalid encoder name: "' .. tostring(v) .. '"'
+	    return false, 'invalid encode type: "' .. tostring(v) .. '"'
 	 else
-	    e.encoder = v
-	    e.encoder_function = f
+	    e.encode = v
+	    e.encode_function = f
 	 end
       elseif k=="name" then
 	 e.name = tostring(v)
@@ -112,13 +112,13 @@ local function engine_configure(e, configuration)
 end
 
 local function engine_inspect(e)
-   return {name=e.name, expression=e.expression, encoder=e.encoder, id=e.id}
+   return {name=e.name, expression=e.expression, encode=e.encode, id=e.id}
 end
 
 local function engine_match(e, input, start)
    start = start or 1
    local result, nextpos = (e.pattern.peg * lpeg.Cp()):match(input, start)
-   if result then return (e.encoder_function(result)), nextpos;
+   if result then return (e.encode_function(result)), nextpos;
    else return false, 1; end
 end
 
@@ -144,13 +144,13 @@ end
 local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename, wholefileflag)
    local peg = (e.pattern.peg * Cp())
    if type(eval_flag)~="boolean" then engine_error(e, "bad eval flag"); end
-   if not e.encoder_function then engine_error(e, "output encoder required, but not set"); end
+   if not e.encode_function then engine_error(e, "output encode required, but not set"); end
    local ok, infile, outfile, errfile = pcall(open3, e, infilename, outfilename, errfilename);
    if not ok then return false, infile; end	    -- infile is the error message in this case
 
    local inlines, outlines, errlines = 0, 0, 0;
    local trace, nextpos, m;
-   local encode = e.encoder_function;
+   local encode = e.encode_function;
    local nextline
    if wholefileflag then
       nextline = function()
@@ -211,9 +211,9 @@ engine.create_function =
 		      -- setting expression causes pattern to be set
 		      expression=default_pattern_name,
 		      pattern=make_default_pattern(name),
-		      -- setting encoder causes encoder_function to be set
-		      encoder=false,
-		      encoder_function=name_to_encoder(false),
+		      -- setting encode causes encode_function to be set
+		      encode=false,
+		      encode_function=name_to_encode(false),
 		      -- functions
 		      match=engine_match,
 		      match_file=engine_match_file,

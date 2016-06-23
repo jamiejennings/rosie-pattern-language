@@ -153,7 +153,7 @@ function lapi.set_match_exp_grep_TEMPORARY(en, pattern_exp, encoder_name)
    if pattern.is(pat) then
       en.expression = "grep(" .. pattern_exp .. ")"
       en.pattern = pat
-      return lapi.configure_engine(en, {encoder=encoder_name})
+      return lapi.configure_engine(en, {encode=encoder_name})
    else
       arg_error(msg)
    end

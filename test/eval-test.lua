@@ -13,7 +13,7 @@ heading = test.heading
 subheading = test.subheading
 
 function set_expression(exp)
-   local ok, msg = api.configure_engine(eid, json.encode{expression=exp, encoder="json"})
+   local ok, msg = api.configure_engine(eid, json.encode{expression=exp, encode="json"})
    if not ok then error("Configuration error: " .. msg); end
 end
 

@@ -48,7 +48,7 @@ heading("Engine")
 ----------------------------------------------------------------------------------------
 subheading("new_engine")
 check(type(api.new_engine)=="function")
-ok, eid_js = api.new_engine(json.encode{name="hello", expression=".*", encoder=false})
+ok, eid_js = api.new_engine(json.encode{name="hello", expression=".*", encode=false})
 check(ok)
 check(type(eid_js)=="string")
 ok, eid = pcall(json.decode, eid_js)
@@ -56,9 +56,9 @@ check(ok)
 check(type(eid)=="table")
 check(type(eid[1])=="string")
 eid = eid[1]
-ok, msg = api.new_engine(json.encode{name="hello", expression=".*", encoder="jsonn"}) -- jsonn
+ok, msg = api.new_engine(json.encode{name="hello", expression=".*", encode="jsonn"}) -- jsonn
 check(not ok)
-check(msg:find("invalid encoder name"))
+check(msg:find("invalid encode type"))
 ok, eid2_js = api.new_engine(json.encode{name="hello"})
 check(ok)
 check(type(eid2_js)=="string")
@@ -82,7 +82,7 @@ check(ok)
 check(type(info[1])=="table")
 check(info[1].name=="hello")
 check(info[1].expression)
-check(info[1].encoder==false)
+check(info[1].encode==false)
 check(info[1].id==eid)
 
 ok, msg = api.inspect_engine()
@@ -351,14 +351,14 @@ check(not ok)
 check(msg:find("configuration argument not a string"))
 
 ok, msg = api.configure_engine(eid, json.encode({expression="common.dotted_identifier",
-					  encoder="json"}))
+					  encode="json"}))
 check(not ok)
 check(msg:find("reference to undefined identifier: common.dotted_identifier"))
 
 ok, msg = api.load_file(eid, "$sys/rpl/common.rpl")
 check(ok)
 ok, msg = api.configure_engine(eid, json.encode({expression="common.dotted_identifier",
-					  encoder=false}))
+					  encode=false}))
 check(ok)
 check(#json.decode(msg)==0)
 
@@ -388,7 +388,7 @@ match = retvals[1]
 check(match["common.dotted_identifier"].text=="x.y.z")
 check(match["common.dotted_identifier"].subs[2]["common.identifier_plus_plus"].text=="y")
 
-ok, msg = api.configure_engine(eid, json.encode{expression='common.number', encoder=false})
+ok, msg = api.configure_engine(eid, json.encode{expression='common.number', encode=false})
 check(ok)
 
 ok, retvals_js = api.match(eid, "x.y.z")
@@ -421,7 +421,7 @@ macosx_log1 = [=[
       "[" [[:digit:]]+ "]"
       "(" common.dotted_identifier {"["[[:digit:]]+"]"}? "):" .*
       ]=]
-ok, msg = api.configure_engine(eid, json.encode{expression=macosx_log1, encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression=macosx_log1, encode="json"})
 check(ok)			    
 ok, retvals_js = api.match_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
@@ -504,7 +504,7 @@ if ok then
 end
 
 print("Starting color output to stdout")
-ok, msg = api.configure_engine(eid, json.encode{encoder="color"})
+ok, msg = api.configure_engine(eid, json.encode{encode="color"})
 check(ok)
 ok, retvals_js = api.match_file(eid, ROSIE_HOME.."/test/test-input", "", "/tmp/err")
 print("End of color output to stdout")
@@ -522,11 +522,11 @@ ok, msg = api.eval(eid)
 check(not ok)
 check(json.decode(msg)[1]=="Argument error: input argument not a string")
 
-ok, msg = api.configure_engine(eid, json.encode{expression=".*//", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression=".*//", encode="json"})
 check(not ok)
 check(msg:find('Syntax error at line 1:'))
 
-ok, msg = api.configure_engine(eid, json.encode{expression=".*", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression=".*", encode="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "foo")
 check(ok)
@@ -535,7 +535,7 @@ check(retvals[1])
 check(retvals[2]==0)
 check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 
-ok, msg = api.configure_engine(eid, json.encode{expression="[[:digit:]]", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression="[[:digit:]]", encode="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "foo")
 check(ok)
@@ -544,7 +544,7 @@ check(not retvals[1])
 check(retvals[2]==3)
 check(retvals[3]:find('FAILED to match against input "foo"'))
 
-ok, msg = api.configure_engine(eid, json.encode{expression="[[:alpha:]]*", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression="[[:alpha:]]*", encode="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "foo56789")
 check(ok)
@@ -553,7 +553,7 @@ check(retvals[1])
 check(retvals[2]==5)
 check(retvals[3]:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
 
-ok, msg = api.configure_engine(eid, json.encode{expression="common.number", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression="common.number", encode="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "abc.x")
 check(ok)
@@ -574,7 +574,7 @@ ok, msg = api.eval_file(eid)
 check(ok)
 check(msg:find(": bad input file name"))
 
-ok, msg = api.configure_engine(eid, json.encode{expression=".*", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression=".*", encode="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "foo")
 check(ok)
@@ -586,7 +586,7 @@ if ok then
    check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 end
 
-ok, msg = api.configure_engine(eid, json.encode{expression="[[:digit:]]", encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression="[[:digit:]]", encode="json"})
 check(ok)
 ok, retvals_js = api.eval(eid, "foo")
 check(ok)
@@ -598,7 +598,7 @@ if ok then
    check(msg:find('FAILED to match against input "foo"')) -- % is esc char
 end
 
- ok, msg = api.configure_engine(eid, json.encode{expression=macosx_log1, encoder="json"})
+ ok, msg = api.configure_engine(eid, json.encode{expression=macosx_log1, encode="json"})
  check(ok)			    
  ok, retvals_js = api.eval_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
  check(ok, "the macosx log pattern in the test file works on some log lines")
@@ -643,7 +643,7 @@ ok, msg = api.eval_file(eid, "thisfiledoesnotexist", "", "")
 check(ok)
 check(msg:find("No such file or directory"), "can't match against nonexistent file")
 
-ok, msg = api.configure_engine(eid, json.encode{expression=macosx_log1, encoder="json"})
+ok, msg = api.configure_engine(eid, json.encode{expression=macosx_log1, encode="json"})
 check(ok)			    
 ok, retvals_js = api.eval_file(eid, ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")

@@ -125,8 +125,8 @@ function bootstrap()
    if not success then error("Bootstrap error: could not compile rosie core rpl: " .. tostring(result)); end
    ROSIE_ENGINE.expression = 'rpl';
    ROSIE_ENGINE.pattern = success;
-   ROSIE_ENGINE.encoder = "null/bootstrap";
-   ROSIE_ENGINE.encoder_function = function(m) return m; end;
+   ROSIE_ENGINE.encode = "null/bootstrap";
+   ROSIE_ENGINE.encode_function = function(m) return m; end;
    -- skip the assignment below to leave the original parser in place
    if true then
       compile.parser = parse_and_explain;

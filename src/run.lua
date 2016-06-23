@@ -240,7 +240,7 @@ function setup_engine()
       if OPTION["-grep"] then
 	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, opt_pattern, "json")
       else
-	 success, msg = lapi.configure_engine(CL_ENGINE, {expression=opt_pattern, encoder="json"})
+	 success, msg = lapi.configure_engine(CL_ENGINE, {expression=opt_pattern, encode="json"})
       end
       if not success then io.write(msg, "\n"); os.exit(-1); end
    end
@@ -254,8 +254,8 @@ function process_pattern_against_file(infilename)
    if OPTION["-all"] then errfilename = ""; end	    -- stderr
 
    -- (4) Set up what kind of encoding we want done on the output
-   encoder = OPTION["-encode"] or "color"
-   success, msg = lapi.configure_engine(CL_ENGINE, {encoder=encoder})
+   encode = OPTION["-encode"] or "color"
+   success, msg = lapi.configure_engine(CL_ENGINE, {encode=encode})
    if not success then io.write("Engine configuration error: ", msg, "\n"); os.exit(-1); end
 
    -- (5) Iterate through the lines in the input file
