@@ -1,21 +1,20 @@
 Source files:
 
-bootstrap.lua              ; uses a parser coded in lua to read rosie-core.rpl
-color-output.lua	   ; generates color text output for terminals (this is a hack at the moment)
-common.lua		   ; code common to many parts of Rosie
-compile.lua		   ; rpl compiler
-engine.lua		   ; abstraction for an rpl engine/interpreter
-manifest.lua		   ; processes the rpl manifest file
-parse.lua		   ; parser for the core of rpl, written in Lua
-repl.lua		   ; the read-eval-print-loop for interactive Rosie
-rosie-core.rpl		   ; rpl parser written in rpl
-run.lua			   ; loads Rosie for command line usage
-test.lua		   ; some compiler tests
+bootstrap.lua        ; uses a parser coded in lua to read rosie-core.rpl
+color-output.lua     ; generates color text output for terminals (this is a hack at the moment)
+common.lua           ; code common to many parts of Rosie
+compile.lua          ; rpl compiler
+engine.lua           ; abstraction for an rpl engine/interpreter
+manifest.lua         ; processes the rpl manifest file
+parse.lua            ; parser for the core of rpl, written in Lua
+repl.lua             ; the read-eval-print-loop for interactive Rosie
+rpl-core.rpl         ; rpl parser written in rpl
+run.lua              ; loads Rosie for command line usage
 
-list.lua		   ; utilities for manipulating lists in Lua
-recordtype.lua		   ; a record type definition in Lua, inspired by Scheme48
-recordtype-test.lua	   ; tests for the record type definition
-utils.lua		   ; misc utilities 
+list.lua             ; utilities for manipulating lists in Lua
+recordtype.lua       ; a record type definition in Lua, inspired by Scheme48
+recordtype-test.lua  ; tests for the record type definition
+util.lua             ; misc utilities 
 
 Notes:
 
