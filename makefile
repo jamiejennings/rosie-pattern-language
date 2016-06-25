@@ -4,6 +4,9 @@ LUA_DIR = lua-5.3.2
 LPEG_DIR = lpeg-1.0.0
 JSON_DIR = lua-cjson-2.1.0
 
+# place to put link to rosie binary
+DESTDIR=/usr/local/bin
+
 ## ----------------------------------------------------------------------------- ##
 
 PLATFORM = none
@@ -97,14 +100,20 @@ lib/cjson.so: $(JSON_DIR)
 compile:
 	bin/lua -e "ROSIE_HOME=\"`pwd`\"" src/rosie-compile.lua
 
+install:
+	@/usr/bin/env echo -n "Linking $(HOME)/run to $(DESTDIR)/rosie... "
+	@-ln -sf "$(HOME)/run" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie" && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
+
 test:
 	@echo "Rosie home is $(HOME)"
 	@echo "Attempting to execute $(HOME)/run ..."
 	@RESULT="$(shell $(HOME)/run 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
-            echo "Rosie Pattern Engine installed successfully!"; \
-            echo "Try this as a test: ./run basic.matchall /etc/resolv.conf"; \
+            echo "\nRosie Pattern Engine installed successfully!"; \
+	    echo ""; \
+            echo "Use 'make install' to install binary in $(DESTDIR)"; \
+            echo "And here is a command to test: ./run basic.matchall /etc/resolv.conf"; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
         fi
