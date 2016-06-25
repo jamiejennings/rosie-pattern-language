@@ -6,7 +6,7 @@
 
 # Language invariants (Sunday, June 12, 2016)
 
-<!-- --------------------------------------------------------------------------------------------------- -->
+
 ## Notation
 
 - `<e> :: <text>` means that `<e>` *returns a match* when given the input string `<text>`
@@ -15,7 +15,7 @@
 - Intermediate language is written as S-expressions with capitalized names in the operator position and one or more expressions in the operand positions
 - `(EVAL <exp>)` is the result of evaluating (compiling) `<exp>`
 
-<!-- --------------------------------------------------------------------------------------------------- -->`
+
 ## Match invariants
 
 ### Bindings
@@ -29,7 +29,7 @@
 ### Sequences
 
 0. `<e1> <e2>` is interpreted as `(SEQ <e1>` `<e2>)`
-0. `(SEQ <e1> <e2>) :: <input>` iff ... **To do: define sequence semantics**
+0. `(SEQ <e1> <e2>) :: <input>` iff **To do: define sequence semantics**
 0. Sequences are right associative, and the precedence of choices and sequences is the same
 0. The sequence `{<e1> <e2>}` is equivalent to `(SEQ <e1> <e2>)` (and so on for longer sequences), and is called a *untokenized sequence* (or a *raw sequence*)
 0. The sequence `(<e1> <e2>)` is equivalent to `(SEQ (COOK <e1>) ~ (COOK <e2>))` (and so on for longer sequences), and is called a *tokenized sequence* (or a *cooked sequence*)
@@ -40,8 +40,8 @@
 0. A quantified expression, `<exp> <q>`, is a kind of (parameterized) non-tokenized sequence, denoted in intermediate language by `(QUANT <exp> <q>)`, where `<exp>` is the base expression and `<q>` is the quantifier
 0. `<exp> <q>` is interpreted as `(QUANT <exp> <q>)`
 0. `(<exp>) <q>` is interpreted as `(QUANT (COOK <exp>) <q>)`
-0. `(QUANT <exp> <q>) :: <input>` iff ... **To do: define quantifier semantics**
-0. `<exp><q>` means `<exp> <exp>` ... `<exp>` for the appropriate number of `<exp>`, as per `<q>`
+0. `(QUANT <exp> <q>) :: <input>` iff **To do: define quantifier semantics**
+0. `<exp><q>` means `<exp> <exp> ... <exp>` for the appropriate number of `<exp>`, as per `<q>`
 0. `(<exp>)<q>` means `(<exp>) ~ (<exp>) ... ~ (<exp>)` for the appropriate number of `<exp>`, as per `<q>`
 0. `{<exp>}<q>` == `<exp><q>` == `{<exp><q>}` == `(<exp><q>)` == `(QUANT <exp>` `<q>)`
 0. Note that `(<exp>)<q> !== (<exp><q>)`.
@@ -49,7 +49,7 @@
 
 ### Choices
 
-0. `(CHOICE <e1>  <e2>)` :: <input> iff ... **To do: define choice semantics**
+0. `(CHOICE <e1>  <e2>)` :: <input> iff **To do: define choice semantics**
 0. Choices are right associative, and the precedence of choices and sequences is the same
 0. The choice `<e1> / <e2>` is interpreted as `(CHOICE (COOK <e1>) (COOK <e2>))` (tokenization is the default)
 0. The choice `{<e1> / <e2>}` == `{<e1>} / {<e2>}` (and so on for longer choices).
@@ -70,11 +70,12 @@
 0. The expression `{(<exp>)}` is equivalent to `(<exp>)` (suspension of tokenization is a no-op here)
 0. The expression `({<exp>})` is equivalent to `{<exp>}` (tokenization is a no-op here)
 
-<!-- --------------------------------------------------------------------------------------------------- -->
+
 ## Capture invariants
 
 0. The right hand side of an assignment is captured, and the capture is named for the left hand side (the identifier)
 0. The right hand side of an alias definition is not captured
+
 
 ## Intermediate language invariants
 
