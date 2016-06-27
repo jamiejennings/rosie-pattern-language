@@ -15,7 +15,7 @@ patterns.
 
 ### Small and fast
 
-The Rosie Pattern Engine takes less than 400KB (yes, *kilobytes*) of disk space, and around 2MB of
+The Rosie Pattern Engine takes less than 400KB (yes, *kilobytes*) of disk space, and around 20MB of
 memory.  Typical log files are parsed at around 40,000 lines/second on my 4-year
 old MacBook Pro, where other (popular) solutions do not achieve 10,000 lines/second.
 

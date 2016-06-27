@@ -1,14 +1,11 @@
-;; -*- Mode: Emacs-Lisp; -*-                                          
+;; -*- Mode: Emacs-Lisp; -*- 
 ;;
 ;; rpl-mode.el --- a major-mode for editing Rosie Pattern Language files
 ;;
-;; © Copyright IBM Corporation 2016.
-;; LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
-;; AUTHOR: Jamie A. Jennings
 
 ;; This file is NOT part of Emacs.
 
-(defconst rpl-version "2015-003"
+(defconst rpl-version "2016-004"
   "rpl mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -32,27 +29,27 @@
   :prefix "rpl-"
   :group 'languages)
 
-;(defcustom rpl-default-application "rpl"
-;  "Default application to run in rpl subprocess."
-;  :type 'string
-;  :group 'rpl)
-;
-;(defcustom rpl-default-command-switches (list "-i")
-;  "Command switches for `rpl-default-application'.
-;Should be a list of strings."
-;  :type '(repeat string)
-;  :group 'rpl)
-;
-;(defcustom rpl-always-show t
-;  "*Non-nil means display rpl-process-buffer after sending a command."
-;  :type 'boolean
-;  :group 'rpl)
-;
-;(defvar rpl-process nil
-;  "The active Rpl subprocess")
-;
-;(defvar rpl-process-buffer nil
-;  "Buffer used for communication with Rpl subprocess")
+(defcustom rpl-default-application "rpl"
+  "Default application to run in rpl subprocess."
+  :type 'string
+  :group 'rpl)
+
+(defcustom rpl-default-command-switches (list "-i")
+  "Command switches for `rpl-default-application'.
+Should be a list of strings."
+  :type '(repeat string)
+  :group 'rpl)
+
+(defcustom rpl-always-show t
+  "*Non-nil means display rpl-process-buffer after sending a command."
+  :type 'boolean
+  :group 'rpl)
+
+(defvar rpl-process nil
+  "The active Rpl subprocess")
+
+(defvar rpl-process-buffer nil
+  "Buffer used for communication with Rpl subprocess")
 
 (defvar rpl-mode-map nil
   "Keymap used with rpl-mode.")
@@ -153,16 +150,16 @@
 (defconst rpl-indent-whitespace " \t"
   "Character set that constitutes whitespace for indentation in rpl.")
 
-;(eval-and-compile
-;  (defalias 'rpl-make-temp-file
-;    (if (fboundp 'make-temp-file)
-;        'make-temp-file
-;      (lambda (prefix &optional dir-flag) ;; Simple implementation
-;        (expand-file-name
-;         (make-temp-name prefix)
-;         (if (fboundp 'temp-directory)
-;             (temp-directory)
-;           temporary-file-directory))))))
+(eval-and-compile
+ (defalias 'rpl-make-temp-file
+   (if (fboundp 'make-temp-file)
+       'make-temp-file
+     (lambda (prefix &optional dir-flag) ;; Simple implementation
+       (expand-file-name
+        (make-temp-name prefix)
+        (if (fboundp 'temp-directory)
+            (temp-directory)
+          temporary-file-directory))))))
 
 (eval-and-compile
   (if (not (fboundp 'replace-in-string)) ;GNU emacs doesn't have it
@@ -465,56 +462,58 @@ Returns the point, or nil if it reached the end of the buffer"
       (beginning-of-line)
       (if (not (looking-at "\\s *\\(--.*\\)?$")) (throw 'found (point))))))
 
-(eval-when-compile
-  (defconst rpl-operator-class
-    "-+*/^.=<>~"))
+;(eval-when-compile
+;  (defconst rpl-prefix-infix-operator-class
+;    "/^=!"))
 
-(defconst rpl-cont-eol-regexp
+;; (eval-when-compile
+;;   (defconst rpl-postfix-operator-class
+;;     "+*?"))
+
+;; (defconst rpl-cont-eol-regexp
+;;   (eval-when-compile
+;;     ;; expression used to generate the regexp
+;;     (concat
+;;      "\\("
+;; ;;     "\\<"
+;; ;;     (regexp-opt '("grammar" "enumerate" "transform") t)
+;; ;;     "\\>\\|"
+;; ;;     "\\(^\\|[^" rpl-prefix-infix-operator-class "]\\)"
+;;      (regexp-opt '("/" "=" "!" "@")  t)
+;;      "\\)"
+;;      "\\s *\\=")
+;;     ))
+
+(defconst rpl-NO-cont-bol-regexp
   (eval-when-compile
     ;; expression used to generate the regexp
     (concat
-     "\\("
-;;     "\\<"
-;;     (regexp-opt '("grammar" "enumerate" "transform") t)
-;;     "\\>\\|"
-     "\\(^\\|[^" rpl-operator-class "]\\)"
-     (regexp-opt '("/" "=")  t)
-     "\\)"
-     "\\s *\\=")
-    ))
-
-
-(defconst rpl-cont-bol-regexp
-  (eval-when-compile
-    ;; expression used to generate the regexp
-    (concat
-     "\\=\\s *"
-     "\\("
-;     "\\<"
-;     (regexp-opt '("and" "or" "not") t)
-;     "\\>\\|"
-     (regexp-opt '("." "*" "/" "^" "=" "<" ">" "(" ")" "[" "]" "!") t)
-     "\\($\\|[^" rpl-operator-class "]\\)"
-     "\\)"
-     )
-    ))
+     "[[:space:]]*\\(alias[[:space:]]+\\)?"
+     "\\(\\w\\|\\.\\|_\\)+"
+     "[[:space:]]*"
+     "="
+     )))
 
 (defun rpl-last-token-continues-p ()
   "Returns true if the last token on this line is a continuation token."
-  (let (line-begin
-	line-end)
-    (save-excursion
-      (beginning-of-line)
-      (setq line-begin (point))
-      (end-of-line)
-      (setq line-end (point))
-      ;; we need to check whether the line ends in a comment and
-      ;; skip that one.
-      (while (rpl-find-regexp 'backward "-" line-begin 'rpl-string-p)
-	(if (looking-at "--")
-	    (setq line-end (point))))
-      (goto-char line-end)
-      (re-search-backward rpl-cont-eol-regexp line-begin t))))
+  nil)
+
+;; (defun rpl-last-token-continues-p ()
+;;   "Returns true if the last token on this line is a continuation token."
+;;   (let (line-begin
+;; 	line-end)
+;;     (save-excursion
+;;       (beginning-of-line)
+;;       (setq line-begin (point))
+;;       (end-of-line)
+;;       (setq line-end (point))
+;;       ;; we need to check whether the line ends in a comment and
+;;       ;; skip that one.
+;;       (while (rpl-find-regexp 'backward "-" line-begin 'rpl-string-p)
+;; 	(if (looking-at "--")
+;; 	    (setq line-end (point))))
+;;       (goto-char line-end)
+;;       (re-search-backward rpl-cont-eol-regexp line-begin t))))
 
 (defun rpl-first-token-continues-p ()
   "Returns true if the first token on this line is a continuation token."
@@ -523,29 +522,24 @@ Returns the point, or nil if it reached the end of the buffer"
       (end-of-line)
       (setq line-end (point))
       (beginning-of-line)
-      (re-search-forward rpl-cont-bol-regexp line-end t))))
+      (not (re-search-forward rpl-NO-cont-bol-regexp line-end t)))))
 
 (defun rpl-is-continuing-statement-p (&optional parse-start)
-  "Return nonnil if the line continues a statement.
-More specifically, return the point in the line that is continued.
-The criteria for a continuing statement are:
-
-* the last token of the previous line is a continuing op,
-  OR the first token of the current line is a continuing op
-
-"
+  "Return nonnil if the line continues a statement."
   (let ((prev-line nil))
     (save-excursion
       (if parse-start (goto-char parse-start))
       (save-excursion (setq prev-line (rpl-goto-nonblank-previous-line)))
+      ;; (and prev-line
+      ;; 	   (or (rpl-first-token-continues-p)
+      ;; 	       (and (goto-char prev-line)
+      ;; 		    ;; check last token of previous nonblank line
+      ;; 		    (rpl-last-token-continues-p))))
       (and prev-line
-	   (or (rpl-first-token-continues-p)
-	       (and (goto-char prev-line)
-		    ;; check last token of previous nonblank line
-		    (rpl-last-token-continues-p)))))))
+	   (rpl-first-token-continues-p)))))
 
 
-(defun rpl-make-indentation-info-pair ()
+(defun rpl-make-indentation-info-pair(found-token found-pos)
   "This is a helper function to rpl-calculate-indentation-info. Don't
 use standalone."
   (cond ((string-equal found-token "grammar")
@@ -611,7 +605,7 @@ and relative each, and the shift/column to indent to."
               (found-end (match-end 0))
               (data (match-data)))
           (setq indentation-info
-                (cons (rpl-make-indentation-info-pair) indentation-info)))))
+                (cons (rpl-make-indentation-info-pair found-token found-pos) indentation-info)))))
     indentation-info))
 
 (defun rpl-accumulate-indentation-info (info)
@@ -621,7 +615,7 @@ shift, or the absolute column to indent to."
   (let ((info-list (reverse info))
         (type 'relative)
         (accu 0))
-    (mapcar (lambda (x)
+    (mapc (lambda (x)
             (setq accu (if (eq 'absolute (car x))
                            (progn (setq type 'absolute)
                                   (cdr x))
@@ -777,7 +771,8 @@ In usual case returns an integer: the column to indent to."
 	  (goto-char pos)
 	  (beginning-of-line)
 	  (forward-line -1)
-	  (+ (current-indentation) shift-amt))))))
+	  ;;(+ (current-indentation) shift-amt)
+	  shift-amt)))))
 
 ;(defun rpl-beginning-of-proc (&optional arg)
 ;  "Move backward to the beginning of a rpl proc (or similar).
@@ -910,7 +905,7 @@ If `rpl-process' is nil or dead, start a new process first."
 	(setq prompt-found (and (rpl-prompt-line) (< last-prompt (point-max)))))
     ;; remove temp. rpl file
     (delete-file tempfile)
-    (rpl-postprocess-output-buffer rpl-process-buffer last-prompt rpl-stdin-line-offset)    
+    ;; (rpl-postprocess-output-buffer rpl-process-buffer last-prompt rpl-stdin-line-offset)    
     (if rpl-always-show
 	(display-buffer rpl-process-buffer)))))
 
