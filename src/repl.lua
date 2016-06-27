@@ -188,7 +188,7 @@ function repl(en)
 	    local ok, messages = lapi.load_string(en, text);
 	    if not ok then io.write(messages, "\n")
 	    elseif messages then
-	       for _, msg in ipairs(messages) do if msg then io.write(msg); end; end
+	       for _, msg in ipairs(messages) do if msg then io.write(msg, "\n"); end; end
 	    end
 	 else
 	    io.write("Repl: internal error\n")
