@@ -117,14 +117,16 @@ end
 
 local function engine_match(e, input, start)
    start = start or 1
-   local result, nextpos = (e.pattern.peg * lpeg.Cp()):match(input, start)
+   local peg = (e.pattern and e.pattern.peg) or engine_error(e, "No pattern expression set")
+   local result, nextpos = (peg * lpeg.Cp()):match(input, start)
    if result then return (e.encode_function(result)), nextpos;
    else return false, 1; end
 end
 
 local function engine_eval(e, input, start)
 --   return matches, nextpos, trace
-   return eval.eval(e.pattern, input, start, e.env, false)
+   local pat = e.pattern or engine_error(e, "No pattern expression set")
+   return eval.eval(pat, input, start, e.env, false)
 end
 
 local function open3(e, infilename, outfilename, errfilename)
@@ -142,7 +144,8 @@ local function open3(e, infilename, outfilename, errfilename)
 end
 
 local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename, wholefileflag)
-   local peg = (e.pattern.peg * Cp())
+   local peg = (e.pattern and e.pattern.peg) or engine_error(e, "No pattern expression set")
+   peg = (peg * Cp())
    if type(eval_flag)~="boolean" then engine_error(e, "bad eval flag"); end
    if not e.encode_function then engine_error(e, "output encode required, but not set"); end
    local ok, infile, outfile, errfile = pcall(open3, e, infilename, outfilename, errfilename);
@@ -195,12 +198,12 @@ end
 
 ----------------------------------------------------------------------------------------
 
-local default_pattern_name = "<uninitialized pattern>"
-local function make_default_pattern(name)
-   return pattern{name=default_pattern_name,
-		  peg = lpeg.Cc('Error: no pattern set for engine "' .. name .. '"'),
-		  alias = false}
-end
+-- local default_pattern_name = "<uninitialized pattern>"
+-- local function make_default_pattern(name)
+--    return pattern{name=default_pattern_name,
+-- 		  peg = lpeg.Cc('Error: no pattern set for engine "' .. name .. '"'),
+-- 		  alias = false}
+-- end
 
 engine.create_function =
    function(_new, name, initial_env)
@@ -209,8 +212,8 @@ engine.create_function =
       local params = {name=name,
 		      env=initial_env,
 		      -- setting expression causes pattern to be set
-		      expression=default_pattern_name,
-		      pattern=make_default_pattern(name),
+		      expression="<uninitialized>",
+		      pattern=false,
 		      -- setting encode causes encode_function to be set
 		      encode=false,
 		      encode_function=name_to_encode(false),
