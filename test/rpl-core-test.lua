@@ -64,7 +64,7 @@ check(type(eid)=="string")
 subheading("Setting up assignments")
 ok, msg = api.load_string(eid, 'a = "a"  b = "b"  c = "c"  d = "d"')
 check(ok)
-ok, msg = api.get_binding(eid, "a")
+ok, msg = api.get_environment(eid, json.encode("a"))
 check(ok)
 
 set_expression('a')

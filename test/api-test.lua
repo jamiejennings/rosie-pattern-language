@@ -108,7 +108,7 @@ check(api.inspect_engine(eid), "other engine with same name still exists")
 
 subheading("get_environment")
 check(type(api.get_environment)=="function")
-ok, env_js = api.get_environment(eid)
+ok, env_js = api.get_environment(eid, json.encode(nil)) -- null
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
 j = json.decode(env_js)
@@ -124,17 +124,17 @@ ok, msg = api.get_environment("hello")
 check(not ok)
 check(invalid_id(msg))
 
-subheading("get_binding")
-check(type(api.get_binding)=="function")
-ok, msg = api.get_binding()
+subheading("get_environment to look at individual bindings")
+check(type(api.get_environment)=="function")
+ok, msg = api.get_environment()
 check(not ok)
 check(invalid_id(msg))
-ok, msg = api.get_binding("hello")
+ok, msg = api.get_environment("hello")
 check(not ok)
 check(invalid_id(msg))
-ok, def = api.get_binding(eid, "$")
+ok, def = api.get_environment(eid, json.encode("$"))
 check(ok, "can get a definition for '$'")
-check(json.decode(def)[1]:find("built-in RPL pattern", 1, true))
+check(json.decode(def)[1].binding:find("built-in RPL pattern", 1, true))
 
 ----------------------------------------------------------------------------------------
 heading("Load")
@@ -156,25 +156,34 @@ check(#json.decode(msg)==0)
 ok, msg = api.load_string(eid, 'foo = "a"')
 check(ok)
 check(json.decode(msg)[1][1]:find("reassignment to identifier"))
-ok, env_js = api.get_environment(eid)
+ok, env_js = api.get_environment(eid, "null")
 check(ok)
 env = json.decode(env_js)[1]
 check(env["foo"].type=="definition", "env contains newly defined identifier")
+
+ok, def = api.get_environment(eid, json.encode("foo"))
+check(ok, "can get a definition for foo that includes a binding")
+check(json.decode(def)[1].binding:find("assignment foo =", 1, true))
+
 ok, msg = api.load_string(eid, 'bar = foo / ( "1" $ )')
 check(ok)
 check(#json.decode(msg)==0)
-ok, env_js = api.get_environment(eid)
+ok, env_js = api.get_environment(eid, "null")
 check(ok)
 env = json.decode(env_js)[1]
 check(type(env)=="table")
 check(env["bar"])
 check(env["bar"].type=="definition", "env contains newly defined identifier")
-ok, def = api.get_binding(eid, "bar")
-check((json.decode(def)[1]:find('bar = foo / %(')), "checking binding defn which relies on reveal_ast")
+ok, def = api.get_environment(eid, json.encode("bar"))
+check(ok)
+def = json.decode(def)
+check(def)
+check(type(def[1])=="table")
+check(def[1].binding:find('bar = foo / %('), "checking binding defn which relies on reveal_ast")
 ok, msg = api.load_string(eid, 'x = //', "syntax error")
 check(not ok)
 check(msg:find("Syntax error at line 1"), "Exact message depends on syntax error reporting")
-ok, env_js = api.get_environment(eid)
+ok, env_js = api.get_environment(eid, "null")
 check(ok)
 env = json.decode(env_js)[1]
 check(not env["x"])
@@ -184,9 +193,10 @@ for _, exp in ipairs{"[0-9]", "[abcdef123]", "[:alpha:]",
 		     "[^[a][b]]"} do
    ok, msg = api.load_string(eid, 'cs = '..exp)
    check(ok)
-   ok, msg = api.get_binding(eid, "cs")
+   ok, msg = api.get_environment(eid, json.encode("cs"))
    check(ok, "failed to get binding for cs when it is bound to " .. exp)
-   check(json.decode(msg)[1]:find(exp, 1, true), "failed to observe this in binding of cs: " .. exp)
+   def = json.decode(msg)[1]
+   check(def.binding:find(exp, 1, true), "failed to observe this in binding of cs: " .. exp)
 end
 
 
@@ -206,13 +216,14 @@ ok, msg = api.load_string(eid, g)
 check(ok)
 check(#json.decode(msg)==0)
 
-ok, def = api.get_binding(eid, "S")
+ok, def = api.get_environment(eid, json.encode("S"))
 check(ok)
-check(json.decode(def)[1]:find("S = {(\"a\" B)}", 1, true))
-check(json.decode(def)[1]:find("A = {(\"a\" S)}", 1, true))
-check(json.decode(def)[1]:find("B = {(\"b\" S)}", 1, true))
+def = json.decode(def)[1]
+check(def.binding:find("S = {(\"a\" B)}", 1, true))
+check(def.binding:find("A = {(\"a\" S)}", 1, true))
+check(def.binding:find("B = {(\"b\" S)}", 1, true))
 
-ok, env_js = api.get_environment(eid)
+ok, env_js = api.get_environment(eid, "null")
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
 env = json.decode(env_js)[1]
@@ -222,10 +233,13 @@ check(env["S"].type=="definition")
 subheading("clear_environment")
 check(type(api.clear_environment)=="function")
 ok, msg = api.clear_environment(eid)
+check(not ok)
+ok, msg = api.clear_environment(eid, "null")	    -- json-encoded arg
 check(ok)
-check(#json.decode(msg)==0)
+check(#json.decode(msg)==1)
+check(json.decode(msg)[1]==true)
 
-ok, env_js = api.get_environment(eid)
+ok, env_js = api.get_environment(eid, "null")
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
 env = json.decode(env_js)[1]
@@ -245,20 +259,40 @@ ok, msg = api.load_file(eid, "$sys/test/ok.rpl")
 check(ok)
 check(type(msg)=="string")
 check(json.decode(msg)[2]:sub(-11)=="test/ok.rpl")
-ok, env = api.get_environment(eid)
+ok, env = api.get_environment(eid, "null")
 check(ok)
 j = json.decode(env)
 env = j[1]
 check(env["num"].type=="definition")
 check(env["S"].type=="alias")
-ok, def = api.get_binding(eid, "W")
+ok, def = api.get_environment(eid, json.encode("W"))
 check(ok)
-check(json.decode(def)[1]:find("alias W = (!w any)", 1, true), "checking binding defn which relies on reveal_ast")
+def = json.decode(def)[1]
+check(def.binding:find("alias W = (!w any)", 1, true), "checking binding defn which relies on reveal_ast")
+
+ok, msg = api.clear_environment(eid, json.encode("W"))
+check(ok)
+check(#json.decode(msg)==1)
+check(json.decode(msg)[1]==true)
+ok, msg = api.clear_environment(eid, json.encode("W"))
+check(ok)
+check(#json.decode(msg)==1)
+check(json.decode(msg)[1]==false)
+ok, def = api.get_environment(eid, json.encode("W"))
+check(ok)
+def = json.decode(def)[1]
+check(def==nil)
+-- let's ensure that something in the env remains
+ok, def = api.get_environment(eid, json.encode("num"))
+check(ok)
+def = json.decode(def)[1]
+check(def.binding)
+
 ok, msg = api.load_file(eid, "$sys/test/undef.rpl")
 check(not ok)
 check(msg:find("Compile error: reference to undefined identifier: spaces"))
 check(msg:find("At line 9"))
-ok, env_js = api.get_environment(eid)
+ok, env_js = api.get_environment(eid, "null")
 check(ok)
 env = json.decode(env_js)[1]
 check(not env["badword"], "an identifier that didn't compile should not end up in the environment")
@@ -283,16 +317,16 @@ check(msg:find("/etc"))
 
 subheading("load_manifest")
 check(type(api.load_manifest)=="function")
-ok, msg = api.get_binding()
+ok, msg = api.load_manifest()
 check(not ok)
 check(invalid_id(msg))
-ok, msg = api.get_binding("hello")
+ok, msg = api.load_manifest("hello")
 check(not ok)
 check(invalid_id(msg))
 ok, msg = api.load_manifest(eid, "$sys/test/manifest")
 check(ok)
 check(json.decode(msg)[2]:sub(-13)=="test/manifest")
-ok, env_js = api.get_environment(eid)
+ok, env_js = api.get_environment(eid, "null")
 check(ok)
 env = json.decode(env_js)[1]
 check(env["manifest_ok"].type=="definition")
@@ -374,9 +408,10 @@ ok, msg = api.configure_engine(eid, json.encode({expression="common.dotted_ident
 check(ok)
 check(#json.decode(msg)==0)
 
-ok, msg = api.get_binding(eid, "hex_only")	    -- common.rpl
+ok, msg = api.get_environment(eid, json.encode("hex_only")) -- common.rpl
 check(ok)
-check(json.decode(msg)[1]:find("hex_only = {[[a-f]] / [[A-F]]}", 1, true))
+def = json.decode(msg)[1]
+check(def.binding:find("hex_only = {[[a-f]] / [[A-F]]}", 1, true))
 
 print(" Need more configuration tests!")
 
@@ -670,4 +705,3 @@ if ok then
 end
 
 return test.finish()
-

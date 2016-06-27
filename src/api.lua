@@ -61,10 +61,11 @@ local function encode_retvals(success, ...)
 end
 
 local function api_wrap(f)
-   api.NARGS[f] = debug.getinfo(f, "u").nparams	    -- number of args for f
-   return function(...)
-	     return encode_retvals(pcall(f, ...))
-	  end
+   local newf = function(...)
+		   return encode_retvals(pcall(f, ...))
+		end
+   api.NARGS[newf] = debug.getinfo(f, "u").nparams
+   return newf
 end
 
 local function arg_error(msg)
@@ -138,21 +139,39 @@ end
 
 api.new_engine = api_wrap(new_engine)
 
-local function get_env(id)
-   return common.flatten_env((engine_from_id(id)).env)
+local function get_env(id, identifier_js)
+   local en = engine_from_id(id)
+   local ok, identifier = pcall(json.decode, identifier_js)
+   if (not ok) then
+      arg_error("identifier not a json string (or json null)")
+   elseif (identifier==json.null) then
+      identifier = nil
+   elseif type(identifier)~="string" then
+      arg_error("identifier not a json string (or json null)")
+   end
+   return lapi.get_environment(en, identifier)
 end
 
 api.get_environment = api_wrap(get_env)
 
-local function clear_env(id)
-   (engine_from_id(id)).env = common.new_env()
+local function clear_env(id, identifier_js)
+   local en = engine_from_id(id)
+   local ok, identifier = pcall(json.decode, identifier_js)
+   if (not ok) then
+      arg_error("identifier not a json string (or json null)")
+   elseif (identifier==json.null) then
+      identifier = nil
+   elseif type(identifier)~="string" then
+      arg_error("identifier not a json string (or json null)")
+   end
+   return lapi.clear_environment(en, identifier)
 end
 
 api.clear_environment = api_wrap(clear_env)
 
-local function get_binding(id, identifier)
-   return lapi.get_binding(engine_from_id(id), identifier)
-end
+-- local function get_binding(id, identifier)
+--    return lapi.get_binding(engine_from_id(id), identifier)
+-- end
 
 ----------------------------------------------------------------------------------------
 -- Loading manifests, files, strings
@@ -200,16 +219,16 @@ end
 
 api.load_string = api_wrap(load_string)
 
--- return a human-readable definition of identifier (reconstituted from its ast)
-local function get_binding(id, identifier)
-   local en = engine_from_id(id);
-   if type(identifier)~="string" then
-      arg_error("identifier argument not a string")
-   end
-   return lapi.get_binding(en, identifier)
-end
+-- -- return a human-readable definition of identifier (reconstituted from its ast)
+-- local function get_binding(id, identifier)
+--    local en = engine_from_id(id);
+--    if type(identifier)~="string" then
+--       arg_error("identifier argument not a string")
+--    end
+--    return lapi.get_binding(en, identifier)
+-- end
 
-api.get_binding = api_wrap(get_binding)
+-- api.get_binding = api_wrap(get_binding)
 
 ----------------------------------------------------------------------------------------
 -- Matching
@@ -275,19 +294,22 @@ end
 
 api.set_match_exp_grep_TEMPORARY = api_wrap(set_match_exp_grep_TEMPORARY)
 
--- api_wrap will fill in the number of args that each api function takes, but (obviously) only
--- for the wrapped functions.  This loop catches the rest:
+-- api_wrap will fill in the number of args that each api function takes, but api_wrap does not
+-- know the name of the function it is wrapping.  The loop below converts from function to name of
+-- the function.  This loop also catches non-wrapped functions.
 
 for name, thing in pairs(api) do
    if type(thing)=="function" then
-      if not api.NARGS[thing] then
-	 local info = debug.getinfo(thing, "u")
-	 if info.isvararg=="true" then
-	    error("Error loading api: vararg function found: " .. name)
-	 else
-	    api.NARGS[thing] = info.nparams
-	 end
-      end -- no NARGS entry
+      local info = debug.getinfo(thing, "u")
+      if info.isvararg=="true" then
+	 error("Error loading api: vararg function found: " .. name)
+      end
+      if api.NARGS[thing] then
+	 api.NARGS[name] = api.NARGS[thing]	    -- copy value set by api_wrap
+	 api.NARGS[thing] = nil
+      else
+	 api.NARGS[name] = info.nparams
+      end
    end -- for each function
 end
 

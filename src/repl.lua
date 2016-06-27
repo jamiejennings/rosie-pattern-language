@@ -26,7 +26,7 @@ local repl_patterns = [==[
       star = "*"
       clear = ".clear" (identifier / star)?
       help = ".help"
-      badcommand = {"." .*}
+      badcommand = {"." .+}
       command = load / manifest / match / eval / debug / patterns / clear / help / badcommand
       input = command / statement / identifier
 ]==]
@@ -76,10 +76,10 @@ function repl(en)
 	 local _, _, _, subs = common.decode_match(m)
 	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
-	    local def, msg = lapi.get_binding(en, text)
-	    if def then io.write(def, "\n")
+	    local def = lapi.get_environment(en, text)
+	    if def then io.write(def.binding, "\n")
 	    else
-	       io.write("Repl: ", msg, "\n")
+	       io.write("Repl: undefined identifier\n")
 	       if text=="help" then
 		  io.write("  Hint: use .help to get help\n")
 	       elseif (text=="exit") or (text=="quit") then

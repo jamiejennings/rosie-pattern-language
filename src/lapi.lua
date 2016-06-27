@@ -56,14 +56,39 @@ function lapi.new_engine(optional_cfg)
    return en
 end
 
-function lapi.get_environment(en)
+-- get a human-readable definition of an identifier (reconstituted from its ast), or of the entire
+-- environment 
+function lapi.get_environment(en, identifier)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   return common.flatten_env(en.env)
+   local env = common.flatten_env(en.env)
+   for id, info in pairs(env) do
+      local val = en.env[id]
+      if not(pattern.is(val)) then
+	 error("Internal error: object in environment not a pattern: " .. tostring(val))
+      end
+      info.binding = reconstitute_pattern_definition(id, val)
+   end -- for every id in the flattened env
+   if identifier then
+      return env[identifier]
+   else
+      return env
+   end
 end
 
-function lapi.clear_environment(en)
+
+function lapi.clear_environment(en, identifier)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   en.env = common.new_env()
+   if identifier then
+      if en.env[identifier] then
+	 en.env[identifier] = nil
+	 return true
+      else
+	 return false
+      end
+   else
+      en.env = common.new_env()
+      return true
+   end -- if identifier arg supplied
 end
 
 ----------------------------------------------------------------------------------------
@@ -91,21 +116,6 @@ function lapi.load_string(en, input)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    local results, messages = compile.compile_source(input, en.env)
    return results, common.compact_messages(messages)
-end
-
--- get a human-readable definition of identifier (reconstituted from its ast)
-function lapi.get_binding(en, identifier)
-   if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   local val = en.env[identifier]
-   if not val then
-      return false, "undefined identifier: " .. tostring(identifier)
-   else
-      if pattern.is(val) then
-	 return reconstitute_pattern_definition(identifier, val)
-      else
-	 error("Internal error: object in environment not a pattern: " .. tostring(val))
-      end
-   end
 end
 
 function lapi.configure_engine(en, c)
