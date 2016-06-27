@@ -50,7 +50,7 @@ One advantage to in-line tokenization is the ability to choose between matching 
 
 ## Self-hosting
 
-It is a milestone in compiler development when a compiler can compile itself, which is called "self-hosting".  Future versions of the compiler can then be written in the language it compiles.  RPL is not a general purpose programming language; it is a domain-specific language for parsing that is not Turing-complete.  But of course it is possible to write a parser for RPL in [(about 60 lines of) RPL](../src/rosie-core.rpl).
+It is a milestone in compiler development when a compiler can compile itself, which is called "self-hosting".  Future versions of the compiler can then be written in the language it compiles.  RPL is not a general purpose programming language; it is a domain-specific language for parsing that is not Turing-complete.  But of course it is possible to write a parser for RPL in [(about 60 lines of) RPL](../src/rpl-core.rpl).
 
 The Rosie Pattern Engine was made self-hosting when the original hand-coded RPL parser (in Lua, using the LPEG library) was relegated to parsing only the definition of RPL written in RPL.  This definition is the core of RPL, in the sense that RPL syntax can now be extended or modified by writing or changing the RPL definition of the language.  Of course, to extend the language (beyond the syntax), one must also modify the RPL compiler.  I have a future goal of writing an interface through which the RPL compiler can be easily extended.  The literature on extensible compilers is rich, and the domain of Rosie (parsing data) is such that user-written compiler extensions would be fruitful.
 

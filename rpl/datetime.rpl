@@ -58,7 +58,7 @@ alias time_hour = { {[01][0-9]} / {"2"[0-3]} }
 
 alias time_minute = {[0-5][0-9]}
 alias time_second = { {{[0-5][0-9]} / "60"} {"." d+}? }     -- time_second must match 60 for leap second
-alias time_numoffset = { [+-] time_hour ":" time_minute }
+alias time_numoffset = { [+-] time_hour ":"? time_minute }
 alias time_offset = { [Zz] / time_numoffset }
 alias partial_time = {time_hour ":" time_minute ":" time_second}
 

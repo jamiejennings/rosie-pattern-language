@@ -32,7 +32,7 @@ local repl_patterns = [==[
 ]==]
 
 repl_engine = lapi.new_engine({name="repl"})
-lapi.load_file(repl_engine, "src/rpl-core.rpl")
+lapi.load_file(repl_engine, "$sys/src/rpl-core.rpl")
 lapi.load_string(repl_engine, repl_patterns)
 
 repl_prompt = "Rosie> "
@@ -62,7 +62,8 @@ function repl(en)
    local s = io.stdin:read("l")
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
-      lapi.configure_engine(repl_engine, {expression="input", encode=false})
+      local ok, msg = lapi.configure_engine(repl_engine, {expression="input", encode=false})
+      if not ok then io.write("Repl internal error: ", msg); os.exit(-6); end
       local m, left = lapi.match(repl_engine, s)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
@@ -135,11 +136,9 @@ function repl(en)
 	       else
 		  local ename, epos, argtext = common.decode_match(csubs[1])
 		  assert(ename=="args")
-		  lapi.configure_engine(repl_engine, {expression='parsed_args'})
+		  local ok, msg = lapi.configure_engine(repl_engine, {expression='parsed_args'})
+		  if not ok then io.write("Repl internal error: ", msg); os.exit(-6); end
 		  local m, msg = lapi.match(repl_engine, argtext)
-		  -- if not m then
-		  --    io.write("Error: missing expression to match and/or input string\n")
-		  --    else
 		  assert(next(m)=="parsed_args")
 		  local msubs = m and m.parsed_args.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
