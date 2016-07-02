@@ -63,7 +63,7 @@ alias time_offset = { [Zz] / time_numoffset }
 alias partial_time = {time_hour ":" time_minute ":" time_second}
 
 datetime.full_date_RFC3339 = {fullyear "-" date_month "-" date_mday}
-datetime.full_time_RFC3339 = {partial_time time_offset}
+datetime.full_time_RFC3339 = {partial_time [:space:]* time_offset}
 datetime.datetime_RFC3339 = {datetime.full_date_RFC3339 [Tt] datetime.full_time_RFC3339}
 
 -- Examples from RFC3339
@@ -165,7 +165,7 @@ datetime.ordinary_datetime = datetime.ordinary_date (datetime.simple_time + date
 datetime.slash_date = { date_mday "/" month_RFC2822 "/" year_RFC2822 }
 datetime.slash_datetime = { datetime.slash_date ":" datetime.time_RFC2822 }
 
-datetime.simple_slash_date =  { d{1,2} "/" d{1,2} "/" {d{2,2} / d{4,4}} }
+datetime.simple_slash_date =  { d{1,2} "/" d{1,2} "/" {d{4,4} / d{2,2}} }
 
 datetime.funny_time = { hour_RFC2822 ":" minute_RFC2822 ":" second_RFC2822 ":" common.int? } zone_RFC2822
 

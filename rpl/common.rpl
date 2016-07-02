@@ -32,6 +32,8 @@ common.word = letter+
 -- common.unix_path = { "/" ([:alnum:]/[_%!$@:.,~-])+ / ".." / "." }+
 
 alias common.unix_path = { {".." / "."}? {"/" {[:alnum:]/[_%!$@:.,~-]}+ }+  }
+--alias common.pathchar = [[:alnum:][_%!$@:.,~-]]
+--alias common.unix_path = { {"../" / "./" / "/"}? {pathchar+ {"/" pathchar+}+ } }
 alias common.windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] any}* }+ }
 common.path = common.unix_path / common.windows_path
 

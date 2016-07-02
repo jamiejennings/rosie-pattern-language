@@ -133,11 +133,14 @@ function cinternals.process_quantified_exp(a, gmr, source, env)
    if qname=="plus" then
       if append_boundary then qpeg=(epeg * boundary)^1
       else qpeg=epeg^1; end
+      min=1; max=nil
    elseif qname=="star" then
       if append_boundary then qpeg = (epeg * (boundary * epeg)^0)^-1
       else qpeg=epeg^0; end
+      min=0; max=nil
    elseif qname=="question" then
-      qpeg = epeg^-1
+      qpeg=epeg^-1
+      min=0; max=1
    elseif qname=="repetition" then
       assert(type(qsubs[1])=="table")
       assert(qsubs[1], "not getting min clause in process_quantified_exp")

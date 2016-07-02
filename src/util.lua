@@ -54,6 +54,7 @@ function util.pretty_print_table(t, max_item_length, js_style)
 end
    
 local function limit(s, max_length)
+   if not max_length then return s; end
    if #s > max_length then
       return s:sub(1,max_length).."..."
    else
@@ -74,7 +75,7 @@ function util.table_to_pretty_string(t, max_item_length, js_style)
       error("Nil table")
       return;
    end
-   local max = max_item_length or 30
+   local max = ((max_item_length==nil) and 40) or max_item_length
    local delta = 2
    local sep, open, close, key_value_sep = ", ", "{", "}", ": "
    local js_array_open, js_array_close = "[", "]"

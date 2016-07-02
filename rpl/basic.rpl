@@ -37,7 +37,7 @@ basic.datetime_patterns =
 basic.network_patterns = 
    network.http_command / 
    network.url / 
-   network.http_version / 
+--   network.http_version / 
    network.ip_address / 
    network.fqdn / 
    network.email_address
