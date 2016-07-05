@@ -9,6 +9,7 @@
 
 math = require "math"
 lpeg = require "lpeg"
+json = require "cjson"
 
 util = {}
 
@@ -107,7 +108,10 @@ function util.table_to_pretty_string(t, max_item_length, js_style)
 	    if type(v)=="table" then
 	       output = output .. pretty_print(v, indent + offset, "")
             elseif type(v)=="string" then
-	       output = output .. string.format("%q", limit(v,max))
+	       output = output ..
+		  ((js_style and json.encode(limit(v,max))) or string.format("%q", limit(v,max)))
+	    elseif v==json.null then
+	       output = output .. "null"
 	    else
 	       output = output .. limit(tostring(v),max)
 	    end -- switch on type(v)
@@ -131,7 +135,7 @@ end
 
 function util.prettify_json(s)
    local t = json.decode(s)
-   return (t==json.null and "NULL") or util.table_to_pretty_string(t, nil, true)
+   return (t==json.null and "null") or util.table_to_pretty_string(t, nil, true)
 end
 
 
@@ -327,6 +331,18 @@ function util.readfile(fullpath)
    end
    return data
 end
+
+function util.where(lua_function)
+   local info = debug.getinfo(lua_function, "S")
+   if info.what=="Lua" then
+      return info.source:sub(2) .. ":" .. info.linedefined
+   elseif info.what=="C" then
+      return "C function"
+   else
+      return "Unknown function type: " .. info.what
+   end
+end
+
 
 	 
 return util

@@ -60,6 +60,19 @@ local function encode_retvals(success, ...)
    return success, json.encode({...})
 end
 
+--local
+function get_arglist(f)
+   local info = debug.getinfo(f, "u")
+   local n, vararg = info.nparams, info.isvararg
+   local arglist = {}
+   for i=1,n do
+      arglist[i] = debug.getlocal(f, i)
+   end
+   arglist.n = n
+   arglist.vararg = vararg
+   return arglist
+end
+   
 local function api_wrap(f)
    local newf = function(...)
 		   return encode_retvals(pcall(f, ...))
