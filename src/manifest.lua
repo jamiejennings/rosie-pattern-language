@@ -73,7 +73,7 @@ function manifest.process_manifest(en, manifest_filename)
       if not success then return success, messages; end
       if messages then
 	 for _, msg in ipairs(messages) do
-	    if msg then table.insert(all_messages, m); end;
+	    if msg then table.insert(all_messages, msg); end;
 	 end -- for
       end
       line = nextline()

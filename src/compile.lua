@@ -531,8 +531,9 @@ function compile.compile_source(source, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local results, messages = cinternals.compile_astlist(astlist, source, env)
    if results then
+      assert(type(messages)=="table")
       foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
-      return results, messages  -- message may contain compiler warnings
+      return results, messages			    -- message may contain compiler warnings
    else
       assert(type(messages)=="string")
       return false, messages			    -- message is a string in this case

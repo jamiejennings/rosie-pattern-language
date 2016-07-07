@@ -30,6 +30,8 @@
     - [x] tokenization ("cooked" expressions)
 	- [x] top-level check for boundary after a cooked top-level expression
 
+- [ ] Allow specification of Unicode code points (utf-8 encoding) as part of character expressions
+
 - [ ] Enhance debugging
     - [ ] RPL compilation is lexically scoped in the sense that an expression is closed over the environment in which it is defined.  But "eval" (the interpreter function used for debugging) is ACCIDENTALLY dynamically scoped. See doc/eval-scope-note.txt.
     - [ ] Enhance syntax error reporting (do this AFTER the syntax transformation work is done)

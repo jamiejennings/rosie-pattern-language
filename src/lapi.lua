@@ -75,7 +75,6 @@ function lapi.get_environment(en, identifier)
    end
 end
 
-
 function lapi.clear_environment(en, identifier)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if identifier then

@@ -68,16 +68,15 @@ function get_arglist(f)
    for i=1,n do
       arglist[i] = debug.getlocal(f, i)
    end
-   arglist.n = n
-   arglist.vararg = vararg
    return arglist
 end
    
-local function api_wrap(f)
+local function api_wrap(f, ...)
+   local returns = {...}
    local newf = function(...)
 		   return encode_retvals(pcall(f, ...))
 		end
-   api.NARGS[newf] = debug.getinfo(f, "u").nparams
+   api.NARGS[newf] = {args=get_arglist(f), returns=returns}
    return newf
 end
 
@@ -100,7 +99,7 @@ local function info()
 end
 
 
-api.info = api_wrap(info)
+api.info = api_wrap(info, "object")
 
 ----------------------------------------------------------------------------------------
 -- Managing the environment (collection of engines)
@@ -119,10 +118,15 @@ end
 api.delete_engine = api_wrap(delete_engine)
 
 local function inspect_engine(id)
-   return lapi.inspect_engine(engine_from_id(id))
+   local info = lapi.inspect_engine(engine_from_id(id))
+   -- sanity check on what we are returning externally
+   if type(info)~="table" then
+      error("Internal error: invalid response from engine inspection: " .. tostring(info), 0)
+   end
+   return info
 end
 
-api.inspect_engine = api_wrap(inspect_engine)
+api.inspect_engine = api_wrap(inspect_engine, "object")
 
 local function new_engine(config_string)
    if type(config_string)~="string" then
@@ -137,7 +141,7 @@ local function new_engine(config_string)
    if engine_list[id] then
       en.id = en.id .. os.tmpname():sub(-6)
       if engine_list[en.id] then
-	 error("Internal error: duplicate engine ids: " .. en.id)
+	 error("Internal error: duplicate engine ids: " .. en.id, 0)
       else
 	 util.warn("duplicate engine ids: " .. id .. " --> " .. en.id)
       end
@@ -150,7 +154,7 @@ local function new_engine(config_string)
    return en.id
 end
 
-api.new_engine = api_wrap(new_engine)
+api.new_engine = api_wrap(new_engine, "string")
 
 local function get_env(id, identifier_js)
    local en = engine_from_id(id)
@@ -162,10 +166,14 @@ local function get_env(id, identifier_js)
    elseif type(identifier)~="string" then
       arg_error("identifier not a json string (or json null)")
    end
-   return lapi.get_environment(en, identifier)
+   local e = lapi.get_environment(en, identifier)
+   if e and (type(e)~="table") then
+      error("Internal error: invalid response from engine env: " .. tostring(e), 0)
+   end
+   return e
 end
 
-api.get_environment = api_wrap(get_env)
+api.get_environment = api_wrap(get_env, "object")
 
 local function clear_env(id, identifier_js)
    local en = engine_from_id(id)
@@ -177,18 +185,27 @@ local function clear_env(id, identifier_js)
    elseif type(identifier)~="string" then
       arg_error("identifier not a json string (or json null)")
    end
-   return lapi.clear_environment(en, identifier)
+   local retval = lapi.clear_environment(en, identifier)
+   if type(retval)~="boolean" then
+      error("Internal error: invalid response from clear env: " .. tostring(retval), 0)
+   end
+   return retval
 end
 
-api.clear_environment = api_wrap(clear_env)
-
--- local function get_binding(id, identifier)
---    return lapi.get_binding(engine_from_id(id), identifier)
--- end
+api.clear_environment = api_wrap(clear_env, "boolean")
 
 ----------------------------------------------------------------------------------------
 -- Loading manifests, files, strings
 ----------------------------------------------------------------------------------------
+
+local function check_results(ok, messages, full_path)
+   if not ok then error(messages, 0); end
+   if messages and (type(messages)~="table") then
+      error("Internal error: invalid messages returned: " .. tostring(messages), 0)
+   elseif (type(full_path)~="string") then
+      error("Internal error: invalid path returned: " .. tostring(full_path), 0)
+   end
+end
 
 local function load_manifest(id, manifest_file)
    local en = engine_from_id(id)
@@ -196,26 +213,21 @@ local function load_manifest(id, manifest_file)
    if type(manifest_file)~="string" then
       arg_error("manifest filename not a string")
    end
-   -- return ok, messages table, and full_path
    local ok, messages, full_path = manifest.process_manifest(en, manifest_file)
-   if not ok then error(messages, 0)
-   else return messages, full_path
-   end
+   check_results(ok, messages, full_path)
+   return messages, full_path
 end
 
-api.load_manifest = api_wrap(load_manifest)
+api.load_manifest = api_wrap(load_manifest, "array", "string")
 
 local function load_file(id, path)
    local en = engine_from_id(id)
    local ok, messages, full_path = lapi.load_file(en, path)
-   if ok then
-      return messages, full_path
-   else
-      error(messages,0)
-   end
+   check_results(ok, messages, full_path)
+   return messages, full_path
 end
 
-api.load_file = api_wrap(load_file)
+api.load_file = api_wrap(load_file, "array", "string")
 
 local function load_string(id, input)
    local en = engine_from_id(id)
@@ -223,25 +235,11 @@ local function load_string(id, input)
       arg_error("input not a string")
    end
    local results, messages = lapi.load_string(en, input)
-   if results then
-      return messages
-   else
-      error(messages, 0)
-   end
+   check_results(results, messages, "dummy")
+   return messages
 end
 
-api.load_string = api_wrap(load_string)
-
--- -- return a human-readable definition of identifier (reconstituted from its ast)
--- local function get_binding(id, identifier)
---    local en = engine_from_id(id);
---    if type(identifier)~="string" then
---       arg_error("identifier argument not a string")
---    end
---    return lapi.get_binding(en, identifier)
--- end
-
--- api.get_binding = api_wrap(get_binding)
+api.load_string = api_wrap(load_string, "array")
 
 ----------------------------------------------------------------------------------------
 -- Matching
@@ -271,7 +269,7 @@ local function match(id, input_text, start)
    return lapi.match(en, input_text, start)
 end
 
-api.match = api_wrap(match)
+api.match = api_wrap(match, "*", "int")		    -- "*" depends on encoder function
 
 local function match_file(id, infilename, outfilename, errfilename, wholefileflag)
    if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
@@ -280,17 +278,23 @@ local function match_file(id, infilename, outfilename, errfilename, wholefilefla
    return lapi.match_file((engine_from_id(id)), infilename, outfilename, errfilename, wholefileflag)
 end
 
-api.match_file = api_wrap(match_file)
+api.match_file = api_wrap(match_file, "int", "int", "int")
 
 local function eval_(id, input_text, start)
    local en = engine_from_id(id)
    if type(input_text)~="string" then
       arg_error("input argument not a string")
    end
-   return lapi.eval(en, input_text, start)
+   local result, leftover, trace = lapi.eval(en, input_text, start)
+   if (type(leftover)~="number") then
+      error("Internal error: invalid return from eval (leftover): " .. tostring(leftover), 0)
+   elseif (type(trace)~="string") then
+      error("Internal error: invalid return from eval (trace): " .. tostring(trace), 0)
+   end
+   return result, leftover, trace
 end
 
-api.eval = api_wrap(eval_)
+api.eval = api_wrap(eval_, "*", "int", "string")
 
 local function eval_file(id, infilename, outfilename, errfilename, wholefileflag)
    if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
@@ -299,7 +303,7 @@ local function eval_file(id, infilename, outfilename, errfilename, wholefileflag
    return lapi.eval_file(engine_from_id(id), infilename, outfilename, errfilename, wholefileflag)
 end
 
-api.eval_file = api_wrap(eval_file)
+api.eval_file = api_wrap(eval_file, "int", "int", "int")
 
 local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    return lapi.set_match_exp_grep_TEMPORARY(engine_from_id(id), pattern_exp)
@@ -321,7 +325,8 @@ for name, thing in pairs(api) do
 	 api.NARGS[name] = api.NARGS[thing]	    -- copy value set by api_wrap
 	 api.NARGS[thing] = nil
       else
-	 api.NARGS[name] = info.nparams
+	 --api.NARGS[name] = get_arglist(thing)
+	 error("Unwrapped function in external api: " .. name)
       end
    end -- for each function
 end
