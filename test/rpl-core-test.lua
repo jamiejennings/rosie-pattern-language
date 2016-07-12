@@ -109,6 +109,16 @@ check(ok)
 ok, msg = api.load_string(eid, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
+ok, msg = api.load_string(eid, 'uses_a = a a')
+check(ok)
+
+ok, msg = api.load_string(eid, 'alternate_uses_a = uses_a')
+check(ok)
+
+ok, msg = api.load_string(eid, 'alias alias_to_uses_a = uses_a')
+check(ok)
+
+
 subheading("Testing re-assignments")
 
 check_match('plain_old_alias', "x", false, 1)
@@ -124,26 +134,44 @@ check(not result[1]["*"].subs, "no subs")
 match = check_match('alias_to_a', "a", true)
 check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
 subs = match[1]["*"].subs
-check(#subs==1)
+check(subs and #subs==1)
 check(next(subs[1])=="a")
 
 match = check_match('alternate_a', "a", true)
 check(next(match[1])=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
 subs = match[1]["alternate_a"].subs
-check(#subs==1)
-check(next(subs[1])=="a")
+check(not subs)
+--check(#subs==1)
+--check(next(subs[1])=="a")
 
 match = check_match('alternate_to_alias_to_a', "a", true)
 check(next(match[1])=="alternate_to_alias_to_a", 'rhs of an assignment can contain an alias, and it will be captured')
 subs = match[1]["alternate_to_alias_to_a"].subs
-check(#subs==1)
-check(next(subs[1])=="a")
+check(not subs)
+--check(#subs==1)
+--check(next(subs[1])=="a")
 
 match = check_match('alias_to_alternate_to_alias_to_a', "a", true)
 check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
 subs = match[1]["*"].subs
-check(#subs==1)
+check(subs and #subs==1)
 check(next(subs[1])=="a")
+
+match = check_match('uses_a', "a a", true)
+check(next(match[1])=="uses_a", 'the match is labeled with the identifier name to which it is bound')
+subs = match[1]["uses_a"].subs
+check(subs and #subs==2)
+check(next(subs[1])=="a")
+check(next(subs[2])=="a")
+
+match = check_match('alias_to_uses_a', "a a", true)
+check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match[1]["*"].subs
+check(subs and #subs==1 and (next(subs[1]))=="uses_a")
+subs = match[1]["*"].subs[1].uses_a.subs
+check(subs and #subs==2)
+check(subs[1] and (next(subs[1])=="a"))
+check(subs[2] and (next(subs[2])=="a"))
 
 ----------------------------------------------------------------------------------------
 heading("Literals")
@@ -1306,17 +1334,21 @@ m = check_match("(common.int common.word)", "42 x", true)
 check((api.load_string(eid, "int = common.int word = common.word")))
        
 m = check_match("int", "42", true)
-check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
+--check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
+check((not m[1]["*"]) and m[1]["int"] and (not m[1]["int"].subs))
 m = check_match("{int}", "42", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
-m = check_match("(int)", "42", true)
-check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
 --check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (not m[1]["*"].subs[1]["int"].subs))
+m = check_match("(int)", "42", true)
+--check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
+check((not m[1]["*"]) and m[1]["int"] and (not m[1]["int"].subs))
 
 m = check_match("int", "42x", true, 1, "42")
-check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
+--check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
+check((not m[1]["*"]) and m[1]["int"] and (not m[1]["int"].subs))
 m = check_match("{int}", "42x", true, 1, "42")
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
+--check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
+check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (not m[1]["*"].subs[1]["int"].subs))
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 

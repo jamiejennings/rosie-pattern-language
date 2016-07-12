@@ -272,6 +272,7 @@ pattern =
    recordtype.define(
    {  name=unspecified;			 -- for reference, debugging
       peg=unspecified;			 -- lpeg pattern
+      uncap=false;			 -- peg without the top-level capture
       alias=false;			 -- is this an alias or not
       raw=false;                         -- true if the exp was raw at top level
       ast=false;			 -- ast that generated this pattern, for pattern debugging

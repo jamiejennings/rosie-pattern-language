@@ -210,7 +210,7 @@ function cinternals.compile_ref(a, gmr, source, env)
    local pat = env[name]
    if (not pat) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
-   return pattern{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw}
+   return pattern{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
 end
 
 function cinternals.compile_predicate(a, gmr, source, env)
@@ -414,7 +414,14 @@ function cinternals.compile_capture(a, gmr, source, env)
 
    pat = cinternals.compile_exp(captured_exp, gmr, source, env)
    pat.name = cap_name
-   pat.peg = common.match_node_wrap(C(pat.peg), reftext)
+   if pat.uncap then
+      -- In this case, we are capturing a reference that is itself a capture.  So what we want to
+      -- do is a re-capture, i.e. ignore the existing capture.
+      pat.peg = common.match_node_wrap(C(pat.uncap), reftext)
+   else
+      pat.uncap = pat.peg
+      pat.peg = common.match_node_wrap(C(pat.peg), reftext)
+   end
    return pat
 end
 

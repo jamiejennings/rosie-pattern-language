@@ -28,7 +28,7 @@ function pattern_EXP_to_grep_pattern(pattern_exp, env)
    local pat, msg = compile.compile_source(pattern_exp, env)
    if not pat then print(msg); os.exit(-1); end
    -- Next, we do what we really need to do in order for the grep option to work
-   local pat, msg = compile.compile_source("e = " .. pattern_exp, env)
+   local pat, msg = compile.compile_source("alias e = " .. pattern_exp, env)
    if not pat then print(msg); os.exit(-1); end
    local pat, msg = compile.compile_source("alias grep = {{!e .}* e}+", env) -- should write gensym
    if not pat then print(msg); os.exit(-1); end
