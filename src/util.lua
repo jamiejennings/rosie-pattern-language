@@ -10,6 +10,7 @@
 math = require "math"
 lpeg = require "lpeg"
 json = require "cjson"
+local string = string				    -- defensive
 
 util = {}
 
