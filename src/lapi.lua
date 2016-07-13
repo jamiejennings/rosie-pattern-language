@@ -52,8 +52,8 @@ function lapi.new_engine(optional_cfg)
    optional_cfg = optional_cfg or {}
    if not optional_cfg.name then optional_cfg.name = "<anonymous>"; end
    local en = engine(optional_cfg.name, common.new_env())
-   en:configure(optional_cfg)
-   return en
+   local ok, msg = en:configure(optional_cfg)
+   return en, ok, msg
 end
 
 -- get a human-readable definition of an identifier (reconstituted from its ast), or of the entire

@@ -35,28 +35,45 @@
 #define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
 #define QUOTE(thing) #thing			    /* stringify it */
 
+#define MAX_ENGINE_ID_LEN 20
+
 int main (int argc, char **argv) {
   int status;
-
+  char eid[MAX_ENGINE_ID_LEN+1];
+  
   initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
 
-  const char *name = "REPL ENGINE";
-  status = rosie_api("new_engine", name, "");    /* leaves engine id on stack */
+  const char *config = "{\"name\":\"REPL ENGINE\"}";
+  status = rosie_api("new_engine", config);    /* leaves engine id on stack */
 
   lua_State *L = get_L();  
-  const char *eid = lua_tostring(L, 1);
+
+  const char *eid_js = lua_tostring(L, 1);
   
-  status = rosie_api( "get_env", eid, "");	   
-  status = rosie_api( "configure", eid, "{\"expression\": \"[:digit:]+\", \"encoder\": \"json\"}");
+  lua_getglobal(L, "json");
+  lua_getfield(L, -1, "decode");
+  lua_remove(L, -2);		/* remove json from stack */
+  lua_pushstring(L, eid_js);
+  lua_call(L, 1, 1);		/* call json.decode */
+  lua_geti(L, -1, 1);		/* get 1st element of table */
+  const char *eid_ref = lua_tostring(L, -1);
+  if (strlcpy(eid, eid_ref, sizeof(eid)) >= sizeof(eid))
+	  luaL_error(L, "error: MAX_ENGINE_ID_LEN too small");
+  lua_pop(L, 3);		/* remove decoded string, table, decode fcn */
+  
+  status = rosie_api( "get_environment", eid, "null");	   
+  status = rosie_api( "configure_engine", eid, "{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}");
   status = rosie_api( "inspect_engine", eid, "");
   status = rosie_api( "match", eid, "123");
   status = rosie_api( "match", eid, "123 abcdef");
   status = rosie_api( "match", eid, "hi");
 
 
-  lua_getglobal(L, "repl");	  /* push repl fcn */
-  lua_pushstring(L, eid);	  /* engine id */
-  lua_call(L, 1, 1);		  /* call repl(eid) */
+  lua_getglobal(L, "repl");	/* push repl fcn */
+  lua_getglobal(L, "engine_list");
+  lua_getfield(L, -1, eid);	/* engine id */
+  lua_remove(L, -2);		/* remove engine_list from stack */
+  lua_call(L, 1, 1);		/* call repl(eid) */
 
   lua_close(L);
   return (status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;

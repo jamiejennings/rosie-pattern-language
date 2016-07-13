@@ -122,12 +122,12 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 static void stackDump (lua_State *L) {
       int i;
       int top = lua_gettop(L);
-      for (i = 1; i <= top; i++) {
+      for (i = top; i >= 1; i--) {
         int t = lua_type(L, i);
         switch (t) {
     
           case LUA_TSTRING:  /* strings */
-	       printf("%d: `%s'", i, lua_tostring(L, i));
+	       printf("%d: '%s'", i, lua_tostring(L, i));
             break;
     
           case LUA_TBOOLEAN:  /* booleans */
@@ -221,8 +221,8 @@ void initialize(const char *rosie_home) {
      report(L, status);
      if (status != LUA_OK) exit(-1);
   
-     /* status = bootstrap(QUOTE_EXPAND(ROSIE_HOME)); */
-     /* if (status != LUA_OK) exit(-1); */
+     status = bootstrap(QUOTE_EXPAND(ROSIE_HOME)); 
+     if (status != LUA_OK) exit(-1); 
 
      /* lua_getglobal(L, "bootstrap"); */
      /* lua_insert(L, 1); */

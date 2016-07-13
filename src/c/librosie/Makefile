@@ -49,7 +49,7 @@ default: $(PLAT)
 
 all:	librosie.so rtest
 
-rtest: librosie.so
+rtest: librosie.so rtest.c
 	$(CC) -o $@ rtest.c $(CFLAGS) $(LIBROSIE) $(LUA_A) $(LIBS)
 
 librosie.o: 

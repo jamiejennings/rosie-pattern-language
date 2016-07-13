@@ -42,7 +42,6 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 -- 
 
 ----------------------------------------------------------------------------------------
--- Note: NARGS is the number of args to pass to each api function
 
 local api = {API_VERSION = "0.99a",		    -- api version
 	     RPL_VERSION = "0.99a",		    -- language version
@@ -51,7 +50,7 @@ local api = {API_VERSION = "0.99a",		    -- api version
              HOSTNAME = os.getenv("HOSTNAME"),
              HOSTTYPE = os.getenv("HOSTTYPE"),
              OSTYPE = os.getenv("OSTYPE"),
-	     NARGS = {}} 			    -- number of args for each api call
+	     SIGNATURE = {}} 			    -- args and return types for each api call
 
 
 ----------------------------------------------------------------------------------------
@@ -76,7 +75,7 @@ local function api_wrap(f, ...)
    local newf = function(...)
 		   return encode_retvals(pcall(f, ...))
 		end
-   api.NARGS[newf] = {args=get_arglist(f), returns=returns}
+   api.SIGNATURE[newf] = {args=get_arglist(f), returns=returns}
    return newf
 end
 
@@ -128,11 +127,11 @@ end
 
 api.inspect_engine = api_wrap(inspect_engine, "object")
 
-local function new_engine(config_string)
-   if type(config_string)~="string" then
+local function new_engine(config_obj)
+   if type(config_obj)~="string" then
       arg_error("engine configuration not a json-encoded object")
    end
-   local ok, c_table = pcall(json.decode, config_string)
+   local ok, c_table = pcall(json.decode, config_obj)
    if not ok then
       arg_error("engine configuration not a valid json object")
    end
@@ -156,9 +155,9 @@ end
 
 api.new_engine = api_wrap(new_engine, "string")
 
-local function get_env(id, identifier_js)
+local function get_env(id, optional_identifier)
    local en = engine_from_id(id)
-   local ok, identifier = pcall(json.decode, identifier_js)
+   local ok, identifier = pcall(json.decode, optional_identifier)
    if (not ok) then
       arg_error("identifier not a json string (or json null)")
    elseif (identifier==json.null) then
@@ -175,9 +174,9 @@ end
 
 api.get_environment = api_wrap(get_env, "object")
 
-local function clear_env(id, identifier_js)
+local function clear_env(id, optional_identifier)
    local en = engine_from_id(id)
-   local ok, identifier = pcall(json.decode, identifier_js)
+   local ok, identifier = pcall(json.decode, optional_identifier)
    if (not ok) then
       arg_error("identifier not a json string (or json null)")
    elseif (identifier==json.null) then
@@ -245,12 +244,12 @@ api.load_string = api_wrap(load_string, "array")
 -- Matching
 ----------------------------------------------------------------------------------------
 
-local function configure_engine(id, c_string)
+local function configure_engine(id, config_obj)
    local en = engine_from_id(id)
-   if type(c_string)~="string" then
+   if type(config_obj)~="string" then
       arg_error("configuration argument not a string")
    end
-   local ok, c_table = pcall(json.decode, c_string)
+   local ok, c_table = pcall(json.decode, config_obj)
    if (not ok) or type(c_table)~="table" then
       arg_error("configuration argument not a JSON object")
    end
@@ -269,7 +268,7 @@ local function match(id, input_text, start)
    return lapi.match(en, input_text, start)
 end
 
-api.match = api_wrap(match, "*", "int")		    -- "*" depends on encoder function
+api.match = api_wrap(match, "string", "int")	    -- string depends on encoder function
 
 local function match_file(id, infilename, outfilename, errfilename, wholefileflag)
    if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
@@ -294,7 +293,7 @@ local function eval_(id, input_text, start)
    return result, leftover, trace
 end
 
-api.eval = api_wrap(eval_, "*", "int", "string")
+api.eval = api_wrap(eval_, "string", "int", "string")
 
 local function eval_file(id, infilename, outfilename, errfilename, wholefileflag)
    if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
@@ -321,11 +320,11 @@ for name, thing in pairs(api) do
       if info.isvararg=="true" then
 	 error("Error loading api: vararg function found: " .. name)
       end
-      if api.NARGS[thing] then
-	 api.NARGS[name] = api.NARGS[thing]	    -- copy value set by api_wrap
-	 api.NARGS[thing] = nil
+      if api.SIGNATURE[thing] then
+	 api.SIGNATURE[name] = api.SIGNATURE[thing]	    -- copy value set by api_wrap
+	 api.SIGNATURE[thing] = nil
       else
-	 --api.NARGS[name] = get_arglist(thing)
+	 --api.SIGNATURE[name] = get_arglist(thing)
 	 error("Unwrapped function in external api: " .. name)
       end
    end -- for each function
