@@ -43,7 +43,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 ----------------------------------------------------------------------------------------
 
-local api = {API_VERSION = "0.99a",		    -- api version
+local api = {API_VERSION = "0.99b",		    -- api version
 	     RPL_VERSION = "0.99a",		    -- language version
 	     ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
 	     ROSIE_HOME = ROSIE_HOME,		    -- install directory
@@ -217,7 +217,7 @@ local function load_manifest(id, manifest_file)
    return messages, full_path
 end
 
-api.load_manifest = api_wrap(load_manifest, "array", "string")
+api.load_manifest = api_wrap(load_manifest, "array of string", "string")
 
 local function load_file(id, path)
    local en = engine_from_id(id)
@@ -226,7 +226,7 @@ local function load_file(id, path)
    return messages, full_path
 end
 
-api.load_file = api_wrap(load_file, "array", "string")
+api.load_file = api_wrap(load_file, "array of string", "string")
 
 local function load_string(id, input)
    local en = engine_from_id(id)
@@ -238,7 +238,7 @@ local function load_string(id, input)
    return messages
 end
 
-api.load_string = api_wrap(load_string, "array")
+api.load_string = api_wrap(load_string, "array of string")
 
 ----------------------------------------------------------------------------------------
 -- Matching

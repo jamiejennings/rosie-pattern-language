@@ -22,6 +22,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "librosie.h"
+
 static lua_State *single_instanceL = NULL;	    /* !@# Make a table? */
 
 static lua_State *globalL = NULL;
@@ -242,8 +244,6 @@ void initialize(const char *rosie_home) {
 		 lua_gettop(L));
 }
 
-
-
 int rosie_api(const char *name, ...) {
 
      va_list args;
@@ -252,6 +252,7 @@ int rosie_api(const char *name, ...) {
      
      lua_State *L = single_instanceL;
 
+     /* number of args AFTER the api name */
      int nargs = 2;		   /* get this later from a table */
 
      printf("Calling Rosie api: %s\n", name);
@@ -267,7 +268,8 @@ int rosie_api(const char *name, ...) {
 
      lua_getglobal(L, "api");
      lua_getfield(L, -1 , name);                    /* -1 is stack top, i.e. api table */
-     lua_remove(L, base+1);			    /* remove the api table from the stack */
+
+     lua_remove(L, -2);	    /* remove the api table from the stack */ 
      /* Later: insert a check HERE to ensure the value we get is a function */
 
      for (int i = 1; i <= nargs; i++) {
@@ -276,6 +278,9 @@ int rosie_api(const char *name, ...) {
      }
 
      va_end(args);
+
+     /* printf("About to call the api the function on the stack, and nargs=%d\n", nargs); */
+     /* stackDump(L); */
 
      lua_call(L, nargs, LUA_MULTRET); 
 
@@ -306,4 +311,40 @@ int rosie_api(const char *name, ...) {
      
      return LUA_OK;
 }
+
+int new_engine(struct string *eid_string) {
+     lua_State *L = single_instanceL;
+     int r = rosie_api("new_engine", "{\"name\":\"A NEW ENGINE\"}", "ignored");
+     // check r after revising rosie_api to not throw errors
+     if (r!=LUA_OK) { return r; };
+
+     size_t len;
+     const char *eid_js = lua_tolstring(L, 1, &len);
+
+     unsigned long max=25;
+     char *eid = malloc(sizeof(char)*max+1);
+     // engine id is on the stack in a json-encoded array of length 1
+     lua_getglobal(L, "json");
+     lua_getfield(L, -1, "decode");
+     lua_remove(L, -2);		/* remove json from stack */
+     lua_pushstring(L, eid_js);
+
+     lua_call(L, 1, 1);		/* call json.decode */
+     lua_geti(L, -1, 1);	/* get 1st element of table */
+
+     if (strlcpy(eid, lua_tolstring(L, -1, &len), max) >= max)
+	  luaL_error(L, "error: MAX_ENGINE_ID_LEN too small");
+
+     lua_pop(L, 3);		/* remove decoded string, table, js string */ 
+
+     eid_string->len = (uint32_t) len;
+     eid_string->ptr = eid;
+	  
+     printf("Value of eid_string: %s\n", eid);
+     /* printf("Stack at end of call to new_engine:\n"); */
+     /* stackDump(L); */
+
+     return LUA_OK;
+}
+
 

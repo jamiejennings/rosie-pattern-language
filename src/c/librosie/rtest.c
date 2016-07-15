@@ -43,23 +43,29 @@ int main (int argc, char **argv) {
   
   initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
 
-  const char *config = "{\"name\":\"REPL ENGINE\"}";
-  status = rosie_api("new_engine", config);    /* leaves engine id on stack */
+  lua_State *L = get_L();   
 
-  lua_State *L = get_L();  
+  /* const char *config = "{\"name\":\"REPL ENGINE\"}"; */
+  /* status = rosie_api("new_engine", config);    /\* leaves engine id on stack *\/ */
 
-  const char *eid_js = lua_tostring(L, 1);
+  /* const char *eid_js = lua_tostring(L, 1); */
   
-  lua_getglobal(L, "json");
-  lua_getfield(L, -1, "decode");
-  lua_remove(L, -2);		/* remove json from stack */
-  lua_pushstring(L, eid_js);
-  lua_call(L, 1, 1);		/* call json.decode */
-  lua_geti(L, -1, 1);		/* get 1st element of table */
-  const char *eid_ref = lua_tostring(L, -1);
-  if (strlcpy(eid, eid_ref, sizeof(eid)) >= sizeof(eid))
-	  luaL_error(L, "error: MAX_ENGINE_ID_LEN too small");
-  lua_pop(L, 3);		/* remove decoded string, table, decode fcn */
+  /* lua_getglobal(L, "json"); */
+  /* lua_getfield(L, -1, "decode"); */
+  /* lua_remove(L, -2);		/\* remove json from stack *\/ */
+  /* lua_pushstring(L, eid_js); */
+  /* lua_call(L, 1, 1);		/\* call json.decode *\/ */
+  /* lua_geti(L, -1, 1);		/\* get 1st element of table *\/ */
+  /* if (strlcpy(eid, lua_tostring(L, -1), sizeof(eid)) >= sizeof(eid)) */
+  /* 	  luaL_error(L, "error: MAX_ENGINE_ID_LEN too small"); */
+  /* lua_pop(L, 3);		/\* remove decoded string, table, decode fcn *\/ */
+  
+  struct string foo;
+
+  status = new_engine(&foo);
+  printf("result of new_engine: len=%d, string=%s\n", foo.len, foo.ptr);
+
+  strlcpy(eid, foo.ptr, sizeof(eid));
   
   status = rosie_api( "get_environment", eid, "null");	   
   status = rosie_api( "configure_engine", eid, "{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}");
