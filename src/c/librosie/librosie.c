@@ -313,12 +313,10 @@ int rosie_api(const char *name, ...) {
      return LUA_OK;
 }
 
-#define CONFIG "{\"name\":\"A NEW ENGINE\"}"
 
-int new_engine(struct string *eid_string) {
+int new_engine(struct string *eid_string, struct string config) {
      lua_State *L = single_instanceL;
 
-     static struct string config = { (uint32_t) strlen(CONFIG), (uint8_t *)CONFIG };
      static struct string ignore = { strlen("ignored"), (uint8_t *)"ignore" };
 
      int r = rosie_api("new_engine", config, ignore);

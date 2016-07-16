@@ -55,75 +55,50 @@ int main (int argc, char **argv) {
 
   lua_State *L = get_L();   
 
-  /* const char *config = "{\"name\":\"REPL ENGINE\"}"; */
-  /* status = rosie_api("new_engine", config);    /\* leaves engine id on stack *\/ */
-
-  /* const char *eid_js = lua_tostring(L, 1); */
-  
-  /* lua_getglobal(L, "json"); */
-  /* lua_getfield(L, -1, "decode"); */
-  /* lua_remove(L, -2);		/\* remove json from stack *\/ */
-  /* lua_pushstring(L, eid_js); */
-  /* lua_call(L, 1, 1);		/\* call json.decode *\/ */
-  /* lua_geti(L, -1, 1);		/\* get 1st element of table *\/ */
-  /* if (strlcpy(eid, lua_tostring(L, -1), sizeof(eid)) >= sizeof(eid)) */
-  /* 	  luaL_error(L, "error: MAX_ENGINE_ID_LEN too small"); */
-  /* lua_pop(L, 3);		/\* remove decoded string, table, decode fcn *\/ */
-  
-  struct string foo;
-
-  status = new_engine(&foo);
+  struct string eid_string_encoded;
+  status = new_engine(&eid_string_encoded, CONST_STRING("{\"name\":\"A NEW ENGINE\"}"));
   
   /* Now json.decode the result */
 
   lua_getglobal(L, "json");
   lua_getfield(L, -1, "decode");
   lua_remove(L, -2);		/* remove json from stack */
-  lua_pushlstring(L, (char *)foo.ptr, (size_t) foo.len);
+  lua_pushlstring(L, (char *)eid_string_encoded.ptr, (size_t) eid_string_encoded.len);
 
   lua_call(L, 1, 1);		/* call json.decode */
   lua_geti(L, -1, 1);		/* get 1st element of table */
 
-/* NEED TO CHANGE ALL USES OF strlcpy, WHICH ASSUMES NULL-TERMINATED STRINGS */
-
   size_t len;
   uint8_t *src = (uint8_t *)lua_tolstring(L, -1, &len);
-  uint8_t *eid = malloc(sizeof(uint8_t)*(len+1));
-  /* if (len > MAX_ENGINE_ID_LEN) luaL_error(L, "error: MAX_ENGINE_ID_LEN too small"); */
-  memcpy(eid, src, len);
-  eid[len+1] = 0;
-  struct string eid_string = { len, eid };
-
+  struct string eid_string = { len, src };
+  
   lua_pop(L, 2);		/* remove decoded string, table */ 
 
   printf("eid_string: len=%d string=%s\n", eid_string.len, (char *)eid_string.ptr);
 
   static struct string null = { strlen("null"), (uint8_t *)"null" };
 
-#define CONFIG ("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}")
-  struct string arg = { strlen(CONFIG), (uint8_t *)CONFIG };
-
   status = rosie_api( "get_environment", eid_string, null);	   
+
+  struct string arg = CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}");
 
   status = rosie_api( "configure_engine", eid_string, arg); 
   status = rosie_api( "inspect_engine", eid_string, null); 
 
-  arg = (struct string) {strlen("123"), (uint8_t *)"123"};
+  arg = CONST_STRING("123");
   status = rosie_api( "match", eid_string, arg); 
 
-  arg = (struct string) {strlen("123 abcdef"), (uint8_t *)"123 abcdef"};
+  arg = CONST_STRING("123 abcdef");
   status = rosie_api( "match", eid_string, arg); 
 
-  arg = (struct string) {strlen("hi"), (uint8_t *)"hi"};
+  arg = CONST_STRING("hi");
   status = rosie_api( "match", eid_string, arg); 
-
 
   lua_getglobal(L, "repl");	/* push repl fcn */
   lua_getglobal(L, "engine_list");
   lua_pushlstring(L, (char *)eid_string.ptr, eid_string.len);
   lua_gettable(L, -2);
   /* top of stack is now enginelist[eid_string] */
-
   lua_remove(L, -2);		/* remove engine_list from stack */
   lua_call(L, 1, 1);		/* call repl(eid) */
 
