@@ -12,6 +12,8 @@ struct string {
 };
 
 #define CONST_STRING(str) (struct string) {strlen(str), (uint8_t *)str}
+#define FREE_STRING(s) { free((s).ptr); (s).ptr=0; (s).len=0; }
+
 
 /* extern int bootstrap (lua_State *L, const char *rosie_home); */
 extern void require (const char *name, int assign_name);

@@ -26,18 +26,6 @@
 
 #define PROGNAME		"rosie"
 
-/* struct string utf8_to_printable(string src) { */
-/*      struct string dst; */
-/*      dest.ptr = malloc(sizeof(char)*4*src.len+1); */
-/*      unsigned int d_ptr = dest.ptr */
-/*      for (unsigned int i=1; i<=src.len; i++) { */
-/* 	  if ( *(src.ptr+i)==0 ) { */
-/* 	       memcpy(dest.ptr,  */
-/* } */
-     
-
-     
-
 /*
 ---------------------------------------------------------------------------------------------------
  main 
@@ -47,8 +35,6 @@
 #define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
 #define QUOTE(thing) #thing			    /* stringify it */
 
-#define MAX_ENGINE_ID_LEN 20
-
 int main (int argc, char **argv) {
   int status;
   initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
@@ -56,7 +42,8 @@ int main (int argc, char **argv) {
   lua_State *L = get_L();   
 
   struct string eid_string_encoded;
-  status = new_engine(&eid_string_encoded, CONST_STRING("{\"name\":\"A NEW ENGINE\"}"));
+  struct string initial_config = CONST_STRING("{\"name\":\"A NEW ENGINE\"}");
+  status = new_engine(&eid_string_encoded, initial_config);
   
   /* Now json.decode the result */
 
@@ -64,6 +51,9 @@ int main (int argc, char **argv) {
   lua_getfield(L, -1, "decode");
   lua_remove(L, -2);		/* remove json from stack */
   lua_pushlstring(L, (char *)eid_string_encoded.ptr, (size_t) eid_string_encoded.len);
+
+  /* For valgrind to not complain: */
+  FREE_STRING(eid_string_encoded);
 
   lua_call(L, 1, 1);		/* call json.decode */
   lua_geti(L, -1, 1);		/* get 1st element of table */
@@ -76,7 +66,7 @@ int main (int argc, char **argv) {
 
   printf("eid_string: len=%d string=%s\n", eid_string.len, (char *)eid_string.ptr);
 
-  static struct string null = { strlen("null"), (uint8_t *)"null" };
+  static struct string null = CONST_STRING("null");
 
   status = rosie_api( "get_environment", eid_string, null);	   
 
@@ -103,6 +93,7 @@ int main (int argc, char **argv) {
   lua_call(L, 1, 1);		/* call repl(eid) */
 
   lua_close(L);
+
   return (status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 }

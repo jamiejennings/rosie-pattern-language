@@ -97,7 +97,6 @@ local function info()
    return info
 end
 
-
 api.info = api_wrap(info, "object")
 
 ----------------------------------------------------------------------------------------
@@ -146,7 +145,7 @@ local function new_engine(config_obj)
       end
    end
 
-   -- TEMP:
+   -- TEMPORARY: !@#  Making sure the C api will handle strings with nulls in them.
    en.id = en.id:sub(1,4) .. string.char(0) .. en.id:sub(5)
 
    engine_list[en.id] = en

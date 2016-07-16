@@ -317,7 +317,7 @@ int rosie_api(const char *name, ...) {
 int new_engine(struct string *eid_string, struct string config) {
      lua_State *L = single_instanceL;
 
-     static struct string ignore = { strlen("ignored"), (uint8_t *)"ignore" };
+     static struct string ignore = CONST_STRING("ignored");
 
      int r = rosie_api("new_engine", config, ignore);
      // check r after revising rosie_api to not throw errors
@@ -328,7 +328,7 @@ int new_engine(struct string *eid_string, struct string config) {
 
      eid_string->ptr = malloc(sizeof(uint8_t)*(len+1));
      memcpy(eid_string->ptr, src, len);
-     eid_string->ptr[len+1] = 0;
+     eid_string->ptr[len] = 0;	/* so we can use printf */
 
      lua_pop(L, 1);		/* remove js string */ 
 
