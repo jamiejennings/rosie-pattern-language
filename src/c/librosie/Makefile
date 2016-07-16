@@ -52,7 +52,7 @@ all:	librosie.so rtest
 rtest: librosie.so rtest.c
 	$(CC) -o $@ rtest.c $(CFLAGS) $(LIBROSIE) $(LUA_A) $(LIBS)
 
-librosie.o: 
+librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
 librosie.so: librosie.o

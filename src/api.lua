@@ -145,6 +145,10 @@ local function new_engine(config_obj)
 	 util.warn("duplicate engine ids: " .. id .. " --> " .. en.id)
       end
    end
+
+   -- TEMP:
+   en.id = en.id:sub(1,4) .. string.char(0) .. en.id:sub(5)
+
    engine_list[en.id] = en
    if (c_table~=json.null) then
       ok, msg = lapi.configure_engine(en, c_table)

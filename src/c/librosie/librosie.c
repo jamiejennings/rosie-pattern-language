@@ -124,6 +124,7 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 static void stackDump (lua_State *L) {
       int i;
       int top = lua_gettop(L);
+      if (top==0) { printf("EMPTY STACK\n"); return;}
       for (i = top; i >= 1; i--) {
         int t = lua_type(L, i);
         switch (t) {
@@ -247,7 +248,7 @@ void initialize(const char *rosie_home) {
 int rosie_api(const char *name, ...) {
 
      va_list args;
-     char *arg;
+     struct string arg;
      int base;
      
      lua_State *L = single_instanceL;
@@ -273,19 +274,19 @@ int rosie_api(const char *name, ...) {
      /* Later: insert a check HERE to ensure the value we get is a function */
 
      for (int i = 1; i <= nargs; i++) {
-	  arg = va_arg(args, char *);   /* get the next arg */
-	  lua_pushstring(L, arg);	/* push it */
+	  arg = va_arg(args, struct string);   /* get the next arg */
+	  lua_pushlstring(L, (char *) arg.ptr, arg.len);	/* push it */
      }
 
      va_end(args);
 
-     /* printf("About to call the api the function on the stack, and nargs=%d\n", nargs); */
-     /* stackDump(L); */
+     printf("About to call the api the function on the stack, and nargs=%d\n", nargs); 
+     stackDump(L); 
 
      lua_call(L, nargs, LUA_MULTRET); 
 
-     /* printf("Stack immediately after lua_call:\n"); */
-     /* stackDump(L); */
+     printf("Stack immediately after lua_call:\n"); 
+     stackDump(L); 
      
      /* printf("base+1 value from stack as a boolean: %s\n", lua_toboolean(L, base+1) ? "true" : "false"); */
      /* printf("base+1 value from stack as a string: %s\n", lua_tostring(L, base+1)); */
@@ -312,37 +313,32 @@ int rosie_api(const char *name, ...) {
      return LUA_OK;
 }
 
+#define CONFIG "{\"name\":\"A NEW ENGINE\"}"
+
 int new_engine(struct string *eid_string) {
      lua_State *L = single_instanceL;
-     int r = rosie_api("new_engine", "{\"name\":\"A NEW ENGINE\"}", "ignored");
+
+     static struct string config = { (uint32_t) strlen(CONFIG), (uint8_t *)CONFIG };
+     static struct string ignore = { strlen("ignored"), (uint8_t *)"ignore" };
+
+     int r = rosie_api("new_engine", config, ignore);
      // check r after revising rosie_api to not throw errors
      if (r!=LUA_OK) { return r; };
 
      size_t len;
-     const char *eid_js = lua_tolstring(L, 1, &len);
+     uint8_t *src = (uint8_t *) lua_tolstring(L, -1, &len);
 
-     unsigned long max=25;
-     char *eid = malloc(sizeof(char)*max+1);
-     // engine id is on the stack in a json-encoded array of length 1
-     lua_getglobal(L, "json");
-     lua_getfield(L, -1, "decode");
-     lua_remove(L, -2);		/* remove json from stack */
-     lua_pushstring(L, eid_js);
+     eid_string->ptr = malloc(sizeof(uint8_t)*(len+1));
+     memcpy(eid_string->ptr, src, len);
+     eid_string->ptr[len+1] = 0;
 
-     lua_call(L, 1, 1);		/* call json.decode */
-     lua_geti(L, -1, 1);	/* get 1st element of table */
-
-     if (strlcpy(eid, lua_tolstring(L, -1, &len), max) >= max)
-	  luaL_error(L, "error: MAX_ENGINE_ID_LEN too small");
-
-     lua_pop(L, 3);		/* remove decoded string, table, js string */ 
+     lua_pop(L, 1);		/* remove js string */ 
 
      eid_string->len = (uint32_t) len;
-     eid_string->ptr = eid;
 	  
-     printf("Value of eid_string: %s\n", eid);
-     /* printf("Stack at end of call to new_engine:\n"); */
-     /* stackDump(L); */
+     printf("Value of eid_string: len=%d string='%s'\n", eid_string->len, eid_string->ptr);
+     printf("Stack at end of call to new_engine:\n"); 
+     stackDump(L); 
 
      return LUA_OK;
 }

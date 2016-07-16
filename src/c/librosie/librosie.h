@@ -8,7 +8,7 @@
 
 struct string {
      uint32_t len;
-     char *ptr;
+     uint8_t *ptr;
 };
 
 /* extern int bootstrap (lua_State *L, const char *rosie_home); */
