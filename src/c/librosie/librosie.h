@@ -22,7 +22,7 @@ uint32_t testbyref(struct string *foo);
 void require (const char *name, int assign_name);
 void initialize(const char *rosie_home);
 int rosie_api(const char *name, ...);
-int new_engine(struct string *eid_string, struct string config);
+int new_engine(struct string *eid_string, struct string *config);
 
 /* !@# */
 extern void l_message (const char *pname, const char *msg);

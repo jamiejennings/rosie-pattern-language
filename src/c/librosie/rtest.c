@@ -51,7 +51,7 @@ int main (int argc, char **argv) {
 
   struct string eid_string_encoded;
   struct string initial_config = CONST_STRING("{\"name\":\"A NEW ENGINE\"}");
-  status = new_engine(&eid_string_encoded, initial_config);
+  status = new_engine(&eid_string_encoded, &initial_config);
   
   /* Now json.decode the result */
 
@@ -76,21 +76,21 @@ int main (int argc, char **argv) {
 
   static struct string null = CONST_STRING("null");
 
-  status = rosie_api( "get_environment", eid_string, null);	   
+  status = rosie_api( "get_environment", &eid_string, &null);	   
 
-  struct string arg = CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}");
+  struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
-  status = rosie_api( "configure_engine", eid_string, arg); 
-  status = rosie_api( "inspect_engine", eid_string, null); 
+  status = rosie_api( "configure_engine", &eid_string, arg); 
+  status = rosie_api( "inspect_engine", &eid_string, &null); 
 
-  arg = CONST_STRING("123");
-  status = rosie_api( "match", eid_string, arg); 
+  arg = &CONST_STRING("123");
+  status = rosie_api( "match", &eid_string, arg); 
 
-  arg = CONST_STRING("123 abcdef");
-  status = rosie_api( "match", eid_string, arg); 
+  arg = &CONST_STRING("123 abcdef");
+  status = rosie_api( "match", &eid_string, arg); 
 
-  arg = CONST_STRING("hi");
-  status = rosie_api( "match", eid_string, arg); 
+  arg = &CONST_STRING("hi");
+  status = rosie_api( "match", &eid_string, arg); 
 
   lua_getglobal(L, "repl");	/* push repl fcn */
   lua_getglobal(L, "engine_list");

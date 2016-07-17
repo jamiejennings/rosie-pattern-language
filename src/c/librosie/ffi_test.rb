@@ -36,8 +36,10 @@ module Rosie
   ffi_lib_flags :now                                # required so other shared objects can resolve names
   ffi_lib "./librosie.so"
   attach_function 'initialize', [ :string ], :void
-  attach_function 'rosie_api', [ :string, CString.val, CString.val ], :int
-  attach_function 'new_engine', [ :pointer, CString.val ], :int
+  # attach_function 'rosie_api', [ :string, CString.val, CString.val ], :int
+  # attach_function 'new_engine', [ :pointer, CString.val ], :int
+  attach_function 'rosie_api', [ :string, CString, CString ], :int
+  attach_function 'new_engine', [ :pointer, CString ], :int
   attach_function 'testbyvalue', [ CString.val ], :uint32
   attach_function 'testbyref', [ :pointer ], :uint32
 end
@@ -64,9 +66,10 @@ ignored[:len] = ignored_string.length
 foo2 = Rosie.testbyref(ignored.pointer)
 foo1 = Rosie.testbyvalue(ignored)
 
-ok = Rosie.new_engine(eid_retval.pointer, config_string)
+ok = Rosie.new_engine(eid_retval.pointer, config_string.pointer)
 print "LEN result of api call is: ", eid_retval[:len], "\n"
-retval_js = eid_retval[:ptr].read_string_length(eid_retval[:len])
+#retval_js = eid_retval[:ptr].read_string_length(eid_retval[:len])
+retval_js = eid_retval[:ptr].read_string
 print "STRING result of api call is: ", retval_js, "\n"
 
 retval = JSON.parse(retval_js)
@@ -76,6 +79,15 @@ eid_string = CString.new
 eid_string[:ptr] = FFI::MemoryPointer.from_string(retval[0])
 eid_string[:len] = retval[0].length
 
+config = {'expression' => "\"ign\"", 'encode' => false} 
+config_js = JSON.generate(config)
+print "config_js is: ", config_js, "\n"
+config_string[:ptr] = FFI::MemoryPointer.from_string(config_js)
+config_string[:len] = config_js.length
+
+ok = Rosie.rosie_api("configure_engine", eid_string, config_string)
 ok = Rosie.rosie_api("inspect_engine", eid_string, ignored)
+ok = Rosie.rosie_api("match", eid_string, ignored)
+
 # print "Result of api call is: ", ok, "\n"
 

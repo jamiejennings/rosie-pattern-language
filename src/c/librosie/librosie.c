@@ -258,7 +258,7 @@ uint32_t testbyref(struct string *foo) {
 int rosie_api(const char *name, ...) {
 
      va_list args;
-     struct string arg;
+     struct string *arg;
      int base;
      
      lua_State *L = single_instanceL;
@@ -284,9 +284,9 @@ int rosie_api(const char *name, ...) {
      /* Later: insert a check HERE to ensure the value we get is a function */
 
      for (int i = 1; i <= nargs; i++) {
-	  arg = va_arg(args, struct string);   /* get the next arg */
-	  printf("LUA stack pushlstring: len=%d, value=%s\n", arg.len, arg.ptr); 
-	  lua_pushlstring(L, (char *) arg.ptr, arg.len);	/* push it */
+	  arg = va_arg(args, struct string *); /* get the next arg */
+	  printf("LUA stack pushlstring: len=%d, value=%s\n", arg->len, arg->ptr); 
+	  lua_pushlstring(L, (char *) arg->ptr, arg->len); /* push it */
      }
 
      va_end(args);
@@ -303,7 +303,7 @@ int rosie_api(const char *name, ...) {
      /* printf("base+1 value from stack as a string: %s\n", lua_tostring(L, base+1)); */
 
      if (lua_isboolean(L, base+1) != TRUE) {
-	  l_message(progname, lua_pushfstring(L, "api error: first return value of %s not a boolean", name));
+	  l_message(progname, lua_pushfstring(L, "librosie internal error: first return value of %s not a boolean", name));
 	  exit(-1);
      }
 
@@ -325,12 +325,12 @@ int rosie_api(const char *name, ...) {
 }
 
 
-int new_engine(struct string *eid_string, struct string config) {
+int new_engine(struct string *eid_string, struct string *config) {
      lua_State *L = single_instanceL;
 
      static struct string ignore = CONST_STRING("ignored");
 
-     int r = rosie_api("new_engine", config, ignore);
+     int r = rosie_api("new_engine", config, &ignore);
      // check r after revising rosie_api to not throw errors
      if (r!=LUA_OK) { return r; };
 
