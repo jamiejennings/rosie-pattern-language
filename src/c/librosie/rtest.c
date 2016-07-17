@@ -37,6 +37,14 @@
 
 int main (int argc, char **argv) {
   int status;
+
+  testbyvalue(CONST_STRING("Hello, world!"));
+  struct string foo;
+  foo.ptr = (uint8_t *) "This is a test.";
+  foo.len = strlen((const char *)foo.ptr);
+  testbyref(&foo);
+  printf("\n");
+
   initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
 
   lua_State *L = get_L();   

@@ -25,19 +25,57 @@ retptr = Libc.strlcpy(buffer, "Abcdef", 100)
 print (buffer.null? ? "<null string>" : buffer.read_string()), "\n"
 
 
+class CString < FFI::Struct
+  layout :len, :uint32,
+         :ptr, :pointer
+end
+
 module Rosie
   extend FFI::Library
+  ffi_convention :stdcall
   ffi_lib_flags :now                                # required so other shared objects can resolve names
   ffi_lib "./librosie.so"
   attach_function 'initialize', [ :string ], :void
-  attach_function 'rosie_api', [ :string, :string, :string ], :int, :string
+  attach_function 'rosie_api', [ :string, CString.val, CString.val ], :int
+  attach_function 'new_engine', [ :pointer, CString.val ], :int
+  attach_function 'testbyvalue', [ CString.val ], :uint32
+  attach_function 'testbyref', [ :pointer ], :uint32
 end
 
 Rosie.initialize("asldkasldk")
-ok, retval_js = Rosie.rosie_api("new_engine", "{\"name\":\"Ruby engine\"}", "")
-print "Result of api call is: ", ok, "\n"
-print "Second result of api call is: ", retval_js, "\n"
-ok, retval_js = Rosie.rosie_api("inspect_engine", "", "")
-print "Result of api call is: ", ok, "\n"
 
-# retval = JSON.parse(retval_js)
+eid_retval = CString.new
+
+actual_string = "{\"name\":\"Ruby engine\"}"
+
+config_string = CString.new
+config_string[:ptr] = FFI::MemoryPointer.from_string(actual_string)
+config_string[:len] = actual_string.length
+
+print "config_string string: ", config_string[:ptr].read_string_length(config_string[:len]), "\n"
+print "config_string length: ", config_string[:len], "\n"
+print "config_string struct size: ", CString.size, "\n"
+
+ignored_string = "ignored"
+ignored = CString.new
+ignored[:ptr] = FFI::MemoryPointer.from_string(ignored_string)
+ignored[:len] = ignored_string.length
+
+foo2 = Rosie.testbyref(ignored.pointer)
+foo1 = Rosie.testbyvalue(ignored)
+
+ok = Rosie.new_engine(eid_retval.pointer, config_string)
+print "LEN result of api call is: ", eid_retval[:len], "\n"
+retval_js = eid_retval[:ptr].read_string_length(eid_retval[:len])
+print "STRING result of api call is: ", retval_js, "\n"
+
+retval = JSON.parse(retval_js)
+# print retval_js, "\n"
+# print retval[0], "\n"
+eid_string = CString.new
+eid_string[:ptr] = FFI::MemoryPointer.from_string(retval[0])
+eid_string[:len] = retval[0].length
+
+ok = Rosie.rosie_api("inspect_engine", eid_string, ignored)
+# print "Result of api call is: ", ok, "\n"
+

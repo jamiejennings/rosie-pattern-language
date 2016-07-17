@@ -245,6 +245,16 @@ void initialize(const char *rosie_home) {
 		 lua_gettop(L));
 }
 
+uint32_t testbyvalue(struct string foo) {
+     printf("testbyvalue: len=%d, string=%s\n", foo.len, foo.ptr);
+     return foo.len;
+}
+
+uint32_t testbyref(struct string *foo) {
+     printf("testbyref: len=%d, string=%s\n", foo->len, foo->ptr);
+     return foo->len;
+}
+
 int rosie_api(const char *name, ...) {
 
      va_list args;
@@ -275,6 +285,7 @@ int rosie_api(const char *name, ...) {
 
      for (int i = 1; i <= nargs; i++) {
 	  arg = va_arg(args, struct string);   /* get the next arg */
+	  printf("LUA stack pushlstring: len=%d, value=%s\n", arg.len, arg.ptr); 
 	  lua_pushlstring(L, (char *) arg.ptr, arg.len);	/* push it */
      }
 
