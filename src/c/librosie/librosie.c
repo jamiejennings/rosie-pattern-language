@@ -151,9 +151,6 @@ static void stackDump (lua_State *L) {
       printf("\n");  /* end the listing */
     }
 
-#define TRUE 1
-#define FALSE 0
-
 #define SET_ROSIE_HOME(val) SET_ROSIE_HOME_HELPER(val)
 #define SET_ROSIE_HOME_HELPER(thing) QUOTE(ROSIE_HOME = #thing)
 
@@ -255,7 +252,12 @@ uint32_t testbyref(struct string *foo) {
      return foo->len;
 }
 
-int rosie_api(const char *name, ...) {
+struct string testretstring(struct string *foo) {
+     printf("testbyref: len=%d, string=%s\n", foo->len, foo->ptr);
+     return CONST_STRING("This is a new struct string returned from librosie.");
+}
+
+struct string rosie_api(const char *name, ...) {
 
      va_list args;
      struct string *arg;
@@ -270,8 +272,8 @@ int rosie_api(const char *name, ...) {
 
      va_start(args, name);	   /* setup variadic arg processing */
 
-     printf("Stack at start of rosie_api:\n");
-     stackDump(L);
+     /* printf("Stack at start of rosie_api:\n"); */
+     /* stackDump(L); */
      base = lua_gettop(L);			    /* save top pointer */
      /* printf("Base of stack is %d\n", base); */
 
@@ -285,71 +287,54 @@ int rosie_api(const char *name, ...) {
 
      for (int i = 1; i <= nargs; i++) {
 	  arg = va_arg(args, struct string *); /* get the next arg */
-	  printf("LUA stack pushlstring: len=%d, value=%s\n", arg->len, arg->ptr); 
+	  /* printf("LUA stack pushlstring: len=%d, value=%s\n", arg->len, arg->ptr);  */
 	  lua_pushlstring(L, (char *) arg->ptr, arg->len); /* push it */
      }
 
      va_end(args);
 
-     printf("About to call the api the function on the stack, and nargs=%d\n", nargs); 
-     stackDump(L); 
+     /* printf("About to call the api the function on the stack, and nargs=%d\n", nargs);  */
+     /* stackDump(L);  */
 
-     lua_call(L, nargs, LUA_MULTRET); 
+     lua_call(L, nargs, 1); 
 
-     printf("Stack immediately after lua_call:\n"); 
-     stackDump(L); 
+     /* printf("Stack immediately after lua_call:\n");  */
+     /* stackDump(L);  */
      
-     /* printf("base+1 value from stack as a boolean: %s\n", lua_toboolean(L, base+1) ? "true" : "false"); */
-     /* printf("base+1 value from stack as a string: %s\n", lua_tostring(L, base+1)); */
-
-     if (lua_isboolean(L, base+1) != TRUE) {
-	  l_message(progname, lua_pushfstring(L, "librosie internal error: first return value of %s not a boolean", name));
+     if (lua_isstring(L, base+1) != TRUE) {
+	  l_message(progname, lua_pushfstring(L, "librosie internal error: return value of %s not a string", name));
 	  exit(-1);
      }
 
-     int ok = lua_toboolean(L, base+1);
-     if (ok != TRUE) {
-	       printf("== In api error handler ==\n");
-	       stackDump(L);
-	       l_message(progname, lua_pushfstring(L, "lua error in rosie api call '%s': %s", name, lua_tostring(L, -1)));
-	       exit(-1);
-	  }
-
-     lua_remove(L, base+1);			    /* remove the boolean retval of api call */
-
-     printf("Stack at end of call to Rosie api: %s\n", name);
-     stackDump(L);
-
-     
-     return LUA_OK;
-}
-
-
-int new_engine(struct string *eid_string, struct string *config) {
-     lua_State *L = single_instanceL;
-
-     static struct string ignore = CONST_STRING("ignored");
-
-     int r = rosie_api("new_engine", config, &ignore);
-     // check r after revising rosie_api to not throw errors
-     if (r!=LUA_OK) { return r; };
-
      size_t len;
      uint8_t *src = (uint8_t *) lua_tolstring(L, -1, &len);
-
-     eid_string->ptr = malloc(sizeof(uint8_t)*(len+1));
-     memcpy(eid_string->ptr, src, len);
-     eid_string->ptr[len] = 0;	/* so we can use printf */
+     struct string retval;
+     retval.ptr = malloc(sizeof(uint8_t)*(len+1));
+     memcpy(retval.ptr, src, len);
+     retval.ptr[len] = 0;	/* so we can use printf */
+     retval.len = (uint32_t) len;
 
      lua_pop(L, 1);		/* remove js string */ 
 
-     eid_string->len = (uint32_t) len;
-	  
-     printf("Value of eid_string: len=%d string='%s'\n", eid_string->len, eid_string->ptr);
-     printf("Stack at end of call to new_engine:\n"); 
-     stackDump(L); 
+     /* printf("Stack at end of call to Rosie api: %s\n", name); */
+     /* stackDump(L); */
+     
+     return retval;
+}
 
-     return LUA_OK;
+
+struct string new_engine(struct string *config) {
+     lua_State *L = single_instanceL;
+
+     struct string *ignore = &CONST_STRING("ignored");
+
+     struct string eid_string = rosie_api("new_engine", config, ignore);
+	  
+     /* printf("Value of eid_string: len=%d string='%s'\n", eid_string.len, eid_string.ptr); */
+     /* printf("Stack at end of call to new_engine:\n");  */
+     /* stackDump(L);  */
+
+     return eid_string;
 }
 
 

@@ -42,6 +42,7 @@ module Rosie
   attach_function 'new_engine', [ :pointer, CString ], :int
   attach_function 'testbyvalue', [ CString.val ], :uint32
   attach_function 'testbyref', [ :pointer ], :uint32
+  attach_function 'testretstring', [ :pointer ], CString.val
 end
 
 Rosie.initialize("asldkasldk")
@@ -65,6 +66,9 @@ ignored[:len] = ignored_string.length
 
 foo2 = Rosie.testbyref(ignored.pointer)
 foo1 = Rosie.testbyvalue(ignored)
+
+maybe_CString = Rosie.testretstring(ignored.pointer)
+print "RETURNED CString len is: ", maybe_CString[:len], "; value is: ", maybe_CString[:ptr].read_string, "\n"
 
 ok = Rosie.new_engine(eid_retval.pointer, config_string.pointer)
 print "LEN result of api call is: ", eid_retval[:len], "\n"

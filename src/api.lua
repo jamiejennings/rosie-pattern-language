@@ -55,12 +55,14 @@ local api = {API_VERSION = "0.99b",		    -- api version
 
 ----------------------------------------------------------------------------------------
 
-local function encode_retvals(success, ...)
-   return success, json.encode({...})
+-- local function encode_retvals(success, ...)
+--    return success, json.encode({...})
+-- end
+local function encode_retvals(...)
+   return json.encode({...})
 end
 
---local
-function get_arglist(f)
+local function get_arglist(f)
    local info = debug.getinfo(f, "u")
    local n, vararg = info.nparams, info.isvararg
    local arglist = {}

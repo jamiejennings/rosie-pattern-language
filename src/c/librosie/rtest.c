@@ -36,7 +36,6 @@
 #define QUOTE(thing) #thing			    /* stringify it */
 
 int main (int argc, char **argv) {
-  int status;
 
   testbyvalue(CONST_STRING("Hello, world!"));
   struct string foo;
@@ -50,8 +49,8 @@ int main (int argc, char **argv) {
   lua_State *L = get_L();   
 
   struct string eid_string_encoded;
-  struct string initial_config = CONST_STRING("{\"name\":\"A NEW ENGINE\"}");
-  status = new_engine(&eid_string_encoded, &initial_config);
+  struct string *initial_config = &CONST_STRING("{\"name\":\"A NEW ENGINE\"}");
+  eid_string_encoded = new_engine(initial_config);
   
   /* Now json.decode the result */
 
@@ -66,6 +65,22 @@ int main (int argc, char **argv) {
   lua_call(L, 1, 1);		/* call json.decode */
   lua_geti(L, -1, 1);		/* get 1st element of table */
 
+  if (lua_isboolean(L, -1) != TRUE) {
+       l_message("rtest", lua_pushfstring(L, "librosie error: first return value of new_engine not a boolean"));
+       exit(-1);
+  }
+
+  if (lua_toboolean(L, -1) != TRUE) {
+       lua_pop(L, 1);	    /* remove 1st element, the success code */
+       lua_geti(L, -1, 2);  /* get 2nd element of table, the error message */
+       /* TEMPORARY */
+       l_message("rtest", lua_tostring(L, 1));
+       exit(-1);
+  }
+
+  lua_pop(L, 1);      /* remove 1st element, the success code */
+  lua_geti(L, -1, 2); /* get 2nd element of table, the eid id (string) */
+
   size_t len;
   uint8_t *src = (uint8_t *)lua_tolstring(L, -1, &len);
   struct string eid_string = { len, src };
@@ -76,21 +91,28 @@ int main (int argc, char **argv) {
 
   static struct string null = CONST_STRING("null");
 
-  status = rosie_api( "get_environment", &eid_string, &null);	   
+  struct string r = rosie_api( "get_environment", &eid_string, &null);	   
+  printf("result of get_environment: len=%d string=%s\n", r.len, (char *)r.ptr);
 
   struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
-  status = rosie_api( "configure_engine", &eid_string, arg); 
-  status = rosie_api( "inspect_engine", &eid_string, &null); 
+  r = rosie_api( "configure_engine", &eid_string, arg); 
+  printf("result of configure_engine: len=%d string=%s\n", r.len, (char *)r.ptr);
+
+  r = rosie_api( "inspect_engine", &eid_string, &null); 
+  printf("result of inspect_engine: len=%d string=%s\n", r.len, (char *)r.ptr);
 
   arg = &CONST_STRING("123");
-  status = rosie_api( "match", &eid_string, arg); 
+  r = rosie_api( "match", &eid_string, arg); 
+  printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
 
   arg = &CONST_STRING("123 abcdef");
-  status = rosie_api( "match", &eid_string, arg); 
+  r = rosie_api( "match", &eid_string, arg); 
+  printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
 
   arg = &CONST_STRING("hi");
-  status = rosie_api( "match", &eid_string, arg); 
+  r = rosie_api( "match", &eid_string, arg); 
+  printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
 
   lua_getglobal(L, "repl");	/* push repl fcn */
   lua_getglobal(L, "engine_list");
@@ -102,7 +124,7 @@ int main (int argc, char **argv) {
 
   lua_close(L);
 
-  return (status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
+  return EXIT_SUCCESS;
 
 }
 
