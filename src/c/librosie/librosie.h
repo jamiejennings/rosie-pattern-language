@@ -14,6 +14,7 @@ struct string {
      uint8_t *ptr;
 };
 
+void free_string(struct string foo);
 uint32_t testbyvalue(struct string foo);
 uint32_t testbyref(struct string *foo);
 struct string testretstring(struct string *foo);

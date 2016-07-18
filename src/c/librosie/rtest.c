@@ -60,7 +60,7 @@ int main (int argc, char **argv) {
   lua_pushlstring(L, (char *)eid_string_encoded.ptr, (size_t) eid_string_encoded.len);
 
   /* For valgrind to not complain: */
-  FREE_STRING(eid_string_encoded);
+  free_string(eid_string_encoded);
 
   lua_call(L, 1, 1);		/* call json.decode */
   lua_geti(L, -1, 1);		/* get 1st element of table */
@@ -93,26 +93,32 @@ int main (int argc, char **argv) {
 
   struct string r = rosie_api( "get_environment", &eid_string, &null);	   
   printf("result of get_environment: len=%d string=%s\n", r.len, (char *)r.ptr);
+  free_string(r);
 
   struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
   r = rosie_api( "configure_engine", &eid_string, arg); 
   printf("result of configure_engine: len=%d string=%s\n", r.len, (char *)r.ptr);
+  free_string(r);
 
   r = rosie_api( "inspect_engine", &eid_string, &null); 
   printf("result of inspect_engine: len=%d string=%s\n", r.len, (char *)r.ptr);
+  free_string(r);
 
   arg = &CONST_STRING("123");
   r = rosie_api( "match", &eid_string, arg); 
   printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
+  free_string(r);
 
   arg = &CONST_STRING("123 abcdef");
   r = rosie_api( "match", &eid_string, arg); 
   printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
+  free_string(r);
 
   arg = &CONST_STRING("hi");
   r = rosie_api( "match", &eid_string, arg); 
   printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
+  free_string(r);
 
   lua_getglobal(L, "repl");	/* push repl fcn */
   lua_getglobal(L, "engine_list");

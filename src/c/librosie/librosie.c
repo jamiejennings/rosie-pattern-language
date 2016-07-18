@@ -254,8 +254,15 @@ uint32_t testbyref(struct string *foo) {
 
 struct string testretstring(struct string *foo) {
      printf("testbyref: len=%d, string=%s\n", foo->len, foo->ptr);
-     return CONST_STRING("This is a new struct string returned from librosie.");
+     char *msg = "This is a new struct string returned from librosie.";
+     size_t len = (size_t) strlen(msg);
+     uint8_t *ptr = malloc(len+1);
+     strlcpy((char *)ptr, msg, len);
+     struct string bar = (struct string) {len, ptr};
+     return bar;
 }
+
+void free_string(struct string foo) FREE_STRING(foo);
 
 struct string rosie_api(const char *name, ...) {
 
@@ -324,16 +331,11 @@ struct string rosie_api(const char *name, ...) {
 
 
 struct string new_engine(struct string *config) {
-     lua_State *L = single_instanceL;
 
      struct string *ignore = &CONST_STRING("ignored");
 
      struct string eid_string = rosie_api("new_engine", config, ignore);
 	  
-     /* printf("Value of eid_string: len=%d string='%s'\n", eid_string.len, eid_string.ptr); */
-     /* printf("Stack at end of call to new_engine:\n");  */
-     /* stackDump(L);  */
-
      return eid_string;
 }
 

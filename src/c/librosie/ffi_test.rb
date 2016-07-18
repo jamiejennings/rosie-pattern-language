@@ -5,7 +5,7 @@ require 'json'
 
 class AP < FFI::AutoPointer
   def self.release(p)
-    Libc.free(p)
+    Libc.free(p) unless p.null?
   end
 end
 
@@ -40,9 +40,10 @@ module Rosie
   # attach_function 'new_engine', [ :pointer, CString.val ], :int
   attach_function 'rosie_api', [ :string, CString, CString ], CString.val
   attach_function 'new_engine', [ CString ], CString.val
+  attach_function 'free_string', [ CString.val ], :void
   attach_function 'testbyvalue', [ CString.val ], :uint32
   attach_function 'testbyref', [ :pointer ], :uint32
-  attach_function 'testretstring', [ :pointer ], CString.val
+  attach_function 'testretstring', [ CString ], CString.val
 end
 
 Rosie.initialize("asldkasldk")
@@ -67,12 +68,14 @@ foo1 = Rosie.testbyvalue(ignored)
 
 maybe_CString = Rosie.testretstring(ignored.pointer)
 print "RETURNED CString len is: ", maybe_CString[:len], "; value is: ", maybe_CString[:ptr].read_string, "\n"
+Rosie.free_string(maybe_CString)
 
 eid_retval = Rosie.new_engine(config_string.pointer)
 print "LEN result of api call is: ", eid_retval[:len], "\n"
 #retval_js = eid_retval[:ptr].read_string_length(eid_retval[:len])
 retval_js = eid_retval[:ptr].read_string
 print "STRING result of api call is: ", retval_js, "\n"
+Rosie.free_string(eid_retval)
 
 retval = JSON.parse(retval_js)
 # print retval_js, "\n"
@@ -80,31 +83,39 @@ retval = JSON.parse(retval_js)
 eid_string = CString.new
 eid_string[:ptr] = FFI::MemoryPointer.from_string(retval[1])
 eid_string[:len] = retval[1].length
+print "eid_string value is: ", eid_string[:ptr].read_string_length(eid_string[:len]), "; eid_string len is: ", eid_string[:len], "\n"
 
 config = {'expression' => "\"ign\"", 'encode' => false} 
 config_js = JSON.generate(config)
 print "config_js is: ", config_js, "\n"
+
+Rosie.free_string(config_string)
 config_string[:ptr] = FFI::MemoryPointer.from_string(config_js)
 config_string[:len] = config_js.length
 
 retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
 print retval[:ptr].read_string, "\n"
+Rosie.free_string(retval)
 retval = Rosie.rosie_api("inspect_engine", eid_string, ignored)
 print retval[:ptr].read_string, "\n"
+Rosie.free_string(retval)
 retval = Rosie.rosie_api("match", eid_string, ignored)
 print retval[:ptr].read_string, "\n"
 retval = Rosie.rosie_api("match", eid_string, config_string)
 print retval[:ptr].read_string, "\n"
-
+Rosie.free_string(retval)
 
 actual_string = "This is NOT valid json"
 config_string[:ptr] = FFI::MemoryPointer.from_string(actual_string)
 config_string[:len] = actual_string.length
 retval = Rosie.new_engine(config_string.pointer)
 print retval[:ptr].read_string, "\n"
+Rosie.free_string(retval)
 
 retval = Rosie.rosie_api("load_manifest", eid_string, config_string)
 print retval[:ptr].read_string, "\n"
+Rosie.free_string(retval)
 
 retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
 print retval[:ptr].read_string, "\n"
+Rosie.free_string(retval)
