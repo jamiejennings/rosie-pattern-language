@@ -146,9 +146,11 @@ foo[:len] = 3
 
 for i in 0..10000000 do
   retval = Rosie.rosie_api "match", eid_string, foo
-  string_to_return_to_caller = retval[:ptr].read_string_length(retval[:len])
+  json_string = retval[:ptr].read_string_length(retval[:len])
   Rosie.free_string(retval)
-#  print "Match: ", retval[:ptr].read_string, "\n"
+# With the JSON.parse in this loop:  user 2m51.152s --> 171s
+# Without the JSON.parse:            user 1m43.046s --> 103s
+#  obj_to_return_to_caller = JSON.parse(json_string)
 end
 
 
