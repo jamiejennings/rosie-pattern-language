@@ -30,6 +30,14 @@ class CString < FFI::Struct
          :ptr, :pointer
 end
 
+def CString_from_string(str)
+  instance = CString.new
+  instance[:len] = str.length
+  instance[:ptr] = FFI::MemoryPointer.from_string(str)
+  print "INIT FROM STRING: ", str, " whose length is: ", str.length, "\n"
+  instance
+end
+
 module Rosie
   extend FFI::Library
   ffi_convention :stdcall
@@ -48,34 +56,27 @@ end
 
 Rosie.initialize("asldkasldk")
 
-actual_string = "{\"name\":\"Ruby engine\"}"
-
-config_string = CString.new
-config_string[:ptr] = FFI::MemoryPointer.from_string(actual_string)
-config_string[:len] = actual_string.length
+config_string = CString_from_string("{\"name\":\"Ruby engine\"}")
 
 print "config_string string: ", config_string[:ptr].read_string_length(config_string[:len]), "\n"
 print "config_string length: ", config_string[:len], "\n"
 print "config_string struct size: ", CString.size, "\n"
 
-ignored_string = "ignored"
-ignored = CString.new
-ignored[:ptr] = FFI::MemoryPointer.from_string(ignored_string)
-ignored[:len] = ignored_string.length
+ignored = CString_from_string("ignored")
 
 foo2 = Rosie.testbyref(ignored.pointer)
 foo1 = Rosie.testbyvalue(ignored)
 
 maybe_CString = Rosie.testretstring(ignored.pointer)
 print "RETURNED CString len is: ", maybe_CString[:len], "; value is: ", maybe_CString[:ptr].read_string, "\n"
-Rosie.free_string(maybe_CString)
+#Rosie.free_string(maybe_CString)
 
 eid_retval = Rosie.new_engine(config_string.pointer)
 print "LEN result of api call is: ", eid_retval[:len], "\n"
 #retval_js = eid_retval[:ptr].read_string_length(eid_retval[:len])
 retval_js = eid_retval[:ptr].read_string
 print "STRING result of api call is: ", retval_js, "\n"
-Rosie.free_string(eid_retval)
+#Rosie.free_string(eid_retval)
 
 retval = JSON.parse(retval_js)
 # print retval_js, "\n"
@@ -89,33 +90,65 @@ config = {'expression' => "\"ign\"", 'encode' => false}
 config_js = JSON.generate(config)
 print "config_js is: ", config_js, "\n"
 
-Rosie.free_string(config_string)
+#Rosie.free_string(config_string)
 config_string[:ptr] = FFI::MemoryPointer.from_string(config_js)
 config_string[:len] = config_js.length
 
 retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
 print retval[:ptr].read_string, "\n"
-Rosie.free_string(retval)
+#Rosie.free_string(retval)
 retval = Rosie.rosie_api("inspect_engine", eid_string, ignored)
 print retval[:ptr].read_string, "\n"
-Rosie.free_string(retval)
+#Rosie.free_string(retval)
 retval = Rosie.rosie_api("match", eid_string, ignored)
 print retval[:ptr].read_string, "\n"
 retval = Rosie.rosie_api("match", eid_string, config_string)
 print retval[:ptr].read_string, "\n"
-Rosie.free_string(retval)
+#Rosie.free_string(retval)
 
 actual_string = "This is NOT valid json"
 config_string[:ptr] = FFI::MemoryPointer.from_string(actual_string)
 config_string[:len] = actual_string.length
 retval = Rosie.new_engine(config_string.pointer)
 print retval[:ptr].read_string, "\n"
-Rosie.free_string(retval)
+#Rosie.free_string(retval)
 
 retval = Rosie.rosie_api("load_manifest", eid_string, config_string)
 print retval[:ptr].read_string, "\n"
-Rosie.free_string(retval)
+#Rosie.free_string(retval)
 
 retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
 print retval[:ptr].read_string, "\n"
-Rosie.free_string(retval)
+#Rosie.free_string(retval)
+
+# Loop test prep
+
+test = CString_from_string("$sys/MANIFEST")
+print "TEST: len=", test[:len], "\n"
+print "TEST: string=", test[:ptr].read_string, "\n"
+
+retval = Rosie.rosie_api("load_manifest", eid_string, test)
+
+config = {'expression' => "[:digit:]+", 'encode' => false} 
+config_js = JSON.generate(config)
+print "config_js is: ", config_js, "\n"
+
+config_string[:ptr] = FFI::MemoryPointer.from_string config_js 
+config_string[:len] = config_js.length
+retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
+print retval[:ptr].read_string, "\n"
+
+# Loop test
+
+foo = CString.new
+foo[:ptr] = FFI::MemoryPointer.from_string "123"
+foo[:len] = 3
+
+for i in 0..10000000 do
+  retval = Rosie.rosie_api "match", eid_string, foo
+  string_to_return_to_caller = retval[:ptr].read_string_length(retval[:len])
+  Rosie.free_string(retval)
+#  print "Match: ", retval[:ptr].read_string, "\n"
+end
+
+

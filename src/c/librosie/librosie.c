@@ -256,8 +256,8 @@ struct string testretstring(struct string *foo) {
      printf("testbyref: len=%d, string=%s\n", foo->len, foo->ptr);
      char *msg = "This is a new struct string returned from librosie.";
      size_t len = (size_t) strlen(msg);
-     uint8_t *ptr = malloc(len+1);
-     strlcpy((char *)ptr, msg, len);
+     uint8_t *ptr = malloc(len+1);                /* to return a string, we must make */
+     strlcpy((char *)ptr, msg, len);              /* sure it is allocated on the heap */
      struct string bar = (struct string) {len, ptr};
      return bar;
 }
@@ -275,7 +275,7 @@ struct string rosie_api(const char *name, ...) {
      /* number of args AFTER the api name */
      int nargs = 2;		   /* get this later from a table */
 
-     printf("Calling Rosie api: %s\n", name);
+     /* printf("Calling Rosie api: %s\n", name); */
 
      va_start(args, name);	   /* setup variadic arg processing */
 
