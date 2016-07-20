@@ -249,7 +249,7 @@ uint32_t testbyvalue(struct string foo) {
 
 uint32_t testbyref(struct string *foo) {
      printf("testbyref: len=%d, string=%s\n", foo->len, foo->ptr);
-     return foo->len;
+     return (uint32_t) strlen((const char *)foo->ptr);
 }
 
 struct string testretstring(struct string *foo) {
@@ -291,18 +291,6 @@ struct string_array2 testretarray2(struct string foo) {
      struct string *b = heap_allocate_string("This is a new struct string called b.");
      struct string *c = heap_allocate_string("This is a new struct string called c.");
      struct string *d = heap_allocate_string("This is a new struct string called d.");
-
-     /* struct string *ptr = calloc(sizeof(struct string), 3); */
-
-     /* struct string *temp = ptr; */
-     /* *temp = *b; */
-     /* /\* memcpy(temp, *b, sizeof(struct string)); *\/ */
-     /* temp++; */
-     /* /\* memcpy(temp, (const void *) c, sizeof(struct string)); *\/ */
-     /* *temp = *c; */
-     /* temp++; */
-     /* /\* memcpy(temp, (const void *) d, sizeof(struct string)); *\/ */
-     /* *temp = *d; */
 
      struct string ptr[3] = {*b, *c, *d};
 
