@@ -46,6 +46,17 @@ int main (int argc, char **argv) {
 
   printf("\n");
 
+  struct string_array2 array2 = testretarray2(CONST_STRING("Hello, world!"));
+  printf("Array length is: %d\n", array2.n);
+  struct string **cstr_ptr = array.ptr; 
+  for (uint32_t i=0; i < array2.n; i++) { 
+       struct string c = *(cstr_ptr[i]);
+       printf("\t %d: len=%d, string=%s\n", i, c.len, c.ptr); 
+  } 
+
+  printf("\n");
+  
+
   initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
 
   lua_State *L = get_L();   

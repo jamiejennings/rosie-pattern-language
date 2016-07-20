@@ -264,9 +264,8 @@ struct string testretstring(struct string *foo) {
 
 struct string *heap_allocate_string(const char *msg) {
      size_t len = (size_t) strlen(msg);
-     uint8_t *ptr = malloc(len+1);                /* to return a string, we must make */
-     strlcpy((char *)ptr, msg, len);              /* sure it is allocated on the heap */
-     ptr[len]=0;
+     uint8_t *ptr = malloc(len+1);     /* to return a string, we must make */
+     strlcpy((char *)ptr, msg, len+1); /* sure it is allocated on the heap */
      struct string *retval = malloc(sizeof(struct string));
      struct string bar = (struct string) {len, ptr};
      memcpy(retval, &bar, sizeof(bar));
@@ -283,6 +282,34 @@ struct string_array testretarray(struct string foo) {
      ptr[0] = b; ptr[1] = c; ptr[2] = d;
 
      return (struct string_array) {3, ptr};
+
+}
+
+struct string_array2 testretarray2(struct string foo) {
+     printf("testretarray2 argument received: len=%d, string=%s\n", foo.len, foo.ptr);
+
+     struct string *b = heap_allocate_string("This is a new struct string called b.");
+     struct string *c = heap_allocate_string("This is a new struct string called c.");
+     struct string *d = heap_allocate_string("This is a new struct string called d.");
+
+     /* struct string *ptr = calloc(sizeof(struct string), 3); */
+
+     /* struct string *temp = ptr; */
+     /* *temp = *b; */
+     /* /\* memcpy(temp, *b, sizeof(struct string)); *\/ */
+     /* temp++; */
+     /* /\* memcpy(temp, (const void *) c, sizeof(struct string)); *\/ */
+     /* *temp = *c; */
+     /* temp++; */
+     /* /\* memcpy(temp, (const void *) d, sizeof(struct string)); *\/ */
+     /* *temp = *d; */
+
+     struct string ptr[3] = {*b, *c, *d};
+
+     struct string_array2 retarray;
+     retarray.ptr = ptr;
+     retarray.n = 3;
+     return retarray;
 
 }
 

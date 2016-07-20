@@ -21,6 +21,11 @@ class CStringArray < FFI::Struct
          :ptr, :pointer
 end
 
+class CStringArray2 < FFI::Struct
+  layout :n, :uint32,
+         :ptr, :pointer 
+end
+
 module Rosie
   extend FFI::Library
   ffi_convention :stdcall       # needed?
@@ -34,6 +39,7 @@ module Rosie
   attach_function 'testbyref', [ :pointer ], :uint32
   attach_function 'testretstring', [ CString ], CString.val
   attach_function 'testretarray', [ CString.val ], CStringArray.val
+  attach_function 'testretarray2', [ CString.val ], CStringArray2.val
 end
 
 s_array = Rosie.testretarray(CString_from_string("This string is not used for anything in this test."))
@@ -42,6 +48,21 @@ print "Number of CStrings returned: ", n, "\n"
 ptr_array = FFI::Pointer.new(FFI::Pointer, s_array[:ptr]).read_array_of_pointer(n)
 for i in 0..(n-1) do
   cstr = CString.new ptr_array[i]
+  print cstr, "\t length is: ", cstr[:len], "\n"
+  print "string ", i, ": ", cstr[:ptr].read_string_length(cstr[:len]), "\n"
+end
+print "\n"
+
+s_array = Rosie.testretarray2(CString_from_string("This string is not used for anything in this test."))
+n = s_array[:n]
+print "Number of CStrings returned: ", n, "\n"
+print "First CString: ", s_array[:ptr], "\n"
+# cstr_ptr = CString.new s_array[:ptr]
+# print "cstr_ptr: ", cstr_ptr, "\n"
+# print "cstr_ptr[:len]: ", cstr_ptr[:len], "\n"
+cstr_array = FFI::Pointer.new(FFI::Pointer, s_array[:ptr]).read_array_of_pointer(n)
+for i in 0..(n-1) do
+  cstr = CString.new cstr_array[i]
   print cstr, "\t length is: ", cstr[:len], "\n"
   print "string ", i, ": ", cstr[:ptr].read_string_length(cstr[:len]), "\n"
 end

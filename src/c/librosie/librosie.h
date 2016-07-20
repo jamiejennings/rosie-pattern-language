@@ -19,11 +19,17 @@ struct string_array {
      struct string **ptr;
 };
 
+struct string_array2 {
+     uint32_t n;
+     struct string *ptr;
+};
+
 void free_string(struct string foo);
 uint32_t testbyvalue(struct string foo);
 uint32_t testbyref(struct string *foo);
 struct string testretstring(struct string *foo);
 struct string_array testretarray(struct string foo);
+struct string_array2 testretarray2(struct string foo);
 
 #define CONST_STRING(str) (struct string) {strlen(str), (uint8_t *)str}
 #define FREE_STRING(s) { free((s).ptr); (s).ptr=0; (s).len=0; }
