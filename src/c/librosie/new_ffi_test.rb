@@ -53,20 +53,22 @@ for i in 0..(n-1) do
 end
 print "\n"
 
-s_array = Rosie.testretarray2(CString_from_string("This string is not used for anything in this test."))
-n = s_array[:n]
-print "Number of CStrings returned: ", n, "\n"
-print "First CString: ", s_array[:ptr], "\n"
-# cstr_ptr = CString.new s_array[:ptr]
-# print "cstr_ptr: ", cstr_ptr, "\n"
-# print "cstr_ptr[:len]: ", cstr_ptr[:len], "\n"
-cstr_array = FFI::Pointer.new(FFI::Pointer, s_array[:ptr]).read_array_of_pointer(n)
-for i in 0..(n-1) do
-  cstr = CString.new cstr_array[i]
-  print cstr, "\t length is: ", cstr[:len], "\n"
-  print "string ", i, ": ", cstr[:ptr].read_string_length(cstr[:len]), "\n"
-end
-print "\n"
+## This approach (below) appears not to work.  Some info online suggests that arrays of structs are not supported in Ruby's ffi. 
+
+# s_array = Rosie.testretarray2(CString_from_string("This string is not used for anything in this test."))
+# n = s_array[:n]
+# print "Number of CStrings returned: ", n, "\n"
+# print "First CString: ", s_array[:ptr], "\n"
+# # cstr_ptr = CString.new s_array[:ptr]
+# # print "cstr_ptr: ", cstr_ptr, "\n"
+# # print "cstr_ptr[:len]: ", cstr_ptr[:len], "\n"
+# cstr_array = FFI::Pointer.new(FFI::Pointer, s_array[:ptr]).read_array_of_pointer(n)
+# for i in 0..(n-1) do
+#   cstr = CString.new cstr_array[i]
+#   print cstr, "\t length is: ", cstr[:len], "\n"
+#   print "string ", i, ": ", cstr[:ptr].read_string_length(cstr[:len]), "\n"
+# end
+# print "\n"
 
 
 
