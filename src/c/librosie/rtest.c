@@ -37,11 +37,13 @@
 
 int main (int argc, char **argv) {
 
-  testbyvalue(CONST_STRING("Hello, world!"));
-  struct string foo;
-  foo.ptr = (uint8_t *) "This is a test.";
-  foo.len = strlen((const char *)foo.ptr);
-  testbyref(&foo);
+  struct string_array array = testretarray(CONST_STRING("Hello, world!"));
+  printf("Array length is: %d\n", array.n);
+  for (uint32_t i=0; i < array.n; i++) {
+       struct string *cstr = array.ptr[i];
+       printf("\t %d: len=%d, string=%s\n", i, cstr->len, cstr->ptr);
+  }
+
   printf("\n");
 
   initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */

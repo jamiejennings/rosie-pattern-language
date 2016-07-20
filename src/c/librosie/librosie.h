@@ -14,11 +14,16 @@ struct string {
      uint8_t *ptr;
 };
 
+struct string_array {
+     uint32_t n;
+     struct string **ptr;
+};
+
 void free_string(struct string foo);
 uint32_t testbyvalue(struct string foo);
 uint32_t testbyref(struct string *foo);
 struct string testretstring(struct string *foo);
-
+struct string_array testretarray(struct string foo);
 
 #define CONST_STRING(str) (struct string) {strlen(str), (uint8_t *)str}
 #define FREE_STRING(s) { free((s).ptr); (s).ptr=0; (s).len=0; }

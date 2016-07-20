@@ -262,6 +262,31 @@ struct string testretstring(struct string *foo) {
      return bar;
 }
 
+struct string *heap_allocate_string(const char *msg) {
+     size_t len = (size_t) strlen(msg);
+     uint8_t *ptr = malloc(len+1);                /* to return a string, we must make */
+     strlcpy((char *)ptr, msg, len);              /* sure it is allocated on the heap */
+     ptr[len]=0;
+     struct string *retval = malloc(sizeof(struct string));
+     struct string bar = (struct string) {len, ptr};
+     memcpy(retval, &bar, sizeof(bar));
+     return retval;
+}     
+
+struct string_array testretarray(struct string foo) {
+     printf("testretarray argument received: len=%d, string=%s\n", foo.len, foo.ptr);
+
+     struct string *b = heap_allocate_string("This is a new struct string called b.");
+     struct string *c = heap_allocate_string("This is a new struct string called c.");
+     struct string *d = heap_allocate_string("This is a new struct string called d.");
+     struct string **ptr = malloc(sizeof(struct string *) * 3);
+     ptr[0] = b; ptr[1] = c; ptr[2] = d;
+
+     return (struct string_array) {3, ptr};
+
+}
+
+
 void free_string(struct string foo) FREE_STRING(foo);
 
 struct string rosie_api(const char *name, ...) {
