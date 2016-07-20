@@ -244,7 +244,7 @@ void initialize(const char *rosie_home) {
 
 uint32_t testbyvalue(struct string foo) {
      printf("testbyvalue: len=%d, string=%s\n", foo.len, foo.ptr);
-     return foo.len;
+     return (uint32_t) strlen((const char *)foo.ptr);
 }
 
 uint32_t testbyref(struct string *foo) {

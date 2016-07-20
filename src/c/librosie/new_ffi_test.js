@@ -43,11 +43,11 @@ var MyCString = Struct({
 });
 
 var MyCStringArray = Struct({
-  'len': 'uint32',
-  'ptr': 'pointer'
+    'len': 'uint32',
+    'ptr': ref.refType(ref.refType(MyCString))
 });
 
-var MyCStringArrayPtr = ref.refType(MyCStringArray), MyCStringPtr = ref.refType(MyCString)
+var MyCStringPtr = ref.refType(MyCString)
 
 var RTLD_NOW = ffi.DynamicLibrary.FLAGS.RTLD_NOW;
 var RTLD_GLOBAL = ffi.DynamicLibrary.FLAGS.RTLD_GLOBAL;
@@ -57,7 +57,9 @@ var Rosie = new DynamicLibrary('librosie.so' || null, mode);
 
 var funcs = {'initialize': [ 'int', ['string']],
 	     'testbyref': [ 'int', [MyCStringPtr] ],
-	     'testretarray': [ MyCStringArrayPtr, [MyCStringPtr] ] }
+	     'testbyvalue': [ 'int', [MyCString] ],
+	     'testretstring': [ MyCString, [MyCStringPtr] ],
+	     'testretarray': [ MyCStringArray, [MyCString] ] }
 
 var lib;
 Object.keys(funcs || {}).forEach(function (func) {
@@ -86,14 +88,38 @@ Object.keys(funcs || {}).forEach(function (func) {
     }
   })
 
-console.log("About to initialize Rosie")
-var i = lib.initialize("adasdasdasadsdsd")
-console.log(i)
-
 var str = new MyCString
 str.len = 7
 str.ptr = "Hello, world"
 console.log("str len=", str.len, " and ptr=", str.ptr)
 
 var retval = lib.testbyref(str.ref())
-console.log("retval=", retval)
+console.log("testbyref retval=", retval)
+
+var retval = lib.testbyvalue(str)
+console.log("testbyvalue retval=", retval)
+
+var retval = lib.testretstring(str.ref())
+console.log("testretstring retval=", retval)
+
+var retval = lib.testretarray(str)
+console.log("testretarray retval=", retval)
+
+var n = retval.len
+console.log(n)
+var p = retval.ptr
+console.log(p)
+for (i=0; i<n; i++) {
+    var cstr = ref.alloc(MyCString)
+    cstr_ptr = ref.get(p, (i*ref.sizeof.pointer), MyCStringPtr)
+    console.log("cstr_ptr: ", cstr_ptr)
+    cstr = cstr_ptr.deref()
+    console.log(i, cstr, "len=", cstr.len, "and ptr=", cstr.ptr)
+}
+    
+
+
+console.log("About to initialize Rosie")
+var i = lib.initialize("adasdasdasadsdsd")
+console.log(i)
+
