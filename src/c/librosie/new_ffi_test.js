@@ -56,6 +56,7 @@ var mode = RTLD_NOW | RTLD_GLOBAL;
 var Rosie = new DynamicLibrary('librosie.so' || null, mode);
 
 var funcs = {'initialize': [ 'int', ['string']],
+	     'new_engine': [ MyCString, [MyCStringPtr] ],
 	     'testbyref': [ 'int', [MyCStringPtr] ],
 	     'testbyvalue': [ 'int', [MyCString] ],
 	     'testretstring': [ MyCString, [MyCStringPtr] ],
@@ -106,20 +107,31 @@ var retval = lib.testretarray(str)
 console.log("testretarray retval=", retval)
 
 var n = retval.len
-console.log(n)
+//console.log(n)
 var p = retval.ptr
-console.log(p)
+//console.log(p)
 for (i=0; i<n; i++) {
     var cstr = ref.alloc(MyCString)
     cstr_ptr = ref.get(p, (i*ref.sizeof.pointer), MyCStringPtr)
-    console.log("cstr_ptr: ", cstr_ptr)
+//    console.log("cstr_ptr: ", cstr_ptr)
     cstr = cstr_ptr.deref()
-    console.log(i, cstr, "len=", cstr.len, "and ptr=", cstr.ptr)
+    console.log(i, "len=", cstr.len, "and ptr=", cstr.ptr.slice(0,cstr.len))
 }
-    
-
 
 console.log("About to initialize Rosie")
 var i = lib.initialize("adasdasdasadsdsd")
 console.log(i)
+
+var config = new MyCString
+var tbl = {'name': 'JS test engine', 'expression':'[:digit:]+', 'encode':false}
+var tmp = JSON.stringify(tbl)
+console.log(tmp)
+
+config.ptr = tmp
+config.len = tmp.length
+console.log(config.len, config.ptr.slice(0,config.len))
+
+var i = ref.alloc(MyCString)
+i = lib.new_engine(config.ref())
+console.log("Engine id is: ", i.ptr.slice(0,i.len))
 
