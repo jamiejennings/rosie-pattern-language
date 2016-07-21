@@ -19,9 +19,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "lauxlib.h"
-#include "lualib.h"
-
 #include "librosie.h"
 
 #define PROGNAME		"rosie"

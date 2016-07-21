@@ -9,6 +9,9 @@
 #define TRUE 1
 #define FALSE 0
 
+#include "lauxlib.h"
+#include "lualib.h"
+
 struct string {
      uint32_t len;
      uint8_t *ptr;
