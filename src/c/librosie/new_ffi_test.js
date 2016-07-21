@@ -57,6 +57,7 @@ var Rosie = new DynamicLibrary('librosie.so' || null, mode);
 
 var funcs = {'initialize': [ 'int', ['string']],
 	     'new_engine': [ MyCString, [MyCStringPtr] ],
+	     'rosie_api': [ MyCString, ['string', MyCStringPtr, MyCStringPtr] ],
 	     'testbyref': [ 'int', [MyCStringPtr] ],
 	     'testbyvalue': [ 'int', [MyCString] ],
 	     'testretstring': [ MyCString, [MyCStringPtr] ],
@@ -133,5 +134,20 @@ console.log(config.len, config.ptr.slice(0,config.len))
 
 var i = ref.alloc(MyCString)
 i = lib.new_engine(config.ref())
-console.log("Engine id is: ", i.ptr.slice(0,i.len))
+console.log("Return value from new_engine is: ", i.ptr.slice(0,i.len))
 
+var ignored = new MyCString
+ignored.ptr = "ignored"
+ignored.len = ignored.ptr.len
+
+tbl = JSON.parse(i.ptr.slice(0,i.len))
+eid = tbl[1]
+console.log("Engine id is: ", eid)
+
+eid_CString = new MyCString
+eid_CString.ptr = eid.slice(0,10)
+eid_CString.len = 10
+console.log("Engine id as CString is: ", eid_CString.len, eid_CString.ptr)
+
+i = lib.rosie_api("inspect_engine", eid_CString.ref(), ignored.ref())
+console.log("Return value from inspect_engine is: ", i.ptr.slice(0,i.len))
