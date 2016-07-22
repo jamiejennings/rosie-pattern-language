@@ -200,9 +200,6 @@ void initialize(const char *rosie_home) {
 
     single_instanceL = L;
 
-
-
-
 /* 
    luaL_checkversion checks whether the core running the call, the core that created the Lua state,
    and the code making the call are all using the same version of Lua. Also checks whether the core
@@ -217,6 +214,9 @@ void initialize(const char *rosie_home) {
      int stkpos = lua_gettop(L);
 
      const char *setup = SET_ROSIE_HOME(ROSIE_HOME); /* !@# */
+
+     printf("Initializing Rosie: %s\n", setup);
+     
      status = dostring (L, setup, "set ROSIE_HOME");
      report(L, status);
      if (status != LUA_OK) exit(-1);
