@@ -75,13 +75,29 @@ def to_cstr_ptr(py_string):
     return cstr_ptr
 
 def from_cstr_ptr(cstr_ptr):
-    lst = ffi.unpack(cstr_ptr.ptr, cstr_ptr.len)
-    s = reduce(lambda s,i: s+chr(i), lst, '')
-    return s
+#    lst = ffi.unpack(cstr_ptr.ptr, cstr_ptr.len)
+#    s = reduce(lambda s,i: s+chr(i), lst, '')
+#    return s
+    return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
 
 print(from_cstr_ptr(to_cstr_ptr(eid)))
 
 foo = Rosie.rosie_api("inspect_engine", to_cstr_ptr(eid), null_cstr_ptr)
-foo = json.loads(from_cstr_ptr(foo))
-print("Return from inspect_engine is: code = " + str(foo[0]) + ", tbl=" + str(foo[1]))
+tbl = json.loads(from_cstr_ptr(foo))
+print("Return from inspect_engine is: code = " + str(tbl[0]) + ", tbl=" + str(tbl[1]))
 
+print
+
+
+## If new_engine returned just the engine id, and it had embedded
+## nulls, would we would need the above implementation of
+## from_cstr_ptr, right?  But this is likely to be slow!
+##
+## We can't use ffi.string (because it uses NULL as eos, like C), so
+## we are forced to use ffi.unpack, which returns a list -- this seems
+## like a lot of consing for a short-lived data structure.
+
+eid_str = to_cstr_ptr(eid)
+b = ffi.buffer(eid_str.ptr, eid_str.len)
+print b[:], len(b)
+print from_cstr_ptr(to_cstr_ptr(eid))
