@@ -89,15 +89,18 @@ print("Return from inspect_engine is: code = " + str(tbl[0]) + ", tbl=" + str(tb
 print
 
 
-## If new_engine returned just the engine id, and it had embedded
-## nulls, would we would need the above implementation of
-## from_cstr_ptr, right?  But this is likely to be slow!
-##
-## We can't use ffi.string (because it uses NULL as eos, like C), so
-## we are forced to use ffi.unpack, which returns a list -- this seems
-## like a lot of consing for a short-lived data structure.
+## We can't use ffi.string (because it uses NULL as eos, like C)
 
 eid_str = to_cstr_ptr(eid)
 b = ffi.buffer(eid_str.ptr, eid_str.len)
 print b[:], len(b)
 print from_cstr_ptr(to_cstr_ptr(eid))
+
+foobar = ffi.new("char []", "foobar")
+ignored = ffi.new("struct string [1]", [[6, foobar]])
+retarray = Rosie.testretarray(ignored[0])
+print retarray.n
+for i in range(0, retarray.n):
+    print from_cstr_ptr(retarray.ptr[i])
+
+    
