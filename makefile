@@ -33,6 +33,10 @@ $(LUA_DIR): $(LUA_DIR).tar.gz
 
 $(LPEG_DIR): $(LPEG_DIR).tar.gz
 	tar -xf $(LPEG_DIR).tar.gz
+	echo '#!/bin/bash' > $(LPEG_DIR)/makedebug
+	echo 'make clean' >> $(LPEG_DIR)/makedebug
+	echo 'make LUADIR=../lua-5.3.2/src COPT="-DLPEG_DEBUG -g" macosx' >> $(LPEG_DIR)/makedebug
+	chmod a+x $(LPEG_DIR)/makedebug
 
 $(JSON_DIR): $(JSON_DIR).tar.gz
 	tar -xf $(JSON_DIR).tar.gz
