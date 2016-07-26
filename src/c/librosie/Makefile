@@ -5,8 +5,8 @@
 # surrounding quotation marks.
 HOME = `cd ../../..; pwd`
 
-
-
+# Use COPT="-DDEBUG=0" on the command line to disable debug printing
+COPT="-DDEBUG=1"
 
 
 
@@ -18,8 +18,8 @@ HOME = `cd ../../..; pwd`
 # Your platform. See PLATS for possible values.
 PLAT= none
 
-CC= gcc -std=gnu99
-CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) -DROSIE_HOME=$(HOME)
+CC=gcc -std=gnu99
+CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) -DROSIE_HOME=$(HOME) $(COPT)
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
@@ -88,7 +88,7 @@ linux:
 macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS= CC=$(CC)
 
-macosx: CC=cc			    # override on the command line for gcc
+macosx: CC="gcc -std=gnu99"
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none

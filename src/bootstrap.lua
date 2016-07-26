@@ -32,13 +32,13 @@ package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 local function print_rosie_info()
    local rosie_home_message = ((SCRIPT_ROSIE_HOME and " (from environment variable $ROSIE_HOME)") or
-			       " (calculated by the Rosie 'run' script)")
+			       " (provided by the program that initialized Rosie)")
    print("Rosie run-time information:")
    print("  ROSIE_HOME = " .. ROSIE_HOME .. rosie_home_message)
    if SCRIPT_ROSIE_HOME then print("  ROSIE_HOME, as calculated in the Rosie run script, was: " .. SCRIPT_ROSIE_HOME); end
-   print("  HOSTNAME = " .. os.getenv("HOSTNAME"))
-   print("  HOSTTYPE = " .. os.getenv("HOSTTYPE"))
-   print("  OSTYPE = " .. os.getenv("OSTYPE"))
+   print("  HOSTNAME = " .. (os.getenv("HOSTNAME") or ""))
+   print("  HOSTTYPE = " .. (os.getenv("HOSTTYPE") or ""))
+   print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
 end
 
 

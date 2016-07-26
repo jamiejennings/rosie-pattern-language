@@ -58,9 +58,9 @@ local api = {API_VERSION = "0.99b",		    -- api version
 -- local function encode_retvals(success, ...)
 --    return success, json.encode({...})
 -- end
-local function encode_retvals(...)
-   return json.encode({...})
-end
+-- local function encode_retvals(...)
+--    return json.encode({...})
+-- end
 
 local function get_arglist(f)
    local info = debug.getinfo(f, "u")
@@ -75,7 +75,7 @@ end
 local function api_wrap(f, ...)
    local returns = {...}
    local newf = function(...)
-		   return encode_retvals(pcall(f, ...))
+		   return pcall(f, ...)
 		end
    api.SIGNATURE[newf] = {args=get_arglist(f), returns=returns}
    return newf

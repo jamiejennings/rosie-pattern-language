@@ -34,7 +34,7 @@
 
 int main (int argc, char **argv) {
 
-  struct string_array array = testretarray(CONST_STRING("Hello, world!"));
+  struct stringArray array = testretarray(CONST_STRING("Hello, world!"));
   printf("Array length is: %d\n", array.n);
   for (uint32_t i=0; i < array.n; i++) {
        struct string *cstr = array.ptr[i];
@@ -43,102 +43,78 @@ int main (int argc, char **argv) {
 
   printf("\n");
 
-  struct string_array2 array2 = testretarray2(CONST_STRING("Hello, world!"));
-  printf("Array length is: %d\n", array2.n);
-  struct string **cstr_ptr = array.ptr; 
-  for (uint32_t i=0; i < array2.n; i++) { 
-       struct string c = *(cstr_ptr[i]);
-       printf("\t %d: len=%d, string=%s\n", i, c.len, c.ptr); 
-  } 
-
-  printf("\n");
-  
-
   initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
 
-  lua_State *L = get_L();   
-
-  struct string eid_string_encoded;
-  struct string *initial_config = &CONST_STRING("{\"name\":\"A NEW ENGINE\"}");
-  eid_string_encoded = new_engine(initial_config);
+  struct string *initial_config = &CONST_STRING("{\"name\":\"Episode IV: A New Engine\"}");
+  struct stringArray retvals = new_engine(initial_config);
   
-  /* Now json.decode the result */
+  LOGf("retvals.n is: %d\n", retvals.n);
+  LOGf("retvals[0].len is: %d\n", stringArrayRef(retvals,0)->len);
+  LOGf("retvals[0].ptr is: %s\n", (char *) stringArrayRef(retvals,0)->ptr);
 
-  lua_getglobal(L, "json");
-  lua_getfield(L, -1, "decode");
-  lua_remove(L, -2);		/* remove json from stack */
-  lua_pushlstring(L, (char *)eid_string_encoded.ptr, (size_t) eid_string_encoded.len);
+  struct string *code = stringArrayRef(retvals,0);
+  LOGf("code->len is: %d\n", code->len);
+  LOGf("code->ptr is: %s\n", (char *) code->ptr);
+
+  char *true_value = "true";
+  if (!memcmp(code->ptr, true_value, (size_t) code->len)) {
+       struct string *err = stringArrayRef(retvals,1);
+       printf("Error in new_engine: %s\n", err ? (char *) err->ptr : "NO MESSAGE");
+       exit(-1);
+  }
 
   /* For valgrind to not complain: */
-  free_string(eid_string_encoded);
+  /* free_string(eid_string); */
 
-  lua_call(L, 1, 1);		/* call json.decode */
-  lua_geti(L, -1, 1);		/* get 1st element of table */
-
-  if (lua_isboolean(L, -1) != TRUE) {
-       l_message("rtest", lua_pushfstring(L, "librosie error: first return value of new_engine not a boolean"));
+  struct string *eid_string = stringArrayRef(retvals, 1);
+  if (!eid_string) {
+       printf("eid_string is NULL\n");
        exit(-1);
   }
-
-  if (lua_toboolean(L, -1) != TRUE) {
-       lua_pop(L, 1);	    /* remove 1st element, the success code */
-       lua_geti(L, -1, 2);  /* get 2nd element of table, the error message */
-       /* TEMPORARY */
-       l_message("rtest", lua_tostring(L, 1));
-       exit(-1);
-  }
-
-  lua_pop(L, 1);      /* remove 1st element, the success code */
-  lua_geti(L, -1, 2); /* get 2nd element of table, the eid id (string) */
-
-  size_t len;
-  uint8_t *src = (uint8_t *)lua_tolstring(L, -1, &len);
-  struct string eid_string = { len, src };
+  else printf("eid_string is ok\n");
   
-  lua_pop(L, 2);		/* remove decoded string, table */ 
+  printf("eid_string: len=%d string=%s\n", eid_string->len, (char *)eid_string->ptr);
 
-  printf("eid_string: len=%d string=%s\n", eid_string.len, (char *)eid_string.ptr);
+  struct string *null = &(CONST_STRING("null"));
 
-  static struct string null = CONST_STRING("null");
-
-  struct string r = rosie_api( "get_environment", &eid_string, &null);	   
-  printf("result of get_environment: len=%d string=%s\n", r.len, (char *)r.ptr);
-  free_string(r);
+  struct string *r = rosie_api( "get_environment", eid_string, null);	   
+  printf("result of get_environment: len=%d string=%s\n", r->len, (char *)r->ptr);
+  free_string(*r);
 
   struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
-  r = rosie_api( "configure_engine", &eid_string, arg); 
-  printf("result of configure_engine: len=%d string=%s\n", r.len, (char *)r.ptr);
-  free_string(r);
+  r = rosie_api( "configure_engine", eid_string, arg); 
+  printf("result of configure_engine: len=%d string=%s\n", r->len, (char *)r->ptr);
+  free_string(*r);
 
   r = rosie_api( "inspect_engine", &eid_string, &null); 
-  printf("result of inspect_engine: len=%d string=%s\n", r.len, (char *)r.ptr);
-  free_string(r);
+  printf("result of inspect_engine: len=%d string=%s\n", r->len, (char *)r->ptr);
+  free_string(*r);
 
   arg = &CONST_STRING("123");
   r = rosie_api( "match", &eid_string, arg); 
-  printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
-  free_string(r);
+  printf("result of match: len=%d string=%s\n", r->len, (char *)r->ptr);
+  free_string(*r);
 
   arg = &CONST_STRING("123 abcdef");
   r = rosie_api( "match", &eid_string, arg); 
-  printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
-  free_string(r);
+  printf("result of match: len=%d string=%s\n", r->len, (char *)r->ptr);
+  free_string(*r);
 
   arg = &CONST_STRING("hi");
   r = rosie_api( "match", &eid_string, arg); 
-  printf("result of match: len=%d string=%s\n", r.len, (char *)r.ptr);
-  free_string(r);
+  printf("result of match: len=%d string=%s\n", r->len, (char *)r->ptr);
+  free_string(*r);
 
-  lua_getglobal(L, "repl");	/* push repl fcn */
-  lua_getglobal(L, "engine_list");
-  lua_pushlstring(L, (char *)eid_string.ptr, eid_string.len);
-  lua_gettable(L, -2);
-  /* top of stack is now enginelist[eid_string] */
-  lua_remove(L, -2);		/* remove engine_list from stack */
-  lua_call(L, 1, 1);		/* call repl(eid) */
+  /* lua_getglobal(L, "repl");	/\* push repl fcn *\/ */
+  /* lua_getglobal(L, "engine_list"); */
+  /* lua_pushlstring(L, (char *)eid_string.ptr, eid_string.len); */
+  /* lua_gettable(L, -2); */
+  /* /\* top of stack is now enginelist[eid_string] *\/ */
+  /* lua_remove(L, -2);		/\* remove engine_list from stack *\/ */
+  /* lua_call(L, 1, 1);		/\* call repl(eid) *\/ */
 
-  lua_close(L);
+  /* lua_close(L); */
 
   return EXIT_SUCCESS;
 
