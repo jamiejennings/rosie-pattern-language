@@ -23,6 +23,17 @@
 
 #define PROGNAME		"rosie"
 
+void print_results(struct stringArray r, const char *name) {
+     printf("Results from %s: n=%d\n", name, r.n);
+     struct string *str = *r.ptr;
+     for (uint32_t i=0; i<r.n; i++) {
+	  printf(" [%d] len=%d, ptr=%s\n", i, str->len, str->ptr);
+	  str++;
+     }
+}
+  
+     
+
 /*
 ---------------------------------------------------------------------------------------------------
  main 
@@ -57,7 +68,7 @@ int main (int argc, char **argv) {
   LOGf("code->ptr is: %s\n", (char *) code->ptr);
 
   char *true_value = "true";
-  if (!memcmp(code->ptr, true_value, (size_t) code->len)) {
+  if (memcmp(code->ptr, true_value, (size_t) code->len)) {
        struct string *err = stringArrayRef(retvals,1);
        printf("Error in new_engine: %s\n", err ? (char *) err->ptr : "NO MESSAGE");
        exit(-1);
@@ -77,34 +88,34 @@ int main (int argc, char **argv) {
 
   struct string *null = &(CONST_STRING("null"));
 
-  struct string *r = rosie_api( "get_environment", eid_string, null);	   
-  printf("result of get_environment: len=%d string=%s\n", r->len, (char *)r->ptr);
-  free_string(*r);
+  struct stringArray r = rosie_api( "get_environment", eid_string, null);	   
+  print_results(r, "get_environment");
+  free_stringArray(r);
 
   struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
   r = rosie_api( "configure_engine", eid_string, arg); 
-  printf("result of configure_engine: len=%d string=%s\n", r->len, (char *)r->ptr);
-  free_string(*r);
+  print_results(r, "configure_engine");
+  free_stringArray(r);
 
   r = rosie_api( "inspect_engine", &eid_string, &null); 
-  printf("result of inspect_engine: len=%d string=%s\n", r->len, (char *)r->ptr);
-  free_string(*r);
+  print_results(r, "inspect_engine");
+  free_stringArray(r);
 
   arg = &CONST_STRING("123");
   r = rosie_api( "match", &eid_string, arg); 
-  printf("result of match: len=%d string=%s\n", r->len, (char *)r->ptr);
-  free_string(*r);
+  print_results(r, "match");
+  free_stringArray(r);
 
   arg = &CONST_STRING("123 abcdef");
   r = rosie_api( "match", &eid_string, arg); 
-  printf("result of match: len=%d string=%s\n", r->len, (char *)r->ptr);
-  free_string(*r);
+  print_results(r, "match");
+  free_stringArray(r);
 
   arg = &CONST_STRING("hi");
   r = rosie_api( "match", &eid_string, arg); 
-  printf("result of match: len=%d string=%s\n", r->len, (char *)r->ptr);
-  free_string(*r);
+  print_results(r, "match");
+  free_stringArray(r);
 
   /* lua_getglobal(L, "repl");	/\* push repl fcn *\/ */
   /* lua_getglobal(L, "engine_list"); */

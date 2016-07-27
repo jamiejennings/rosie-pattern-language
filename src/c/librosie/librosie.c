@@ -250,8 +250,16 @@ struct stringArray testretarray(struct string foo) {
 }
 
 void free_string(struct string foo) FREE_STRING(foo);
+void free_stringArray(struct stringArray r) {
+     struct string *s = *r.ptr;
+     for (uint32_t i=0; i<r.n; i++) {
+	  free_string(*s);
+	  s++;
+     }
+     r.n=0;
+}
 
-struct string *rosie_api(const char *name, ...) {
+struct stringArray rosie_api(const char *name, ...) {
 
      va_list args;
      struct string *arg;
@@ -266,7 +274,7 @@ struct string *rosie_api(const char *name, ...) {
 
      va_start(args, name);	   /* setup variadic arg processing */
 
-     LOG("Stack at start of rosie_api:\n");
+     LOGf("Stack at start of rosie_api (%s):\n", name);
      LOGstack(L);
      base = lua_gettop(L);			    /* save top pointer */
      /* printf("Base of stack is %d\n", base); */
@@ -295,34 +303,61 @@ struct string *rosie_api(const char *name, ...) {
      LOG("Stack immediately after lua_call:\n");
      LOGstack(L);
      
-     if (lua_isboolean(L, base+1) != TRUE) {
-	  l_message(progname, lua_pushfstring(L, "librosie internal error: first return value of %s not a boolean", name));
+     if (lua_istable(L, base+1) != TRUE) {
+	  l_message(progname, lua_pushfstring(L, "librosie internal error: return value of %s not a table", name));
 	  exit(-1);
      }
 
-     uint8_t *src = (uint8_t *) (lua_toboolean(L, base+1) ? "true" : "false");
-     size_t len = strlen((char *) src);
-     struct string *retval = malloc(sizeof(struct string));
-     retval->ptr = malloc(sizeof(uint8_t)*(len+1));
-     memcpy(retval->ptr, src, len);
-     retval->ptr[len] = 0;	/* so we can use printf */
-     retval->len = (uint32_t) len;
+     struct stringArray retvals;
+     size_t nretvals = lua_rawlen(L, base+1);
+     struct string **list = malloc(sizeof(struct string *) * nretvals);
+     size_t len;
+	  
+     for (size_t i=0; i<nretvals; i++) {
+	  int t = lua_rawgeti(L, base+1, (lua_Integer) i+1); /* lua has 1-based indexing */
+	  if (t != LUA_TSTRING) { printf("Return type error: %d\n", t); exit(-1); }
+	  list[i] = malloc(sizeof(struct string));
+	  uint8_t *str = (uint8_t *) lua_tolstring(L, -1, &len);
+	  LOGf("Return value [%d]: len=%d ptr=%s\n", (int) i, (int) len, str);
+	  list[i]->len = len;
+	  list[i]->ptr = malloc(sizeof(uint8_t)*(len+1));
+	  memcpy(list[i]->ptr, str, len);
+	  list[i]->ptr[len] = 0; /* so we can use printf for debugging */	  
+	  lua_pop(L, 1);
+     }
+     retvals.n = nretvals;
+     retvals.ptr = list;
+
+     lua_pop(L, 1);		/* pop the api call's results table */
 
      LOGf("Stack at end of call to Rosie api: %s\n", name); 
      LOGstack(L); 
      
-     return retval;
+     return retvals;
 }
 
 
 struct stringArray new_engine(struct string *config) {
 
      struct string *ignore = &CONST_STRING("ignored");
-     struct string *eid_string = rosie_api("new_engine", config, ignore);
-     struct string **ptr = malloc(sizeof(struct string *) * 1);
-     struct stringArray ret = {1, ptr};
-     ret.ptr[0]=eid_string;
-     return ret;
+     struct stringArray retvals = rosie_api("new_engine", config, ignore);
+     LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n);
+     if (retvals.n !=2) {
+	  l_message(progname,
+		    lua_pushfstring(LL,
+				    "librosie internal error: wrong number of return values to new_engine (%d)",
+				    retvals.n));
+	  exit(-1);
+     }
+     struct string *code = stringArrayRef(retvals, 0);
+     char *true_value = "true";
+     if (memcmp(code->ptr, true_value, (size_t) code->len)) {
+	  LOGf("Success code was NOT true: len=%d, ptr=%s\n", code->len, code->ptr);
+	  struct string *err = stringArrayRef(retvals,1);
+	  printf("Error in new_engine: %s\n", (char *) err->ptr);
+	  exit(-1);
+     }
+     return retvals;
 }
 
 
