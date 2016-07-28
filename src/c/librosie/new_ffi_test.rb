@@ -112,32 +112,32 @@ end
 
 retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 retval = Rosie.rosie_api("inspect_engine", eid_string, ignored)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 retval = Rosie.rosie_api("match", eid_string, ignored)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 retval = Rosie.rosie_api("match", eid_string, config_string)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 config_string = CString_from_string("This is NOT valid json")
 retval = Rosie.new_engine(config_string.pointer)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 retval = Rosie.rosie_api("load_manifest", eid_string, config_string)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 # Loop test prep
 
@@ -147,7 +147,7 @@ print "TEST: string=", test[:ptr].read_string, "\n"
 
 retval = Rosie.rosie_api("load_manifest", eid_string, test)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 config_js = "{\"expression\" : \"[:digit:]+\", \"encode\" : false}"
 print "config_js is: ", config_js, "\n"
@@ -155,19 +155,30 @@ print "config_js is: ", config_js, "\n"
 config_string = CString_from_string(config_js)
 retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
 print_string_array(retval)
-Rosie.free_string(retval)
+Rosie.free_stringArray(retval)
 
 # Loop test
 
 foo = CString_from_string("1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
+retval = Rosie.rosie_api "match", eid_string, foo
+retval_SAVE = retval
+
+call_rosie = true
 
 print "Looping..."
 for i in 0..1000000 do
-  retval = Rosie.rosie_api "match", eid_string, foo
+#for i in 0..0 do
+  if call_rosie then
+    retval = Rosie.rosie_api "match", eid_string, foo
+  else
+    retval = CStringArray.new; retval[:n] = retval_SAVE[:n]; retval[:ptr] = retval_SAVE[:ptr]
+  end
   strings = string_array_from_CStringArray(retval)
   code = strings[0]
   json_string = strings[1]
-  Rosie.free_string(retval)
+  if call_rosie then
+    Rosie.free_stringArray(retval)
+  end
   # if code=="true" then
   #   print "Successful call to match\n"
   # else

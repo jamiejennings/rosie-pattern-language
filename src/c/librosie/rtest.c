@@ -104,6 +104,26 @@ int main () {
      print_results(r, "match");
      free_stringArray(r);
 
+     char *foo = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999";
+     struct string *foo_string = &CONST_STRING(foo);
+
+/* Guard against running a 1M iteration loop with verbose output */
+#if DEBUG==0
+     printf("Looping..."); fflush(stdout);
+     for (int i=0; i<1000000; i++) {
+	  r = rosie_api("match", eid_string, foo_string);
+	  code = stringArrayRef(r, 0);
+	  if (memcmp(code->ptr, true_value, (size_t) code->len)) {
+	       struct string *err = stringArrayRef(retvals,1);
+	       printf("Error in match: %s\n", err ? (char *) err->ptr : "NO MESSAGE");
+	  }
+	  else
+	       LOGf("Match returned: %s\n", stringArrayRef(r,1)->ptr);
+	  free_stringArray(r);
+     }
+     printf(" done.\n");
+#endif
+
      delete_engine(eid_string);
      free_string_ptr(eid_string);
      finalize();
