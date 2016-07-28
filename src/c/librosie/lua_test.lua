@@ -14,12 +14,15 @@ input = "12399999999999999999999999999999999999999999999999999999999999999999999
    
 api.configure_engine(eid, json.encode{expression="[:digit:]+", encode=false})
 
+io.write("Looping...")
+io.stdout:flush()
 t0=os.clock();
 for i=1,1000000 do
    retval = api.match(eid, input);
 --   js = json.decode(retval[2]);
 end;
 t1=os.clock();
-print(t1-t0)
+print(" done.")
+print(t1-t0 .. " sec, measured internally")
 
 

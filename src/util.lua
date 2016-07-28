@@ -57,7 +57,9 @@ end
    
 local function limit(s, max_length)
    if not max_length then return s; end
-   if #s > max_length then
+   if type(max_length)~="number" then
+      error("max length argument not a number: " .. tostring(max_length))
+   elseif #s > max_length then
       return s:sub(1,max_length).."..."
    else
       return s

@@ -6,16 +6,15 @@
 ----
 
 test = require "test-functions"
-json = require "cjson"
 
 check = test.check
 heading = test.heading
 subheading = test.subheading
 
-eid = false;
+e = false;
 
 function set_expression(exp)
-   local ok, msg = api.configure_engine(eid, json.encode{expression=exp, encode=false})
+   local ok, msg = pcall(lapi.configure_engine, e, {expression=exp, encode=false})
    if not ok then error("Configuration error: " .. msg); end
 end
 
@@ -23,10 +22,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text, 
    expected_leftover = expected_leftover or 0
    addlevel = addlevel or 0
    set_expression(exp)
-   local ok, retvals_js = api.match(eid, input)
-   check(ok, "failed call to api.match")
-   local retvals = json.decode(retvals_js)
-   local m, leftover = retvals[1], retvals[2]
+   local m, leftover = lapi.match(e, input)
    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " '" .. input .. "'", 1+addlevel)
    local fmt = "expected leftover matching %s against '%s' was %d but received %d"
@@ -41,7 +37,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text, 
 	       string.format(fmt, exp, input, expected_text, text), 1+addlevel)
       end
    end
-   return retvals
+   return m, leftover
 end
       
 test.start(test.current_filename())
@@ -49,73 +45,65 @@ test.start(test.current_filename())
 ----------------------------------------------------------------------------------------
 heading("Setting up")
 ----------------------------------------------------------------------------------------
-api = require "api"
 
-check(type(api)=="table")
-check(api.API_VERSION)
-check(type(api.API_VERSION=="string"))
-
-check(type(api.new_engine)=="function")
-ok, eid_js = api.new_engine(json.encode{name="rpl core test"})
-check(ok)
-eid = json.decode(eid_js)[1]
-check(type(eid)=="string")
+check(type(lapi)=="table")
+check(type(lapi.new_engine)=="function")
+e, config_ok, msg = lapi.new_engine({name="rpl core test"})
+check(engine.is(e))
 
 subheading("Setting up assignments")
-ok, msg = api.load_string(eid, 'a = "a"  b = "b"  c = "c"  d = "d"')
-check(ok)
-ok, msg = api.get_environment(eid, json.encode("a"))
-check(ok)
+t1, t2 = lapi.load_string(e, 'a = "a"  b = "b"  c = "c"  d = "d"')
+check(type(t1)=="table")
+if t2 then check(type(t2)=="table"); end
+t = lapi.get_environment(e, "a")
+check(type(t)=="table")
 
 set_expression('a')
-ok, match_js = api.match(eid, "a")
-check(ok)
-match = json.decode(match_js)
-check(next(match[1])=="a", "the match of an identifier is named for the identifier")
+match, leftover = lapi.match(e, "a")
+check(type(match)=="table")
+check(type(leftover)=="number")
+check(leftover==0)
+check(next(match)=="a", "the match of an identifier is named for the identifier")
 
 set_expression('(a)')
-ok, match_js = api.match(eid, "a")
-check(ok)
-match = json.decode(match_js)
-check(next(match[1])=="a", "the match of an expression is usually anonymous, but cooking an identifier is redundant")
-subs = match[1]["a"].subs
+match, leftover = lapi.match(e, "a")
+check(next(match)=="a", "the match of an expression is usually anonymous, but cooking an identifier is redundant")
+subs = match["a"].subs
 check(not subs)
 
 set_expression('{a}')
-ok, match_js = api.match(eid, "a")
-check(ok)
-match = json.decode(match_js)
-check(next(match[1])=="*", "the match of an expression is anonymous")
-subs = match[1]["*"].subs
+match, leftover = lapi.match(e, "a")
+check(next(match)=="*", "the match of an expression is anonymous")
+subs = match["*"].subs
 check(subs)
 submatchname = next(subs[1])
 check(submatchname=="a", "the only sub of this expression is the identifier in the raw group")
 
-ok, msg = api.load_string(eid, 'alias plain_old_alias = "p"')
+ok, msg = pcall(lapi.load_string, e, 'alias plain_old_alias = "p"')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias alias_to_plain_old_alias = plain_old_alias')
+ok, msg = pcall(lapi.load_string, e, 'alias alias_to_plain_old_alias = plain_old_alias')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias alias_to_a = a')
+ok, msg = pcall(lapi.load_string, e, 'alias alias_to_a = a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alternate_a = a')
+ok, msg = pcall(lapi.load_string, e, 'alternate_a = a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alternate_to_alias_to_a = alias_to_a')
+ok, msg = pcall(lapi.load_string, e, 'alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
+ok, msg = pcall(lapi.load_string, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'uses_a = a a')
+ok, msg = pcall(lapi.load_string, e, 'uses_a = a a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alternate_uses_a = uses_a')
+ok, msg = pcall(lapi.load_string, e, 'alternate_uses_a = uses_a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias alias_to_uses_a = uses_a')
+ok, msg = pcall(lapi.load_string, e, 'alias alias_to_uses_a = uses_a')
 check(ok)
 
 
@@ -123,52 +111,48 @@ subheading("Testing re-assignments")
 
 check_match('plain_old_alias', "x", false, 1)
 result = check_match('plain_old_alias', "p", true)
-check(next(result[1])=="*", "the match of an alias is anonymous")
-check(not result[1]["*"].subs, "no subs")
+check(next(result)=="*", "the match of an alias is anonymous")
+check(not result["*"].subs, "no subs")
 
 check_match('alias_to_plain_old_alias', "x", false, 1)
 result = check_match('alias_to_plain_old_alias', "p", true)
-check(next(result[1])=="*", "the match of an alias is anonymous")
-check(not result[1]["*"].subs, "no subs")
+check(next(result)=="*", "the match of an alias is anonymous")
+check(not result["*"].subs, "no subs")
 
 match = check_match('alias_to_a', "a", true)
-check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match[1]["*"].subs
+check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match["*"].subs
 check(subs and #subs==1)
 check(next(subs[1])=="a")
 
 match = check_match('alternate_a', "a", true)
-check(next(match[1])=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
-subs = match[1]["alternate_a"].subs
+check(next(match)=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
+subs = match["alternate_a"].subs
 check(not subs)
---check(#subs==1)
---check(next(subs[1])=="a")
 
 match = check_match('alternate_to_alias_to_a', "a", true)
-check(next(match[1])=="alternate_to_alias_to_a", 'rhs of an assignment can contain an alias, and it will be captured')
-subs = match[1]["alternate_to_alias_to_a"].subs
+check(next(match)=="alternate_to_alias_to_a", 'rhs of an assignment can contain an alias, and it will be captured')
+subs = match["alternate_to_alias_to_a"].subs
 check(not subs)
---check(#subs==1)
---check(next(subs[1])=="a")
 
 match = check_match('alias_to_alternate_to_alias_to_a', "a", true)
-check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match[1]["*"].subs
+check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match["*"].subs
 check(subs and #subs==1)
 check(next(subs[1])=="a")
 
 match = check_match('uses_a', "a a", true)
-check(next(match[1])=="uses_a", 'the match is labeled with the identifier name to which it is bound')
-subs = match[1]["uses_a"].subs
+check(next(match)=="uses_a", 'the match is labeled with the identifier name to which it is bound')
+subs = match["uses_a"].subs
 check(subs and #subs==2)
 check(next(subs[1])=="a")
 check(next(subs[2])=="a")
 
 match = check_match('alias_to_uses_a', "a a", true)
-check(next(match[1])=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match[1]["*"].subs
+check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match["*"].subs
 check(subs and #subs==1 and (next(subs[1]))=="uses_a")
-subs = match[1]["*"].subs[1].uses_a.subs
+subs = match["*"].subs[1].uses_a.subs
 check(subs and #subs==2)
 check(subs[1] and (next(subs[1])=="a"))
 check(subs[2] and (next(subs[2])=="a"))
@@ -179,10 +163,8 @@ heading("Literals")
 subheading("Built-ins")
 
 set_expression('.')
-ok, match_js = api.match(eid, "a")
-check(ok)
-match = json.decode(match_js)
-check(next(match[1])=="*", "the match of an alias is anonymous")
+match, leftover = lapi.match(e, "a")
+check(next(match)=="*", "the match of an alias is anonymous")
 
 check_match(".", "a", true)
 check_match(".", "abcd", true, 3, "a")
@@ -503,7 +485,7 @@ check_match('{(a)*}', ' a a   ', true, 7, "")
 subheading("Explicit boundary pattern")
 check_match('~(a)*', ' a a   ', true, 3, " a a")
 check_match('(~(a)*)', ' a a   ', true, 3, " a a")
-ok, msg = api.load_string(eid, "token = { ![[:space:]] . {!~ .}* }")
+ok, msg = pcall(lapi.load_string, e, "token = { ![[:space:]] . {!~ .}* }")
 check(ok)
 check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 40, "The")
 check_match('token token token', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,")
@@ -1117,12 +1099,12 @@ for _, exp in ipairs{"[]]",
 		     "[[a-z] [def]",		    -- no final closing bracket
 		     "[]",			    -- this was legal before v0.99?
                      "[[abc][]]"} do
-   ok, msg = api.configure_engine(eid, json.encode({expression=exp}))
+   ok, msg = lapi.configure_engine(e, {expression=exp})
    check(not ok, "this expression was expected to fail: " .. exp)
    check(msg:find("Syntax error at line 1"), "Did not get syntax error for exp " ..
       exp .. ".  Message was: " .. msg)
 end
-ok, msg = api.configure_engine(eid, json.encode{expression="[:foobar:]"})
+ok, msg = lapi.configure_engine(e, {expression="[:foobar:]"})
 check(not ok)
 check(msg:find("named charset not defined"))
 
@@ -1231,7 +1213,7 @@ g1_defn = [[grammar
   B = { {"b" S} / {"a" B B} }
 end]]
 
-ok, msg = api.load_string(eid, g1_defn)
+ok, msg = pcall(lapi.load_string, e, g1_defn)
 check(ok)
 check_match('g1', "", true)
 check_match('g1', "ab", true)
@@ -1245,12 +1227,9 @@ check_match('g1$', "a", false)
 check_match('g1$', "aabb", true)
 
 set_expression('g1')
-ok, match_js = api.match(eid, "baab!")
-check(ok)
-check(match_js)
-match = json.decode(match_js)
-check(next(match[1])=='g1', "the match of a grammar is named for the identifier bound to the grammar")
-check(match[2]==1, "one char left over for this match")
+match, leftover = lapi.match(e, "baab!")
+check(next(match)=='g1', "the match of a grammar is named for the identifier bound to the grammar")
+check(leftover==1, "one char left over for this match")
 function collect_names(ast)
    local name = next(ast)
    if ast[name].subs then
@@ -1259,7 +1238,7 @@ function collect_names(ast)
       return list(name)
    end
 end
-ids = collect_names(match[1])
+ids = collect_names(match)
 check(member('g1', ids))
 check(member('B', ids))
 check(not member('A', ids))			    -- an alias
@@ -1273,9 +1252,9 @@ heading("Invariants")
 
 subheading("Raw and cooked versions of . and equiv identifiers")
 
-check((api.load_string(eid, "dot = .")))
-check((api.load_string(eid, "rawdot = {.}")))
-check((api.load_string(eid, "cookeddot = (.)")))
+check((api.load_string(e, "dot = .")))
+check((api.load_string(e, "rawdot = {.}")))
+check((api.load_string(e, "cookeddot = (.)")))
 
 check_match(".", "a", true)
 check_match("dot", "a", true)
@@ -1302,105 +1281,105 @@ check_match("cookeddot", "", false)
 
 subheading("Raw and cooked versions of the same definition")
 
-check((api.load_manifest(eid, "$sys/MANIFEST")))
+check((lapi.load_manifest(e, "$sys/MANIFEST")))
 
 m = check_match("common.int", "42", true)
-check((not m[1]["*"]) and m[1]["common.int"] and (not m[1]["common.int"].subs))
+check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
 m = check_match("{common.int}", "42", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (not m[1]["*"].subs[1]["common.int"].subs))
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 m = check_match("(common.int)", "42", true)
-check((not m[1]["*"]) and m[1]["common.int"] and (not m[1]["common.int"].subs))
---check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (not m[1]["*"].subs[1]["common.int"].subs))
+check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
+--check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 
 m = check_match("common.int", "42x", true, 1, "42")
-check((not m[1]["*"]) and m[1]["common.int"] and (not m[1]["common.int"].subs))
+check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
 m = check_match("{common.int}", "42x", true, 1, "42")
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (not m[1]["*"].subs[1]["common.int"].subs))
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 m = check_match("(common.int)", "42x", true, 1)
 m = check_match("(common.int ~)", "42x", false)
 
 m = check_match("common.int common.word", "42x", false)
 m = check_match("{common.int common.word}", "42x", true, 0, "42x")
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
-      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
+      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
 m = check_match("(common.int common.word)", "42x", false)
 
 m = check_match("common.int common.word", "42 x", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
-      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
+      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
 m = check_match("{common.int common.word}", "42 x", false)
 m = check_match("(common.int common.word)", "42 x", true)
 
-check((api.load_string(eid, "int = common.int word = common.word")))
+check((api.load_string(e, "int = common.int word = common.word")))
        
 m = check_match("int", "42", true)
---check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
-check((not m[1]["*"]) and m[1]["int"] and (not m[1]["int"].subs))
+--check((not m["*"]) and m["int"] and (#m["int"].subs==1))
+check((not m["*"]) and m["int"] and (not m["int"].subs))
 m = check_match("{int}", "42", true)
---check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (not m[1]["*"].subs[1]["int"].subs))
+--check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (#m["*"].subs[1]["int"].subs==1))
+check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (not m["*"].subs[1]["int"].subs))
 m = check_match("(int)", "42", true)
---check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
-check((not m[1]["*"]) and m[1]["int"] and (not m[1]["int"].subs))
+--check((not m["*"]) and m["int"] and (#m["int"].subs==1))
+check((not m["*"]) and m["int"] and (not m["int"].subs))
 
 m = check_match("int", "42x", true, 1, "42")
---check((not m[1]["*"]) and m[1]["int"] and (#m[1]["int"].subs==1))
-check((not m[1]["*"]) and m[1]["int"] and (not m[1]["int"].subs))
+--check((not m["*"]) and m["int"] and (#m["int"].subs==1))
+check((not m["*"]) and m["int"] and (not m["int"].subs))
 m = check_match("{int}", "42x", true, 1, "42")
---check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (#m[1]["*"].subs[1]["int"].subs==1))
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and (not m[1]["*"].subs[1]["int"].subs))
+--check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (#m["*"].subs[1]["int"].subs==1))
+check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (not m["*"].subs[1]["int"].subs))
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 
 m = check_match("int word", "42x", false)
 m = check_match("{int word}", "42x", true, 0, "42x")
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and
-      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["word"])
+check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
+      (m["*"].subs[2]) and m["*"].subs[2]["word"])
 m = check_match("(int word)", "42x", false)
 
 m = check_match("int word", "42 x", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and
-      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["word"])
+check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
+      (m["*"].subs[2]) and m["*"].subs[2]["word"])
 m = check_match("{int word}", "42 x", false)
 m = check_match("(int word)", "42 x", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["int"] and
-      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["word"])
+check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
+      (m["*"].subs[2]) and m["*"].subs[2]["word"])
 
-check((api.load_string(eid, "alias int = common.int alias word = common.word")))
+check((lapi.load_string(e, "alias int = common.int alias word = common.word")))
        
 m = check_match("int", "42", true)
-check(m[1]["*"] and m[1]["*"].subs[1]["common.int"] and (not m[1]["*"].subs[1]["common.int"].subs))
+check(m["*"] and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 m = check_match("{int}", "42", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (not m[1]["*"].subs[1]["common.int"].subs))
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 m = check_match("(int)", "42", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (not m[1]["*"].subs[1]["common.int"].subs))
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 
 m = check_match("int", "42x", true, 1, "42")
-check(m[1]["*"] and m[1]["*"].subs[1]["common.int"] and (not m[1]["*"].subs[1]["common.int"].subs))
+check(m["*"] and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 m = check_match("{int}", "42x", true, 1, "42")
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and (not m[1]["*"].subs[1]["common.int"].subs))
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 
 m = check_match("int word", "42x", false)
 m = check_match("{int word}", "42x", true, 0, "42x")
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
-      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
+      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
 m = check_match("(int word)", "42x", false)
 
 m = check_match("int word", "42 x", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
-      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
+      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
 m = check_match("{int word}", "42 x", false)
 m = check_match("(int word)", "42 x", true)
-check((m[1]["*"].subs[1]) and m[1]["*"].subs[1]["common.int"] and
-      (m[1]["*"].subs[2]) and m[1]["*"].subs[2]["common.word"])
+check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
+      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
 
 subheading("Bindings (equivalence of reference and referent)")
 
-check((api.load_string(eid, "foo = a / b / c")))
+check((lapi.load_string(e, "foo = a / b / c")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m[1]["foo"]); check(#m[1]["foo"].subs==1); check(m[1]["foo"].subs[1]["a"]); 
+check(m["foo"]); check(#m["foo"].subs==1); check(m["foo"].subs[1]["a"]); 
 
 function test_foo()
    check_match("foo", "a!", true, 1, "a");     check_match("(a / b / c)", "a!", true, 1, "a")
@@ -1414,19 +1393,19 @@ end
 
 test_foo()
 
-check((api.load_string(eid, "foo = (a / b / c)")))
+check((lapi.load_string(e, "foo = (a / b / c)")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m[1]["foo"]); check(#m[1]["foo"].subs==1); check(m[1]["foo"].subs[1]["a"]); 
+check(m["foo"]); check(#m["foo"].subs==1); check(m["foo"].subs[1]["a"]); 
 test_foo()
 
-check((api.load_string(eid, "alias foo = a / b / c")))
+check((lapi.load_string(e, "alias foo = a / b / c")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m[1]["*"]); check(#m[1]["*"].subs==1); check(m[1]["*"].subs[1]["a"]); 
+check(m["*"]); check(#m["*"].subs==1); check(m["*"].subs[1]["a"]); 
 test_foo()
 
-check((api.load_string(eid, "alias foo = (a / b / c)")))
+check((lapi.load_string(e, "alias foo = (a / b / c)")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m[1]["*"]); check(#m[1]["*"].subs==1); check(m[1]["*"].subs[1]["a"]); 
+check(m["*"]); check(#m["*"].subs==1); check(m["*"].subs[1]["a"]); 
 test_foo()
 
 subheading("Sequences")
@@ -1443,7 +1422,7 @@ check_bc("b c")
 check_bc("(b c)")
 check_bc("{b ~ c}")
 
-check((api.load_string(eid, "foo = a b c*")))
+check((lapi.load_string(e, "foo = a b c*")))
 check_match('a b c*', 'a b x', true, 1, "a b ")
 check_match('foo', 'a b x', true, 1, "a b ")
 
