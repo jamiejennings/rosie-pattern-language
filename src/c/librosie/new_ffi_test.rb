@@ -86,7 +86,7 @@ end
 Rosie.free_stringArray(retval)
 eid_string = CString_from_string(eid)
 
-config_js = "{\"expression\" : \"\\\"ign\\\"\", \"encode\" : false}"
+config_js = "{\"expression\" : \"\\\"ign\\\"\", \"encode\" : \"json\"}"
 print "config_js is: ", config_js, "\n"
 
 config_string = CString_from_string(config_js)
@@ -149,7 +149,7 @@ retval = Rosie.rosie_api("load_manifest", eid_string, test)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
-config_js = "{\"expression\" : \"[:digit:]+\", \"encode\" : false}"
+config_js = "{\"expression\" : \"[:digit:]+\", \"encode\" : \"json\"}"
 print "config_js is: ", config_js, "\n"
 
 config_string = CString_from_string(config_js)

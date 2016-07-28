@@ -238,15 +238,16 @@ struct stringArray rosie_api(const char *name, ...) {
 	  list[i] = malloc(sizeof(struct string));
 	  char *str;
 	  switch (t) {
+	  case LUA_TSTRING:
+	       str = (char *) lua_tolstring(L, -1, &len);
+	       break;
 	  case LUA_TBOOLEAN:
 	       if (lua_toboolean(L, -1)) {len=4; str="true";}
 	       else {len=5; str="false";}
 	       break;
-	  case LUA_TSTRING:
-	       str = (char *) lua_tolstring(L, -1, &len);
-	       break;
 	  default:
-	       printf("Return type error: %d\n", t); exit(-1);
+	       LOGf("Return type error: %d\n", t);
+	       len=0; str = "";
 	  }
 	  LOGf("Return value [%d]: len=%d ptr=%s\n", (int) i, (int) len, str);
 	  list[i]->len = len;

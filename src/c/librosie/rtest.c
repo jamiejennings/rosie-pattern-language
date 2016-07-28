@@ -26,7 +26,7 @@ void print_results(struct stringArray r, const char *name) {
      struct string **str_ptr_ptr = r.ptr;
      for (uint32_t i=0; i<r.n; i++) {
 	  struct string *str = str_ptr_ptr[i];
-	  printf(" [%d] len=%d, ptr=%s\n", i, str->len, str->ptr);
+	  printf(" [%d] len=%d, ptr=%s\n", i, str->len, (str->ptr ? str->ptr : (uint8_t *)""));
      }
 }
      
@@ -79,7 +79,7 @@ int main () {
      print_results(r, "get_environment");
      free_stringArray(r);
 
-     struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": false}"));
+     struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
      r = rosie_api( "configure_engine", eid_string, arg); 
      print_results(r, "configure_engine");

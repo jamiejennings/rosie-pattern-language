@@ -274,7 +274,7 @@ local function match(id, input_text, start)
       arg_error("input argument not a string")
    end
    local m, leftover = lapi.match(en, input_text, start)
-   return json.encode(m), tostring(leftover)
+   return m, tostring(leftover)
 end
 
 api.match = api_wrap(match, "string", "int")	    -- string depends on encoder function
@@ -300,7 +300,7 @@ local function eval_(id, input_text, start)
    elseif (type(trace)~="string") then
       error("Internal error: invalid return from eval (trace): " .. tostring(trace), 0)
    end
-   return json.encode(result), tostring(leftover), trace
+   return result, tostring(leftover), trace
 end
 
 api.eval = api_wrap(eval_, "string", "int", "string")
