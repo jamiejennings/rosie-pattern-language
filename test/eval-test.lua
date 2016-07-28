@@ -6,14 +6,15 @@
 ----
 
 test = require "test-functions"
-json = require "cjson"
 
 check = test.check
 heading = test.heading
 subheading = test.subheading
 
+e = false;
+
 function set_expression(exp)
-   local ok, msg = api.configure_engine(eid, json.encode{expression=exp, encode="json"})
+   local ok, msg = lapi.configure_engine(e, {expression=exp, encode="json"})
    if not ok then error("Configuration error: " .. msg); end
 end
 
@@ -23,11 +24,9 @@ trace = "no trace set"
 
 function check_eval(exp, input, expectation, expected_contents_list)
    set_expression(exp)
-   local ok, results_js = api.eval(eid, input)
-   check(ok, "failed call to api.eval: " .. tostring(results_js))
+   local ok, m, leftover, localtrace = pcall(lapi.eval, e, input)
+   check(ok, "failed call to lapi.eval: " .. tostring(m))
    if ok then
-      local results = json.decode(results_js)
-      local m, leftover, localtrace = table.unpack(results)
       check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " " .. input .. " ", 1)
       if expected_contents_list then
@@ -56,40 +55,35 @@ test.start(test.current_filename())
 ----------------------------------------------------------------------------------------
 heading("Setting up")
 ----------------------------------------------------------------------------------------
-api = require "api"
-
-check(type(api)=="table")
-check(api.info)
-check(type(api.info=="function"))
-
-check(type(api.new_engine)=="function")
-ok, eid_js = api.new_engine(json.encode{name="eval test"})
-check(ok)
-eid = json.decode(eid_js)[1]
-check(type(eid)=="string")
+check(type(lapi)=="table")
+check(type(lapi.new_engine)=="function")
+e, config_ok, msg = lapi.new_engine({name="eval test"})
+check(engine.is(e))
+check(config_ok)
 
 subheading("Setting up assignments")
-ok, msg = api.load_string(eid, 'a = "a"  b = "b"  c = "c"  d = "d"')
-check(ok)
-ok, msg = api.get_environment(eid, json.encode("a"))
+t1, t2 = lapi.load_string(e, 'a = "a"  b = "b"  c = "c"  d = "d"')
+check(type(t1)=="table")
+if t2 then check(type(t2)=="table"); end
+t = lapi.get_environment(e, "a")
+check(type(t)=="table")
+
+ok, msg = pcall(lapi.load_string, e, 'alias plain_old_alias = "p"')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias plain_old_alias = "p"')
+ok, msg = pcall(lapi.load_string, e, 'alias alias_to_plain_old_alias = plain_old_alias')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias alias_to_plain_old_alias = plain_old_alias')
+ok, msg = pcall(lapi.load_string, e, 'alias alias_to_a = a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alias alias_to_a = a')
+ok, msg = pcall(lapi.load_string, e, 'alternate_a = a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alternate_a = a')
+ok, msg = pcall(lapi.load_string, e, 'alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = api.load_string(eid, 'alternate_to_alias_to_a = alias_to_a')
-check(ok)
-
-ok, msg = api.load_string(eid, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
+ok, msg = pcall(lapi.load_string, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
 ----------------------------------------------------------------------------------------
