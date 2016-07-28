@@ -97,7 +97,7 @@ local function engine_configure(e, configuration)
       elseif k=="encode" then
 	 local f = name_to_encode(v)
 	 if type(f)~="function" then
-	    return false, 'invalid encode type: "' .. tostring(v) .. '"'
+	    return false, 'invalid value for encode: "' .. tostring(v) .. '"'
 	 else
 	    e.encode = v
 	    e.encode_function = f
