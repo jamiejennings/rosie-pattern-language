@@ -25,10 +25,10 @@
 
 void print_results(struct stringArray r, const char *name) {
      printf("Results from %s: n=%d\n", name, r.n);
-     struct string *str = *r.ptr;
+     struct string **str_ptr_ptr = r.ptr;
      for (uint32_t i=0; i<r.n; i++) {
+	  struct string *str = str_ptr_ptr[i];
 	  printf(" [%d] len=%d, ptr=%s\n", i, str->len, str->ptr);
-	  str++;
      }
 }
   
@@ -51,6 +51,10 @@ int main (int argc, char **argv) {
        struct string *cstr = array.ptr[i];
        printf("\t %d: len=%d, string=%s\n", i, cstr->len, cstr->ptr);
   }
+  /* free_string_ptr(array.ptr[0]); */
+  /* free_string_ptr(array.ptr[1]); */
+  /* free_string_ptr(array.ptr[2]); */
+  free_stringArray(array); 
 
   printf("\n");
 
@@ -74,58 +78,50 @@ int main (int argc, char **argv) {
        exit(-1);
   }
 
-  /* For valgrind to not complain: */
-  /* free_string(eid_string); */
-
-  struct string *eid_string = stringArrayRef(retvals, 1);
+  struct string *eid_string = copy_string_ptr(stringArrayRef(retvals, 1));
   if (!eid_string) {
        printf("eid_string is NULL\n");
        exit(-1);
   }
   else printf("eid_string is ok\n");
-  
   printf("eid_string: len=%d string=%s\n", eid_string->len, (char *)eid_string->ptr);
 
+  free_stringArray(retvals);
+  
   struct string *null = &(CONST_STRING("null"));
 
   struct stringArray r = rosie_api( "get_environment", eid_string, null);	   
   print_results(r, "get_environment");
   free_stringArray(r);
 
-  struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
+  struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"false\"}"));
 
   r = rosie_api( "configure_engine", eid_string, arg); 
   print_results(r, "configure_engine");
   free_stringArray(r);
 
-  r = rosie_api( "inspect_engine", &eid_string, &null); 
+  r = rosie_api( "inspect_engine", eid_string, null); 
   print_results(r, "inspect_engine");
   free_stringArray(r);
 
   arg = &CONST_STRING("123");
-  r = rosie_api( "match", &eid_string, arg); 
+  r = rosie_api( "match", eid_string, arg); 
   print_results(r, "match");
   free_stringArray(r);
 
   arg = &CONST_STRING("123 abcdef");
-  r = rosie_api( "match", &eid_string, arg); 
+  r = rosie_api( "match", eid_string, arg); 
   print_results(r, "match");
   free_stringArray(r);
 
   arg = &CONST_STRING("hi");
-  r = rosie_api( "match", &eid_string, arg); 
+  r = rosie_api( "match", eid_string, arg); 
   print_results(r, "match");
   free_stringArray(r);
 
-  /* lua_getglobal(L, "repl");	/\* push repl fcn *\/ */
-  /* lua_getglobal(L, "engine_list"); */
-  /* lua_pushlstring(L, (char *)eid_string.ptr, eid_string.len); */
-  /* lua_gettable(L, -2); */
-  /* /\* top of stack is now enginelist[eid_string] *\/ */
-  /* lua_remove(L, -2);		/\* remove engine_list from stack *\/ */
-  /* lua_call(L, 1, 1);		/\* call repl(eid) *\/ */
-
-  /* lua_close(L); */
+  delete_engine(eid_string);
+  free_string_ptr(eid_string);
+  finalize();
 
   return EXIT_SUCCESS;
 

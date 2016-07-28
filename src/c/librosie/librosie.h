@@ -9,8 +9,6 @@
 #define TRUE 1
 #define FALSE 0
 
-#define MAX_RETVALS 10
-
 #include "lauxlib.h"
 #include "lualib.h"
 
@@ -29,19 +27,23 @@ uint32_t testbyref(struct string *foo);
 struct string testretstring(struct string *foo);
 struct stringArray testretarray(struct string foo);
 
+struct string *copy_string_ptr(struct string *src);
 void free_string(struct string foo);
+void free_string_ptr(struct string *foo);
 void free_stringArray(struct stringArray r);
 
 #define CONST_STRING(str) (struct string) {strlen(str), (uint8_t *)str}
-#define FREE_STRING(s) { free((s).ptr); (s).ptr=0; (s).len=0; }
 
 #define stringArrayRef(name, pos) (((name).n > (pos)) ? ((name).ptr[(pos)]) : '\0')
 
 /* extern int bootstrap (lua_State *L, const char *rosie_home); */
 void require (const char *name, int assign_name);
 void initialize(const char *rosie_home);
+void finalize();
 struct stringArray rosie_api(const char *name, ...);
 struct stringArray new_engine(struct string *config);
+void delete_engine(struct string *eid_string);
+
 
 #ifndef DEBUG
 #define DEBUG 0

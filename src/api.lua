@@ -61,9 +61,9 @@ local api = {API_VERSION = "0.99b",		    -- api version
 -- local function encode_retvals(...)
 --    return json.encode({...})
 -- end
-local function encode_retvals(...)
-   return map(tostring, {...})
-end
+-- local function encode_retvals(...)
+--    return map(tostring, {...})
+-- end
 
 local function get_arglist(f)
    local info = debug.getinfo(f, "u")
@@ -78,7 +78,7 @@ end
 local function api_wrap(f, ...)
    local returns = {...}
    local newf = function(...)
-		   return encode_retvals(pcall(f, ...))
+		   return { pcall(f, ...) }
 		end
    api.SIGNATURE[newf] = {args=get_arglist(f), returns=returns}
    return newf
@@ -99,7 +99,7 @@ local function info()
 	 info[k] = v
       end
    end -- loop
-   return info
+   return json.encode(info)
 end
 
 api.info = api_wrap(info, "object")
@@ -126,7 +126,7 @@ local function inspect_engine(id)
    if type(info)~="table" then
       error("Internal error: invalid response from engine inspection: " .. tostring(info), 0)
    end
-   return info
+   return json.encode(info)
 end
 
 api.inspect_engine = api_wrap(inspect_engine, "object")
@@ -177,7 +177,7 @@ local function get_env(id, optional_identifier)
    if e and (type(e)~="table") then
       error("Internal error: invalid response from engine env: " .. tostring(e), 0)
    end
-   return e
+   return json.encode(e)
 end
 
 api.get_environment = api_wrap(get_env, "object")
@@ -196,7 +196,7 @@ local function clear_env(id, optional_identifier)
    if type(retval)~="boolean" then
       error("Internal error: invalid response from clear env: " .. tostring(retval), 0)
    end
-   return retval
+   return json.encode(retval)
 end
 
 api.clear_environment = api_wrap(clear_env, "boolean")
@@ -222,19 +222,19 @@ local function load_manifest(id, manifest_file)
    end
    local ok, messages, full_path = manifest.process_manifest(en, manifest_file)
    check_results(ok, messages, full_path)
-   return messages, full_path
+   return full_path, table.unpack(messages)
 end
 
-api.load_manifest = api_wrap(load_manifest, "array of string", "string")
+api.load_manifest = api_wrap(load_manifest, "string", "[string]*")
 
 local function load_file(id, path)
    local en = engine_from_id(id)
    local ok, messages, full_path = lapi.load_file(en, path)
    check_results(ok, messages, full_path)
-   return messages, full_path
+   return full_path, table.unpack(messages)
 end
 
-api.load_file = api_wrap(load_file, "array of string", "string")
+api.load_file = api_wrap(load_file, "string", "[string]*")
 
 local function load_string(id, input)
    local en = engine_from_id(id)
@@ -243,10 +243,10 @@ local function load_string(id, input)
    end
    local results, messages = lapi.load_string(en, input)
    check_results(results, messages, "dummy")
-   return messages
+   return table.unpack(messages)
 end
 
-api.load_string = api_wrap(load_string, "array of string")
+api.load_string = api_wrap(load_string, "[string]*")
 
 ----------------------------------------------------------------------------------------
 -- Matching
@@ -273,7 +273,8 @@ local function match(id, input_text, start)
    if type(input_text)~="string" then
       arg_error("input argument not a string")
    end
-   return lapi.match(en, input_text, start)
+   local m, leftover = lapi.match(en, input_text, start)
+   return json.encode(m), tostring(leftover)
 end
 
 api.match = api_wrap(match, "string", "int")	    -- string depends on encoder function
@@ -282,7 +283,8 @@ local function match_file(id, infilename, outfilename, errfilename, wholefilefla
    if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
       arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
    end
-   return lapi.match_file((engine_from_id(id)), infilename, outfilename, errfilename, wholefileflag)
+   local i,o,e = lapi.match_file((engine_from_id(id)), infilename, outfilename, errfilename, wholefileflag)
+   return tostring(i), tostring(o), tostring(e)
 end
 
 api.match_file = api_wrap(match_file, "int", "int", "int")
@@ -298,7 +300,7 @@ local function eval_(id, input_text, start)
    elseif (type(trace)~="string") then
       error("Internal error: invalid return from eval (trace): " .. tostring(trace), 0)
    end
-   return result, leftover, trace
+   return json.encode(result), tostring(leftover), trace
 end
 
 api.eval = api_wrap(eval_, "string", "int", "string")
@@ -307,7 +309,8 @@ local function eval_file(id, infilename, outfilename, errfilename, wholefileflag
    if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
       arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
    end
-   return lapi.eval_file(engine_from_id(id), infilename, outfilename, errfilename, wholefileflag)
+   local i,o,e = lapi.eval_file(engine_from_id(id), infilename, outfilename, errfilename, wholefileflag)
+   return tostring(i), tostring(o), tostring(e)
 end
 
 api.eval_file = api_wrap(eval_file, "int", "int", "int")

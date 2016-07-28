@@ -231,8 +231,8 @@ struct string *heap_allocate_string(const char *msg) {
      uint8_t *ptr = malloc(len+1);     /* to return a string, we must make */
      strlcpy((char *)ptr, msg, len+1); /* sure it is allocated on the heap */
      struct string *retval = malloc(sizeof(struct string));
-     struct string bar = (struct string) {len, ptr};
-     memcpy(retval, &bar, sizeof(bar));
+     retval->len = len;
+     retval->ptr = ptr;
      return retval;
 }     
 
@@ -249,47 +249,52 @@ struct stringArray testretarray(struct string foo) {
 
 }
 
-void free_string(struct string foo) FREE_STRING(foo);
+struct string *copy_string_ptr(struct string *src) {
+     struct string *dest = malloc(sizeof(struct string));
+     dest->len = src->len;
+     dest->ptr = malloc(sizeof(uint8_t)*src->len);
+     memcpy(dest->ptr, src->ptr, src->len);
+     return dest;
+}
+
+void free_string_ptr(struct string *ref) {
+     free(ref->ptr);
+     free(ref);
+}
+
+void free_string(struct string s) {
+     free(s.ptr);
+}
+
 void free_stringArray(struct stringArray r) {
-     struct string *s = *r.ptr;
+     struct string **s = r.ptr;
      for (uint32_t i=0; i<r.n; i++) {
-	  free_string(*s);
-	  s++;
+	  free(s[i]->ptr);
+	  free(s[i]);
      }
-     r.n=0;
+     free(r.ptr);
 }
 
 struct stringArray rosie_api(const char *name, ...) {
 
+     lua_State *L = LL;
      va_list args;
      struct string *arg;
-     int base;
-     
-     lua_State *L = LL;
 
      /* number of args AFTER the api name */
      int nargs = 2;		   /* get this later from a table */
 
-     /* printf("Calling Rosie api: %s\n", name); */
-
      va_start(args, name);	   /* setup variadic arg processing */
-
      LOGf("Stack at start of rosie_api (%s):\n", name);
      LOGstack(L);
-     base = lua_gettop(L);			    /* save top pointer */
-     /* printf("Base of stack is %d\n", base); */
+     int base = lua_gettop(L);			    /* save top pointer */
 
      /* Optimize later: memoize stack value of fcn for each api call to avoid this lookup? */
-
      lua_getglobal(L, "api");
      lua_getfield(L, -1 , name);                    /* -1 is stack top, i.e. api table */
-
      lua_remove(L, -2);	    /* remove the api table from the stack */ 
-     /* Later: insert a check HERE to ensure the value we get is a function */
-
      for (int i = 1; i <= nargs; i++) {
 	  arg = va_arg(args, struct string *); /* get the next arg */
-	  /* printf("LUA stack pushlstring: len=%d, value=%s\n", arg->len, arg->ptr);  */
 	  lua_pushlstring(L, (char *) arg->ptr, arg->len); /* push it */
      }
 
@@ -315,14 +320,25 @@ struct stringArray rosie_api(const char *name, ...) {
 	  
      for (size_t i=0; i<nretvals; i++) {
 	  int t = lua_rawgeti(L, base+1, (lua_Integer) i+1); /* lua has 1-based indexing */
-	  if (t != LUA_TSTRING) { printf("Return type error: %d\n", t); exit(-1); }
 	  list[i] = malloc(sizeof(struct string));
-	  uint8_t *str = (uint8_t *) lua_tolstring(L, -1, &len);
+	  char *str;
+	  switch (t) {
+	  case LUA_TBOOLEAN:
+	       if (lua_toboolean(L, -1)) {len=4; str="true";}
+	       else {len=5; str="false";}
+	       break;
+	  case LUA_TSTRING:
+	       str = (char *) lua_tolstring(L, -1, &len);
+	       break;
+	  default:
+	       printf("Return type error: %d\n", t); exit(-1);
+	  }
 	  LOGf("Return value [%d]: len=%d ptr=%s\n", (int) i, (int) len, str);
 	  list[i]->len = len;
 	  list[i]->ptr = malloc(sizeof(uint8_t)*(len+1));
 	  memcpy(list[i]->ptr, str, len);
 	  list[i]->ptr[len] = 0; /* so we can use printf for debugging */	  
+	  LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[i]->len, list[i]->ptr);
 	  lua_pop(L, 1);
      }
      retvals.n = nretvals;
@@ -361,3 +377,13 @@ struct stringArray new_engine(struct string *config) {
 }
 
 
+void delete_engine(struct string *eid_string) {
+     struct string *ignore = &CONST_STRING("ignored12345");
+     struct stringArray retvals = rosie_api("delete_engine", eid_string, ignore);
+     LOGf("In new_engine, number of retvals from delete_engine was %d\n", retvals.n);
+     free_stringArray(retvals);
+}
+
+void finalize() {
+     lua_close(LL);
+}
