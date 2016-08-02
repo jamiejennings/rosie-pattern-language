@@ -1,4 +1,4 @@
-/*  -*- Mode: C/l; -*-                                                       */
+/*  -*- Mode: C; -*-                                                         */
 /*                                                                           */
 /* librosie.c    Expose the Rosie API                                        */
 /*                                                                           */
@@ -31,39 +31,6 @@ static const char *progname = "librosie";
 void print_error_message (const char *msg) {
      lua_writestringerror("%s: ", progname);
      lua_writestringerror("%s\n", msg);
-}
-
-/*
- * Message handler used to run all chunks
- */
-static int msghandler (lua_State *L) {
-  const char *msg = lua_tostring(L, 1);
-  if (msg == NULL) {  /* is error object not a string? */
-    if (luaL_callmeta(L, 1, "__tostring") &&  /* does it have a metamethod */
-        lua_type(L, -1) == LUA_TSTRING)  /* that produces a string? */
-      return 1;  /* that is the message */
-    else
-      msg = lua_pushfstring(L, "(error object is a %s value)",
-                               luaL_typename(L, 1));
-  }
-  luaL_traceback(L, L, msg, 1);  /* append a standard traceback */
-  return 1;  /* return the traceback */
-}
-
-/*
- * Interface to 'lua_pcall', which sets appropriate message function
- * and C-signal handler. Used to run all chunks.
- */
-static int docall (lua_State *L, int narg, int nres) {
-  int status;
-  int base = lua_gettop(L) - narg;  /* function index */
-  lua_pushcfunction(L, msghandler);  /* push message handler */
-  lua_insert(L, base);  /* put it under function and args */
-  /* signal(SIGINT, laction);  /\* set C-signal handler *\/ */
-  status = lua_pcall(L, narg, nres, base);
-  /* signal(SIGINT, SIG_DFL); /\* reset C-signal handler *\/ */
-  lua_remove(L, base);  /* remove message handler from the stack */
-  return status;
 }
 
 static void stackDump (lua_State *L) {
@@ -112,16 +79,16 @@ void require (const char *name, int assign_name) {
      int status;  
      lua_getglobal(LL, "require");  
      lua_pushstring(LL, name);  
-     status = docall(LL, 1, 1);                   /* call 'require(name)' */  
+     status = lua_pcall(LL, 1, 1, 0);                   /* call 'require(name)' */  
      if (status != LUA_OK) {  
-	  print_error_message(lua_pushfstring(LL, "error requiring %s (%s)", name, lua_tostring(LL, -1)));  
+	  print_error_message(lua_pushfstring(LL, "Internal error: cannot load %s (%s)", name, lua_tostring(LL, -1)));  
 	  exit(-1);  
      }  
      if (assign_name==TRUE) lua_setglobal(LL, name); /* set the global to the return value of 'require' */  
      else lua_pop(LL, 1);    /* else discard the result of require */  
 }  
 
-void initialize(const char *rosie_home) {
+int initialize(const char *rosie_home) {
      int status;
      lua_State *L = luaL_newstate();
      if (L == NULL) {
@@ -140,8 +107,9 @@ void initialize(const char *rosie_home) {
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
   status = bootstrap(rosie_home);
-  if (status != LUA_OK) exit(-1); 
+  if (status != LUA_OK) return (-1); 
   require("api", TRUE);
+  return 0;
 }
 
 struct string *heap_allocate_string(const char *msg) {

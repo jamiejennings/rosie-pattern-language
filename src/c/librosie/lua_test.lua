@@ -12,14 +12,15 @@ eid = tbl[2]
 
 input = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
    
-api.configure_engine(eid, json.encode{expression="[:digit:]+", encode=false})
+api.configure_engine(eid, json.encode{expression="[:digit:]+", encode="json"})
 
 io.write("Looping...")
 io.stdout:flush()
 t0=os.clock();
-for i=1,1000000 do
+M = 1000000
+for i=1,5*M do
    retval = api.match(eid, input);
---   js = json.decode(retval[2]);
+   js = json.decode(retval[2]);
 end;
 t1=os.clock();
 print(" done.")

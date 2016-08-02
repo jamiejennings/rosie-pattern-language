@@ -32,7 +32,7 @@ void free_stringArray(struct stringArray r);
 #define CONST_STRING(str) (struct string) {strlen(str), (uint8_t *)str}
 #define stringArrayRef(name, pos) (((name).n > (pos)) ? ((name).ptr[(pos)]) : '\0')
 
-void initialize(const char *rosie_home);
+int initialize(const char *rosie_home);
 void finalize();
 struct stringArray rosie_api(const char *name, ...);
 struct stringArray new_engine(struct string *config);

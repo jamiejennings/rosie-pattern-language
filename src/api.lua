@@ -65,12 +65,14 @@ local function get_arglist(f)
    return arglist
 end
    
+local enumeration_counter = 681;
 local function api_wrap(f, ...)
    local returns = {...}
    local newf = function(...)
 		   return { pcall(f, ...) }
 		end
-   api.SIGNATURE[newf] = {args=get_arglist(f), returns=returns}
+   api.SIGNATURE[newf] = {args=get_arglist(f), returns=returns, code=enumeration_counter}
+   enumeration_counter = enumeration_counter + 1;
    return newf
 end
 
@@ -215,7 +217,7 @@ local function load_manifest(id, manifest_file)
    return full_path, table.unpack(messages)
 end
 
-api.load_manifest = api_wrap(load_manifest, "string", "[string]*")
+api.load_manifest = api_wrap(load_manifest, "string", "string*")
 
 local function load_file(id, path)
    local en = engine_from_id(id)
@@ -224,7 +226,7 @@ local function load_file(id, path)
    return full_path, table.unpack(messages)
 end
 
-api.load_file = api_wrap(load_file, "string", "[string]*")
+api.load_file = api_wrap(load_file, "string", "string*")
 
 local function load_string(id, input)
    local en = engine_from_id(id)
@@ -236,7 +238,7 @@ local function load_string(id, input)
    return table.unpack(messages)
 end
 
-api.load_string = api_wrap(load_string, "[string]*")
+api.load_string = api_wrap(load_string, "string*")
 
 ----------------------------------------------------------------------------------------
 -- Matching

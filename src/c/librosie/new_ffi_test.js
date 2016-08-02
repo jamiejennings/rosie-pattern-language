@@ -43,7 +43,7 @@ var MyCString = Struct({
 });
 
 var MyCStringArray = Struct({
-    'len': 'uint32',
+    'n': 'uint32',
     'ptr': ref.refType(ref.refType(MyCString))
 });
 
@@ -56,12 +56,13 @@ var mode = RTLD_NOW | RTLD_GLOBAL;
 var Rosie = new DynamicLibrary('librosie.so' || null, mode);
 
 var funcs = {'initialize': [ 'int', ['string']],
-	     'new_engine': [ MyCString, [MyCStringPtr] ],
-	     'rosie_api': [ MyCString, ['string', MyCStringPtr, MyCStringPtr] ],
-	     'testbyref': [ 'int', [MyCStringPtr] ],
-	     'testbyvalue': [ 'int', [MyCString] ],
-	     'testretstring': [ MyCString, [MyCStringPtr] ],
-	     'testretarray': [ MyCStringArray, [MyCString] ] }
+	     'new_engine': [ MyCStringArray, [MyCStringPtr] ],
+	     'rosie_api': [ MyCStringArray, ['string', MyCStringPtr, MyCStringPtr] ],
+	     // 'testbyref': [ 'int', [MyCStringPtr] ],
+	     // 'testbyvalue': [ 'int', [MyCString] ],
+	     // 'testretstring': [ MyCString, [MyCStringPtr] ],
+	     // 'testretarray': [ MyCStringArray, [MyCString] ]
+	    }
 
 var lib;
 Object.keys(funcs || {}).forEach(function (func) {
@@ -95,32 +96,53 @@ str.len = 7
 str.ptr = "Hello, world"
 console.log("str len=", str.len, " and ptr=", str.ptr)
 
-var retval = lib.testbyref(str.ref())
-console.log("testbyref retval=", retval)
+// var retval = lib.testbyref(str.ref())
+// console.log("testbyref retval=", retval)
 
-var retval = lib.testbyvalue(str)
-console.log("testbyvalue retval=", retval)
+// var retval = lib.testbyvalue(str)
+// console.log("testbyvalue retval=", retval)
 
-var retval = lib.testretstring(str.ref())
-console.log("testretstring retval=", retval)
+// var retval = lib.testretstring(str.ref())
+// console.log("testretstring retval=", retval)
 
-var retval = lib.testretarray(str)
-console.log("testretarray retval=", retval)
+// var retval = lib.testretarray(str)
+// console.log("testretarray retval=", retval)
 
-var n = retval.len
-//console.log(n)
-var p = retval.ptr
-//console.log(p)
-for (i=0; i<n; i++) {
-    var cstr = ref.alloc(MyCString)
-    cstr_ptr = ref.get(p, (i*ref.sizeof.pointer), MyCStringPtr)
-//    console.log("cstr_ptr: ", cstr_ptr)
-    cstr = cstr_ptr.deref()
-    console.log(i, "len=", cstr.len, "and ptr=", cstr.ptr.slice(0,cstr.len))
+// var n = retval.len
+// var p = retval.ptr
+// for (i=0; i<n; i++) {
+//     var cstr = ref.alloc(MyCString)
+//     cstr_ptr = ref.get(p, (i*ref.sizeof.pointer), MyCStringPtr)
+//     cstr = cstr_ptr.deref()
+//     console.log(i, "len=", cstr.len, "and ptr=", cstr.ptr.slice(0,cstr.len))
+// }
+
+function print_array(retval) {
+    var n = retval.n
+    var p = retval.ptr
+    for (var i=0; i<n; i++) {
+	var cstr = ref.alloc(MyCString)
+	var cstr_ptr = ref.get(p, (i*ref.sizeof.pointer), MyCStringPtr)
+	cstr = cstr_ptr.deref()
+	console.log("[",i, "] len =", cstr.len, "and ptr =", cstr.ptr.slice(0,cstr.len))
+    }
 }
 
+function extract_string(stringarray, index) {
+    var n = stringarray.n
+    var p = stringarray.ptr
+    if (index < n) {
+	var cstr = ref.alloc(MyCString)
+	var cstr_ptr = ref.get(p, (index*ref.sizeof.pointer), MyCStringPtr)
+	cstr = cstr_ptr.deref()
+	return cstr.ptr.slice(0,cstr.len)
+    }
+    else return null
+}
+
+
 console.log("About to initialize Rosie")
-var i = lib.initialize("adasdasdasadsdsd")
+var i = lib.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language")
 console.log(i)
 
 var config = new MyCString
@@ -132,16 +154,16 @@ config.ptr = tmp
 config.len = tmp.length
 console.log(config.len, config.ptr.slice(0,config.len))
 
-var i = ref.alloc(MyCString)
+var i = ref.alloc(MyCStringArray)
 i = lib.new_engine(config.ref())
-console.log("Return value from new_engine is: ", i.ptr.slice(0,i.len))
+console.log("Return value from new_engine is: ")
+print_array(i)
 
 var ignored = new MyCString
 ignored.ptr = "ignored"
 ignored.len = ignored.ptr.len
 
-tbl = JSON.parse(i.ptr.slice(0,i.len))
-eid = tbl[1]
+eid = extract_string(i, 1)
 console.log("Engine id is: ", eid)
 
 eid_CString = new MyCString
@@ -150,4 +172,6 @@ eid_CString.len = 10
 console.log("Engine id as CString is: ", eid_CString.len, eid_CString.ptr)
 
 i = lib.rosie_api("inspect_engine", eid_CString.ref(), ignored.ref())
-console.log("Return value from inspect_engine is: ", i.ptr.slice(0,i.len))
+console.log("Return value from inspect_engine is: ")
+print_array(i)
+
