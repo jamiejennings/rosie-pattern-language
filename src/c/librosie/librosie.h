@@ -38,6 +38,9 @@ struct stringArray rosie_api(const char *name, ...);
 struct stringArray new_engine(struct string *config);
 void delete_engine(struct string *eid_string);
 
+struct stringArray json_decode(struct string *js_string);
+//struct stringArray json_encode(struct string *plain_string);
+
 
 #ifndef DEBUG
 #define DEBUG 0

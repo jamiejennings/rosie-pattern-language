@@ -37,22 +37,23 @@ var RTLD_NOW = ffi.DynamicLibrary.FLAGS.RTLD_NOW;
 var RTLD_GLOBAL = ffi.DynamicLibrary.FLAGS.RTLD_GLOBAL;
 var mode = RTLD_NOW | RTLD_GLOBAL;
 
-var Rosie = new DynamicLibrary('librosie.so' || null, mode);
+var RosieLib = new DynamicLibrary('librosie.so' || null, mode);
 
 var funcs = {'initialize': [ 'int', ['string']],
 	     'new_engine': [ MyCStringArray, [MyCStringPtr] ],
-	     'rosie_api': [ MyCStringArray, ['string', MyCStringPtr, MyCStringPtr] ]
+	     'rosie_api': [ MyCStringArray, ['string', MyCStringPtr, MyCStringPtr] ],
+	     'free_stringArray': [ 'void', [MyCStringArray] ]
 	    }
 
-var lib = new ffi.Library;
+var Rosie = new ffi.Library;
 Object.keys(funcs || {}).forEach(function (func) {
     debug('defining function', func)
 
-    var fptr = Rosie.get(func)
+    var fptr = RosieLib.get(func)
       , info = funcs[func]
 
     if (fptr.isNull()) {
-      throw new Error('Library: "' + libfile
+      throw new Error('Library: "' + Libfile
         + '" returned NULL function pointer for "' + func + '"')
     }
 
@@ -64,10 +65,10 @@ Object.keys(funcs || {}).forEach(function (func) {
       , varargs = fopts && fopts.varargs
 
     if (varargs) {
-      lib[func] = VariadicForeignFunction(fptr, resultType, paramTypes, abi)
+      Rosie[func] = VariadicForeignFunction(fptr, resultType, paramTypes, abi)
     } else {
       var ff = ForeignFunction(fptr, resultType, paramTypes, abi)
-      lib[func] = async ? ff.async : ff
+      Rosie[func] = async ? ff.async : ff
     }
   })
 
@@ -127,7 +128,7 @@ function print_array(retval) {
 }
 
 console.log("About to initialize Rosie")
-var i = lib.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language")
+var i = Rosie.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language")
 console.log("Return value from initialize: ", i)
 
 var config = new MyCString
@@ -139,7 +140,7 @@ var buf = config.ptr.reinterpret(config.len)
 console.log(config.ptr.length, config.len, buf.toString("utf8", 0, config.len))
 
 var i = ref.alloc(MyCStringArray)
-i = lib.new_engine(config.ref())
+i = Rosie.new_engine(config.ref())
 console.log("Return value from new_engine is: ")
 var code = extract_string_from_array(i, 0)
 var eid = extract_string_from_array(i, 1)
@@ -150,7 +151,50 @@ var ignored = new_CString("ignored")
 var eid_CString = new_CString(eid)
 console.log("Engine id as CString is: len =", eid_CString.len, "and ptr =", eid_CString.ptr.toString())
 
-i = lib.rosie_api("inspect_engine", eid_CString.ref(), ignored.ref())
+i = Rosie.rosie_api("inspect_engine", eid_CString.ref(), ignored.ref())
 console.log("Return value from inspect_engine is: ")
 print_array(i)
 
+// Loop prep
+
+var manifest = new_CString("$sys/MANIFEST")
+console.log("manifest: len =", manifest.len, "value =", manifest.ptr.toString())
+
+var retval = Rosie.rosie_api("load_manifest", eid_CString.ref(), manifest.ref())
+print_array(retval)
+Rosie.free_stringArray(retval)
+
+var config = new_CString("{\"expression\" : \"[:digit:]+\", \"encode\" : \"json\"}")
+
+retval = Rosie.rosie_api("configure_engine", eid_CString.ref(), config.ref())
+print_array(retval)
+Rosie.free_stringArray(retval)
+
+var foo = new_CString("1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
+var retval = Rosie.rosie_api("match", eid_CString.ref(), foo.ref())
+retval_SAVE = retval
+print_array(retval_SAVE)
+
+// Loop
+
+console.log("Looping...")
+M = 1000000
+call_rosie = true
+for (var i=0; i<5*M; i++) {
+//for (var i=0; i<5; i++) {
+    if (call_rosie) retval = Rosie.rosie_api("match", eid_CString.ref(), foo.ref())
+    else {
+	retval = new MyCStringArray;
+	retval.n = retval_SAVE.n;
+	retval.ptr = retval_SAVE.ptr;
+    }
+    code = extract_string_from_array(retval, 0)
+    if (code != "true") console.log("Error code returned from match api")
+    json_string = extract_string_from_array(retval, 1)
+    if (call_rosie) Rosie.free_stringArray(retval)
+//    if (code=="true") console.log("Successful call to match")
+//    else console.log("Call to match FAILED")
+//    console.log(json_string)
+    obj_to_return_to_caller = JSON.parse(json_string)
+}
+console.log("Done.\n")

@@ -92,7 +92,21 @@ int main () {
      arg = &CONST_STRING("123");
      r = rosie_api( "match", eid_string, arg); 
      print_results(r, "match");
+     uint8_t *code2 = r.ptr[0]->ptr;
+     uint8_t *match2 = r.ptr[1]->ptr;
+     printf("code: %s\n", (char *)code2);
+     printf("match: %s\n", (char *)match2);
+     
+     struct string js_str = {r.ptr[1]->len, r.ptr[1]->ptr};
+     struct stringArray js_array = json_decode(&js_str);
+     print_results(js_array, "json_decode");
+     uint8_t *js_code2 = r.ptr[0]->ptr;
+     uint8_t *js_match2 = r.ptr[1]->ptr;
+     printf("json decode code: %s\n", (char *) js_code2);
+     printf("json decode match: %s\n", (char *) js_match2);
+
      free_stringArray(r);
+     free_stringArray(js_array);
 
      arg = &CONST_STRING("123 abcdef");
      r = rosie_api( "match", eid_string, arg); 
@@ -107,22 +121,33 @@ int main () {
      char *foo = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999";
      struct string *foo_string = &CONST_STRING(foo);
 
-/* Guard against running a 1M iteration loop with verbose output */
+/* Guard against running a high iteration loop with verbose output */
 #if DEBUG==0
+     int M = 1000000;
+#else
+     int M = 1;
+#endif
      printf("Looping..."); fflush(stdout);
-     for (int i=0; i<1000000; i++) {
+     for (int i=0; i<5*M; i++) {
 	  r = rosie_api("match", eid_string, foo_string);
 	  code = stringArrayRef(r, 0);
 	  if (memcmp(code->ptr, true_value, (size_t) code->len)) {
 	       struct string *err = stringArrayRef(retvals,1);
 	       printf("Error in match: %s\n", err ? (char *) err->ptr : "NO MESSAGE");
 	  }
-	  else
+	  else {
 	       LOGf("Match returned: %s\n", stringArrayRef(r,1)->ptr);
+	       struct string js_str = {r.ptr[1]->len, r.ptr[1]->ptr};
+	       struct stringArray js_array = json_decode(&js_str);
+#if DEBUG==1
+	       print_results(js_array, "json_decode");
+#endif
+	       free_stringArray(js_array);
+	  }
+
 	  free_stringArray(r);
      }
      printf(" done.\n");
-#endif
 
      delete_engine(eid_string);
      free_string_ptr(eid_string);

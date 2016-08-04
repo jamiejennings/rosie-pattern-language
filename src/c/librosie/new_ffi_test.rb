@@ -120,13 +120,13 @@ call_rosie = true
 print "Looping..."
 M = 1000000
 for i in 0..5*M do
-#for i in 0..0 do
+#for i in 0..3 do
   if call_rosie then
     retval = Rosie.rosie_api "match", eid_string, foo
   else
     retval = Rosie::CStringArray.new; retval[:n] = retval_SAVE[:n]; retval[:ptr] = retval_SAVE[:ptr]
   end
-  strings = string_array_from_Rosie::CStringArray(retval)
+  strings = string_array_from_CStringArray(retval)
   code = strings[0]
   if code != "true" then
     print "Error code returned from match api"
@@ -136,11 +136,11 @@ for i in 0..5*M do
     Rosie.free_stringArray(retval)
   end
   # if code=="true" then
-  #   print "Successful call to match\n"
+  #  print "Successful call to match\n"
   # else
   #   print "Call to match FAILED\n"
   # end
-  #print json_string, "\n"
+  # print json_string, "\n"
   obj_to_return_to_caller = JSON.parse(json_string)
 end
 
