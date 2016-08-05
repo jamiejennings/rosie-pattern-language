@@ -48,9 +48,10 @@ int main () {
      struct string *initial_config = &CONST_STRING("{\"name\":\"Episode IV: A New Engine\"}");
      struct stringArray retvals = new_engine(initial_config);
   
-     LOGf("retvals.n is: %d\n", retvals.n);
-     LOGf("retvals[0].len is: %d\n", stringArrayRef(retvals,0)->len);
-     LOGf("retvals[0].ptr is: %s\n", (char *) stringArrayRef(retvals,0)->ptr);
+     print_results(retvals, "new_engine");
+     /* LOGf("retvals.n is: %d\n", retvals.n); */
+     /* LOGf("retvals[0].len is: %d\n", stringArrayRef(retvals,0)->len); */
+     /* LOGf("retvals[0].ptr is: %s\n", (char *) stringArrayRef(retvals,0)->ptr); */
 
      struct string *code = stringArrayRef(retvals,0);
      LOGf("code->len is: %d\n", code->len);
@@ -68,7 +69,6 @@ int main () {
 	  printf("eid_string is NULL\n");
 	  exit(-1);
      }
-     else printf("eid_string is ok\n");
      printf("eid_string: len=%d string=%s\n", eid_string->len, (char *)eid_string->ptr);
 
      free_stringArray(retvals);
@@ -85,12 +85,12 @@ int main () {
      print_results(r, "configure_engine");
      free_stringArray(r);
 
-     r = rosie_api( "inspect_engine", eid_string, null); 
+     r = inspect_engine(eid_string); 
      print_results(r, "inspect_engine");
      free_stringArray(r);
 
      arg = &CONST_STRING("123");
-     r = rosie_api( "match", eid_string, arg); 
+     r = match(eid_string, arg); 
      print_results(r, "match");
      uint8_t *code2 = r.ptr[0]->ptr;
      uint8_t *match2 = r.ptr[1]->ptr;
@@ -109,12 +109,12 @@ int main () {
      free_stringArray(js_array);
 
      arg = &CONST_STRING("123 abcdef");
-     r = rosie_api( "match", eid_string, arg); 
+     r = match(eid_string, arg); 
      print_results(r, "match");
      free_stringArray(r);
 
      arg = &CONST_STRING("hi");
-     r = rosie_api( "match", eid_string, arg); 
+     r = match(eid_string, arg); 
      print_results(r, "match");
      free_stringArray(r);
 
@@ -129,7 +129,7 @@ int main () {
 #endif
      printf("Looping..."); fflush(stdout);
      for (int i=0; i<5*M; i++) {
-	  r = rosie_api("match", eid_string, foo_string);
+	  r = match(eid_string, foo_string);
 	  code = stringArrayRef(r, 0);
 	  if (memcmp(code->ptr, true_value, (size_t) code->len)) {
 	       struct string *err = stringArrayRef(retvals,1);

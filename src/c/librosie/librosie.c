@@ -63,6 +63,16 @@ static void stackDump (lua_State *L) {
       printf("\n");  /* end the listing */
     }
 
+void print_stringArray(struct stringArray sa, char *caller_name) {
+     printf("Values returned in stringArray from: %s\n", caller_name);
+     printf("  Number of strings: %d\n", sa.n);
+     for (uint32_t i=0; i<sa.n; i++) {
+	  struct string *cstrptr = sa.ptr[i];
+	  printf("  [%d] len = %d, ptr = %s\n", i, cstrptr->len, cstrptr->ptr);
+     }
+}
+
+
 #define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
 #define QUOTE(thing) #thing			    /* stringify it */
 
@@ -262,8 +272,21 @@ struct stringArray new_engine(struct string *config) {
 void delete_engine(struct string *eid_string) {
      struct string *ignore = &CONST_STRING("ignored12345");
      struct stringArray retvals = rosie_api("delete_engine", eid_string, ignore);
-     LOGf("In new_engine, number of retvals from delete_engine was %d\n", retvals.n);
+     print_stringArray(retvals, "delete_engine");
      free_stringArray(retvals);
+}
+
+struct stringArray inspect_engine(struct string *eid_string) {
+     struct string *ignore = &CONST_STRING("ignored678");
+     struct stringArray retvals = rosie_api("inspect_engine", eid_string, ignore);
+     LOGprintArray(retvals, "inspect_engine");
+     return retvals;
+}
+
+struct stringArray match(struct string *eid_string, struct string *input) {
+     struct stringArray retvals = rosie_api("match", eid_string, input);
+     LOGprintArray(retvals, "match");
+     return retvals;
 }
 
 void finalize() {
@@ -329,4 +352,4 @@ struct stringArray json_decode(struct string *js_string) {
 
 
 
-struct stringArray json_encode(struct string *plain_string);
+//struct stringArray json_encode(struct string *plain_string);

@@ -36,11 +36,14 @@ int initialize(const char *rosie_home);
 void finalize();
 struct stringArray rosie_api(const char *name, ...);
 struct stringArray new_engine(struct string *config);
+struct stringArray inspect_engine(struct string *eid_string);
+struct stringArray match(struct string *eid_string, struct string *input);
 void delete_engine(struct string *eid_string);
 
 struct stringArray json_decode(struct string *js_string);
 //struct stringArray json_encode(struct string *plain_string);
 
+void print_stringArray(struct stringArray sa, char *caller_name);
 
 #ifndef DEBUG
 #define DEBUG 0
@@ -57,3 +60,5 @@ struct stringArray json_decode(struct string *js_string);
 #define LOGstack(L) \
      do { if (DEBUG) stackDump(L); } while (0)
 
+#define LOGprintArray(sa, caller_name) \
+     do { if (DEBUG) print_stringArray(sa, caller_name); } while (0)
