@@ -122,15 +122,21 @@ int initialize(const char *rosie_home) {
   return 0;
 }
 
-struct string *heap_allocate_string(const char *msg) {
-     size_t len = (size_t) strlen(msg);
+struct string *heap_allocate_stringN(char *msg, size_t len) {
      uint8_t *ptr = malloc(len+1);     /* to return a string, we must make */
-     strlcpy((char *)ptr, msg, len+1); /* sure it is allocated on the heap */
+     memcpy((char *)ptr, msg, len);    /* sure it is allocated on the heap. */
+     ptr[len]=0;		       /* add null terminator. */
      struct string *retval = malloc(sizeof(struct string));
      retval->len = len;
      retval->ptr = ptr;
+     /* printf("In heap_allocate_stringN: len=%d, ptr=%s\n", (int) len, (char *)msg); */
      return retval;
 }     
+
+struct string *heap_allocate_string(char *msg) {
+     size_t len = (size_t) strlen(msg);
+     return heap_allocate_stringN(msg, len);
+}
 
 struct stringArray testretarray(struct string foo) {
      printf("testretarray argument received: len=%d, string=%s\n", foo.len, foo.ptr);

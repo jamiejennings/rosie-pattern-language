@@ -10,17 +10,27 @@ if tbl[1]~=true then
 end
 eid = tbl[2]
 
-input = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
+input1 = "1230000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+input  = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
    
 api.configure_engine(eid, json.encode{expression="[:digit:]+", encode="json"})
 
+save = api.match(eid, input1)
+
+for_real = true
+
+print()
 io.write("Looping...")
 io.stdout:flush()
 t0=os.clock();
 M = 1000000
+--M = 1
 for i=1,5*M do
-   retval = api.match(eid, input);
+   if for_real then retval = api.match(eid, input);
+   else retval = save;
+   end
    js = json.decode(retval[2]);
+   if M==1 then table.print(retval); table.print(js); end
 end;
 t1=os.clock();
 print(" done.")

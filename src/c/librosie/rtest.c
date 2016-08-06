@@ -118,8 +118,12 @@ int main () {
      print_results(r, "match");
      free_stringArray(r);
 
-     char *foo = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999";
-     struct string *foo_string = &CONST_STRING(foo);
+     char *foo2 = "1230000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+     struct string *foo_string2 = &CONST_STRING(foo2);
+
+     r = match(eid_string, foo_string2); 
+     print_results(r, "match");
+     struct stringArray saved = r;
 
 /* Guard against running a high iteration loop with verbose output */
 #if DEBUG==0
@@ -127,9 +131,16 @@ int main () {
 #else
      int M = 1;
 #endif
+
+     int for_real = TRUE;
+
+     char *foo = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999";
+     struct string *foo_string = &CONST_STRING(foo);
+
      printf("Looping..."); fflush(stdout);
      for (int i=0; i<5*M; i++) {
-	  r = match(eid_string, foo_string);
+	  if (for_real) r = match(eid_string, foo_string);
+	  else r = saved;
 	  code = stringArrayRef(r, 0);
 	  if (memcmp(code->ptr, true_value, (size_t) code->len)) {
 	       struct string *err = stringArrayRef(retvals,1);
@@ -145,8 +156,9 @@ int main () {
 	       free_stringArray(js_array);
 	  }
 
-	  free_stringArray(r);
+	  if (for_real) free_stringArray(r);
      }
+     free_stringArray(saved);
      printf(" done.\n");
 
      delete_engine(eid_string);

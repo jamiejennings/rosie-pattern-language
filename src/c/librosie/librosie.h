@@ -24,6 +24,7 @@ struct stringArray {
      struct string **ptr;
 };
 
+struct string *heap_allocate_stringN(char *msg, size_t len);
 struct string *copy_string_ptr(struct string *src);
 void free_string(struct string foo);
 void free_string_ptr(struct string *foo);
