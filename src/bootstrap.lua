@@ -105,17 +105,11 @@ end
 BOOTSTRAP_COMPLETE = false;
 
 function bootstrap()
-   local vfile = io.open(ROSIE_HOME.."/VERSION")
-   if not vfile then
-      io.stderr:write("Installation error: File "..tostring(ROSIE_HOME).."/VERSION does not exist or is not readable\n")
-      os.exit(-3)
-   end
+   ROSIE_VERSION = common.read_version_or_die()
    
    -- During bootstrapping, we have to compile the rpl using the "core" compiler, and
    -- manually configure ROSIE_ENGINE without calling engine_configure.
 
-   ROSIE_VERSION = vfile:read("l"); vfile:close();
-   
    -- To bootstrap, we have to compile the Rosie rpl using the core parser/compiler
 
    -- Create a matching engine for processing Rosie Pattern Language files

@@ -1,3 +1,19 @@
+On the importance of not only API clarity but on the fact that the algorithm
+behind the API must be understood as well:  (I would argue this supports Rosie's
+linear time approach versus the typically variable regex approach.)
+"What did we learn from this harrowing experience? First, we need to fully
+understand our dependencies before putting them into production. We made
+incorrect assumptions about the Express.js API"
+(http://techblog.netflix.com/2014/11/nodejs-in-flames.html)
+
+"Regular expressions can be concatenated to form new regular expressions; if A
+and B are both regular expressions, then AB is also a regular expression. In
+general, if a string p matches A and another string q matches B, the string pq
+will match AB. This holds unless A or B contain low precedence operations;
+boundary conditions between A and B; or have numbered group references. [...]
+For details [consult] almost any textbook about compiler construction."
+(https://docs.python.org/2/library/re.html)
+
 "not that regular expressions are evil, per se, but that overuse of regular expressions is evil."
 (http://blog.codinghorror.com/regular-expressions-now-you-have-two-problems/)
 

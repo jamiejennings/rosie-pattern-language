@@ -24,6 +24,17 @@
 
 #include "librosie.h"
 
+/* To do:
+   - One Lua state per engine
+   - Have initialize create a table of Rosie api functions (store in Lua Registry) 
+   - Check result of each malloc, and error out appropriately
+   - Put debugging functions like stackDump inside #if DEBUG==1
+   - Move json_decode and similar test functions to rtest
+
+
+*/
+
+
 /* For now, we are only supporting one Lua state.  This is NOT thread-safe. */
 static lua_State *LL = NULL;
 static const char *progname = "librosie";

@@ -45,13 +45,13 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 local api = {API_VERSION = "0.99b",		    -- api version
 	     RPL_VERSION = "0.99a",		    -- language version
-	     ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
-	     ROSIE_HOME = ROSIE_HOME,		    -- install directory
-             HOSTNAME = os.getenv("HOSTNAME"),
-             HOSTTYPE = os.getenv("HOSTTYPE"),
-             OSTYPE = os.getenv("OSTYPE"),
+	     VERSION = ROSIE_VERSION,		    -- code revision level
+	     HOME = ROSIE_HOME,			    -- install directory
+             BUILD_HOSTNAME = os.getenv("HOSTNAME"),
+             BUILD_HOSTTYPE = os.getenv("HOSTTYPE"),
+             BUILD_OSTYPE = os.getenv("OSTYPE"),
+	     BUILD_TIME = os.date(),
 	     SIGNATURE = {}} 			    -- args and return types for each api call
-
 
 ----------------------------------------------------------------------------------------
 
@@ -188,7 +188,7 @@ local function clear_env(id, optional_identifier)
    if type(retval)~="boolean" then
       error("Internal error: invalid response from clear env: " .. tostring(retval), 0)
    end
-   return json.encode(retval)
+   return retval
 end
 
 api.clear_environment = api_wrap(clear_env, "boolean")
@@ -214,7 +214,7 @@ local function load_manifest(id, manifest_file)
    end
    local ok, messages, full_path = manifest.process_manifest(en, manifest_file)
    check_results(ok, messages, full_path)
-   return full_path, table.unpack(messages)
+   return full_path, (messages and table.unpack(messages)) or nil
 end
 
 api.load_manifest = api_wrap(load_manifest, "string", "string*")
@@ -223,7 +223,7 @@ local function load_file(id, path)
    local en = engine_from_id(id)
    local ok, messages, full_path = lapi.load_file(en, path)
    check_results(ok, messages, full_path)
-   return full_path, table.unpack(messages)
+   return full_path, (messages and table.unpack(messages)) or nil
 end
 
 api.load_file = api_wrap(load_file, "string", "string*")
@@ -235,7 +235,7 @@ local function load_string(id, input)
    end
    local results, messages = lapi.load_string(en, input)
    check_results(results, messages, "dummy")
-   return table.unpack(messages)
+   return (messages and table.unpack(messages)) or nil
 end
 
 api.load_string = api_wrap(load_string, "string*")
@@ -276,7 +276,8 @@ local function match_file(id, infilename, outfilename, errfilename, wholefilefla
       arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
    end
    local i,o,e = lapi.match_file((engine_from_id(id)), infilename, outfilename, errfilename, wholefileflag)
-   return tostring(i), tostring(o), tostring(e)
+   if (not i) then error(o,0); end
+   return json.encode{i, o, e}
 end
 
 api.match_file = api_wrap(match_file, "int", "int", "int")
@@ -302,7 +303,8 @@ local function eval_file(id, infilename, outfilename, errfilename, wholefileflag
       arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
    end
    local i,o,e = lapi.eval_file(engine_from_id(id), infilename, outfilename, errfilename, wholefileflag)
-   return tostring(i), tostring(o), tostring(e)
+   if (not i) then error(o,0); end
+   return json.encode{i, o, e}
 end
 
 api.eval_file = api_wrap(eval_file, "int", "int", "int")
@@ -310,6 +312,39 @@ api.eval_file = api_wrap(eval_file, "int", "int", "int")
 local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
    return lapi.set_match_exp_grep_TEMPORARY(engine_from_id(id), pattern_exp)
 end   
+
+---------------------------------------------------------------------------------------------------
+-- Generate C code for librosie
+
+function gen_constant(name, spec)
+   -- #define ROSIE_API_name code
+   local const = "ROSIE_API_" .. name
+   assert(type(spec.code)=="number")
+   return "#define " .. const .. " " .. tostring(spec.code)
+end
+
+function gen_version(api)
+   local str = false
+   for k,v in pairs(api) do
+      if (type(k)=="string") and (type(v)=="string") then
+	 if str then str = str .. "\n" else str="" end
+	 str = str .. string.format("#define ROSIE_%s %q", k, v)
+      end
+   end
+   return str
+end
+
+function gen_prototype(name, spec)
+   -- struct stringArray name(...)
+   
+   
+
+end
+
+
+
+
+---------------------------------------------------------------------------------------------------
 
 api.set_match_exp_grep_TEMPORARY = api_wrap(set_match_exp_grep_TEMPORARY)
 

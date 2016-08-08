@@ -392,5 +392,15 @@ function common.print_env_internal(env, skip_header, total)
    end
 end
 
+function common.read_version_or_die()
+   assert(type(ROSIE_HOME)=="string")
+   local vfile = io.open(ROSIE_HOME.."/VERSION")
+   if not vfile then
+      io.stderr:write("Installation error: File "..tostring(ROSIE_HOME).."/VERSION does not exist or is not readable\n")
+      os.exit(-3)
+   end
+   local v = vfile:read("l"); vfile:close();
+   return v
+end
 
 return common
