@@ -9,7 +9,7 @@
 test = require "test-functions"
 json = require "cjson"
 
-results = {}
+local results = {}
 
 function do_test(fn)
    table.insert(results, {fn, dofile(fn)})
