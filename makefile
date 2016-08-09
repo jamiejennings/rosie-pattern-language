@@ -1,10 +1,6 @@
 ## ----------------------------------------------------------------------------- ##
 
-LUA_DIR = lua-5.3.2
-LPEG_DIR = lpeg-1.0.0
-JSON_DIR = lua-cjson-2.1.0
-
-# place to put link to rosie binary
+# place to put a link to rosie binary during install:
 DESTDIR=/usr/local/bin
 
 ## ----------------------------------------------------------------------------- ##
@@ -16,44 +12,56 @@ LUA_ARCHIVE = 'http://www.lua.org/ftp/lua-5.3.2.tar.gz'
 LPEG_ARCHIVE = 'http://www.inf.puc-rio.br/~roberto/lpeg/lpeg-1.0.0.tar.gz'
 JSON_ARCHIVE = 'http://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.tar.gz'
 
+LUA = lua-5.3.2
+LPEG = lpeg-1.0.0
+JSON = lua-cjson-2.1.0
+
 ## ----------------------------------------------------------------------------- ##
 
 HOME = "`pwd`"
+TMP = tmp
 
 default: $(PLATFORM)
+
+LUA_DIR = $(TMP)/$(LUA)
+LPEG_DIR = $(TMP)/$(LPEG)
+JSON_DIR = $(TMP)/$(JSON)
 
 download: $(LUA_DIR) $(LPEG_DIR) $(JSON_DIR)
 
 $(LUA_DIR): $(LUA_DIR).tar.gz
-	tar -xf $(LUA_DIR).tar.gz
+	cd $(TMP) && tar -xf $(LUA).tar.gz
 	cd $(LUA_DIR)/src && sed -e 's/CC=cc/CC=$$(CC)/' Makefile > Makefile2
 	echo 'macosx: CC=cc' >$(LUA_DIR)/src/extra
 	cd $(LUA_DIR)/src && cat Makefile2 extra > Makefile
 	cd $(LUA_DIR) && ln -sf src include	    # Needed for lpeg to compile
 
 $(LPEG_DIR): $(LPEG_DIR).tar.gz
-	tar -xf $(LPEG_DIR).tar.gz
+	cd $(TMP) && tar -xf $(LPEG).tar.gz
 	echo '#!/bin/bash' > $(LPEG_DIR)/makedebug
 	echo 'make clean' >> $(LPEG_DIR)/makedebug
 	echo 'make LUADIR=../lua-5.3.2/src COPT="-DLPEG_DEBUG -g" macosx' >> $(LPEG_DIR)/makedebug
 	chmod a+x $(LPEG_DIR)/makedebug
 
 $(JSON_DIR): $(JSON_DIR).tar.gz
-	tar -xf $(JSON_DIR).tar.gz
+	cd $(TMP) && tar -xf $(JSON).tar.gz
 
 $(LUA_DIR).tar.gz:
+	mkdir -p $(TMP)
 	curl -o $(LUA_DIR).tar.gz $(LUA_ARCHIVE)
 
 $(LPEG_DIR).tar.gz:
+	mkdir -p $(TMP)
 	curl -o $(LPEG_DIR).tar.gz $(LPEG_ARCHIVE)
 
 $(JSON_DIR).tar.gz:
+	mkdir -p $(TMP)
 	curl -o $(JSON_DIR).tar.gz $(JSON_ARCHIVE)
 
 .PHONY: clean superclean none test
 
 clean:
-	rm -f bin/* lib/*
+	rm -rf bin/* lib/*
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR) && make clean
 	-cd $(JSON_DIR) && make clean
@@ -61,8 +69,7 @@ clean:
 	@echo "Use 'make superclean' to remove local copies of prerequisites"
 
 superclean: clean
-	rm -rf $(LUA_DIR) $(LPEG_DIR) $(JSON_DIR)
-	rm -rf $(LUA_DIR).tar.gz $(LPEG_DIR).tar.gz $(JSON_DIR).tar.gz
+	rm -rf $(TMP)
 
 none:
 	@echo "Please do 'make PLATFORM' where PLATFORM is one of these: $(PLATFORMS)"

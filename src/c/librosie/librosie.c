@@ -7,12 +7,6 @@
 /*  AUTHOR: Jamie A. Jennings                                                */
 
 
-/* ROSIE_HOME defined on the command line during compilation (see Makefile)  */
-
-#ifndef ROSIE_HOME
-#error "ROSIE_HOME not defined.  Check CFLAGS in Makefile?"
-#endif
-
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,9 +41,6 @@ static lua_State *LL = NULL;
  * Utility functions
  * ----------------------------------------------------------------------------------------
  */
-
-#define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
-#define QUOTE(thing) #thing			    /* stringify it */
 
 int bootstrap (const char *rosie_home) {
      char name[MAXPATHSIZE + 1];

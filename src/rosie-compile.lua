@@ -8,7 +8,7 @@
 
 
 function luac(name)
-   local luac_bin = ROSIE_HOME .. "/lua-5.3.2/src/luac"
+   local luac_bin = ROSIE_HOME .. "/bin/luac"
    return os.execute(luac_bin .. " -o bin/" .. name .. ".luac src/" .. name .. ".lua")
 end
 

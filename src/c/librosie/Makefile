@@ -31,8 +31,8 @@ SYSCFLAGS=
 SYSLDFLAGS=
 SYSLIBS=
 
-MYCFLAGS=  -I/Users/jjennings/Work/Dev/rosie-pattern-language/lua-5.3.2/include
-MYLDFLAGS= -L/Users/jjennings/Work/Dev/rosie-pattern-language/lua-5.3.2/src
+MYCFLAGS=  -I/Users/jjennings/Work/Dev/rosie-pattern-language/tmp/lua-5.3.2/include
+MYLDFLAGS= -L/Users/jjennings/Work/Dev/rosie-pattern-language/tmp/lua-5.3.2/src
 MYLIBS= 
 MYOBJS=
 
@@ -40,7 +40,7 @@ MYOBJS=
 
 PLATS= aix bsd c89 freebsd generic linux macosx mingw posix solaris
 
-LUA_A=	/Users/jjennings/Work/Dev/rosie-pattern-language/lua-5.3.2/src/liblua.a
+LUA_A=	/Users/jjennings/Work/Dev/rosie-pattern-language/tmp/lua-5.3.2/src/liblua.a
 LIBROSIE= /Users/jjennings/Work/Dev/rosie-pattern-language/src/C/librosie/librosie.so
 
 
