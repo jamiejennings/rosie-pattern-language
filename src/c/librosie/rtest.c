@@ -26,7 +26,7 @@ void print_results(struct stringArray r, const char *name) {
      struct string **str_ptr_ptr = r.ptr;
      for (uint32_t i=0; i<r.n; i++) {
 	  struct string *str = str_ptr_ptr[i];
-	  printf(" [%d] len=%d, ptr=%s\n", i, str->len, (str->ptr ? str->ptr : (uint8_t *)""));
+	  printf(" [%d] len=%d, ptr=%s\n", i, str->len, (str->ptr ? str->ptr : (byte_ptr)""));
      }
 }
      
@@ -43,15 +43,13 @@ int main () {
 
      printf("\nTo suppress logging messages, build this test with: make macosx COPT=\"-DDEBUG=0\"\n\n");
 
-     initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
+     struct stringArray retvals = initialize(QUOTE_EXPAND(ROSIE_HOME));	/* initialize Rosie */
+     print_results(retvals, "initialize");
+     free_stringArray(retvals);
 
      struct string *initial_config = &CONST_STRING("{\"name\":\"Episode IV: A New Engine\"}");
-     struct stringArray retvals = new_engine(initial_config);
-  
+     retvals = new_engine(initial_config);
      print_results(retvals, "new_engine");
-     /* LOGf("retvals.n is: %d\n", retvals.n); */
-     /* LOGf("retvals[0].len is: %d\n", stringArrayRef(retvals,0)->len); */
-     /* LOGf("retvals[0].ptr is: %s\n", (char *) stringArrayRef(retvals,0)->ptr); */
 
      struct string *code = stringArrayRef(retvals,0);
      LOGf("code->len is: %d\n", code->len);
@@ -72,7 +70,7 @@ int main () {
      printf("eid_string: len=%d string=%s\n", eid_string->len, (char *)eid_string->ptr);
 
      free_stringArray(retvals);
-  
+
      struct string *null = &(CONST_STRING("null"));
 
      struct stringArray r = rosie_api( "get_environment", eid_string, null);	   
@@ -92,21 +90,23 @@ int main () {
      arg = &CONST_STRING("123");
      r = match(eid_string, arg); 
      print_results(r, "match");
-     uint8_t *code2 = r.ptr[0]->ptr;
-     uint8_t *match2 = r.ptr[1]->ptr;
+     byte_ptr code2 = r.ptr[0]->ptr;
+     byte_ptr match2 = r.ptr[1]->ptr;
      printf("code: %s\n", (char *)code2);
      printf("match: %s\n", (char *)match2);
      
+     /* Temporarily, we will not be using json.decode during this refactoring */
+#if FALSE
      struct string js_str = {r.ptr[1]->len, r.ptr[1]->ptr};
      struct stringArray js_array = json_decode(&js_str);
      print_results(js_array, "json_decode");
-     uint8_t *js_code2 = r.ptr[0]->ptr;
-     uint8_t *js_match2 = r.ptr[1]->ptr;
+     byte_ptr js_code2 = r.ptr[0]->ptr;
+     byte_ptr js_match2 = r.ptr[1]->ptr;
      printf("json decode code: %s\n", (char *) js_code2);
      printf("json decode match: %s\n", (char *) js_match2);
-
-     free_stringArray(r);
      free_stringArray(js_array);
+#endif
+     free_stringArray(r);
 
      arg = &CONST_STRING("123 abcdef");
      r = match(eid_string, arg); 
@@ -123,13 +123,12 @@ int main () {
 
      r = match(eid_string, foo_string2); 
      print_results(r, "match");
-     struct stringArray saved = r;
 
 /* Guard against running a high iteration loop with verbose output */
-#if DEBUG==0
      int M = 1000000;
-#else
-     int M = 1;
+     M = 1;
+#if DEBUG==0
+     M = 1;
 #endif
 
      int for_real = TRUE;
@@ -139,30 +138,35 @@ int main () {
 
      printf("Looping..."); fflush(stdout);
      for (int i=0; i<5*M; i++) {
-	  if (for_real) r = match(eid_string, foo_string);
-	  else r = saved;
+	  if (for_real) {
+	       free_stringArray(r);
+	       r = match(eid_string, foo_string);
+	  }
 	  code = stringArrayRef(r, 0);
 	  if (memcmp(code->ptr, true_value, (size_t) code->len)) {
-	       struct string *err = stringArrayRef(retvals,1);
+	       struct string *err = stringArrayRef(r,1);
 	       printf("Error in match: %s\n", err ? (char *) err->ptr : "NO MESSAGE");
 	  }
 	  else {
 	       LOGf("Match returned: %s\n", stringArrayRef(r,1)->ptr);
+#if FALSE /* Temporary */
 	       struct string js_str = {r.ptr[1]->len, r.ptr[1]->ptr};
 	       struct stringArray js_array = json_decode(&js_str);
 #if DEBUG==1
 	       print_results(js_array, "json_decode");
 #endif
 	       free_stringArray(js_array);
+#endif
 	  }
-
-	  if (for_real) free_stringArray(r);
      }
-     free_stringArray(saved);
+     free_stringArray(r);
      printf(" done.\n");
 
-     delete_engine(eid_string);
+     retvals = delete_engine(eid_string);
+     print_results(retvals, "delete_engine");
+     free_stringArray(retvals);
      free_string_ptr(eid_string);
+
      finalize();
 
      return EXIT_SUCCESS;

@@ -24,6 +24,13 @@
 
 #include "librosie.h"
 
+#define EXIT_JSON_DECODE_ERROR -1
+#define EXIT_JSON_ENCODE_ERROR -2
+#define EXIT_OUT_OF_MEMORY -3
+
+#define new_TRUE_string() (new_string("true", 4))
+#define new_FALSE_string() (new_string("false", 5))
+
 /* To do:
    - One Lua state per engine
    - Have initialize create a table of Rosie api functions (store in Lua Registry) 
@@ -31,15 +38,51 @@
    - Put debugging functions like stackDump inside #if DEBUG==1
    - Move json_decode and similar test functions to rtest
 
-
 */
-
-
 /* For now, we are only supporting one Lua state.  This is NOT thread-safe. */
 static lua_State *LL = NULL;
+
+
+/* ----------------------------------------------------------------------------------------
+ * Utility functions
+ * ----------------------------------------------------------------------------------------
+ */
+
+#define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
+#define QUOTE(thing) #thing			    /* stringify it */
+
+int bootstrap (const char *rosie_home) {
+     char name[MAXPATHSIZE + 1];
+     if (strlcpy(name, rosie_home, sizeof(name)) < sizeof(name)) {
+	  if (strlcat(name, "/src/bootstrap.lua", sizeof(name)) < sizeof(name))
+	       return (luaL_dofile(LL, name) == LUA_OK);
+     }
+     lua_pushstring(LL, "librosie: error during bootstrap: MAXPATHSIZE too small");
+     return FALSE;
+}
+
+int require (const char *name, int assign_name) {  
+     int status;  
+     lua_getglobal(LL, "require");  
+     lua_pushstring(LL, name);  
+     status = lua_pcall(LL, 1, 1, 0);                   /* call 'require(name)' */  
+     if (status != LUA_OK) {
+	  lua_pop(LL, 1);	/* discard error because the details don't matter */
+	  return FALSE;
+     }
+     if (assign_name==TRUE) lua_setglobal(LL, name); /* set the global to the return value of 'require' */  
+     else lua_pop(LL, 1);   /* else discard the result of require */  
+     return TRUE;
+}  
+
+/* ----------------------------------------------------------------------------------------
+ * Debug functions
+ * ----------------------------------------------------------------------------------------
+ */
+
 static const char *progname = "librosie";
 
-void print_error_message (const char *msg) {
+static void print_error_message (const char *msg) {
      lua_writestringerror("%s: ", progname);
      lua_writestringerror("%s\n", msg);
 }
@@ -74,7 +117,7 @@ static void stackDump (lua_State *L) {
       printf("\n");  /* end the listing */
     }
 
-void print_stringArray(struct stringArray sa, char *caller_name) {
+static void print_stringArray(struct stringArray sa, char *caller_name) {
      printf("Values returned in stringArray from: %s\n", caller_name);
      printf("  Number of strings: %d\n", sa.n);
      for (uint32_t i=0; i<sa.n; i++) {
@@ -84,37 +127,81 @@ void print_stringArray(struct stringArray sa, char *caller_name) {
 }
 
 
-#define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
-#define QUOTE(thing) #thing			    /* stringify it */
+/* ---------------------------------------------------------------------------------------- */
+/* MISC STUFF TO RE-DO: */
 
-int bootstrap (const char *rosie_home) {
-     char name[MAXPATHSIZE + 1];
-     if (strlcpy(name, rosie_home, sizeof(name)) >= sizeof(name))
-	  luaL_error(LL, "error during bootstrap: MAXPATHSIZE too small");
-     if (strlcat(name, "/src/bootstrap.lua", sizeof(name)) >= sizeof(name))
-	  luaL_error(LL, "error during bootstrap: MAXPATHSIZE too small");
-     return luaL_dofile(LL, name);
-}
-
-void require (const char *name, int assign_name) {  
-     int status;  
-     lua_getglobal(LL, "require");  
-     lua_pushstring(LL, name);  
-     status = lua_pcall(LL, 1, 1, 0);                   /* call 'require(name)' */  
+#if FALSE
+struct stringArray json_decode(struct string *js_string) {
+     lua_getglobal(LL, "json");
+     lua_getfield(LL, -1, "decode");
+     LOGf("Fetched json.decode, and top of stack is a %s\n", lua_typename(LL, lua_type(LL, -1)));
+     lua_pushlstring(LL, (char *) js_string->ptr, js_string->len);
+     LOG("About to call json.decode\n");
+     LOGstack(LL);
+     int status = lua_pcall(LL, 1, 1, 0);                   /* call 'json.decode(js_string)' */  
      if (status != LUA_OK) {  
-	  print_error_message(lua_pushfstring(LL, "Internal error: cannot load %s (%s)", name, lua_tostring(LL, -1)));  
-	  exit(-1);  
+	  print_error_message(lua_pushfstring(LL, "Internal error: cannot json.decode %s (%s)", js_string->ptr, lua_tostring(LL, -1)));  
+	  exit(EXIT_JSON_DECODE_ERROR);  
      }  
-     if (assign_name==TRUE) lua_setglobal(LL, name); /* set the global to the return value of 'require' */  
-     else lua_pop(LL, 1);    /* else discard the result of require */  
-}  
+     LOG("After call to json.decode\n");
+     LOGstack(LL);
 
-int initialize(const char *rosie_home) {
-     int status;
+     /* Since we can't return a lua table to C, we will encode it again and return that */
+     lua_getfield(LL, -2, "encode");
+     LOGf("Fetched json.encode, and top of stack is a %s\n", lua_typename(LL, lua_type(LL, -1)));
+     lua_insert(LL, -2);	/* move the table produced by decode to the top */
+     LOG("About to call json.encode\n");
+     LOGstack(LL);
+     status = lua_pcall(LL, 1, 1, 0);                   /* call 'json.encode(table)' */  
+     if (status != LUA_OK) {  
+	  print_error_message(lua_pushfstring(LL, "Internal error: json.encode failed (%s)", js_string->ptr, lua_tostring(LL, -1)));  
+	  exit(EXIT_JSON_ENCODE_ERROR);  
+     }  
+     LOG("After call to json.encode\n");
+     LOGstack(LL);
+
+     uint32_t nretvals = 2;
+     struct string **list = malloc(sizeof(struct string *) * nretvals);
+     size_t len;
+     char *str;
+     if (TRUE) {len=4; str="true";}
+     else {len=5; str="false";}
+     LOGf("len=%d, str=%s", (int) len, (char *)str);
+     list[0] = malloc(sizeof(struct string));
+     list[0]->len = len;
+     list[0]->ptr = malloc(sizeof(uint8_t)*(len+1));
+     memcpy(list[0]->ptr, str, len);
+     list[0]->ptr[len] = 0; /* so we can use printf for debugging */	  
+     LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[0]->len, list[0]->ptr);
+
+     str = (char *) lua_tolstring(LL, -1, &len);
+     list[1] = malloc(sizeof(struct string));
+     list[1]->len = len;
+     list[1]->ptr = malloc(sizeof(uint8_t)*(len+1));
+     memcpy(list[1]->ptr, str, len);
+     list[1]->ptr[len] = 0; /* so we can use printf for debugging */	  
+     LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[1]->len, list[1]->ptr);
+
+     lua_pop(LL, 2);    /* discard the result string and the json table */  
+     return (struct stringArray) {2, list};
+
+}  
+     
+//struct stringArray json_encode(struct string *plain_string);
+
+#endif
+
+/* ----------------------------------------------------------------------------------------
+ * Exported functions
+ * ----------------------------------------------------------------------------------------
+ */
+
+struct stringArray initialize(const char *rosie_home) {
+
      lua_State *L = luaL_newstate();
      if (L == NULL) {
 	  print_error_message("error during initialization: not enough memory");
-	  exit(-2);
+	  exit(EXIT_OUT_OF_MEMORY);
      }
      LL = L;
 /* 
@@ -127,40 +214,63 @@ int initialize(const char *rosie_home) {
   lua_pushstring(L, rosie_home);
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
-  status = bootstrap(rosie_home);
-  if (status != LUA_OK) return (-1); 
-  require("api", TRUE);
-  return 0;
+  if (bootstrap(rosie_home)) {
+       if (require("api", TRUE)) { 
+	    struct string **list = malloc(sizeof(struct string *) * 1);
+	    list[0] = new_TRUE_string();
+	    /* TODO: return an id here */
+	    return (struct stringArray) {1, list};
+       }
+       else {
+	    struct string **list = malloc(sizeof(struct string *) * 2);
+	    list[0] = new_FALSE_string();
+	    char *str_ptr;
+	    int n = asprintf(&str_ptr, "Internal error: cannot load api (%s)", lua_tostring(LL, -1));
+	    if (n < 0) exit(EXIT_OUT_OF_MEMORY);  
+	    list[1] = malloc(sizeof(struct string));
+	    list[1]->ptr = (byte_ptr) str_ptr;
+	    list[1]->len = n;
+	    lua_close(L);
+	    return (struct stringArray) {2, list};
+       }
+  }
+  struct string **list = malloc(sizeof(struct string *) * 2);
+  list[0] = new_FALSE_string();
+  list[1] = malloc(sizeof(struct string));
+  byte_ptr str = (byte_ptr) lua_tolstring(LL, -1, (size_t *) &(list[1]->len));
+  memcpy(list[1]->ptr, str, list[1]->len);
+  lua_close(L);
+  return (struct stringArray) {2, list};
 }
 
-struct string *heap_allocate_stringN(char *msg, size_t len) {
-     uint8_t *ptr = malloc(len+1);     /* to return a string, we must make */
+struct string *new_string(char *msg, size_t len) {
+     byte_ptr ptr = malloc(len+1);     /* to return a string, we must make */
      memcpy((char *)ptr, msg, len);    /* sure it is allocated on the heap. */
      ptr[len]=0;		       /* add null terminator. */
      struct string *retval = malloc(sizeof(struct string));
      retval->len = len;
      retval->ptr = ptr;
-     /* printf("In heap_allocate_stringN: len=%d, ptr=%s\n", (int) len, (char *)msg); */
+     /* printf("In new_string: len=%d, ptr=%s\n", (int) len, (char *)msg); */
      return retval;
 }     
 
-struct string *heap_allocate_string(char *msg) {
-     size_t len = (size_t) strlen(msg);
-     return heap_allocate_stringN(msg, len);
-}
+/* struct string *heap_allocate_string(char *msg) { */
+/*      size_t len = (size_t) strlen(msg); */
+/*      return new_string(msg, len); */
+/* } */
 
-struct stringArray testretarray(struct string foo) {
-     printf("testretarray argument received: len=%d, string=%s\n", foo.len, foo.ptr);
+/* struct stringArray testretarray(struct string foo) { */
+/*      printf("testretarray argument received: len=%d, string=%s\n", foo.len, foo.ptr); */
 
-     struct string *b = heap_allocate_string("This is a new struct string called b.");
-     struct string *c = heap_allocate_string("This is a new struct string called c.");
-     struct string *d = heap_allocate_string("This is a new struct string called d.");
-     struct string **ptr = malloc(sizeof(struct string *) * 3);
-     ptr[0] = b; ptr[1] = c; ptr[2] = d;
+/*      struct string *b = heap_allocate_string("This is a new struct string called b."); */
+/*      struct string *c = heap_allocate_string("This is a new struct string called c."); */
+/*      struct string *d = heap_allocate_string("This is a new struct string called d."); */
+/*      struct string **ptr = malloc(sizeof(struct string *) * 3); */
+/*      ptr[0] = b; ptr[1] = c; ptr[2] = d; */
 
-     return (struct stringArray) {3, ptr};
+/*      return (struct stringArray) {3, ptr}; */
 
-}
+/* } */
 
 struct string *copy_string_ptr(struct string *src) {
      struct string *dest = malloc(sizeof(struct string));
@@ -282,15 +392,16 @@ struct stringArray new_engine(struct string *config) {
 	  struct string *err = stringArrayRef(retvals,1);
 	  LOGf("Error in new_engine: %s\n", (char *) err->ptr);
      }
+     LOGprintArray(retvals, "new_engine");
      return retvals;
 }
 
 
-void delete_engine(struct string *eid_string) {
+struct stringArray delete_engine(struct string *eid_string) {
      struct string *ignore = &CONST_STRING("ignored12345");
      struct stringArray retvals = rosie_api("delete_engine", eid_string, ignore);
-     print_stringArray(retvals, "delete_engine");
-     free_stringArray(retvals);
+     LOGprintArray(retvals, "delete_engine");
+     return retvals;
 }
 
 struct stringArray inspect_engine(struct string *eid_string) {
@@ -309,64 +420,3 @@ struct stringArray match(struct string *eid_string, struct string *input) {
 void finalize() {
      lua_close(LL);
 }
-
-struct stringArray json_decode(struct string *js_string) {
-     lua_getglobal(LL, "json");
-     lua_getfield(LL, -1, "decode");
-     LOGf("Fetched json.decode, and top of stack is a %s\n", lua_typename(LL, lua_type(LL, -1)));
-     lua_pushlstring(LL, (char *) js_string->ptr, js_string->len);
-     LOG("About to call json.decode\n");
-     LOGstack(LL);
-     int status = lua_pcall(LL, 1, 1, 0);                   /* call 'json.decode(js_string)' */  
-     if (status != LUA_OK) {  
-	  print_error_message(lua_pushfstring(LL, "Internal error: cannot json.decode %s (%s)", js_string->ptr, lua_tostring(LL, -1)));  
-	  exit(-1);  
-     }  
-     LOG("After call to json.decode\n");
-     LOGstack(LL);
-
-     /* Since we can't return a lua table to C, we will encode it again and return that */
-     lua_getfield(LL, -2, "encode");
-     LOGf("Fetched json.encode, and top of stack is a %s\n", lua_typename(LL, lua_type(LL, -1)));
-     lua_insert(LL, -2);	/* move the table produced by decode to the top */
-     LOG("About to call json.encode\n");
-     LOGstack(LL);
-     status = lua_pcall(LL, 1, 1, 0);                   /* call 'json.encode(table)' */  
-     if (status != LUA_OK) {  
-	  print_error_message(lua_pushfstring(LL, "Internal error: json.encode failed (%s)", js_string->ptr, lua_tostring(LL, -1)));  
-	  exit(-1);  
-     }  
-     LOG("After call to json.encode\n");
-     LOGstack(LL);
-
-     uint32_t nretvals = 2;
-     struct string **list = malloc(sizeof(struct string *) * nretvals);
-     size_t len;
-     char *str;
-     if (TRUE) {len=4; str="true";}
-     else {len=5; str="false";}
-     LOGf("len=%d, str=%s", (int) len, (char *)str);
-     list[0] = malloc(sizeof(struct string));
-     list[0]->len = len;
-     list[0]->ptr = malloc(sizeof(uint8_t)*(len+1));
-     memcpy(list[0]->ptr, str, len);
-     list[0]->ptr[len] = 0; /* so we can use printf for debugging */	  
-     LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[0]->len, list[0]->ptr);
-
-     str = (char *) lua_tolstring(LL, -1, &len);
-     list[1] = malloc(sizeof(struct string));
-     list[1]->len = len;
-     list[1]->ptr = malloc(sizeof(uint8_t)*(len+1));
-     memcpy(list[1]->ptr, str, len);
-     list[1]->ptr[len] = 0; /* so we can use printf for debugging */	  
-     LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[1]->len, list[1]->ptr);
-
-     lua_pop(LL, 2);    /* discard the result string and the json table */  
-     return (struct stringArray) {2, list};
-
-}  
-     
-
-
-
-//struct stringArray json_encode(struct string *plain_string);
