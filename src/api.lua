@@ -13,33 +13,9 @@ require "list"
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
---
---  Rosie API:
---
---      - Managing the environment
---        + Obtain/destroy/ping a Rosie engine
---        - FUTURE: Enable/disable informational logging and warnings to stderr
---            (Need to change QUIET to logging level, and make it a thread-local
---            variable that can be set per invocation of the parser/compiler/etc.)
---
---      + Rosie engine functions
---        + RPL related
---          + RPL statement (incremental compilation)
---          + RPL file compilation
---          + RPL manifest processing
---          + Get a copy of the engine environment
---          + Get identifier definition (human readable, reconstituted)
---
---        + Match related
---          + match pattern against string
---          + match pattern against file
---          + eval pattern against string
---          + eval pattern against file
---
---  FUTURE:
---        - Human interaction / debugging
---          - CRUD on color assignments for color output?
--- 
+-- One engine per Lua state, in order to be thread-safe.  Also, engines sharing a Lua state do not
+-- share anything, so what is the benefit (beyond a small-ish savings of memory)?
+local default_engine;
 
 ----------------------------------------------------------------------------------------
 
@@ -100,20 +76,21 @@ api.info = api_wrap(info, "object")
 -- Managing the environment (collection of engines)
 ----------------------------------------------------------------------------------------
 
-engine_list = {}
+-- engine_list = {}
 
-local function engine_from_id(id)
-   return engine_list[id] or arg_error("invalid engine id: " .. tostring(id))
-end
+-- local function engine_from_id(id)
+--    return engine_list[id] or arg_error("invalid engine id: " .. tostring(id))
+-- end
 
 local function delete_engine(id)
-   engine_list[id] = nil;
+   --   engine_list[id] = nil;
+   default_engine = nil;
 end
 
 api.delete_engine = api_wrap(delete_engine)
 
-local function inspect_engine(id)
-   local info = lapi.inspect_engine(engine_from_id(id))
+local function inspect_engine()
+   local info = lapi.inspect_engine(default_engine)
    -- sanity check on what we are returning externally
    if type(info)~="table" then
       error("Internal error: invalid response from engine inspection: " .. tostring(info), 0)
@@ -131,32 +108,36 @@ local function new_engine(config_obj)
    if not ok then
       arg_error("engine configuration not a valid json object")
    end
+
+   if default_engine then error("Engine already created", 0); end
+
    local en = engine("<anonymous>")
-   local id = en.id
-   if engine_list[id] then
-      en.id = en.id .. os.tmpname():sub(-6)
-      if engine_list[en.id] then
-	 error("Internal error: duplicate engine ids: " .. en.id, 0)
-      else
-	 util.warn("duplicate engine ids: " .. id .. " --> " .. en.id)
-      end
-   end
+   -- local id = en.id
+   -- if engine_list[id] then
+   --    en.id = en.id .. os.tmpname():sub(-6)
+   --    if engine_list[en.id] then
+   -- 	 error("Internal error: duplicate engine ids: " .. en.id, 0)
+   --    else
+   -- 	 util.warn("duplicate engine ids: " .. id .. " --> " .. en.id)
+   --    end
+   -- end
 
-   -- TEMPORARY: !@#  Making sure the C api will handle strings with nulls in them.
-   en.id = en.id:sub(1,4) .. string.char(0) .. en.id:sub(5)
+   -- -- TEMPORARY: !@#  Making sure the C api will handle strings with nulls in them.
+   -- en.id = en.id:sub(1,4) .. string.char(0) .. en.id:sub(5)
+   -- engine_list[en.id] = en
 
-   engine_list[en.id] = en
    if (c_table~=json.null) then
       ok, msg = lapi.configure_engine(en, c_table)
       if not ok then arg_error(msg); end
    end
-   return en.id
+   default_engine = en;
+   return en.id					    -- may be useful for client-side logging?
 end
 
 api.new_engine = api_wrap(new_engine, "string")
 
-local function get_env(id, optional_identifier)
-   local en = engine_from_id(id)
+local function get_env(optional_identifier)
+   local en = default_engine
    local ok, identifier = pcall(json.decode, optional_identifier)
    if (not ok) then
       arg_error("identifier not a json string (or json null)")
@@ -174,8 +155,8 @@ end
 
 api.get_environment = api_wrap(get_env, "object")
 
-local function clear_env(id, optional_identifier)
-   local en = engine_from_id(id)
+local function clear_env(optional_identifier)
+   local en = default_engine
    local ok, identifier = pcall(json.decode, optional_identifier)
    if (not ok) then
       arg_error("identifier not a json string (or json null)")
@@ -206,8 +187,8 @@ local function check_results(ok, messages, full_path)
    end
 end
 
-local function load_manifest(id, manifest_file)
-   local en = engine_from_id(id)
+local function load_manifest(manifest_file)
+   local en = default_engine
    -- N.B. process_manifest does the compute_full_path calculation
    if type(manifest_file)~="string" then
       arg_error("manifest filename not a string")
@@ -219,8 +200,8 @@ end
 
 api.load_manifest = api_wrap(load_manifest, "string", "string*")
 
-local function load_file(id, path)
-   local en = engine_from_id(id)
+local function load_file(path)
+   local en = default_engine
    local ok, messages, full_path = lapi.load_file(en, path)
    check_results(ok, messages, full_path)
    return full_path, (messages and table.unpack(messages)) or nil
@@ -228,8 +209,8 @@ end
 
 api.load_file = api_wrap(load_file, "string", "string*")
 
-local function load_string(id, input)
-   local en = engine_from_id(id)
+local function load_string(input)
+   local en = default_engine
    if type(input)~="string" then
       arg_error("input not a string")
    end
@@ -244,8 +225,8 @@ api.load_string = api_wrap(load_string, "string*")
 -- Matching
 ----------------------------------------------------------------------------------------
 
-local function configure_engine(id, config_obj)
-   local en = engine_from_id(id)
+local function configure_engine(config_obj)
+   local en = default_engine
    if type(config_obj)~="string" then
       arg_error("configuration argument not a string")
    end
@@ -260,8 +241,8 @@ end
 
 api.configure_engine = api_wrap(configure_engine)
    
-local function match(id, input_text, start)
-   local en = engine_from_id(id)
+local function match(input_text, start)
+   local en = default_engine
    if type(input_text)~="string" then
       arg_error("input argument not a string")
    end
@@ -271,19 +252,19 @@ end
 
 api.match = api_wrap(match, "string", "int")	    -- string depends on encoder function
 
-local function match_file(id, infilename, outfilename, errfilename, wholefileflag)
+local function match_file(infilename, outfilename, errfilename, wholefileflag)
    if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
       arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
    end
-   local i,o,e = lapi.match_file((engine_from_id(id)), infilename, outfilename, errfilename, wholefileflag)
+   local i,o,e = lapi.match_file((default_engine), infilename, outfilename, errfilename, wholefileflag)
    if (not i) then error(o,0); end
    return json.encode{i, o, e}
 end
 
 api.match_file = api_wrap(match_file, "int", "int", "int")
 
-local function eval_(id, input_text, start)
-   local en = engine_from_id(id)
+local function eval_(input_text, start)
+   local en = default_engine
    if type(input_text)~="string" then
       arg_error("input argument not a string")
    end
@@ -298,19 +279,19 @@ end
 
 api.eval = api_wrap(eval_, "string", "int", "string")
 
-local function eval_file(id, infilename, outfilename, errfilename, wholefileflag)
+local function eval_file(infilename, outfilename, errfilename, wholefileflag)
    if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
       arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
    end
-   local i,o,e = lapi.eval_file(engine_from_id(id), infilename, outfilename, errfilename, wholefileflag)
+   local i,o,e = lapi.eval_file(default_engine, infilename, outfilename, errfilename, wholefileflag)
    if (not i) then error(o,0); end
    return json.encode{i, o, e}
 end
 
 api.eval_file = api_wrap(eval_file, "int", "int", "int")
 
-local function set_match_exp_grep_TEMPORARY(id, pattern_exp)
-   return lapi.set_match_exp_grep_TEMPORARY(engine_from_id(id), pattern_exp)
+local function set_match_exp_grep_TEMPORARY(pattern_exp)
+   return lapi.set_match_exp_grep_TEMPORARY(default_engine, pattern_exp)
 end   
 
 ---------------------------------------------------------------------------------------------------

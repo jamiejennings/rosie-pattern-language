@@ -33,38 +33,42 @@
    - Move json_decode and similar test functions to rtest
 
 */
-/* For now, we are only supporting one Lua state.  This is NOT thread-safe. */
-static lua_State *LL = NULL;
-
 
 /* ----------------------------------------------------------------------------------------
  * Utility functions
  * ----------------------------------------------------------------------------------------
  */
 
-int bootstrap (const char *rosie_home) {
+static int bootstrap (lua_State *L, const char *rosie_home) {
      char name[MAXPATHSIZE + 1];
      if (strlcpy(name, rosie_home, sizeof(name)) < sizeof(name)) {
 	  if (strlcat(name, "/src/bootstrap.lua", sizeof(name)) < sizeof(name))
-	       return (luaL_dofile(LL, name) == LUA_OK);
+	       return (luaL_dofile(L, name) == LUA_OK);
      }
-     lua_pushstring(LL, "librosie: error during bootstrap: MAXPATHSIZE too small");
+     lua_pushstring(L, "librosie: error during bootstrap: MAXPATHSIZE too small");
      return FALSE;
 }
 
-int require (const char *name, int assign_name) {  
+static int require (lua_State *L, const char *name, int assign_name) {  
      int status;  
-     lua_getglobal(LL, "require");  
-     lua_pushstring(LL, name);  
-     status = lua_pcall(LL, 1, 1, 0);                   /* call 'require(name)' */  
+     lua_getglobal(L, "require");  
+     lua_pushstring(L, name);  
+     status = lua_pcall(L, 1, 1, 0);                   /* call 'require(name)' */  
      if (status != LUA_OK) {
-	  lua_pop(LL, 1);	/* discard error because the details don't matter */
+	  lua_pop(L, 1);	/* discard error because the details don't matter */
 	  return FALSE;
      }
-     if (assign_name==TRUE) lua_setglobal(LL, name); /* set the global to the return value of 'require' */  
-     else lua_pop(LL, 1);   /* else discard the result of require */  
+     if (assign_name==TRUE) lua_setglobal(L, name); /* set the global to the return value of 'require' */  
+     else lua_pop(L, 1);   /* else discard the result of require */  
      return TRUE;
 }  
+
+static struct stringArray *new_stringArray(uint32_t n, struct string **strings) {
+     struct stringArray *sa = malloc(sizeof(struct stringArray));
+     sa->n = n;
+     sa->ptr = strings;
+     return sa;
+}     
 
 /* ----------------------------------------------------------------------------------------
  * Debug functions
@@ -187,14 +191,13 @@ struct stringArray json_decode(struct string *js_string) {
  * ----------------------------------------------------------------------------------------
  */
 
-struct stringArray initialize(const char *rosie_home) {
+lua_State *initialize(const char *rosie_home, struct stringArray *msgs) {
 
      lua_State *L = luaL_newstate();
      if (L == NULL) {
 	  print_error_message("error during initialization: not enough memory");
 	  exit(EXIT_OUT_OF_MEMORY);
      }
-     LL = L;
 /* 
    luaL_checkversion checks whether the core running the call, the core that created the Lua state,
    and the code making the call are all using the same version of Lua. Also checks whether the core
@@ -205,33 +208,36 @@ struct stringArray initialize(const char *rosie_home) {
   lua_pushstring(L, rosie_home);
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
-  if (bootstrap(rosie_home)) {
-       if (require("api", TRUE)) { 
+  if (bootstrap(L, rosie_home)) {
+       if (require(L, "api", TRUE)) { 
 	    struct string **list = malloc(sizeof(struct string *) * 1);
 	    list[0] = new_TRUE_string();
 	    /* TODO: return an id here */
-	    return (struct stringArray) {1, list};
+	    msgs = new_stringArray(1, list);
+	    return L;
        }
        else {
 	    struct string **list = malloc(sizeof(struct string *) * 2);
 	    list[0] = new_FALSE_string();
 	    char *str_ptr;
-	    int n = asprintf(&str_ptr, "Internal error: cannot load api (%s)", lua_tostring(LL, -1));
+	    int n = asprintf(&str_ptr, "Internal error: cannot load api (%s)", lua_tostring(L, -1));
 	    if (n < 0) exit(EXIT_OUT_OF_MEMORY);  
 	    list[1] = malloc(sizeof(struct string));
 	    list[1]->ptr = (byte_ptr) str_ptr;
 	    list[1]->len = n;
 	    lua_close(L);
-	    return (struct stringArray) {2, list};
+	    msgs = new_stringArray(2, list);
+	    return NULL;
        }
   }
   struct string **list = malloc(sizeof(struct string *) * 2);
   list[0] = new_FALSE_string();
   list[1] = malloc(sizeof(struct string));
-  byte_ptr str = (byte_ptr) lua_tolstring(LL, -1, (size_t *) &(list[1]->len));
+  byte_ptr str = (byte_ptr) lua_tolstring(L, -1, (size_t *) &(list[1]->len));
   memcpy(list[1]->ptr, str, list[1]->len);
   lua_close(L);
-  return (struct stringArray) {2, list};
+  msgs = new_stringArray(2, list);
+  return NULL;
 }
 
 struct string *new_string(char *msg, size_t len) {
@@ -289,9 +295,9 @@ void free_stringArray(struct stringArray r) {
      free(r.ptr);
 }
 
-struct stringArray rosie_api(const char *name, ...) {
+struct stringArray rosie_api(lua_State *L, const char *name, ...) {
 
-     lua_State *L = LL;
+     /* lua_State *L = LL; */
      va_list args;
      struct string *arg;
 
@@ -364,14 +370,13 @@ struct stringArray rosie_api(const char *name, ...) {
      return retvals;
 }
 
-
-struct stringArray new_engine(struct string *config) {
+struct stringArray new_engine(lua_State *L, struct string *config) {
 
      struct string *ignore = &CONST_STRING("ignored");
-     struct stringArray retvals = rosie_api("new_engine", config, ignore);
+     struct stringArray retvals = rosie_api(L, "new_engine", config, ignore);
      LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n);
      if (retvals.n !=2) {
-	  print_error_message(lua_pushfstring(LL,
+	  print_error_message(lua_pushfstring(L,
 				    "librosie internal error: wrong number of return values to new_engine (%d)",
 				    retvals.n));
 	  exit(-1);
@@ -388,26 +393,26 @@ struct stringArray new_engine(struct string *config) {
 }
 
 
-struct stringArray delete_engine(struct string *eid_string) {
+struct stringArray delete_engine(lua_State *L, struct string *eid_string) {
      struct string *ignore = &CONST_STRING("ignored12345");
-     struct stringArray retvals = rosie_api("delete_engine", eid_string, ignore);
+     struct stringArray retvals = rosie_api(L, "delete_engine", eid_string, ignore);
      LOGprintArray(retvals, "delete_engine");
      return retvals;
 }
 
-struct stringArray inspect_engine(struct string *eid_string) {
+struct stringArray inspect_engine(lua_State *L, struct string *eid_string) {
      struct string *ignore = &CONST_STRING("ignored678");
-     struct stringArray retvals = rosie_api("inspect_engine", eid_string, ignore);
+     struct stringArray retvals = rosie_api(L, "inspect_engine", eid_string, ignore);
      LOGprintArray(retvals, "inspect_engine");
      return retvals;
 }
 
-struct stringArray match(struct string *eid_string, struct string *input) {
-     struct stringArray retvals = rosie_api("match", eid_string, input);
+struct stringArray match(lua_State *L, struct string *eid_string, struct string *input) {
+     struct stringArray retvals = rosie_api(L, "match", eid_string, input);
      LOGprintArray(retvals, "match");
      return retvals;
 }
 
-void finalize() {
-     lua_close(LL);
+void finalize(lua_State *L) {
+     lua_close(L);
 }

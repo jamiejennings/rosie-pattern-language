@@ -103,6 +103,7 @@ end
 
 function lapi.load_file(en, path)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
+   if type(path)~="string" then arg_error("path not a string: " .. tostring(path)); end
    local full_path, msg = common.compute_full_path(path)
    if not full_path then return false, msg; end
    local input, msg = util.readfile(full_path)
