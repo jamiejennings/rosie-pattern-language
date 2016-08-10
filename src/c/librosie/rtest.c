@@ -51,12 +51,12 @@ int main () {
 	  print_results(retvals, "initialize");
 	  exit(-1);
      }
+
      print_results(retvals, "initialize"); 
-     free_stringArray(retvals);
      
-     struct string *initial_config = &CONST_STRING("{\"name\":\"Episode IV: A New Engine\"}");
-     retvals = new_engine(handle, initial_config);
-     print_results(retvals, "new_engine");
+     /* struct string *initial_config = &CONST_STRING("{\"name\":\"Episode IV: A New Engine\"}"); */
+     /* retvals = new_engine(handle, initial_config); */
+     /* print_results(retvals, "new_engine"); */
 
      struct string *code = stringArrayRef(retvals,0);
      LOGf("code->len is: %d\n", code->len);
@@ -80,22 +80,22 @@ int main () {
 
      struct string *null = &(CONST_STRING("null"));
 
-     struct stringArray r = rosie_api(handle, "get_environment", eid_string, null);	   
+     struct stringArray r = rosie_api(handle, "get_environment", null);	   
      print_results(r, "get_environment");
      free_stringArray(r);
 
      struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
-     r = rosie_api(handle, "configure_engine", eid_string, arg); 
+     r = rosie_api(handle, "configure_engine", arg); 
      print_results(r, "configure_engine");
      free_stringArray(r);
 
-     r = inspect_engine(handle, eid_string); 
+     r = inspect_engine(handle); 
      print_results(r, "inspect_engine");
      free_stringArray(r);
 
      arg = &CONST_STRING("123");
-     r = match(handle, eid_string, arg); 
+     r = match(handle, arg); 
      print_results(r, "match");
      byte_ptr code2 = r.ptr[0]->ptr;
      byte_ptr match2 = r.ptr[1]->ptr;
@@ -116,19 +116,19 @@ int main () {
      free_stringArray(r);
 
      arg = &CONST_STRING("123 abcdef");
-     r = match(handle, eid_string, arg); 
+     r = match(handle, arg); 
      print_results(r, "match");
      free_stringArray(r);
 
      arg = &CONST_STRING("hi");
-     r = match(handle, eid_string, arg); 
+     r = match(handle, arg); 
      print_results(r, "match");
      free_stringArray(r);
 
      char *foo2 = "1230000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
      struct string *foo_string2 = &CONST_STRING(foo2);
 
-     r = match(handle, eid_string, foo_string2); 
+     r = match(handle, foo_string2); 
      print_results(r, "match");
 
 /* Guard against running a high iteration loop with verbose output */
@@ -147,7 +147,7 @@ int main () {
      for (int i=0; i<5*M; i++) {
 	  if (for_real) {
 	       free_stringArray(r);
-	       r = match(handle, eid_string, foo_string);
+	       r = match(handle, foo_string);
 	  }
 	  code = stringArrayRef(r, 0);
 	  if (memcmp(code->ptr, true_value, (size_t) code->len)) {
@@ -169,9 +169,6 @@ int main () {
      free_stringArray(r);
      printf(" done.\n");
 
-     retvals = delete_engine(handle, eid_string);
-     print_results(retvals, "delete_engine");
-     free_stringArray(retvals);
      free_string_ptr(eid_string);
 
      finalize(handle);

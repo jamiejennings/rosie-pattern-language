@@ -39,12 +39,10 @@ void free_stringArray(struct stringArray r);
 #define stringArrayRef(name, pos) (((name).n > (pos)) ? ((name).ptr[(pos)]) : '\0')
 
 lua_State *initialize(const char *rosie_home, struct stringArray *msgs);
-void finalize();
+void finalize(lua_State *L);
 struct stringArray rosie_api(lua_State *L, const char *name, ...);
-struct stringArray new_engine(lua_State *L, struct string *config);
-struct stringArray inspect_engine(lua_State *L, struct string *eid_string);
-struct stringArray match(lua_State *L, struct string *eid_string, struct string *input);
-struct stringArray delete_engine(lua_State *L, struct string *eid_string);
+struct stringArray inspect_engine(lua_State *L);
+struct stringArray match(lua_State *L, struct string *input);
 
 // TO DO: Change json fcns to take a Lua state reference (or engine) as an arg
 //struct stringArray json_decode(struct string *js_string);

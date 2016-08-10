@@ -63,12 +63,12 @@ static int require (lua_State *L, const char *name, int assign_name) {
      return TRUE;
 }  
 
-static struct stringArray *new_stringArray(uint32_t n, struct string **strings) {
-     struct stringArray *sa = malloc(sizeof(struct stringArray));
-     sa->n = n;
-     sa->ptr = strings;
-     return sa;
-}     
+/* static struct stringArray *new_stringArray(uint32_t n, struct string **strings) { */
+/*      struct stringArray *sa = malloc(sizeof(struct stringArray)); */
+/*      sa->n = n; */
+/*      sa->ptr = strings; */
+/*      return sa; */
+/* }      */
 
 /* ----------------------------------------------------------------------------------------
  * Debug functions
@@ -121,6 +121,29 @@ static void print_stringArray(struct stringArray sa, char *caller_name) {
      }
 }
 
+static struct stringArray new_engine(lua_State *L) {
+
+     struct string *config = &CONST_STRING("null");
+     struct stringArray retvals = rosie_api(L, "new_engine", config);
+     LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n);
+     if (retvals.n !=2) {
+	  print_error_message(lua_pushfstring(L,
+				    "librosie internal error: wrong number of return values to new_engine (%d)",
+				    retvals.n));
+	  exit(-1);
+     }
+#if DEBUG==1
+     struct string *code = stringArrayRef(retvals, 0);
+     char *true_value = "true";
+     if (memcmp(code->ptr, true_value, (size_t) code->len)) {
+	  LOGf("Success code was NOT true: len=%d, ptr=%s\n", code->len, code->ptr);
+	  struct string *err = stringArrayRef(retvals,1);
+	  LOGf("Error in new_engine: %s\n", (char *) err->ptr);
+     }
+#endif
+     LOGprintArray(retvals, "new_engine");
+     return retvals;
+}
 
 /* ---------------------------------------------------------------------------------------- */
 /* MISC STUFF TO RE-DO: */
@@ -210,10 +233,12 @@ lua_State *initialize(const char *rosie_home, struct stringArray *msgs) {
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
   if (bootstrap(L, rosie_home)) {
        if (require(L, "api", TRUE)) { 
-	    struct string **list = malloc(sizeof(struct string *) * 1);
-	    list[0] = new_TRUE_string();
+	    /* struct string **list = malloc(sizeof(struct string *) * 1); */
+	    /* list[0] = new_TRUE_string(); */
 	    /* TODO: return an id here */
-	    msgs = new_stringArray(1, list);
+	    struct stringArray retvals = new_engine(L);
+	    msgs->n = retvals.n;
+	    msgs->ptr = retvals.ptr;
 	    return L;
        }
        else {
@@ -226,7 +251,8 @@ lua_State *initialize(const char *rosie_home, struct stringArray *msgs) {
 	    list[1]->ptr = (byte_ptr) str_ptr;
 	    list[1]->len = n;
 	    lua_close(L);
-	    msgs = new_stringArray(2, list);
+	    msgs->n = 2;
+	    msgs->ptr = list;
 	    return NULL;
        }
   }
@@ -236,7 +262,8 @@ lua_State *initialize(const char *rosie_home, struct stringArray *msgs) {
   byte_ptr str = (byte_ptr) lua_tolstring(L, -1, (size_t *) &(list[1]->len));
   memcpy(list[1]->ptr, str, list[1]->len);
   lua_close(L);
-  msgs = new_stringArray(2, list);
+  msgs->n = 2;
+  msgs->ptr = list;
   return NULL;
 }
 
@@ -250,24 +277,6 @@ struct string *new_string(char *msg, size_t len) {
      /* printf("In new_string: len=%d, ptr=%s\n", (int) len, (char *)msg); */
      return retval;
 }     
-
-/* struct string *heap_allocate_string(char *msg) { */
-/*      size_t len = (size_t) strlen(msg); */
-/*      return new_string(msg, len); */
-/* } */
-
-/* struct stringArray testretarray(struct string foo) { */
-/*      printf("testretarray argument received: len=%d, string=%s\n", foo.len, foo.ptr); */
-
-/*      struct string *b = heap_allocate_string("This is a new struct string called b."); */
-/*      struct string *c = heap_allocate_string("This is a new struct string called c."); */
-/*      struct string *d = heap_allocate_string("This is a new struct string called d."); */
-/*      struct string **ptr = malloc(sizeof(struct string *) * 3); */
-/*      ptr[0] = b; ptr[1] = c; ptr[2] = d; */
-
-/*      return (struct stringArray) {3, ptr}; */
-
-/* } */
 
 struct string *copy_string_ptr(struct string *src) {
      struct string *dest = malloc(sizeof(struct string));
@@ -302,7 +311,7 @@ struct stringArray rosie_api(lua_State *L, const char *name, ...) {
      struct string *arg;
 
      /* number of args AFTER the api name */
-     int nargs = 2;		   /* get this later from a table */
+     int nargs = 1;		   /* get this later from a table */
 
      va_start(args, name);	   /* setup variadic arg processing */
      LOGf("Stack at start of rosie_api (%s):\n", name);
@@ -370,45 +379,22 @@ struct stringArray rosie_api(lua_State *L, const char *name, ...) {
      return retvals;
 }
 
-struct stringArray new_engine(lua_State *L, struct string *config) {
+/* struct stringArray delete_engine(lua_State *L, struct string *eid_string) { */
+/*      struct string *ignore = &CONST_STRING("ignored12345"); */
+/*      struct stringArray retvals = rosie_api(L, "delete_engine", ignore); */
+/*      LOGprintArray(retvals, "delete_engine"); */
+/*      return retvals; */
+/* } */
 
-     struct string *ignore = &CONST_STRING("ignored");
-     struct stringArray retvals = rosie_api(L, "new_engine", config, ignore);
-     LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n);
-     if (retvals.n !=2) {
-	  print_error_message(lua_pushfstring(L,
-				    "librosie internal error: wrong number of return values to new_engine (%d)",
-				    retvals.n));
-	  exit(-1);
-     }
-     struct string *code = stringArrayRef(retvals, 0);
-     char *true_value = "true";
-     if (memcmp(code->ptr, true_value, (size_t) code->len)) {
-	  LOGf("Success code was NOT true: len=%d, ptr=%s\n", code->len, code->ptr);
-	  struct string *err = stringArrayRef(retvals,1);
-	  LOGf("Error in new_engine: %s\n", (char *) err->ptr);
-     }
-     LOGprintArray(retvals, "new_engine");
-     return retvals;
-}
-
-
-struct stringArray delete_engine(lua_State *L, struct string *eid_string) {
-     struct string *ignore = &CONST_STRING("ignored12345");
-     struct stringArray retvals = rosie_api(L, "delete_engine", eid_string, ignore);
-     LOGprintArray(retvals, "delete_engine");
-     return retvals;
-}
-
-struct stringArray inspect_engine(lua_State *L, struct string *eid_string) {
+struct stringArray inspect_engine(lua_State *L) {
      struct string *ignore = &CONST_STRING("ignored678");
-     struct stringArray retvals = rosie_api(L, "inspect_engine", eid_string, ignore);
+     struct stringArray retvals = rosie_api(L, "inspect_engine", ignore);
      LOGprintArray(retvals, "inspect_engine");
      return retvals;
 }
 
-struct stringArray match(lua_State *L, struct string *eid_string, struct string *input) {
-     struct stringArray retvals = rosie_api(L, "match", eid_string, input);
+struct stringArray match(lua_State *L, struct string *input) {
+     struct stringArray retvals = rosie_api(L, "match", input);
      LOGprintArray(retvals, "match");
      return retvals;
 }
