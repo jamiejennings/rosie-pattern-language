@@ -304,6 +304,11 @@ void free_stringArray(struct stringArray r) {
      free(r.ptr);
 }
 
+void free_stringArray_ptr(struct stringArray *ref) {
+     free_stringArray(*ref);
+     /* free(ref); */
+}
+
 struct stringArray rosie_api(lua_State *L, const char *name, ...) {
 
      /* lua_State *L = LL; */
@@ -390,6 +395,12 @@ struct stringArray inspect_engine(lua_State *L) {
      struct string *ignore = &CONST_STRING("ignored678");
      struct stringArray retvals = rosie_api(L, "inspect_engine", ignore);
      LOGprintArray(retvals, "inspect_engine");
+     return retvals;
+}
+
+struct stringArray configure_engine(lua_State *L, struct string *config) {
+     struct stringArray retvals = rosie_api(L, "configure_engine", config);
+     LOGprintArray(retvals, "configure_engine");
      return retvals;
 }
 

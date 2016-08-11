@@ -35,10 +35,10 @@ import "C"
 
 import "fmt"
 import "encoding/json"
+import "os"
 //import "unsafe"
 
 func structString_to_GoString(cstr C.struct_string) string {
-	//fmt.Printf("In structString_to_GoString: cstr.len = %d\n", cstr.len)
 	return C.GoStringN(C.to_char_ptr(cstr.ptr), C.int(cstr.len))
 }
 
@@ -50,27 +50,23 @@ func gostring_to_structStringptr(s string) *C.struct_string {
 func main() {
 	fmt.Printf("Hello, world.\n")
 	
-//	var r C.struct_string
+	var messages C.struct_stringArray
 	
 	ss := C.CString("/Users/jjennings/Work/Dev/rosie-pattern-language")
-	i, err := C.initialize(ss)
-	fmt.Printf("Return code from initialize was: %d\n", i)
-	fmt.Printf("Err field returned by initialize was: %s\n", err)
+	engine, err := C.initialize(ss, &messages)
+	if engine==nil {
+		fmt.Printf("Return value from initialize was NULL!")
+		fmt.Printf("Err field returned by initialize was: %s\n", err)
+		os.Exit(-1)
+	}
 
 	var a C.struct_stringArray
 	cfg := gostring_to_structStringptr("{\"expression\":\"[:digit:]+\", \"encode\":\"json\"}")
-	a, err = C.new_engine(cfg)
+	a, err = C.configure_engine(engine, cfg)
 	retval := structString_to_GoString(*C.string_array_ref(a,0))
-	eid := structString_to_GoString(*C.string_array_ref(a,1))
-	fmt.Printf("Code from new_engine: %s\n", retval)
-	fmt.Printf("Eid from new_engine: %s\n", eid)
+	fmt.Printf("Code from configure_engine: %s\n", retval)
 
-	eid_string := C.new_string_ptr(C.int(len(eid)), C.CString(eid))
-	fmt.Printf("**** eid_string: len=%d, ptr=%s\n",
-		eid_string.len, C.GoStringN(C.to_char_ptr(eid_string.ptr), C.int(eid_string.len)))
-	C.free_stringArray(a)
-
-	a, err = C.inspect_engine(eid_string)
+	a, err = C.inspect_engine(engine)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Code from inspect_engine: %s\n", retval)
 	fmt.Printf("Config from inspect_engine: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
@@ -79,7 +75,7 @@ func main() {
 	var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"
 	foo_string := C.new_string_ptr(C.int(len(foo)), C.CString(foo))
 
-	a, err = C.match(eid_string, foo_string)
+	a, err = C.match(engine, foo_string)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Code from match: %s\n", retval)
 	fmt.Printf("Data|false from match: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
@@ -102,7 +98,7 @@ func main() {
 	fmt.Printf("Looping...")
 	for i:=0; i<5*M; i++ {
 		if for_real {
-			r = C.match(eid_string, foo_string)
+			r = C.match(engine, foo_string)
 		} else {
 			r = a
 		}
@@ -138,22 +134,7 @@ func main() {
 	fmt.Printf(" done.\n");
 
 	C.free_stringArray(a)
-	_, err = C.delete_engine(eid_string)
-	if (err!=nil) { fmt.Printf("Err field from delete_engine: %s\n", err) }
-	C.free_string_ptr(eid_string);
-	C.finalize();
-
-	// var retvals [2]interface{}
-	// err = json.Unmarshal([]byte(retval), &retvals)
-	// if err != nil {
-	// 	fmt.Println("JSON parse error:", err)
-	// }
-	// fmt.Printf("Success code: %t\n", retvals[0].(bool))
-	// fmt.Printf("String returned: %s\n", retvals[1].(string))
-
-	// eid := C.new_string_ptr(4, C.CString(retvals[1].(string)))
-	// r, err = C.rosie_api(C.CString("inspect_engine", eid, cfg))
-	// fmt.Printf("Result of inspect_engine was: %s\n", structString_to_GoString(r))
+	C.finalize(engine);
 
 
 }

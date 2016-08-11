@@ -31,9 +31,10 @@ struct stringArray {
 
 struct string *new_string(char *msg, size_t len);
 struct string *copy_string_ptr(struct string *src);
-void free_string(struct string foo);
-void free_string_ptr(struct string *foo);
+void free_string(struct string s);
+void free_string_ptr(struct string *s);
 void free_stringArray(struct stringArray r);
+void free_stringArray_ptr(struct stringArray *r);
 
 #define CONST_STRING(str) (struct string) {strlen(str), (byte_ptr)str}
 #define stringArrayRef(name, pos) (((name).n > (pos)) ? ((name).ptr[(pos)]) : '\0')
@@ -42,6 +43,7 @@ lua_State *initialize(const char *rosie_home, struct stringArray *msgs);
 void finalize(lua_State *L);
 struct stringArray rosie_api(lua_State *L, const char *name, ...);
 struct stringArray inspect_engine(lua_State *L);
+struct stringArray configure_engine(lua_State *L, struct string *config);
 struct stringArray match(lua_State *L, struct string *input);
 
 // TO DO: Change json fcns to take a Lua state reference (or engine) as an arg

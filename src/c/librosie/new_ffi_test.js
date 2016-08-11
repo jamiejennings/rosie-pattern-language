@@ -32,6 +32,7 @@ var MyCStringArray = Struct({
 });
 
 var MyCStringPtr = ref.refType(MyCString)
+var MyCStringArrayPtr = ref.refType(MyCStringArray)
 
 var RTLD_NOW = ffi.DynamicLibrary.FLAGS.RTLD_NOW;
 var RTLD_GLOBAL = ffi.DynamicLibrary.FLAGS.RTLD_GLOBAL;
@@ -39,9 +40,12 @@ var mode = RTLD_NOW | RTLD_GLOBAL;
 
 var RosieLib = new DynamicLibrary('librosie.so' || null, mode);
 
-var funcs = {'initialize': [ 'int', ['string']],
-	     'new_engine': [ MyCStringArray, [MyCStringPtr] ],
-	     'rosie_api': [ MyCStringArray, ['string', MyCStringPtr, MyCStringPtr] ],
+var funcs = {'initialize': [ 'pointer', ['string', MyCStringArrayPtr]],
+	     'inspect_engine': [ MyCStringArray, ['pointer'] ],
+	     'configure_engine': [ MyCStringArray, ['pointer', MyCStringPtr] ],
+	     'inspect_engine': [ MyCStringArray, ['pointer'] ],
+	     'rosie_api': [ MyCStringArray, ['pointer', 'string', MyCStringPtr] ],
+	     'finalize': [ 'void', ['pointer']],
 	     'free_stringArray': [ 'void', [MyCStringArray] ]
 	    }
 
@@ -127,9 +131,10 @@ function print_array(retval) {
     }
 }
 
+messages = new MyCStringArray
 console.log("About to initialize Rosie")
-var i = Rosie.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language")
-console.log("Return value from initialize: ", i)
+var engine = Rosie.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language", messages.ref())
+console.log("Return value from initialize: ", engine)
 
 var config = new MyCString
 var tbl = {'name': 'JS test engine', 'expression':'[:digit:]+', 'encode':false}
@@ -137,21 +142,17 @@ var tmp = JSON.stringify(tbl)
 config.ptr = ref.allocCString(tmp)
 config.len = Buffer.byteLength(tmp)
 var buf = config.ptr.reinterpret(config.len)
-console.log(config.ptr.length, config.len, buf.toString("utf8", 0, config.len))
+//console.log(config.ptr.length, config.len, buf.toString("utf8", 0, config.len))
 
 var i = ref.alloc(MyCStringArray)
-i = Rosie.new_engine(config.ref())
-console.log("Return value from new_engine is: ")
+i = Rosie.configure_engine(engine, config.ref())
+console.log("Return value from configure_engine is: ")
 var code = extract_string_from_array(i, 0)
-var eid = extract_string_from_array(i, 1)
 print_array(i)
-console.log("Engine id is: ", eid)
 
 var ignored = new_CString("ignored")
-var eid_CString = new_CString(eid)
-console.log("Engine id as CString is: len =", eid_CString.len, "and ptr =", eid_CString.ptr.toString())
 
-i = Rosie.rosie_api("inspect_engine", eid_CString.ref(), ignored.ref())
+i = Rosie.inspect_engine(engine)
 console.log("Return value from inspect_engine is: ")
 print_array(i)
 
@@ -160,18 +161,18 @@ print_array(i)
 var manifest = new_CString("$sys/MANIFEST")
 console.log("manifest: len =", manifest.len, "value =", manifest.ptr.toString())
 
-var retval = Rosie.rosie_api("load_manifest", eid_CString.ref(), manifest.ref())
+var retval = Rosie.rosie_api(engine, "load_manifest", manifest.ref())
 print_array(retval)
 Rosie.free_stringArray(retval)
 
 var config = new_CString("{\"expression\" : \"[:digit:]+\", \"encode\" : \"json\"}")
 
-retval = Rosie.rosie_api("configure_engine", eid_CString.ref(), config.ref())
+retval = Rosie.configure_engine(engine, config.ref())
 print_array(retval)
 Rosie.free_stringArray(retval)
 
 var foo = new_CString("1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
-var retval = Rosie.rosie_api("match", eid_CString.ref(), foo.ref())
+var retval = Rosie.rosie_api(engine, "match", foo.ref())
 retval_SAVE = retval
 print_array(retval_SAVE)
 
@@ -182,7 +183,7 @@ M = 1000000
 call_rosie = true
 for (var i=0; i<5*M; i++) {
 //for (var i=0; i<5; i++) {
-    if (call_rosie) retval = Rosie.rosie_api("match", eid_CString.ref(), foo.ref())
+    if (call_rosie) retval = Rosie.rosie_api(engine, "match", foo.ref())
     else {
 	retval = new MyCStringArray;
 	retval.n = retval_SAVE.n;

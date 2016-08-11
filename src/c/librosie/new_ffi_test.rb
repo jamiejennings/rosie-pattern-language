@@ -6,43 +6,6 @@ require 'json'
 $: << "."                       # temporary: add "." to the library search path
 require 'rosie'
 
-Rosie.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language")
-
-config_string = Rosie.CString_from_string("{\"name\":\"Ruby engine\"}")
-print "config_string string: ", config_string[:ptr].read_string_length(config_string[:len]), "\n"
-print "config_string length: ", config_string[:len], "\n"
-print "config_string struct size: ", Rosie::CString.size, "\n"
-
-ignored = Rosie::CString_from_string("ignored")
-
-# foo2 = Rosie.testbyref(ignored.pointer)
-# foo1 = Rosie.testbyvalue(ignored)
-
-# maybe_Rosie::CString = Rosie.testretstring(ignored.pointer)
-# print "RETURNED Rosie::CString len is: ", maybe_Rosie::CString[:len], "; value is: ", maybe_Rosie::CString[:ptr].read_string, "\n"
-# Rosie.free_string(maybe_Rosie::CString)
-
-retval = Rosie.new_engine(config_string.pointer)
-print "number of strings returned from api call is: ", retval[:n], "\n"
-ptr_array = FFI::Pointer.new(FFI::Pointer, retval[:ptr]).read_array_of_pointer(retval[:n])
-code = Rosie::CString.new ptr_array[0]
-if code[:ptr].read_string() != "true" then
-  msg = Rosie::CString.new ptr_array[1]
-  print "Error calling new_engine: " + msg[:ptr].read_string_length(msg[:len])
-  exit -1
-else
-  eid_string = Rosie::CString.new ptr_array[1]
-  eid = eid_string[:ptr].read_string_length(eid_string[:len])
-  print "eid is: ", eid, "\n"
-end
-Rosie.free_stringArray(retval)
-eid_string = Rosie::CString_from_string(eid)
-
-config_js = "{\"expression\" : \"\\\"ign\\\"\", \"encode\" : \"json\"}"
-print "config_js is: ", config_js, "\n"
-
-config_string = Rosie::CString_from_string(config_js)
-
 def print_string_array(retval)
   print "number of strings returned from api call is: ", retval[:n], "\n"
   ptr_array = FFI::Pointer.new(FFI::Pointer, retval[:ptr]).read_array_of_pointer(retval[:n])
@@ -62,32 +25,47 @@ def string_array_from_CStringArray(retval)
   return strings
 end
 
-retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
+messages = Rosie::CStringArray.new
+engine = Rosie.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language", messages)
+print_string_array(messages)
+
+
+config_string = Rosie.CString_from_string("{\"name\":\"Ruby engine\"}")
+print "config_string string: ", config_string[:ptr].read_string_length(config_string[:len]), "\n"
+print "config_string length: ", config_string[:len], "\n"
+print "config_string struct size: ", Rosie::CString.size, "\n"
+
+ignored = Rosie::CString_from_string("ignored")
+
+config_js = "{\"expression\" : \"\\\"ign\\\"\", \"encode\" : \"json\"}"
+config_string = Rosie::CString_from_string(config_js)
+
+retval = Rosie.configure_engine(engine, config_string)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
-retval = Rosie.rosie_api("inspect_engine", eid_string, ignored)
+retval = Rosie.inspect_engine(engine)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
-retval = Rosie.rosie_api("match", eid_string, ignored)
+retval = Rosie.rosie_api(engine, "match", ignored)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
-retval = Rosie.rosie_api("match", eid_string, config_string)
+retval = Rosie.rosie_api(engine, "match", config_string)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
 config_string = Rosie::CString_from_string("This is NOT valid json")
-retval = Rosie.new_engine(config_string.pointer)
+retval = Rosie.configure_engine(engine, config_string.pointer)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
-retval = Rosie.rosie_api("load_manifest", eid_string, config_string)
+retval = Rosie.rosie_api(engine, "load_manifest", ignored) # should fail
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
-retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
+retval = Rosie.configure_engine(engine, config_string)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
@@ -97,7 +75,7 @@ test = Rosie::CString_from_string("$sys/MANIFEST")
 print "TEST: len=", test[:len], "\n"
 print "TEST: string=", test[:ptr].read_string, "\n"
 
-retval = Rosie.rosie_api("load_manifest", eid_string, test)
+retval = Rosie.rosie_api(engine, "load_manifest", test)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
@@ -105,14 +83,14 @@ config_js = "{\"expression\" : \"[:digit:]+\", \"encode\" : \"json\"}"
 print "config_js is: ", config_js, "\n"
 
 config_string = Rosie::CString_from_string(config_js)
-retval = Rosie.rosie_api("configure_engine", eid_string, config_string)
+retval = Rosie.rosie_api(engine, "configure_engine", config_string)
 print_string_array(retval)
 Rosie.free_stringArray(retval)
 
 # Loop test
 
 foo = Rosie::CString_from_string("1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
-retval = Rosie.rosie_api "match", eid_string, foo
+retval = Rosie.rosie_api engine, "match", foo
 retval_SAVE = retval
 
 call_rosie = true
@@ -122,7 +100,7 @@ M = 1000000
 for i in 0..5*M do
 #for i in 0..3 do
   if call_rosie then
-    retval = Rosie.rosie_api "match", eid_string, foo
+    retval = Rosie.match engine, foo
   else
     retval = Rosie::CStringArray.new; retval[:n] = retval_SAVE[:n]; retval[:ptr] = retval_SAVE[:ptr]
   end
@@ -145,3 +123,4 @@ for i in 0..5*M do
 end
 
 print " done.\n"
+Rosie.finalize(engine)
