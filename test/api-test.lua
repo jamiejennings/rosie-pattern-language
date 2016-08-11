@@ -64,29 +64,21 @@ check(type(api_v.HOME)=="string")
 ----------------------------------------------------------------------------------------
 heading("Engine")
 ----------------------------------------------------------------------------------------
-subheading("new_engine")
-ok, msg = wapi.new_engine()
-check(not ok)
-check(msg:find("not a json-encoded object", 1, true))
-ok, msg = wapi.new_engine("null")
+subheading("initialize")
+check(type(wapi.initialize)=="function")
+ok, msg = wapi.initialize()
 check(ok)
 
-ok, msg = wapi.new_engine(json.encode{name="hello"})
+ok, msg = wapi.initialize()
 check(not ok)
 check(msg:find("already"))
 
-ok = wapi.delete_engine();
+ok = wapi.finalize();
 check(ok)
 
-ok, msg = wapi.new_engine(json.encode{name="hello", expression=".*", encode="jsonn"}) -- jsonn
-check(not ok)
-check(msg:find("invalid value for encode"))
-
-check(type(wapi.new_engine)=="function")
-ok, eid = wapi.new_engine(json.encode{name="hello", expression=".*", encode=false})
+ok, eid = wapi.initialize()
 check(ok)
 check(type(eid)=="string")
-
 
 
 subheading("inspect_engine")
@@ -96,7 +88,6 @@ check(ok)
 ok, info = pcall(json.decode, info_js)
 check(ok)
 check(type(info)=="table")
-check(info.name=="hello")
 check(info.expression)
 check(info.encode==false)
 check(info.id==eid)
@@ -327,48 +318,6 @@ check(msg:find("Error: cannot read file"))
 ----------------------------------------------------------------------------------------
 heading("Match")
 ----------------------------------------------------------------------------------------
--- subheading("match_using_exp")
--- check(type(wapi.match_using_exp)=="function")
--- ok, msg = wapi.match_using_exp()
--- check(not ok)
--- check(msg==arg_err_engine_id)
-
--- ok, msg = wapi.match_using_exp(eid)
--- check(not ok)
--- check(msg:find("pattern expression not a string"))
-
--- ok, match, left = wapi.match_using_exp(".", "A")
--- check(ok)
--- check(left==0)
--- j = json.decode(match)
--- check(j["*"].text=="A")
--- check(j["*"].pos==1)
-
--- ok, match, left = wapi.match_using_exp('{"A".}', "ABC")
--- check(ok)
--- check(left==1)
--- j = json.decode(match)
--- check(j["*"].text=="AB")
--- check(j["*"].pos==1)
-
--- ok, msg = wapi.load_manifest("MANIFEST")
--- check(ok)
-
--- ok, match, left = wapi.match_using_exp('common.number', "1FACE x y")
--- check(ok)
--- check(left==3)
--- j = json.decode(match)
--- check(j["common.number"].text=="1FACE")
--- check(j["common.number"].pos==1)
-
--- ok, match, left = wapi.match_using_exp('[:space:]* common.number', "   1FACE")
--- check(ok)
--- check(left==0)
--- j = json.decode(match)
--- check(j["*"].pos==1)
--- check(j["*"].subs["common.number"])
--- check(j["*"].subs["common.number"].pos==4)
-
 
 subheading("configure")
 check(type(wapi.configure_engine)=="function")

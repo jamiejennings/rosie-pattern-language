@@ -41,12 +41,21 @@ local function get_arglist(f)
    return arglist
 end
    
+local hidden = {}
 local enumeration_counter = 681;
+local function api_wrap_f(f)
+   return function(...)
+	     return { pcall(f, ...) }
+	  end
+end
+local function api_wrap_only(f)
+   local newf = api_wrap_f(f)
+   hidden[newf] = true;
+   return newf
+end
 local function api_wrap(f, ...)
    local returns = {...}
-   local newf = function(...)
-		   return { pcall(f, ...) }
-		end
+   local newf = api_wrap_f(f)
    api.SIGNATURE[newf] = {args=get_arglist(f), returns=returns, code=enumeration_counter}
    enumeration_counter = enumeration_counter + 1;
    return newf
@@ -73,21 +82,22 @@ end
 api.info = api_wrap(info, "object")
 
 ----------------------------------------------------------------------------------------
--- Managing the environment (collection of engines)
+-- Managing the environment
 ----------------------------------------------------------------------------------------
 
--- engine_list = {}
+local function initialize()
+   if default_engine then error("Engine already created", 0); end
+   default_engine = engine("<anonymous>")
+   return default_engine.id			    -- may be useful for client-side logging?
+end
 
--- local function engine_from_id(id)
---    return engine_list[id] or arg_error("invalid engine id: " .. tostring(id))
--- end
+api.initialize = api_wrap_only(initialize, "string")
 
-local function delete_engine(id)
-   --   engine_list[id] = nil;
+local function finalize(id)
    default_engine = nil;
 end
 
-api.delete_engine = api_wrap(delete_engine)
+api.finalize = api_wrap_only(finalize)
 
 local function inspect_engine()
    local info = lapi.inspect_engine(default_engine)
@@ -99,42 +109,6 @@ local function inspect_engine()
 end
 
 api.inspect_engine = api_wrap(inspect_engine, "object")
-
-local function new_engine(config_obj)
-   if type(config_obj)~="string" then
-      arg_error("engine configuration not a json-encoded object")
-   end
-   local ok, c_table = pcall(json.decode, config_obj)
-   if not ok then
-      arg_error("engine configuration not a valid json object")
-   end
-
-   if default_engine then error("Engine already created", 0); end
-
-   local en = engine("<anonymous>")
-   -- local id = en.id
-   -- if engine_list[id] then
-   --    en.id = en.id .. os.tmpname():sub(-6)
-   --    if engine_list[en.id] then
-   -- 	 error("Internal error: duplicate engine ids: " .. en.id, 0)
-   --    else
-   -- 	 util.warn("duplicate engine ids: " .. id .. " --> " .. en.id)
-   --    end
-   -- end
-
-   -- -- TEMPORARY: !@#  Making sure the C api will handle strings with nulls in them.
-   -- en.id = en.id:sub(1,4) .. string.char(0) .. en.id:sub(5)
-   -- engine_list[en.id] = en
-
-   if (c_table~=json.null) then
-      ok, msg = lapi.configure_engine(en, c_table)
-      if not ok then arg_error(msg); end
-   end
-   default_engine = en;
-   return en.id					    -- may be useful for client-side logging?
-end
-
-api.new_engine = api_wrap(new_engine, "string")
 
 local function get_env(optional_identifier)
    local en = default_engine
@@ -241,12 +215,12 @@ end
 
 api.configure_engine = api_wrap(configure_engine)
    
-local function match(input_text, start)
+local function match(input_text, optional_start)
    local en = default_engine
    if type(input_text)~="string" then
       arg_error("input argument not a string")
    end
-   local m, leftover = lapi.match(en, input_text, start)
+   local m, leftover = lapi.match(en, input_text, optional_start)
    return m, tostring(leftover)
 end
 
@@ -294,6 +268,8 @@ local function set_match_exp_grep_TEMPORARY(pattern_exp)
    return lapi.set_match_exp_grep_TEMPORARY(default_engine, pattern_exp)
 end   
 
+api.set_match_exp_grep_TEMPORARY = api_wrap(set_match_exp_grep_TEMPORARY)
+
 ---------------------------------------------------------------------------------------------------
 -- Generate C code for librosie
 
@@ -335,11 +311,12 @@ top_message = [=[
 
 ]=]
       
-function gen_HEADER(api)
+function gen_HEADER(signature)
    local str = top_message
-   for k,v in pairs(api) do str = str .. gen_constant(k,v) .. "\n"; end
+   str = str .. gen_constant("FIRST_CODE", {code=enumeration_counter}) .. "\n";
+   for k,v in pairs(signature) do str = str .. gen_constant(k,v) .. "\n"; end
    str = str .. "\n"
-   for k,v in pairs(api) do str = str .. gen_prototype(k,v) .. "\n"; end
+   for k,v in pairs(signature) do str = str .. gen_prototype(k,v) .. "\n"; end
    str = str .. "\n/* end */\n"
    return str
 end
@@ -350,8 +327,6 @@ end
 
 
 ---------------------------------------------------------------------------------------------------
-
-api.set_match_exp_grep_TEMPORARY = api_wrap(set_match_exp_grep_TEMPORARY)
 
 -- api_wrap will fill in the number of args that each api function takes, but api_wrap does not
 -- know the name of the function it is wrapping.  The loop below converts from function to name of
@@ -366,8 +341,7 @@ for name, thing in pairs(api) do
       if api.SIGNATURE[thing] then
 	 api.SIGNATURE[name] = api.SIGNATURE[thing]	    -- copy value set by api_wrap
 	 api.SIGNATURE[thing] = nil
-      else
-	 --api.SIGNATURE[name] = get_arglist(thing)
+      elseif not hidden[thing] then
 	 error("Unwrapped function in external api: " .. name)
       end
    end -- for each function

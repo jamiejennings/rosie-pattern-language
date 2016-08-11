@@ -121,6 +121,7 @@ function test.print_grand_total(results)
       end
    end -- for
    test.summarize("GRAND TOTAL", count, failcount)
+   return (failcount==0)
 end
 
 return test

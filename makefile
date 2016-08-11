@@ -58,7 +58,7 @@ $(JSON_DIR).tar.gz:
 	mkdir -p $(TMP)
 	curl -o $(JSON_DIR).tar.gz $(JSON_ARCHIVE)
 
-.PHONY: clean superclean none test
+.PHONY: clean superclean none sniff test
 
 clean:
 	rm -rf bin/* lib/*
@@ -78,19 +78,22 @@ none:
 
 CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 
 CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-fpic
-CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV 
+CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
+CJSON_MAKE_ARGS += CJSON_CFLAGS+="-pthread -DMULTIPLE_THREADS"
+CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
+
 
 macosx: PLATFORM=macosx
 # Change the next line to CC=gcc if you prefer to use gcc on MacOSX
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: bin/lua lib/lpeg.so lib/cjson.so compile test
+macosx: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
 linux: PLATFORM=linux
 linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
-linux: bin/lua lib/lpeg.so lib/cjson.so compile test
+linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
 bin/lua: $(LUA_DIR)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
@@ -115,7 +118,7 @@ install:
 	@/usr/bin/env echo -n "Linking $(HOME)/run to $(DESTDIR)/rosie... "
 	@-ln -sf "$(HOME)/run" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie" && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
 
-test:
+sniff:
 	@echo "Rosie home is $(HOME)"
 	@echo "Attempting to execute $(HOME)/run ..."
 	@RESULT="$(shell $(HOME)/run 2>&1 >/dev/null)"; \
@@ -124,9 +127,11 @@ test:
             echo "\nRosie Pattern Engine installed successfully!"; \
 	    echo ""; \
             echo "Use 'make install' to install binary in $(DESTDIR)"; \
-            echo "And here is a command to test: ./run basic.matchall /etc/resolv.conf"; \
+            echo "And here is a command to try: ./run basic.matchall /etc/resolv.conf"; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
         fi
 
+test:
+	echo "dofile 'test/all.lua'" | rosie -D
 

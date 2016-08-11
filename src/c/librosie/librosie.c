@@ -120,7 +120,6 @@ static void print_stringArray(struct stringArray sa, char *caller_name) {
 }
 
 static struct stringArray new_engine(lua_State *L) {
-
      struct string *config = &CONST_STRING("null");
      struct stringArray retvals = rosie_api(L, "new_engine", config);
      LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n);
@@ -167,9 +166,6 @@ void *initialize(const char *rosie_home, struct stringArray *msgs) {
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
   if (bootstrap(L, rosie_home)) {
        if (require(L, "api", TRUE)) { 
-	    /* struct string **list = malloc(sizeof(struct string *) * 1); */
-	    /* list[0] = new_TRUE_string(); */
-	    /* TODO: return an id here */
 	    struct stringArray retvals = new_engine(L);
 	    msgs->n = retvals.n;
 	    msgs->ptr = retvals.ptr;
