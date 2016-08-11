@@ -214,7 +214,7 @@ struct stringArray json_decode(struct string *js_string) {
  * ----------------------------------------------------------------------------------------
  */
 
-lua_State *initialize(const char *rosie_home, struct stringArray *msgs) {
+void *initialize(const char *rosie_home, struct stringArray *msgs) {
 
      lua_State *L = luaL_newstate();
      if (L == NULL) {
@@ -278,6 +278,10 @@ struct string *new_string(char *msg, size_t len) {
      return retval;
 }     
 
+struct stringArray *new_stringArray() {
+     return malloc(sizeof(struct stringArray));
+}
+
 struct string *copy_string_ptr(struct string *src) {
      struct string *dest = malloc(sizeof(struct string));
      dest->len = src->len;
@@ -306,12 +310,11 @@ void free_stringArray(struct stringArray r) {
 
 void free_stringArray_ptr(struct stringArray *ref) {
      free_stringArray(*ref);
-     /* free(ref); */
+     free(ref);
 }
 
-struct stringArray rosie_api(lua_State *L, const char *name, ...) {
+struct stringArray rosie_api(void *L, const char *name, ...) {
 
-     /* lua_State *L = LL; */
      va_list args;
      struct string *arg;
 
@@ -391,25 +394,25 @@ struct stringArray rosie_api(lua_State *L, const char *name, ...) {
 /*      return retvals; */
 /* } */
 
-struct stringArray inspect_engine(lua_State *L) {
+struct stringArray inspect_engine(void *L) {
      struct string *ignore = &CONST_STRING("ignored678");
      struct stringArray retvals = rosie_api(L, "inspect_engine", ignore);
      LOGprintArray(retvals, "inspect_engine");
      return retvals;
 }
 
-struct stringArray configure_engine(lua_State *L, struct string *config) {
+struct stringArray configure_engine(void *L, struct string *config) {
      struct stringArray retvals = rosie_api(L, "configure_engine", config);
      LOGprintArray(retvals, "configure_engine");
      return retvals;
 }
 
-struct stringArray match(lua_State *L, struct string *input) {
+struct stringArray match(void *L, struct string *input) {
      struct stringArray retvals = rosie_api(L, "match", input);
      LOGprintArray(retvals, "match");
      return retvals;
 }
 
-void finalize(lua_State *L) {
+void finalize(void *L) {
      lua_close(L);
 }

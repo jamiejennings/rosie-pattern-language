@@ -24,6 +24,7 @@ struct stringArray {
 };
 
 struct string *new_string(char *msg, size_t len);
+struct stringArray *new_stringArray();
 struct string *copy_string_ptr(struct string *src);
 void free_string(struct string foo);
 void free_string_ptr(struct string *foo);
@@ -61,7 +62,7 @@ def printArray(a, caller_name):
 
 Rosie = ffi.dlopen("librosie.so")
 
-messages = ffi.new("struct stringArray *")
+messages = Rosie.new_stringArray()
 engine = Rosie.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language", messages)
 printArray(messages, "initialize")
 Rosie.free_stringArray_ptr(messages)
