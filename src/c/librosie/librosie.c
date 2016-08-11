@@ -18,9 +18,7 @@
 
 #include "librosie.h"
 
-#define EXIT_JSON_DECODE_ERROR -1
-#define EXIT_JSON_ENCODE_ERROR -2
-#define EXIT_OUT_OF_MEMORY -3
+#define EXIT_OUT_OF_MEMORY -100
 
 #define new_TRUE_string() (new_string("true", 4))
 #define new_FALSE_string() (new_string("false", 5))
@@ -145,70 +143,6 @@ static struct stringArray new_engine(lua_State *L) {
      return retvals;
 }
 
-/* ---------------------------------------------------------------------------------------- */
-/* MISC STUFF TO RE-DO: */
-
-#if FALSE
-struct stringArray json_decode(struct string *js_string) {
-     lua_getglobal(LL, "json");
-     lua_getfield(LL, -1, "decode");
-     LOGf("Fetched json.decode, and top of stack is a %s\n", lua_typename(LL, lua_type(LL, -1)));
-     lua_pushlstring(LL, (char *) js_string->ptr, js_string->len);
-     LOG("About to call json.decode\n");
-     LOGstack(LL);
-     int status = lua_pcall(LL, 1, 1, 0);                   /* call 'json.decode(js_string)' */  
-     if (status != LUA_OK) {  
-	  print_error_message(lua_pushfstring(LL, "Internal error: cannot json.decode %s (%s)", js_string->ptr, lua_tostring(LL, -1)));  
-	  exit(EXIT_JSON_DECODE_ERROR);  
-     }  
-     LOG("After call to json.decode\n");
-     LOGstack(LL);
-
-     /* Since we can't return a lua table to C, we will encode it again and return that */
-     lua_getfield(LL, -2, "encode");
-     LOGf("Fetched json.encode, and top of stack is a %s\n", lua_typename(LL, lua_type(LL, -1)));
-     lua_insert(LL, -2);	/* move the table produced by decode to the top */
-     LOG("About to call json.encode\n");
-     LOGstack(LL);
-     status = lua_pcall(LL, 1, 1, 0);                   /* call 'json.encode(table)' */  
-     if (status != LUA_OK) {  
-	  print_error_message(lua_pushfstring(LL, "Internal error: json.encode failed (%s)", js_string->ptr, lua_tostring(LL, -1)));  
-	  exit(EXIT_JSON_ENCODE_ERROR);  
-     }  
-     LOG("After call to json.encode\n");
-     LOGstack(LL);
-
-     uint32_t nretvals = 2;
-     struct string **list = malloc(sizeof(struct string *) * nretvals);
-     size_t len;
-     char *str;
-     if (TRUE) {len=4; str="true";}
-     else {len=5; str="false";}
-     LOGf("len=%d, str=%s", (int) len, (char *)str);
-     list[0] = malloc(sizeof(struct string));
-     list[0]->len = len;
-     list[0]->ptr = malloc(sizeof(uint8_t)*(len+1));
-     memcpy(list[0]->ptr, str, len);
-     list[0]->ptr[len] = 0; /* so we can use printf for debugging */	  
-     LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[0]->len, list[0]->ptr);
-
-     str = (char *) lua_tolstring(LL, -1, &len);
-     list[1] = malloc(sizeof(struct string));
-     list[1]->len = len;
-     list[1]->ptr = malloc(sizeof(uint8_t)*(len+1));
-     memcpy(list[1]->ptr, str, len);
-     list[1]->ptr[len] = 0; /* so we can use printf for debugging */	  
-     LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[1]->len, list[1]->ptr);
-
-     lua_pop(LL, 2);    /* discard the result string and the json table */  
-     return (struct stringArray) {2, list};
-
-}  
-     
-//struct stringArray json_encode(struct string *plain_string);
-
-#endif
-
 /* ----------------------------------------------------------------------------------------
  * Exported functions
  * ----------------------------------------------------------------------------------------
@@ -280,14 +214,6 @@ struct string *new_string(char *msg, size_t len) {
 
 struct stringArray *new_stringArray() {
      return malloc(sizeof(struct stringArray));
-}
-
-struct string *copy_string_ptr(struct string *src) {
-     struct string *dest = malloc(sizeof(struct string));
-     dest->len = src->len;
-     dest->ptr = malloc(sizeof(uint8_t)*src->len);
-     memcpy(dest->ptr, src->ptr, src->len);
-     return dest;
 }
 
 void free_string_ptr(struct string *ref) {

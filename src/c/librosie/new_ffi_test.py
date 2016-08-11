@@ -25,7 +25,6 @@ struct stringArray {
 
 struct string *new_string(char *msg, size_t len);
 struct stringArray *new_stringArray();
-struct string *copy_string_ptr(struct string *src);
 void free_string(struct string foo);
 void free_string_ptr(struct string *foo);
 void free_stringArray(struct stringArray r);

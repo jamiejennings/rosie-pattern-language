@@ -35,7 +35,6 @@ void free_string(struct string s);
 void free_string_ptr(struct string *s);
 void free_stringArray(struct stringArray r);
 void free_stringArray_ptr(struct stringArray *r);
-struct string *copy_string_ptr(struct string *src);
 
 #define CONST_STRING(str) (struct string) {strlen(str), (byte_ptr)str}
 #define stringArrayRef(name, pos) (((name).n > (pos)) ? ((name).ptr[(pos)]) : '\0')
