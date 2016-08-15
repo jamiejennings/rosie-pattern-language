@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/jamiejennings/rosie-pattern-language.svg?branch=master)](https://travis-ci.org/jamiejennings/rosie-pattern-language)
 # This is Rosie Pattern Language
 
 ## Rosie will tidy up raw data (text), recognize key pieces of data, and create JSON structured output
