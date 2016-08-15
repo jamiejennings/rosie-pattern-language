@@ -1,8 +1,10 @@
 ## ----------------------------------------------------------------------------- ##
+## Customizable options:
 
-# place to put a link to rosie binary during install:
+## The place to put a link to rosie binary when using 'make install'
 DESTDIR=/usr/local/bin
 
+## End of customizable options
 ## ----------------------------------------------------------------------------- ##
 
 REPORTED_PLATFORM=$(shell (uname -o || uname -s) 2> /dev/null)
@@ -14,8 +16,7 @@ else
 PLATFORM=none
 endif
 
-#PLATFORM = none
-PLATFORMS = linux macosx
+PLATFORMS = linux macosx windows
 
 LUA_ARCHIVE = 'http://www.lua.org/ftp/lua-5.3.2.tar.gz'
 LPEG_ARCHIVE = 'http://www.inf.puc-rio.br/~roberto/lpeg/lpeg-1.0.0.tar.gz'
@@ -81,9 +82,7 @@ superclean: clean
 	rm -rf $(TMP)
 
 none:
-	@echo "Please do 'make PLATFORM' where PLATFORM is one of these: $(PLATFORMS)"
-	@echo "Or 'make download' to download the pre-requisites"
-
+	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
 CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 
 CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-fpic
@@ -96,13 +95,16 @@ macosx: PLATFORM=macosx
 # Change the next line to CC=gcc if you prefer to use gcc on MacOSX
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: bin/lua lib/lpeg.so lib/cjson.so compile sniff
+macosx: bin/lua lib/lpeg.so lib/cjson.so compile ln sniff
 
 linux: PLATFORM=linux
 linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
-linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
+linux: bin/lua lib/lpeg.so lib/cjson.so compile ln sniff
+
+windows:
+	@echo Windows installation not yet supported.
 
 bin/lua: $(LUA_DIR)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
@@ -123,6 +125,10 @@ lib/cjson.so: $(JSON_DIR)
 compile:
 	bin/lua -e "ROSIE_HOME=\"`pwd`\"" src/rosie-compile.lua
 
+ln:
+	@/usr/bin/env echo -n "Linking $(HOME)/run to ./rosie... "
+	@-ln -sf "$(HOME)/run" "./rosie" && chmod 755 "./rosie" && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
+
 install:
 	@/usr/bin/env echo -n "Linking $(HOME)/run to $(DESTDIR)/rosie... "
 	@-ln -sf "$(HOME)/run" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie" && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
@@ -133,10 +139,11 @@ sniff:
 	@RESULT="$(shell $(HOME)/run 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
-            echo "\nRosie Pattern Engine installed successfully!"; \
+            echo ""; \
+            echo "Rosie Pattern Engine installed successfully!"; \
 	    echo ""; \
             echo "Use 'make install' to install binary in $(DESTDIR)"; \
-            echo "And here is a command to try: ./run basic.matchall /etc/resolv.conf"; \
+            echo "Try this and look for color text output: ./rosie basic.matchall /etc/resolv.conf"; \
             true; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
