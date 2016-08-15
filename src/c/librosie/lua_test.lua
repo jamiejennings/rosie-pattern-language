@@ -3,7 +3,7 @@ ROSIE_HOME = "/Users/jjennings/Work/Dev/rosie-pattern-language"
 dofile(ROSIE_HOME.."/src/bootstrap.lua")
 
 api = require "api"
-tbl = api.new_engine("null")
+tbl = api.initialize()
 table.print(tbl)
 if tbl[1]~=true then
    print "Error"; os.exit(-1)
@@ -26,7 +26,7 @@ for_real = true
 print()
 io.write("Looping...")
 io.stdout:flush()
-t0=os.clock();
+--t0=os.clock();
 M = 1000000
 --M = 1
 for i=1,5*M do
@@ -34,10 +34,10 @@ for i=1,5*M do
    else retval = save;
    end
    js = json.decode(retval[2]);
-   if M==1 then table.print(retval); table.print(js); end
+--   if M==1 then table.print(retval); table.print(js); end
 end;
-t1=os.clock();
+--t1=os.clock();
 print(" done.")
-print(t1-t0 .. " sec, measured internally")
+--print(t1-t0 .. " sec, measured internally")
 
 
