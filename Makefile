@@ -151,5 +151,6 @@ sniff:
         fi
 
 test:
-	echo "dofile 'test/all.lua'" | rosie -D
+	@echo Running tests in test/all.lua
+	echo "dofile 'test/all.lua'" | ./rosie -D
 
