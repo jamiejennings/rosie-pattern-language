@@ -23,9 +23,8 @@ For the PL and comp sci geeks among us, some technical notes are [here](doc/geek
 
 ## How to build: clone the repo, and type 'make'
 
-After cloning the repository, there is just one step: `make <platform>` where
-`<platform>` is, e.g. `macosx` or `linux`.  The `makefile` will download the
-needed prerequisites and compile them.
+After cloning the repository, there is just one step: `make`  The `makefile` will download the
+needed prerequisites, compile them, and run a quick test.
 
 You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
 
