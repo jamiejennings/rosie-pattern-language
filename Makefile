@@ -5,7 +5,16 @@ DESTDIR=/usr/local/bin
 
 ## ----------------------------------------------------------------------------- ##
 
-PLATFORM = none
+REPORTED_PLATFORM=$(shell (uname -o || uname -s) 2> /dev/null)
+ifeq ($(REPORTED_PLATFORM), Darwin)
+PLATFORM=macosx
+else ifeq ($(REPORTED_PLATFORM), GNU/Linux)
+PLATFORM=linux
+else
+PLATFORM=none
+endif
+
+#PLATFORM = none
 PLATFORMS = linux macosx
 
 LUA_ARCHIVE = 'http://www.lua.org/ftp/lua-5.3.2.tar.gz'
@@ -128,8 +137,10 @@ sniff:
 	    echo ""; \
             echo "Use 'make install' to install binary in $(DESTDIR)"; \
             echo "And here is a command to try: ./run basic.matchall /etc/resolv.conf"; \
+            true; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
+	    false; \
         fi
 
 test:
