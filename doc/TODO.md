@@ -61,6 +61,8 @@
           closed over the environment in which it is defined.  But "eval" (the
           interpreter function used for debugging) is ACCIDENTALLY dynamically
           scoped. See doc/eval-scope-note.txt.
+	- [ ] Eliminate MANFIFEST file; add an environment variable containing the
+          default file to load instead
 
 - [ ] Source references
     - [ ] Store a source ref with each match; for efficient output, maybe output
