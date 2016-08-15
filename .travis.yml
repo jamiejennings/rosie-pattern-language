@@ -1,3 +1,10 @@
+# safelist
+branches:
+  only:
+  - master
+  - v0.99a
+  - v0.99b
+  
 before_install:
 - sudo apt-get update -qq
 
@@ -5,5 +12,6 @@ language: C
 compiler: gcc
 
 install: make download
-script: make
+script: make && make test
+
 
