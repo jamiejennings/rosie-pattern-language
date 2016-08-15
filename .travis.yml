@@ -1,6 +1,5 @@
 before_install:
 - sudo apt-get update -qq
-- sudo apt-get install -qq curl readline readline-devel
 
 language: C
 compiler: gcc
