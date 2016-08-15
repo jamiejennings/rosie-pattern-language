@@ -1,0 +1,25 @@
+2016-08-15  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99c
+
+	Makefile now auto-detects platform (OSX or Linux, currently)
+
+	Added travis support
+
+2016-08-09  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99b
+
+	Fixed an inadvertent change to assignment semantics that
+	appeared in v0.99a wherein uses of pattern a were labeled b in the
+	output because a was defined as 'a=b'.  The correct behavior is for such
+	matches to be labeled a.
+
+	Introduced this CHANGELOG.
+
+	Moved dependencies into ROSIE_HOME/tmp directory.
+
+	Moved docker file examples into ROSIE_HOME/docker directory.
+
+
+

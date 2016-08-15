@@ -124,4 +124,6 @@ function test.print_grand_total(results)
    return (failcount==0)
 end
 
+test.start()					    -- setup defaults so we can get right to testing
+
 return test

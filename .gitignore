@@ -3,8 +3,22 @@
 **/*.a
 **/*.so
 **/*.so.dSYM
+**/*.dSYM
+**/.DS_Store
 **/*~
 *.tar.gz
+
+src/c/librosie/rtest
+src/c/repl/rosie
+src/c/librosie/node_modules/*
+src/c/librosie/go/src/ffi/libs/*
+src/c/librosie/go/src/hello/
+
+# These are symlinks within the repo:
+rosie
+src/c/librosie/go/src/ffi/librosie.c
+src/c/librosie/go/src/ffi/librosie.h
+
 bin
 lpeg-1.0.0
 lua-5.3.2
