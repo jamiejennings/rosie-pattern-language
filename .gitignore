@@ -8,7 +8,10 @@
 **/*~
 *.tar.gz
 
-src/c/librosie/rtest
+ffi/librosie/librosie_gen.c
+ffi/librosie/librosie_gen.h
+ffi/sample/C/rtest
+
 src/c/repl/rosie
 src/c/librosie/node_modules/*
 src/c/librosie/go/src/ffi/libs/*
