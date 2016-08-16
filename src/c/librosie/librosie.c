@@ -23,13 +23,18 @@
 #define new_TRUE_string() (new_string("true", 4))
 #define new_FALSE_string() (new_string("false", 5))
 
-/* To do:
-   - One Lua state per engine
-   - Have initialize create a table of Rosie api functions (store in Lua Registry) 
-   - Check result of each malloc, and error out appropriately
-   - Put debugging functions like stackDump inside #if DEBUG==1
-   - Move json_decode and similar test functions to rtest
+#define prelude(L, name) \
+     do { lua_getfield(L, -1, name); } while (0)
 
+#define push(L, stringname) \
+     do { lua_pushlstring(L, (char *) stringname->ptr, stringname->len); } while (0)
+
+/* To do:
+   + One Lua state per engine
+   + Have initialize create a table of Rosie api functions
+   + Put debugging functions like stackDump inside #if DEBUG==1
+   + Move json_decode and similar test functions to rtest
+   - Check result of each malloc, and error out appropriately
 */
 
 /* ----------------------------------------------------------------------------------------
@@ -118,34 +123,37 @@ static void print_stringArray(struct stringArray sa, char *caller_name) {
      }
 }
 
-static struct stringArray new_engine(lua_State *L) {
-     struct string *config = &CONST_STRING("null");
-     struct stringArray retvals = rosie_api(L, "initialize", config);
-     LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n);
-     if (retvals.n !=2) {
-	  print_error_message(lua_pushfstring(L,
-				    "librosie internal error: wrong number of return values to initialize (%d)",
-				    retvals.n));
-	  exit(-1);
-     }
-#if DEBUG==1
-     struct string *code = stringArrayRef(retvals, 0);
-     char *true_value = "true";
-     if (memcmp(code->ptr, true_value, (size_t) code->len)) {
-	  LOGf("Success code was NOT true: len=%d, ptr=%s\n", code->len, code->ptr);
-	  struct string *err = stringArrayRef(retvals,1);
-	  LOGf("Error in new_engine: %s\n", (char *) err->ptr);
-     }
-#endif
-     LOGprintArray(retvals, "new_engine");
-     return retvals;
-}
+/* static struct stringArray new_engine(lua_State *L) { */
+/*      struct string *config = &CONST_STRING("null"); */
+/*      struct stringArray retvals = rosie_api(L, "initialize", config); */
+/*      LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n); */
+/*      if (retvals.n !=2) { */
+/* 	  print_error_message(lua_pushfstring(L, */
+/* 				    "librosie internal error: wrong number of return values to initialize (%d)", */
+/* 				    retvals.n)); */
+/* 	  exit(-1); */
+/*      } */
+/* #if DEBUG==1 */
+/*      struct string *code = stringArrayRef(retvals, 0); */
+/*      char *true_value = "true"; */
+/*      if (memcmp(code->ptr, true_value, (size_t) code->len)) { */
+/* 	  LOGf("Success code was NOT true: len=%d, ptr=%s\n", code->len, code->ptr); */
+/* 	  struct string *err = stringArrayRef(retvals,1); */
+/* 	  LOGf("Error in new_engine: %s\n", (char *) err->ptr); */
+/*      } */
+/* #endif */
+/*      LOGprintArray(retvals, "new_engine"); */
+/*      return retvals; */
+/* } */
 
 /* ----------------------------------------------------------------------------------------
  * Exported functions
  * ----------------------------------------------------------------------------------------
  */
 
+/* forward ref */
+static struct stringArray call_api(lua_State *L, char *api_name, int nargs);
+     
 void *initialize(const char *rosie_home, struct stringArray *msgs) {
 
      lua_State *L = luaL_newstate();
@@ -165,7 +173,8 @@ void *initialize(const char *rosie_home, struct stringArray *msgs) {
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
   if (bootstrap(L, rosie_home)) {
        if (require_api(L)) { 
-	    struct stringArray retvals = new_engine(L);
+	    prelude(L, "initialize");
+	    struct stringArray retvals = call_api(L, "initialize", 0);
 	    msgs->n = retvals.n;
 	    msgs->ptr = retvals.ptr;
 	    return L;
@@ -269,48 +278,48 @@ void free_stringArray_ptr(struct stringArray *ref) {
      free(ref);
 }
 
-struct stringArray rosie_api(void *L, const char *name, ...) {
+/* struct stringArray rosie_api(void *L, const char *name, ...) { */
 
-     va_list args;
-     struct string *arg;
+/*      va_list args; */
+/*      struct string *arg; */
 
-     /* number of args AFTER the api name */
-     int nargs = 1;		   /* get this later from a table */
+/*      /\* number of args AFTER the api name *\/ */
+/*      int nargs = 1;		   /\* get this later from a table *\/ */
 
-     va_start(args, name);	   /* setup variadic arg processing */
-     LOGf("Stack at start of rosie_api (%s):\n", name);
-     LOGstack(L);
+/*      va_start(args, name);	   /\* setup variadic arg processing *\/ */
+/*      LOGf("Stack at start of rosie_api (%s):\n", name); */
+/*      LOGstack(L); */
 
-//     lua_getglobal(L, "api");
-     lua_getfield(L, -1 , name);                    /* -1 is stack top, i.e. api table */
-//     lua_remove(L, -2);	    /* remove the api table from the stack */ 
-     for (int i = 1; i <= nargs; i++) {
-	  arg = va_arg(args, struct string *); /* get the next arg */
-	  lua_pushlstring(L, (char *) arg->ptr, arg->len); /* push it */
-     }
-     va_end(args);
+/* //     lua_getglobal(L, "api"); */
+/*      lua_getfield(L, -1 , name);                    /\* -1 is stack top, i.e. api table *\/ */
+/* //     lua_remove(L, -2);	    /\* remove the api table from the stack *\/  */
+/*      for (int i = 1; i <= nargs; i++) { */
+/* 	  arg = va_arg(args, struct string *); /\* get the next arg *\/ */
+/* 	  lua_pushlstring(L, (char *) arg->ptr, arg->len); /\* push it *\/ */
+/*      } */
+/*      va_end(args); */
 
-     LOGf("About to call the api function on the stack, and nargs=%d\n", nargs);  
-     LOGstack(L);  
-     /* API CALL */
-     lua_call(L, nargs, 1); 
-     LOG("Stack immediately after lua_call:\n");
-     LOGstack(L);
+/*      LOGf("About to call the api function on the stack, and nargs=%d\n", nargs);   */
+/*      LOGstack(L);   */
+/*      /\* API CALL *\/ */
+/*      lua_call(L, nargs, 1);  */
+/*      LOG("Stack immediately after lua_call:\n"); */
+/*      LOGstack(L); */
      
-     if (lua_istable(L, -1) != TRUE) {
-	  print_error_message(lua_pushfstring(L, "librosie internal error: return value of %s not a table", name));
-	  exit(-1);
-     }
+/*      if (lua_istable(L, -1) != TRUE) { */
+/* 	  print_error_message(lua_pushfstring(L, "librosie internal error: return value of %s not a table", name)); */
+/* 	  exit(-1); */
+/*      } */
 
-     struct stringArray retvals = construct_retvals(L);
+/*      struct stringArray retvals = construct_retvals(L); */
 
-     LOGf("Stack at end of call to Rosie api: %s\n", name); 
-     LOGstack(L); 
+/*      LOGf("Stack at end of call to Rosie api: %s\n", name);  */
+/*      LOGstack(L);  */
      
-     return retvals;
-}
+/*      return retvals; */
+/* } */
 
-struct stringArray call_api(lua_State *L, char *api_name, int nargs) {
+static struct stringArray call_api(lua_State *L, char *api_name, int nargs) {
      LOGf("About to call %s and nargs=%d\n", api_name, nargs);  
      LOGstack(L);  
      /* API CALL */
@@ -335,30 +344,25 @@ struct stringArray call_api(lua_State *L, char *api_name, int nargs) {
      return retvals;
 }
      
-#define prelude(L, name) \
-     do { lua_getfield(L, -1, name); } while (0)
+/* struct stringArray inspect_engine(void *L) { */
+/*      prelude(L, "inspect_engine"); */
+/*      return call_api(L, "inspect_engine", 0); */
+/* } */
 
-#define push(L, stringname) \
-     do { lua_pushlstring(L, (char *) stringname->ptr, stringname->len); } while (0)
+/* struct stringArray configure_engine(void *L, struct string *config) { */
+/*      prelude(L, "configure_engine"); */
+/*      push(L, config); */
+/*      return call_api(L, "configure_engine", 1); */
+/* } */
 
-
-struct stringArray inspect_engine(void *L) {
-     prelude(L, "inspect_engine");
-     return call_api(L, "inspect_engine", 0);
-}
-
-struct stringArray configure_engine(void *L, struct string *config) {
-     prelude(L, "configure_engine");
-     push(L, config);
-     return call_api(L, "configure_engine", 1);
-}
-
-struct stringArray match(void *L, struct string *input) {
-     prelude(L, "match");
-     push(L, input);
-     return call_api(L, "match", 1);
-}
+/* struct stringArray match(void *L, struct string *input) { */
+/*      prelude(L, "match"); */
+/*      push(L, input); */
+/*      return call_api(L, "match", 1); */
+/* } */
 
 void finalize(void *L) {
      lua_close(L);
 }
+
+#include "librosie_gen.c"

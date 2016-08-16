@@ -4,19 +4,25 @@
 # the Rosie source).  It's important that this value be passed without any additional
 # surrounding quotation marks.
 HOME = `cd ../../..; pwd`
+ROSIE = "$(HOME)/rosie"
 
 # Use COPT="-DDEBUG" on the command line to enable debug printing
 
+REPORTED_PLATFORM=$(shell (uname -o || uname -s) 2> /dev/null)
+ifeq ($(REPORTED_PLATFORM), Darwin)
+PLATFORM=macosx
+else ifeq ($(REPORTED_PLATFORM), GNU/Linux)
+PLATFORM=linux
+else
+PLATFORM=none
+endif
 
-# See ../doc/readme.html for installation and customization instructions.
+PLATFORMS = linux macosx windows
 
-# == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
-
-# Your platform. See PLATS for possible values.
-PLAT= none
+default: $(PLATFORM)
 
 CC=gcc -std=gnu99
-CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) -DROSIE_HOME=$(HOME) $(COPT)
+CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) $(COPT)
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
@@ -28,8 +34,8 @@ SYSCFLAGS=
 SYSLDFLAGS=
 SYSLIBS=
 
-MYCFLAGS=  -I/Users/jjennings/Work/Dev/rosie-pattern-language/tmp/lua-5.3.2/include
-MYLDFLAGS= -L/Users/jjennings/Work/Dev/rosie-pattern-language/tmp/lua-5.3.2/src
+MYCFLAGS=  -I$(HOME)/tmp/lua-5.3.2/include
+MYLDFLAGS= -L$(HOME)/tmp/lua-5.3.2/src
 MYLIBS= 
 MYOBJS=
 
@@ -37,8 +43,8 @@ MYOBJS=
 
 PLATS= aix bsd c89 freebsd generic linux macosx mingw posix solaris
 
-LUA_A=	/Users/jjennings/Work/Dev/rosie-pattern-language/tmp/lua-5.3.2/src/liblua.a
-LIBROSIE= /Users/jjennings/Work/Dev/rosie-pattern-language/src/C/librosie/librosie.so
+LUA_A=	$(HOME)/tmp/lua-5.3.2/src/liblua.a
+LIBROSIE= $(HOME)/src/C/librosie/librosie.so
 
 
 # Targets start here.
@@ -86,6 +92,10 @@ macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS= CC=$(CC)
 
 macosx: CC="gcc -std=gnu99"
+
+genC:
+	@echo Generating librosie C functions and headers
+	echo 'api = require "api"; api.write_C_HEADER("librosie_gen"); api.write_C_FUNCTIONS("librosie_gen")' | $(ROSIE) -D >/dev/null
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none

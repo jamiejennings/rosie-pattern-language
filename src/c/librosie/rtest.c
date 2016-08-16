@@ -9,10 +9,6 @@
 
 /* ROSIE_HOME defined on the command line during compilation (see Makefile)  */
 
-#ifndef ROSIE_HOME
-#error "ROSIE_HOME not defined.  Check CFLAGS in Makefile?"
-#endif
-
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +16,10 @@
 #include <stdarg.h>
 
 #include "librosie.h"
+
+#ifndef ROSIE_HOME
+#error "ROSIE_HOME not defined.  Check CFLAGS in Makefile?"
+#endif
 
 void print_results(struct stringArray r, const char *name) {
      printf("Results from %s: n=%d\n", name, r.n);
@@ -142,7 +142,7 @@ int main () {
 
      struct string *null = &(CONST_STRING("null"));
 
-     struct stringArray r = rosie_api(engine, "get_environment", null);	   
+     struct stringArray r = get_environment(engine,);
      print_results(r, "get_environment");
      free_stringArray(r);
 

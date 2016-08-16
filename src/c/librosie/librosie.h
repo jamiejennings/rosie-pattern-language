@@ -41,16 +41,10 @@ void free_stringArray_ptr(struct stringArray *r);
 
 void *initialize(const char *rosie_home, struct stringArray *msgs);
 void finalize(void *L);
-struct stringArray rosie_api(void *L, const char *name, ...);
-struct stringArray inspect_engine(void *L);
-struct stringArray configure_engine(void *L, struct string *config);
-struct stringArray match(void *L, struct string *input);
 
-// TO DO: Change json fcns to take a Lua state reference (or engine) as an arg
-//struct stringArray json_decode(struct string *js_string);
-//struct stringArray json_encode(struct string *plain_string);
+#include "librosie_gen.h"
 
-//void print_stringArray(struct stringArray sa, char *caller_name);
+
 
 #ifdef DEBUG
 #define LOGGING 1
