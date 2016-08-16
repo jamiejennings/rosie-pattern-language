@@ -52,20 +52,22 @@ struct stringArray match(void *L, struct string *input);
 
 //void print_stringArray(struct stringArray sa, char *caller_name);
 
-#ifndef DEBUG
-#define DEBUG 0
+#ifdef DEBUG
+#define LOGGING 1
+#else
+#define LOGGING 0
 #endif
 
 #define LOG(msg) \
-     do { if (DEBUG) fprintf(stderr, "%s:%d:%s(): %s", __FILE__, \
+     do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): %s", __FILE__, \
 			     __LINE__, __func__, msg); } while (0)
 
 #define LOGf(fmt, ...) \
-     do { if (DEBUG) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+     do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
 			     __LINE__, __func__, __VA_ARGS__); } while (0)
 
 #define LOGstack(L) \
-     do { if (DEBUG) stackDump(L); } while (0)
+     do { if (LOGGING) stackDump(L); } while (0)
 
 #define LOGprintArray(sa, caller_name) \
-     do { if (DEBUG) print_stringArray(sa, caller_name); } while (0)
+     do { if (LOGGING) print_stringArray(sa, caller_name); } while (0)

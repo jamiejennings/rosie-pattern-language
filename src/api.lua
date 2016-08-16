@@ -299,7 +299,7 @@ function gen_prototype(name, spec)
       if arglist~="" then arglist = arglist .. ", "; end
       arglist = arglist .. "struct string *" .. arg
    end
-   return p .. arglist .. ");"
+   return p .. arglist .. ")"
 end
 
 top_message = [=[
@@ -316,14 +316,24 @@ function gen_HEADER(signature)
    str = str .. gen_constant("FIRST_CODE", {code=enumeration_counter}) .. "\n";
    for k,v in pairs(signature) do str = str .. gen_constant(k,v) .. "\n"; end
    str = str .. "\n"
-   for k,v in pairs(signature) do str = str .. gen_prototype(k,v) .. "\n"; end
-   str = str .. "\n/* end */\n"
+   for k,v in pairs(signature) do str = str .. gen_prototype(k,v) .. ";\n"; end
+   str = str .. "\n/* end of generated code */\n"
    return str
 end
 
---   local h, err = io.open(filename, "w")
---   if not h then error(err); end
---   h:write(gen_HEADER(api.SIGNATURE)); h:close()
+function write_HEADER(filename)
+   local h, err = io.open(filename, "w")
+   if not h then error(err); end
+   h:write(gen_HEADER(api.SIGNATURE))
+   h:close()
+end
+
+function gen_API_FUNCTION(name, spec)
+   str = gen_prototype(name, spec) .. "{\n"
+
+
+   str = str .. "}\n\n"
+end
 
 
 ---------------------------------------------------------------------------------------------------

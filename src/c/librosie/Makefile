@@ -5,10 +5,7 @@
 # surrounding quotation marks.
 HOME = `cd ../../..; pwd`
 
-# Use COPT="-DDEBUG=0" on the command line to disable debug printing
-COPT="-DDEBUG=1"
-
-
+# Use COPT="-DDEBUG" on the command line to enable debug printing
 
 
 # See ../doc/readme.html for installation and customization instructions.

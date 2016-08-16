@@ -9,6 +9,12 @@
 local common = require "common"
 local compile = require "compile"
 
+-- Import declaration        | Local name of word
+-- ------------------------- | ------------------------------
+-- import "lib/common"       | common.word
+-- import "lib/common" as cm | cm.word
+-- import "lib/math" as .    | word
+
 --local module = {}
 
 import_pats = [==[
@@ -22,18 +28,43 @@ import_pats = [==[
       literal = { {!{esc/dquote} .} / {esc .} }*      -- from rpl-core
       alias quoted_string = { dquote literal dquote } -- from rpl-core
       import_path = quoted_string 
+
       import_spec = import_path ("as" (package_name / package_name_dot))?
       import = "import" import_spec (";" import_spec)* 
+
+      -- Specification for the package statement
+      package = "package" package_name
    ]==]
 
 e  = lapi.new_engine{name="import testing"}
 lapi.load_string(e, import_pats)
 
 assert(pattern.is(e.env.import))
-assert(lapi.configure_engine(e, {expression="import", encode=false}))
 
 require "test-functions"
 check = test.check
+
+assert(lapi.configure_engine(e, {expression="package", encode=false}))
+
+m, leftover = lapi.match(e, 'package')
+check(not m)
+m, leftover = lapi.match(e, 'package foo')
+check(m and (leftover==0))
+m, leftover = lapi.match(e, 'package fooBar')
+check(m and (leftover==0))
+m, leftover = lapi.match(e, 'package f_oo')
+check(m and (leftover==0))
+m, leftover = lapi.match(e, 'package _foo')
+check(not m)
+m, leftover = lapi.match(e, 'package 6foo')
+check(not m)
+m, leftover = lapi.match(e, 'package .foo')
+check(not m)
+m, leftover = lapi.match(e, 'package foo.bar')
+check(m and (leftover==4))
+
+
+assert(lapi.configure_engine(e, {expression="import", encode=false}))
 
 m, leftover = lapi.match(e, 'import ')
 check(not m)

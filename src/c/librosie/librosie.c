@@ -47,17 +47,16 @@ static int bootstrap (lua_State *L, const char *rosie_home) {
      return FALSE;
 }
 
-static int require (lua_State *L, const char *name, int assign_name) {  
+static int require_api (lua_State *L) {  
      int status;  
      lua_getglobal(L, "require");  
-     lua_pushstring(L, name);  
+     lua_pushstring(L, "api");  
      status = lua_pcall(L, 1, 1, 0);                   /* call 'require(name)' */  
      if (status != LUA_OK) {
 	  lua_pop(L, 1);	/* discard error because the details don't matter */
 	  return FALSE;
      }
-     if (assign_name==TRUE) lua_setglobal(L, name); /* set the global to the return value of 'require' */  
-     else lua_pop(L, 1);   /* else discard the result of require */  
+     /* IMPORTANT: leave the api table on the stack! */  
      return TRUE;
 }  
 
@@ -121,11 +120,11 @@ static void print_stringArray(struct stringArray sa, char *caller_name) {
 
 static struct stringArray new_engine(lua_State *L) {
      struct string *config = &CONST_STRING("null");
-     struct stringArray retvals = rosie_api(L, "new_engine", config);
+     struct stringArray retvals = rosie_api(L, "initialize", config);
      LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n);
      if (retvals.n !=2) {
 	  print_error_message(lua_pushfstring(L,
-				    "librosie internal error: wrong number of return values to new_engine (%d)",
+				    "librosie internal error: wrong number of return values to initialize (%d)",
 				    retvals.n));
 	  exit(-1);
      }
@@ -165,7 +164,7 @@ void *initialize(const char *rosie_home, struct stringArray *msgs) {
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
   if (bootstrap(L, rosie_home)) {
-       if (require(L, "api", TRUE)) { 
+       if (require_api(L)) { 
 	    struct stringArray retvals = new_engine(L);
 	    msgs->n = retvals.n;
 	    msgs->ptr = retvals.ptr;
@@ -195,6 +194,41 @@ void *initialize(const char *rosie_home, struct stringArray *msgs) {
   msgs->n = 2;
   msgs->ptr = list;
   return NULL;
+}
+
+struct stringArray construct_retvals(lua_State *L) {
+     struct stringArray retvals;
+     size_t nretvals = lua_rawlen(L, -1);
+     struct string **list = malloc(sizeof(struct string *) * nretvals);
+     size_t len;
+     for (size_t i=0; i<nretvals; i++) {
+	  int t = lua_rawgeti(L, -1, (lua_Integer) i+1);    /* lua has 1-based indexing */
+	  list[i] = malloc(sizeof(struct string));
+	  char *str;
+	  switch (t) {
+	  case LUA_TSTRING:
+	       str = (char *) lua_tolstring(L, -1, &len);
+	       break;
+	  case LUA_TBOOLEAN:
+	       if (lua_toboolean(L, -1)) {len=4; str="true";}
+	       else {len=5; str="false";}
+	       break;
+	  default:
+	       LOGf("Return type error: %d\n", t);
+	       len=0; str = "";
+	  }
+	  LOGf("Return value [%d]: len=%d ptr=%s\n", (int) i, (int) len, str);
+	  list[i]->len = len;
+	  list[i]->ptr = malloc(sizeof(uint8_t)*(len+1));
+	  memcpy(list[i]->ptr, str, len);
+	  list[i]->ptr[len] = 0; /* so we can use printf for debugging */	  
+	  LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[i]->len, list[i]->ptr);
+	  lua_pop(L, 1);
+     }
+     retvals.n = nretvals;
+     retvals.ptr = list;
+     lua_pop(L, 1);		/* pop the api call's results table */
+     return retvals;
 }
 
 struct string *new_string(char *msg, size_t len) {
@@ -247,17 +281,16 @@ struct stringArray rosie_api(void *L, const char *name, ...) {
      LOGf("Stack at start of rosie_api (%s):\n", name);
      LOGstack(L);
 
-     /* Optimize later: memoize stack value of fcn for each api call to avoid this lookup? */
-     lua_getglobal(L, "api");
+//     lua_getglobal(L, "api");
      lua_getfield(L, -1 , name);                    /* -1 is stack top, i.e. api table */
-     lua_remove(L, -2);	    /* remove the api table from the stack */ 
+//     lua_remove(L, -2);	    /* remove the api table from the stack */ 
      for (int i = 1; i <= nargs; i++) {
 	  arg = va_arg(args, struct string *); /* get the next arg */
 	  lua_pushlstring(L, (char *) arg->ptr, arg->len); /* push it */
      }
      va_end(args);
 
-     LOGf("About to call the api the function on the stack, and nargs=%d\n", nargs);  
+     LOGf("About to call the api function on the stack, and nargs=%d\n", nargs);  
      LOGstack(L);  
      /* API CALL */
      lua_call(L, nargs, 1); 
@@ -269,39 +302,7 @@ struct stringArray rosie_api(void *L, const char *name, ...) {
 	  exit(-1);
      }
 
-     struct stringArray retvals;
-     size_t nretvals = lua_rawlen(L, -1);
-     struct string **list = malloc(sizeof(struct string *) * nretvals);
-     size_t len;
-	  
-     for (size_t i=0; i<nretvals; i++) {
-	  int t = lua_rawgeti(L, -1, (lua_Integer) i+1);    /* lua has 1-based indexing */
-	  list[i] = malloc(sizeof(struct string));
-	  char *str;
-	  switch (t) {
-	  case LUA_TSTRING:
-	       str = (char *) lua_tolstring(L, -1, &len);
-	       break;
-	  case LUA_TBOOLEAN:
-	       if (lua_toboolean(L, -1)) {len=4; str="true";}
-	       else {len=5; str="false";}
-	       break;
-	  default:
-	       LOGf("Return type error: %d\n", t);
-	       len=0; str = "";
-	  }
-	  LOGf("Return value [%d]: len=%d ptr=%s\n", (int) i, (int) len, str);
-	  list[i]->len = len;
-	  list[i]->ptr = malloc(sizeof(uint8_t)*(len+1));
-	  memcpy(list[i]->ptr, str, len);
-	  list[i]->ptr[len] = 0; /* so we can use printf for debugging */	  
-	  LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[i]->len, list[i]->ptr);
-	  lua_pop(L, 1);
-     }
-     retvals.n = nretvals;
-     retvals.ptr = list;
-
-     lua_pop(L, 1);		/* pop the api call's results table */
+     struct stringArray retvals = construct_retvals(L);
 
      LOGf("Stack at end of call to Rosie api: %s\n", name); 
      LOGstack(L); 
@@ -309,30 +310,53 @@ struct stringArray rosie_api(void *L, const char *name, ...) {
      return retvals;
 }
 
-/* struct stringArray delete_engine(lua_State *L, struct string *eid_string) { */
-/*      struct string *ignore = &CONST_STRING("ignored12345"); */
-/*      struct stringArray retvals = rosie_api(L, "delete_engine", ignore); */
-/*      LOGprintArray(retvals, "delete_engine"); */
-/*      return retvals; */
-/* } */
+struct stringArray call_api(lua_State *L, char *api_name, int nargs) {
+     LOGf("About to call %s and nargs=%d\n", api_name, nargs);  
+     LOGstack(L);  
+     /* API CALL */
+     lua_call(L, nargs, 1); 
+     LOG("Stack immediately after lua_call:\n");
+     LOGstack(L);
+     
+     if (lua_istable(L, -1) != TRUE) {
+	  print_error_message(
+	       lua_pushfstring(L,
+			       "librosie internal error: return value of %s not a table",
+			       api_name));
+	  exit(-1);
+     }
+
+     struct stringArray retvals = construct_retvals(L);
+
+     LOGf("Stack at end of call to Rosie api: %s\n", api_name); 
+     LOGstack(L); 
+
+     LOGprintArray(retvals, "match");
+     return retvals;
+}
+     
+#define prelude(L, name) \
+     do { lua_getfield(L, -1, name); } while (0)
+
+#define push(L, stringname) \
+     do { lua_pushlstring(L, (char *) stringname->ptr, stringname->len); } while (0)
+
 
 struct stringArray inspect_engine(void *L) {
-     struct string *ignore = &CONST_STRING("ignored678");
-     struct stringArray retvals = rosie_api(L, "inspect_engine", ignore);
-     LOGprintArray(retvals, "inspect_engine");
-     return retvals;
+     prelude(L, "inspect_engine");
+     return call_api(L, "inspect_engine", 0);
 }
 
 struct stringArray configure_engine(void *L, struct string *config) {
-     struct stringArray retvals = rosie_api(L, "configure_engine", config);
-     LOGprintArray(retvals, "configure_engine");
-     return retvals;
+     prelude(L, "configure_engine");
+     push(L, config);
+     return call_api(L, "configure_engine", 1);
 }
 
 struct stringArray match(void *L, struct string *input) {
-     struct stringArray retvals = rosie_api(L, "match", input);
-     LOGprintArray(retvals, "match");
-     return retvals;
+     prelude(L, "match");
+     push(L, input);
+     return call_api(L, "match", 1);
 }
 
 void finalize(void *L) {

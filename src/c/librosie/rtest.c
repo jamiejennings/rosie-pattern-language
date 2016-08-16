@@ -107,7 +107,10 @@ struct stringArray json_decode(lua_State *LL, struct string *js_string) {
 
 int main () {
 
-     printf("\nTo suppress logging messages, build this test with: make macosx COPT=\"-DDEBUG=0\"\n\n");
+     if (LOGGING)
+	  printf("\nTo suppress logging messages, build this test WITHOUT this: COPT=\"-DDEBUG\"\n\n");
+     else
+	  printf("\nTo enable lots of logging messages, build this test with: make macosx COPT=\"-DDEBUG\"\n\n");
 
      struct stringArray retvals;
      void *engine = initialize(QUOTE_EXPAND(ROSIE_HOME), &retvals);
@@ -145,7 +148,7 @@ int main () {
 
      struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
-     r = rosie_api(engine, "configure_engine", arg); 
+     r = configure_engine(engine, arg); 
      print_results(r, "configure_engine");
      free_stringArray(r);
 
@@ -191,7 +194,7 @@ int main () {
 /* Guard against running a high iteration loop with verbose output */
      int M = 1000000;
      M = 1;
-#if DEBUG==0
+#ifdef DEBUG
      M = 1;
 #endif
 
@@ -215,7 +218,7 @@ int main () {
 	       LOGf("Match returned: %s\n", stringArrayRef(r,1)->ptr);
 	       struct string js_str = {r.ptr[1]->len, r.ptr[1]->ptr};
 	       struct stringArray js_array = json_decode(engine, &js_str);
-#if DEBUG==1
+#ifdef DEBUG
 	       print_results(js_array, "json_decode");
 #endif
 	       free_stringArray(js_array);
