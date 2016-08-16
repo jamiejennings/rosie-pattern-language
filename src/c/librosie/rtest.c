@@ -102,19 +102,15 @@ struct stringArray json_decode(lua_State *LL, struct string *js_string) {
 --------------------------------------------------------------------------------------------------- 
 */
 
-#define QUOTE_EXPAND(name) QUOTE(name)		    /* expand name */
-#define QUOTE(thing) #thing			    /* stringify it */
-
 int main () {
 
      if (LOGGING)
 	  printf("\nTo suppress logging messages, build this test WITHOUT this: COPT=\"-DDEBUG\"\n\n");
      else
-	  printf("\nTo enable lots of logging messages, build this test with: make macosx COPT=\"-DDEBUG\"\n\n");
+	  printf("\nTo enable lots of logging messages, build this test with: make COPT=\"-DDEBUG\"\n\n");
 
      struct stringArray retvals;
-     void *engine = initialize(QUOTE_EXPAND(ROSIE_HOME), &retvals);
-
+     void *engine = initialize((ROSIE_HOME), &retvals);
      if (!engine) {
 	  printf("Initialization error!   Details:\n");
 	  print_results(retvals, "initialize");
@@ -140,9 +136,9 @@ int main () {
 
      free_stringArray(retvals);
 
-     struct string *null = &(CONST_STRING("null"));
+//     struct string *null = &(CONST_STRING("null"));
 
-     struct stringArray r = get_environment(engine,);
+     struct stringArray r = get_environment(engine, NULL);
      print_results(r, "get_environment");
      free_stringArray(r);
 
@@ -157,7 +153,7 @@ int main () {
      free_stringArray(r);
 
      arg = &CONST_STRING("123");
-     r = match(engine, arg); 
+     r = match(engine, arg, NULL); 
      print_results(r, "match");
      byte_ptr code2 = r.ptr[0]->ptr;
      byte_ptr match2 = r.ptr[1]->ptr;
@@ -176,19 +172,19 @@ int main () {
      free_stringArray(r);
 
      arg = &CONST_STRING("123 abcdef");
-     r = match(engine, arg); 
+     r = match(engine, arg, NULL); 
      print_results(r, "match");
      free_stringArray(r);
 
      arg = &CONST_STRING("hi");
-     r = match(engine, arg); 
+     r = match(engine, arg, NULL); 
      print_results(r, "match");
      free_stringArray(r);
 
      char *foo2 = "1230000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
      struct string *foo_string2 = &CONST_STRING(foo2);
 
-     r = match(engine, foo_string2); 
+     r = match(engine, foo_string2, NULL); 
      print_results(r, "match");
 
 /* Guard against running a high iteration loop with verbose output */
@@ -207,7 +203,7 @@ int main () {
      for (int i=0; i<5*M; i++) {
 	  if (for_real) {
 	       free_stringArray(r);
-	       r = match(engine, foo_string);
+	       r = match(engine, foo_string, NULL);
 	  }
 	  code = stringArrayRef(r, 0);
 	  if (memcmp(code->ptr, true_value, (size_t) code->len)) {

@@ -222,6 +222,12 @@ local function match(input_text, optional_start)
    if type(input_text)~="string" then
       arg_error("input argument not a string")
    end
+   if optional_start then
+      optional_start = tonumber(optional_start)
+      if not optional_start then
+	 arg_error("start position argument not coercible to a number")
+      end
+   end
    local m, leftover = lapi.match(en, input_text, optional_start)
    return m, tostring(leftover)
 end
@@ -325,13 +331,12 @@ function gen_C_HEADER(api)
    return str
 end
 
-function api.write_C_HEADER(basefilename)
+function write_C_HEADER(basefilename)
    local h, err = io.open(basefilename..".h", "w")
    if not h then error(err); end
    h:write(gen_C_HEADER(api))
    h:close()
 end
-hidden[api.write_C_HEADER] = true;
 
 -- struct stringArray configure_engine(void *L, struct string *config) {
 --      prelude(L, "configure_engine");
@@ -360,13 +365,19 @@ function gen_C_FUNCTIONS(api)
    return str
 end
 
-function api.write_C_FUNCTIONS(basefilename)
+function write_C_FUNCTIONS(basefilename)
    local h, err = io.open(basefilename..".c", "w")
    if not h then error(err); end
    h:write(gen_C_FUNCTIONS(api))
    h:close()
 end
-hidden[api.write_C_FUNCTIONS] = true;
+
+function api.write_C_FILES()
+   local fn = "librosie_gen"
+   write_C_HEADER(fn)
+   write_C_FUNCTIONS(fn)
+end
+hidden[api.write_C_FILES] = true;
 
 ---------------------------------------------------------------------------------------------------
 

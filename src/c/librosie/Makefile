@@ -1,12 +1,13 @@
 # Makefile for building TEST driver program for Rosie
 
-# The value of HOME should be the Rosie install directory (called ROSIE_HOME in
-# the Rosie source).  It's important that this value be passed without any additional
-# surrounding quotation marks.
 HOME = `cd ../../..; pwd`
 ROSIE = "$(HOME)/rosie"
 
-# Use COPT="-DDEBUG" on the command line to enable debug printing
+ifdef DEBUG
+COPT = "-DDEBUG"
+endif
+
+# Use -DDEBUG on the command line to enable debug printing
 
 REPORTED_PLATFORM=$(shell (uname -o || uname -s) 2> /dev/null)
 ifeq ($(REPORTED_PLATFORM), Darwin)
@@ -62,7 +63,7 @@ librosie.so: librosie.o
 	$(CC) -shared -o $@ librosie.o $(LDFLAGS) $(LUA_A)
 
 clean:
-	$(RM) librosie.so librosie.o rtest.o rtest
+	$(RM) librosie.so librosie.o rtest.o rtest librosie_gen.c librosie_gen.h
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
@@ -93,13 +94,15 @@ macosx:
 
 macosx: CC="gcc -std=gnu99"
 
-genC:
+gen_C:
+librosie_gen.c:
+librosie_gen.h:
 	@echo Generating librosie C functions and headers
-	echo 'api = require "api"; api.write_C_HEADER("librosie_gen"); api.write_C_FUNCTIONS("librosie_gen")' | $(ROSIE) -D >/dev/null
+	echo 'api = require "api"; api.write_C_FILES();' | $(ROSIE) -D >/dev/null
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none
 
 
 rtest.o: rtest.c librosie.h
-librosie.o: librosie.c
+librosie.o: librosie_gen.c librosie_gen.h librosie.c librosie.h 

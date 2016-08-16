@@ -27,7 +27,9 @@
      do { lua_getfield(L, -1, name); } while (0)
 
 #define push(L, stringname) \
-     do { lua_pushlstring(L, (char *) stringname->ptr, stringname->len); } while (0)
+     do { if (stringname != NULL) lua_pushlstring(L, (char *) stringname->ptr, stringname->len); \
+	  else lua_pushnil(L);						\
+     } while (0)
 
 /* To do:
    + One Lua state per engine
@@ -44,6 +46,7 @@
 
 static int bootstrap (lua_State *L, const char *rosie_home) {
      char name[MAXPATHSIZE + 1];
+     LOG("About to bootstrap\n");
      if (strlcpy(name, rosie_home, sizeof(name)) < sizeof(name)) {
 	  if (strlcat(name, "/src/bootstrap.lua", sizeof(name)) < sizeof(name))
 	       return (luaL_dofile(L, name) == LUA_OK);
@@ -172,8 +175,10 @@ void *initialize(const char *rosie_home, struct stringArray *msgs) {
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
   if (bootstrap(L, rosie_home)) {
+       LOG("Bootstrap succeeded\n");
+       fflush(stderr);
        if (require_api(L)) { 
-	    prelude(L, "initialize");
+	    lua_getfield(L, -1, "initialize");
 	    struct stringArray retvals = call_api(L, "initialize", 0);
 	    msgs->n = retvals.n;
 	    msgs->ptr = retvals.ptr;

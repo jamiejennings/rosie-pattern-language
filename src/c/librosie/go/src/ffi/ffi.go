@@ -14,8 +14,6 @@ package main
 // #include <stdarg.h>
 // #include <stdlib.h>
 // #include "librosie.h"
-// #include "lauxlib.h"
-// #include "lualib.h"
 // struct string *new_string_ptr(int len, char *buf) {
 //   struct string *cstr_ptr = malloc(sizeof(struct string));
 //   cstr_ptr->len = (uint32_t) len;
@@ -30,7 +28,7 @@ package main
 //   if (index > a.n) return NULL;
 //   else return a.ptr[index];
 // }
-// #cgo CFLAGS: -std=gnu99 -shared -DROSIE_HOME="/Users/jjennings/Work/Dev/rosie-pattern-language" -I/Users/jjennings/Work/Dev/rosie-pattern-language/lua-5.3.2/include
+// #cgo CFLAGS: -std=gnu99 -I./include
 import "C"
 
 import "fmt"
@@ -75,7 +73,7 @@ func main() {
 	var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"
 	foo_string := C.new_string_ptr(C.int(len(foo)), C.CString(foo))
 
-	a, err = C.match(engine, foo_string)
+	a, err = C.match(engine, foo_string, nil)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Code from match: %s\n", retval)
 	fmt.Printf("Data|false from match: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
@@ -98,7 +96,7 @@ func main() {
 	fmt.Printf("Looping...")
 	for i:=0; i<5*M; i++ {
 		if for_real {
-			r = C.match(engine, foo_string)
+			r = C.match(engine, foo_string, nil)
 		} else {
 			r = a
 		}
