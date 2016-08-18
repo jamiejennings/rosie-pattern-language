@@ -34,7 +34,7 @@ import "C"
 import "fmt"
 import "encoding/json"
 import "os"
-//import "unsafe"
+import "strconv"
 
 func structString_to_GoString(cstr C.struct_string) string {
 	return C.GoStringN(C.to_char_ptr(cstr.ptr), C.int(cstr.len))
@@ -79,59 +79,42 @@ func main() {
 	fmt.Printf("Data|false from match: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
 	fmt.Printf("Leftover chars from match: %s\n", structString_to_GoString(*C.string_array_ref(a,2)))
 
-// Loop
-
-	var M int = 1000000
-//	int = 1
-	var for_real bool = true
-
-	var quiet bool = false
-	if M>1 { quiet = true }
 	var r C.struct_stringArray
 	var code, js_str string
+	var leftover int
 
 	foo = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
 	foo_string = C.new_string_ptr(C.int(len(foo)), C.CString(foo))
 
-	fmt.Printf("Looping...")
-	for i:=0; i<5*M; i++ {
-		if for_real {
-			r = C.match(engine, foo_string, nil)
-		} else {
-			r = a
+	r = C.match(engine, foo_string, nil)
+	code = structString_to_GoString(*C.string_array_ref(r,0))
+	js_str = structString_to_GoString(*C.string_array_ref(r,1))
+	leftover, err = strconv.Atoi(structString_to_GoString(*C.string_array_ref(r,2)))
+	if code != "true" {
+		fmt.Printf("Error in match: %s\n", js_str)
+	} else {
+		fmt.Printf("Code from match: %s\n", code)
+		fmt.Printf("Data|false from match: %s\n", js_str)
+		fmt.Printf("Leftover chars from match: %d\n", leftover)
+
+		var retvals map[string]map[string]interface{}
+		err = json.Unmarshal([]byte(js_str), &retvals)
+		if err != nil {
+			fmt.Println("JSON parse error:", err)
 		}
-		code = structString_to_GoString(*C.string_array_ref(r,0))
-		js_str = structString_to_GoString(*C.string_array_ref(r,1))
-		if code != "true" {
-			fmt.Printf("Error in match: %s\n", js_str)
+		fmt.Printf("Match table: %s\n", retvals)
+		fmt.Printf("Text from match table: %s\n", retvals["*"]["text"])
+		fmt.Printf("Pos from match table: %d\n", int(retvals["*"]["pos"].(float64)))
+		if retvals["*"]["subs"] != nil {
+			fmt.Printf("Subs from match table: %s\n", retvals["*"]["subs"].(string))
 		} else {
-			if !quiet {
-				fmt.Printf("Code from match: %s\n", code)
-				fmt.Printf("Data|false from match: %s\n", js_str)
-				fmt.Printf("Leftover chars from match: %s\n", structString_to_GoString(*C.string_array_ref(a,2)))
-			}
-			var retvals map[string]map[string]interface{}
-			err = json.Unmarshal([]byte(js_str), &retvals)
-			if err != nil {
-				fmt.Println("JSON parse error:", err)
-			}
-			
-			if !quiet {
-				fmt.Printf("Match table: %s\n", retvals)
-				fmt.Printf("Text from match table: %s\n", retvals["*"]["text"])
-				fmt.Printf("Pos from match table: %f\n", retvals["*"]["pos"].(float64))
-				if retvals["*"]["subs"] != nil {
-					fmt.Printf("Subs from match table: %s\n", retvals["*"]["subs"].(string))
-				} else {
-					fmt.Printf("No subs from match table.\n")
-				}
-			}
+			fmt.Printf("No subs from match table.\n")
 		}
-		if for_real { C.free_stringArray(r) }
 	}
+	C.free_stringArray(r)
+
 	fmt.Printf(" done.\n");
 
-	C.free_stringArray(a)
 	C.finalize(engine);
 
 

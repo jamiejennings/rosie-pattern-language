@@ -1,2 +1,5 @@
 # This file is createed by setup.sh:
 setgopath
+
+# This is the go executable produced by 'go build rtest'
+rtest
