@@ -8,7 +8,7 @@
 
 ## Use "DEBUG=1" on the command line to enable verbose debugging output
 
-HOME = `cd ../../../..; pwd`
+HOME = `cd ../../..; pwd`
 ROSIE = "$(HOME)/rosie"
 
 ifdef DEBUG
