@@ -1,6 +1,6 @@
 //  -*- Mode: Go; -*-                                              
 // 
-//  rtest.go
+//  rtest.go    Sample driver for librosie in go
 // 
 //  © Copyright IBM Corporation 2016.
 //  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
