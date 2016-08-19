@@ -50,8 +50,8 @@ func main() {
 	
 	var messages C.struct_stringArray
 	
-	ss := C.CString("/Users/jjennings/Work/Dev/rosie-pattern-language")
-	engine, err := C.initialize(ss, &messages)
+	home := gostring_to_structStringptr("/Users/jjennings/Work/Dev/rosie-pattern-language")
+	engine, err := C.initialize(home, &messages)
 	if engine==nil {
 		fmt.Printf("Return value from initialize was NULL!")
 		fmt.Printf("Err field returned by initialize was: %s\n", err)

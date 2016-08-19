@@ -40,7 +40,7 @@ module Rosie
   attach_function 'match_file', [:pointer, CString, CString, CString, CString], CStringArray.val
   attach_function 'set_match_exp_grep_TEMPORARY', [:pointer, CString], CStringArray.val
 
-  attach_function 'initialize', [ :string, CStringArray ], :pointer
+  attach_function 'initialize', [ CString, CStringArray ], :pointer
   attach_function 'finalize', [ :pointer ], :void
 
   attach_function 'free_string', [ CString.val ], :void

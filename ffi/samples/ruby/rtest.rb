@@ -23,7 +23,7 @@ def print_string_array(retval)
 end
 
 messages = Rosie::CStringArray.new
-engine = Rosie.initialize("/Users/jjennings/Work/Dev/rosie-pattern-language", messages)
+engine = Rosie.initialize(Rosie.to_CString("/Users/jjennings/Work/Dev/rosie-pattern-language"), messages)
 print_string_array(messages)
 
 config_string = Rosie.to_CString("{\"name\":\"Ruby engine\"}")

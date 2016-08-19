@@ -90,7 +90,7 @@ int main () {
 	  printf("\nTo enable lots of logging messages, build librosie.so with: make DEBUG=1\n\n");
 
      struct stringArray retvals;
-     void *engine = initialize((ROSIE_HOME), &retvals);
+     void *engine = initialize(&(CONST_STRING(ROSIE_HOME)), &retvals);
      if (!engine) {
 	  printf("Initialization error!   Details:\n");
 	  print_results(retvals, "initialize");

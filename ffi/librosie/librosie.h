@@ -6,8 +6,6 @@
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
 /*  AUTHOR: Jamie A. Jennings                                                */
 
-#define MAXPATHSIZE 4096
-
 #define TRUE 1
 #define FALSE 0
 
@@ -33,7 +31,7 @@ void free_string_ptr(struct string *s);
 void free_stringArray(struct stringArray r);
 void free_stringArray_ptr(struct stringArray *r);
 
-void *initialize(const char *rosie_home, struct stringArray *msgs);
+void *initialize(struct string *rosie_home, struct stringArray *msgs);
 void finalize(void *L);
 
 #include "librosie_gen.h"

@@ -6,6 +6,13 @@
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
 /*  AUTHOR: Jamie A. Jennings                                                */
 
+/* To do:
+   + One Lua state per engine
+   + Have initialize create a table of Rosie api functions
+   + Put debugging functions like stackDump inside #if DEBUG==1
+   + Move json_decode and similar test functions to rtest
+   - Check result of each malloc, and error out appropriately
+*/
 
 #include <signal.h>
 #include <stdio.h>
@@ -23,7 +30,8 @@
 /* ----------------------------------------------------------------------------------------
  * DEBUG (LOGGING) 
  * ----------------------------------------------------------------------------------------
-*/
+ */
+
 #ifdef DEBUG
 #define LOGGING 1
 #else
@@ -56,28 +64,18 @@
 	  else lua_pushnil(L);						\
      } while (0)
 
-/* To do:
-   + One Lua state per engine
-   + Have initialize create a table of Rosie api functions
-   + Put debugging functions like stackDump inside #if DEBUG==1
-   + Move json_decode and similar test functions to rtest
-   - Check result of each malloc, and error out appropriately
-*/
-
 /* ----------------------------------------------------------------------------------------
  * Utility functions
  * ----------------------------------------------------------------------------------------
  */
 
-static int bootstrap (lua_State *L, const char *rosie_home) {
-     char name[MAXPATHSIZE + 1];
+static int bootstrap (lua_State *L, struct string *rosie_home) {
+     const char *bootscript = "/src/bootstrap.lua";
      LOG("About to bootstrap\n");
-     if (strlcpy(name, rosie_home, sizeof(name)) < sizeof(name)) {
-	  if (strlcat(name, "/src/bootstrap.lua", sizeof(name)) < sizeof(name))
-	       return (luaL_dofile(L, name) == LUA_OK);
-     }
-     lua_pushstring(L, "librosie: error during bootstrap: MAXPATHSIZE too small");
-     return FALSE;
+     char *name = malloc(rosie_home->len + strlen(bootscript) + 1);
+     memcpy(name, rosie_home->ptr, rosie_home->len);
+     memcpy(name+(rosie_home->len), bootscript, strlen(bootscript));
+     return (luaL_dofile(L, name) == LUA_OK);
 }
 
 static int require_api (lua_State *L) {  
@@ -93,12 +91,14 @@ static int require_api (lua_State *L) {
      return TRUE;
 }  
 
-/* static struct stringArray *new_stringArray(uint32_t n, struct string **strings) { */
-/*      struct stringArray *sa = malloc(sizeof(struct stringArray)); */
-/*      sa->n = n; */
-/*      sa->ptr = strings; */
-/*      return sa; */
-/* }      */
+#if 0
+static struct stringArray *new_stringArray(uint32_t n, struct string **strings) { 
+     struct stringArray *sa = malloc(sizeof(struct stringArray)); 
+     sa->n = n; 
+     sa->ptr = strings; 
+     return sa; 
+}
+#endif
 
 /* ----------------------------------------------------------------------------------------
  * Debug functions
@@ -119,27 +119,22 @@ static void stackDump (lua_State *L) {
       for (i = top; i >= 1; i--) {
         int t = lua_type(L, i);
         switch (t) {
-    
           case LUA_TSTRING:  /* strings */
 	       printf("%d: '%s'", i, lua_tostring(L, i));
             break;
-    
           case LUA_TBOOLEAN:  /* booleans */
 	       printf("%d: %s", i, (lua_toboolean(L, i) ? "true" : "false"));
             break;
-    
           case LUA_TNUMBER:  /* numbers */
 	       printf("%d: %g", i, lua_tonumber(L, i));
             break;
-    
           default:  /* other values */
 	       printf("%d: %s", i, lua_typename(L, t));
             break;
-    
         }
-        printf("  ");  /* put a separator */
+        printf("  ");
       }
-      printf("\n");  /* end the listing */
+      printf("\n");
     }
 
 static void print_stringArray(struct stringArray sa, char *caller_name) {
@@ -151,29 +146,6 @@ static void print_stringArray(struct stringArray sa, char *caller_name) {
      }
 }
 
-/* static struct stringArray new_engine(lua_State *L) { */
-/*      struct string *config = &CONST_STRING("null"); */
-/*      struct stringArray retvals = rosie_api(L, "initialize", config); */
-/*      LOGf("In new_engine, number of retvals from rosie_api was %d\n", retvals.n); */
-/*      if (retvals.n !=2) { */
-/* 	  print_error_message(lua_pushfstring(L, */
-/* 				    "librosie internal error: wrong number of return values to initialize (%d)", */
-/* 				    retvals.n)); */
-/* 	  exit(-1); */
-/*      } */
-/* #if DEBUG==1 */
-/*      struct string *code = stringArrayRef(retvals, 0); */
-/*      char *true_value = "true"; */
-/*      if (memcmp(code->ptr, true_value, (size_t) code->len)) { */
-/* 	  LOGf("Success code was NOT true: len=%d, ptr=%s\n", code->len, code->ptr); */
-/* 	  struct string *err = stringArrayRef(retvals,1); */
-/* 	  LOGf("Error in new_engine: %s\n", (char *) err->ptr); */
-/*      } */
-/* #endif */
-/*      LOGprintArray(retvals, "new_engine"); */
-/*      return retvals; */
-/* } */
-
 /* ----------------------------------------------------------------------------------------
  * Exported functions
  * ----------------------------------------------------------------------------------------
@@ -182,8 +154,7 @@ static void print_stringArray(struct stringArray sa, char *caller_name) {
 /* forward ref */
 static struct stringArray call_api(lua_State *L, char *api_name, int nargs);
      
-void *initialize(const char *rosie_home, struct stringArray *msgs) {
-
+void *initialize(struct string *rosie_home, struct stringArray *msgs) {
      lua_State *L = luaL_newstate();
      if (L == NULL) {
 	  print_error_message("error during initialization: not enough memory");
@@ -196,9 +167,9 @@ void *initialize(const char *rosie_home, struct stringArray *msgs) {
 */   
   luaL_checkversion(L);
   luaL_openlibs(L);
-  lua_pushstring(L, rosie_home);
+  lua_pushlstring(L, (char *) rosie_home->ptr, rosie_home->len);
   lua_setglobal(L, "ROSIE_HOME");
-  LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home);
+  LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home->ptr);
   if (bootstrap(L, rosie_home)) {
        LOG("Bootstrap succeeded\n");
        fflush(stderr);
