@@ -78,8 +78,7 @@ local help_messages =
      ["-manifest"] = {"load the manifest file <arg> instead of MANIFEST from $sys",
 		      "(the Rosie install directory); use a single dash '-' to",
 		      "load no manifest file"},
-     ["-f"] = {"load the RPL file <arg>, after manifest (if any) is loaded;",
-	       "use a single dash '-' to read from the stdin"},
+     ["-f"] = {"load the RPL file <arg>, after manifest (if any) is loaded"},
      ["-e"] = {"compile the RPL statements in <arg>, after manifest and",
 	       "RPL file (if any) are loaded"},
   }
