@@ -305,11 +305,11 @@ function util.extract_source_line_from_pos(source, pos)
 end
       
 function util.split_path(path, optional_separator)
-   optional_separator = optional_separator or package.config:sub(1, (package.config:find("\n"))-1)
-   if #optional_separator~=1 then
-      error(string.format("Separator is not a one character string: %q", optional_separator))
+   local separator = optional_separator or common.dirsep
+   if #separator~=1 then
+      error(string.format("Separator is not a one character string: %q", separator))
    end
-   local f = path:gmatch("([^"..common.dirsep.."]*)"..common.dirsep.."()")
+   local f = path:gmatch("([^".. separator .. "]*)" .. separator .. "()")
    local results, lastpos = {}, 1
    local component, nextpos = f()
    while component do
@@ -318,7 +318,12 @@ function util.split_path(path, optional_separator)
       component, nextpos = f()
    end
    table.insert(results, path:sub(lastpos))
-   -- return the proper path, the base name, and a table of all the components
+   -- return:
+   -- (1) the proper path (directory path, not including file name, like unix 'dirname')
+   -- (2) the base file name (like unix 'basename'), and
+   -- (3) a table of all the path components, where an absolute path is indicated by the empty
+   --     string in the first table entry (otherwise the path is relative)
+   -- Note that the path can be reconstructed via table.concat(results, common.dirsep)
    return path:sub(1,lastpos-1), results[#results], results
 end
 

@@ -87,7 +87,7 @@ function transform(s, table_name)
    return ex
 end
 
-env = {print=print, println=println, printf=printf, quote=quote, NR=NR, ORS=ORS, OFS=OFS}
+env = {require=require, print=print, println=println, printf=printf, quote=quote, NR=NR, ORS=ORS, OFS=OFS}
 local f, err = load(transform(script, "LINE"), "cli chunk", "t", env)
 if (not f) then
    error(string.format("Failed to compile script: %q\nError: %s", script, err), 0)

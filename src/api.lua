@@ -171,7 +171,7 @@ local function load_manifest(manifest_file)
    end
    local ok, messages, full_path = manifest.process_manifest(en, manifest_file)
    check_results(ok, messages, full_path)
-   return full_path, (messages and table.unpack(messages)) or nil
+   return full_path, table.unpack(messages)
 end
 
 api.load_manifest = api_wrap(load_manifest, "string", "string*")
@@ -180,7 +180,7 @@ local function load_file(path)
    local en = default_engine
    local ok, messages, full_path = lapi.load_file(en, path)
    check_results(ok, messages, full_path)
-   return full_path, (messages and table.unpack(messages)) or nil
+   return full_path, table.unpack(messages)
 end
 
 api.load_file = api_wrap(load_file, "string", "string*")
@@ -192,7 +192,7 @@ local function load_string(input)
    end
    local results, messages = lapi.load_string(en, input)
    check_results(results, messages, "dummy")
-   return (messages and table.unpack(messages)) or nil
+   return table.unpack(messages)
 end
 
 api.load_string = api_wrap(load_string, "string*")
