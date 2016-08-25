@@ -65,5 +65,17 @@ module Rosie
     return strings
   end
 
-end  
+  # N.B. (1) jruby reports that read_string_length is not a method of
+  # FFI::Pointer, AND (2) it appears that read_string accepts a length argument.
+  def Rosie.print_string_array(retval)
+    print "Number of strings returned from api call is: ", retval[:n], "\n"
+    ptr_array = FFI::Pointer.new(FFI::Pointer, retval[:ptr]).read_array_of_pointer(retval[:n])
+    for i in 0..(retval[:n]-1) do
+      str = Rosie::CString.new ptr_array[i]
+#      print "  [", i, "] len=", str[:len], ", ptr=", str[:ptr].read_string_length(str[:len]), "\n"
+      print "  [", i, "] len=", str[:len], ", ptr=", str[:ptr].read_string(str[:len]), "\n"
+    end
+  end
+
+end  #module Rosie
 

@@ -10,12 +10,14 @@ SCRIPT_PATH=`pwd`;
 popd  > /dev/null
 
 I=""
+DEV="false"
 
 #
-# -D is an undocumented command line option that launches Rosie in development mode
+# -D is an 'undocumented' command line option that launches Rosie in development mode
 #
 if [[ "$1" = "-D" ]]; then
    I="-i"
+   DEV="true"
    shift
 fi
 
@@ -31,4 +33,4 @@ if ([ -x $SCRIPT_PATH/bin/lua ]) then
        exit -1
 fi
 
-/usr/bin/env ROSIE_HOME=$ROSIE_HOME HOSTNAME=$HOSTNAME HOSTTYPE=$HOSTTYPE OSTYPE=$OSTYPE $ROSIE_LUA_PATH/bin/lua $I -e "ROSIE_HOME=\"$ROSIE_LUA_PATH\"; SCRIPTNAME=\"$0\"" $ROSIE_LUA_PATH/src/run.lua "$@"
+/usr/bin/env ROSIE_HOME=$ROSIE_HOME HOSTNAME=$HOSTNAME HOSTTYPE=$HOSTTYPE OSTYPE=$OSTYPE $ROSIE_LUA_PATH/bin/lua $I -e "ROSIE_HOME=\"$ROSIE_LUA_PATH\"; SCRIPTNAME=\"$0\"; ROSIE_DEV=$DEV" $ROSIE_LUA_PATH/src/run.lua "$@"

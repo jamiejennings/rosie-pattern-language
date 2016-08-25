@@ -35,7 +35,7 @@ check(api.HOME and type(api.ROSIE_HOME=="string"))
 function wrap(f)
    return function (...)
 	     local tbl = f(...)
-	     return tbl[1], table.unpack(tbl, 2)
+	     return table.unpack(tbl)
 	  end
 end
 
@@ -308,11 +308,11 @@ check(env["manifest_ok"].type=="definition")
 
 ok, msg = wapi.load_manifest("$sys/test/manifest.err")
 check(not ok)
-check(msg:find("Error: cannot open file"))
+check(msg[3]:find("Error: cannot open file"))
 
 ok, msg = wapi.load_manifest("$sys/test/manifest.synerr") -- contains a //
 check(not ok)
-check(msg:find("Error: cannot read file"))
+check(msg[3]:find("Error: cannot read file"))
 
 
 ----------------------------------------------------------------------------------------

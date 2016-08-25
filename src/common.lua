@@ -26,6 +26,7 @@ common.dirsep = package.config:sub(1, (package.config:find("\n"))-1)
 assert(#common.dirsep==1, "directory separator should be a forward or a backward slash")
 
 function common.compute_full_path(path, manifest_path)
+   -- return the full path, the dirname of the path, and the basename of the path
    local full_path
    if (type(path)~="string") or (path=="") then
       error("Internal error: bad path argument to compute_full_path: " .. tostring(path))
@@ -61,13 +62,14 @@ function common.compute_full_path(path, manifest_path)
 end
 
 function common.compact_messages(tbl)
-   if type(tbl)~="table" then return tbl; end	    -- mellifluous
+   if type(tbl)~="table" then return tbl; end
+   -- otherwise, always return a table of zero or more strings
+   if (not tbl) or (type(tbl)~="table") then tbl = {tbl}; end
    local only_strings = {}
    for _, msg in ipairs(tbl) do
       if msg then table.insert(only_strings, msg); end
    end
-   if not next(only_strings) then return nil;
-   else return only_strings; end
+   return only_strings
 end
 
 common.escape_substitutions =			    -- characters that change when escaped are:

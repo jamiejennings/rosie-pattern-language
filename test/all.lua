@@ -21,5 +21,11 @@ do_test(ROSIE_HOME .. "/test/cli-test.lua")
 do_test(ROSIE_HOME .. "/test/eval-test.lua")
 
 passed = test.print_grand_total(results)
-if passed then os.exit(0) else os.exit(-1); end
+
+-- When running Rosie interactively (i.e. development mode), do not exit.  Otherwise, these tests
+-- were launched from the command line, so we should exit with an informative status.
+if not ROSIE_DEV then
+   if passed then os.exit(0) else os.exit(-1); end
+end
+
 
