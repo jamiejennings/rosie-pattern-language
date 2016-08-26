@@ -1,0 +1,12 @@
+These directories contain sample programs which are little more than proofs of
+concept.  When designing librosie, I wanted to ensure that it was callable from
+a reasonably broad set of languages.  Those languages had to support libffi, and
+further support passing the right data types back and forth (in particular,
+strings that can include null bytes, in order to accomodate utf-8 strings.
+
+Note that utf8 strings can contain the null character (code point 0), which is
+encoded as a single zero byte.  There exists a "modified utf-8" encoding, which
+encodes the null character using the two byte encoding C0 80, but this is not
+standard utf-8.
+
+
