@@ -88,9 +88,14 @@ function transform(s, table_name)
 end
 
 env = {require=require, print=print, println=println, printf=printf, quote=quote, NR=NR, ORS=ORS, OFS=OFS}
-local f, err = load(transform(script, "LINE"), "cli chunk", "t", env)
+transformed = transform(script, "LINE")
+local f, err = load(transformed, "rprint script", "t", env)
 if (not f) then
-   error(string.format("Failed to compile script: %q\nError: %s", script, err), 0)
+   error(string.format("Failed to compile script: %q\nExpanded script is: %q\nError: %s",
+		       script,
+		       transformed,
+		       err),
+	 0)
 end
 
 l = io.stdin:read("l")
