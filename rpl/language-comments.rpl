@@ -1,10 +1,38 @@
 ---- -*- Mode: rpl; -*-                                                                             
 ----
----- language-comments.rpl
+---- language-comments.rpl   Extract comments (or just code) from source files
 ----
 ---- © Copyright IBM Corporation 2016.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
+
+-- USAGE:
+-- You must use rosie's -wholefile command line option with these patterns. 
+--
+-- EXAMPLE: extract comments
+-- bash-3.2$ rosie -wholefile c.any_comment tmp/lpeg-1.0.0/lpvm.c
+
+-- ** $Id: lpvm.c,v 1.6 2015/09/28 17:01:25 roberto Exp $
+-- ** Copyright 2007, Lua.org & PUC-Rio  (see 'lpeg.html' for license)
+--   initial size for call/backtrack stack  
+-- ** {======================================================
+-- ** Virtual Machine
+-- ** =======================================================
+--   saved position (or NULL for calls)   next instruction  
+-- ** Double the size of the array of captures
+-- [...]
+--
+-- EXAMPLE: extract code
+-- bash-3.2$ rosie -wholefile c.code_only tmp/lpeg-1.0.0/lpvm.c
+-- 
+-- #include <limits.h>
+-- #include <string.h>
+-- 
+-- #include "lua.h"
+-- #include "lauxlib.h"
+-- [...]
+
+
 
 -- require "csv"
 
@@ -16,8 +44,8 @@ alias sq = {csv.squote squoted_field csv.squote}
 
 alias string_constant = dq / sq
 
-comment = {!"\n" .}*
-alias hash_comment = {[:space:]* "#" comment "\n"?}
+comment = {!"\n" .}*		-- terminates at newline or end of input
+alias hash_comment = {[:space:]* "#" comment "\n"?} -- note: eats newline if not at end of input
 alias hash_skip = { string_constant / {!"#" .} }*
 
 ----------------------------------------------------------------------------------------
@@ -33,9 +61,25 @@ alias ruby.any_comment = { hash_skip hash_comment }*
 -- Python
 ----------------------------------------------------------------------------------------
 
--- useful patterns to search for: py.line_comment, py.any_comment
+-- useful patterns to search for: py.line_comment, py.any_comment, py.block_comment, py.code_only
+
+alias py.block_comment_delimeter = { "\"\"\"" / "'''" }
+alias py.any_skip = {!py.block_comment_delimeter !hash_comment .}*
+py.block_comment_contents = { !py.block_comment_delimeter . }*
+
+alias py.block_comment = { py.block_comment_delimeter py.block_comment_contents py.block_comment_delimeter }
 alias py.line_comment = hash_comment*
-alias py.any_comment = { hash_skip hash_comment }*
+alias py.any_comment = { py.any_skip {py.block_comment / hash_comment} }*
+
+alias py.comments_to_skip = 
+   { {py.block_comment_delimeter {!py.block_comment_delimeter .}* py.block_comment_delimeter}
+     /
+     {"#" {!"\n" .}* }
+   }
+
+py.code = {!py.block_comment_delimeter !"#" .}+         -- keep chars up to a comment
+alias py.code_only = { py.comments_to_skip / py.code}*  -- discard comments, keep code
+
 
 ----------------------------------------------------------------------------------------
 -- Perl
@@ -52,7 +96,6 @@ alias pl.any_comment = { hash_skip hash_comment }*
 -- useful patterns to search for: js.line_comment, js.block_comment, js.any_comment
 
 alias js.comment_char = "//"
-alias js.line_comment = {[:space:]* js.comment_char comment "\n"?}+
 
 alias js.start_comment = "/*"
 alias js.end_comment = "*/"
@@ -66,6 +109,16 @@ alias js.block_comment_full = { js.start_comment
 				js.comment_block
 				js.end_comment 
 			     }
-alias js.block_comment = { js.block_comment_skip js.block_comment_full }+
 alias js.skip = { string_constant / {!js.any_comment_start .} }*
+
+alias js.block_comment = { js.block_comment_skip js.block_comment_full }+
+alias js.line_comment = {[:space:]* js.comment_char comment "\n"?}+
 alias js.any_comment = { js.skip {js.line_comment / js.block_comment_full} }+
+
+alias js.comments_to_skip =
+   {js.start_comment {!js.end_comment .}* js.end_comment} / {js.comment_char {!"\n" .}*}
+js.code = {!js.start_comment !js.comment_char .}+       -- keep chars up to a comment
+alias js.code_only = { js.comments_to_skip / js.code}*  -- discard comments, keep code
+
+c.any_comment = js.any_comment
+c.code_only = js.code_only
