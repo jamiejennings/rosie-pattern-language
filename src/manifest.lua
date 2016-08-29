@@ -44,6 +44,7 @@ local function process_manifest_line(en, line, manifest_path)
       if not input then return false, {info, msg}; end
 
       local results, messages = compile.compile_source(input, en.env)
+      if type(messages)=="string" then messages = {messages}; end -- compiler error
       table.insert(messages, 1, info)
       return (not (not results)), messages
    else
