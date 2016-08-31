@@ -53,6 +53,10 @@ alias hash_skip = { string_constant / {!"#" .} }*
 ----------------------------------------------------------------------------------------
 
 -- useful patterns to search for: ruby.line_comment, ruby.any_comment
+-- FIXME:
+--   N.B. These patterns do not detect ruby's "here documents", which are a long form of string
+--   literal.  Thus, if a ruby long string contains something that looks like a comment, it will turn
+--   up in the comment pattern.
 
 alias ruby.line_comment = hash_comment*
 alias ruby.any_comment = { hash_skip hash_comment }*
@@ -93,7 +97,8 @@ alias pl.any_comment = { hash_skip hash_comment }*
 -- javascript, Java, C, and more
 ----------------------------------------------------------------------------------------
 
--- useful patterns to search for: js.line_comment, js.block_comment, js.any_comment
+-- useful patterns to search for: js.line_comment, js.block_comment, js.any_comment,
+-- js.code_only, c.any_comment, c.code_only
 
 alias js.comment_char = "//"
 
