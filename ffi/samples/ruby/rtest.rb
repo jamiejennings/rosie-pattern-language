@@ -7,10 +7,8 @@
 # #  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 # #  AUTHOR: Jamie A. Jennings
 
-
 $: << "."                       # add "." to the library search path
 require 'rosie'
-
 require 'json'
 
 # def print_string_array(retval)
@@ -64,7 +62,8 @@ retval = Rosie.configure_engine(engine, config_string)
 Rosie.print_string_array(retval)
 Rosie.free_stringArray(retval)
 
-# Loop test prep
+
+
 
 test = Rosie::to_CString("$sys/MANIFEST")
 print "TEST: len=", test[:len], "\n"
@@ -84,7 +83,6 @@ Rosie.free_stringArray(retval)
 
 foo = Rosie::to_CString("1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
 retval = Rosie.match engine, foo, nil
-retval_SAVE = retval
 
 retval = Rosie.match engine, foo, nil
 strings = Rosie.from_CStringArray(retval)
@@ -101,8 +99,16 @@ else
   print "Call to match FAILED\n"
 end
 
+require 'test/unit'
+extend Test::Unit::Assertions
+
 print json_string, "\n"
-obj_to_return_to_caller = JSON.parse(json_string)
+obj = JSON.parse(json_string)
+assert(obj.keys.length==1)      # the one item will be indexed by "*"
+items = obj[obj.keys[0]]        # items will contain "text" and "pos" fields
+assert(items)
+items.each_key { |k| puts k }
+if (obj.keys.length!=1) then raise "Multiple return values from match!" end
 
 print " done.\n"
 Rosie.finalize(engine)

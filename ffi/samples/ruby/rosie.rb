@@ -60,7 +60,7 @@ module Rosie
     strings = []
     for i in 0..(retval[:n]-1) do
       cstr = Rosie::CString.new ptr_array[i]
-      strings[i] = cstr[:ptr].read_string_length(cstr[:len])
+      strings[i] = cstr[:ptr].read_string(cstr[:len])
     end
     return strings
   end
@@ -72,7 +72,6 @@ module Rosie
     ptr_array = FFI::Pointer.new(FFI::Pointer, retval[:ptr]).read_array_of_pointer(retval[:n])
     for i in 0..(retval[:n]-1) do
       str = Rosie::CString.new ptr_array[i]
-#      print "  [", i, "] len=", str[:len], ", ptr=", str[:ptr].read_string_length(str[:len]), "\n"
       print "  [", i, "] len=", str[:len], ", ptr=", str[:ptr].read_string(str[:len]), "\n"
     end
   end
