@@ -7,7 +7,10 @@
 	Added travis support
 
 	Added ffi directory with librosie and sample programs for using Rosie
-	from a variety of other languages.
+	from a variety of other languages.  More samples are coming.
+
+	Added patterns for extracting Python's block comments, as well as code
+	only (no comments) to rpl/language-comments.rpl
 
 2016-08-09  Jamie Jennings  <jjennings@us.ibm.com>
 
