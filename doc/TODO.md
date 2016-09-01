@@ -19,7 +19,9 @@
 - [ ] Create and expose a comprehensive Rosie API
     - [x] Lua API (lapi)
 	- [x] External API (api) using JSON encoding
-    - [ ] Expose the Rosie API as a C library; make it available through libffi.
+    - [x] Expose the Rosie API as a C library; make it available through libffi.
+	- [ ] Provide proof-of-concept librosie-using sample programs: C, go,
+          Python, Ruby, node.js, java
 
 - [x] Enhance character expressions to include:
     - [x] Union of character sets, e.g. `[[a-f][0-9]`
@@ -79,14 +81,14 @@
       (Implementation will introduce a lexical scope to facilitate future
       addition of block structure to RPL.)
 
-- [ ] Optimizations
+- [ ] Optimizations (back burner, because performance is v good now)
     - [ ] Profiling
         - [ ] If profiling suggests it would help, try LuaJIT
 		- [ ] Save a compiled env so that we don't have to re-compile always
 		- [ ] Approach: de/serialize a rosie engine's environment
 		- [x] Will luac be helpful as well?
     - [x] Tune the run-time matching loop
-	- [ ] Compiler
+	- [ ] RPL Compiler
         - [ ] Remove unnecessary assertions (which are VERY slow in Lua)
         - [ ] Simplify each AST, e.g. by removing sequences of boundaries (checking for idempotence first)
         - [ ] Avoid multiple table indexing by assigning to a local
