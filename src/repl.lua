@@ -79,7 +79,7 @@ function repl(en)
 	    local def = lapi.get_environment(en, text)
 	    if def then io.write(def.binding, "\n")
 	    else
-	       io.write("Repl: undefined identifier\n")
+	       io.write(string.format("Repl: undefined identifier %s\n", text))
 	       if text=="help" then
 		  io.write("  Hint: use .help to get help\n")
 	       elseif (text=="exit") or (text=="quit") then
