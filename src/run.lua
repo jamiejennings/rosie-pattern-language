@@ -296,23 +296,22 @@ function run()
       os.exit()
    end
 
-   if not opt_pattern then print("Rosie CLI warning: missing pattern argument"); end
-
-   if opt_filenames then
-      for _,fn in ipairs(opt_filenames) do
-	 if (not QUIET) or (#opt_filenames>1) then print("\n" .. fn .. ":"); end
-	 process_pattern_against_file(fn)
-      end -- for each file
-   else
-      print("Rosie CLI warning: missing filename arguments")
-   end
-
    if OPTION["-repl"] then
       if QUIET then greeting(); end
       repl(CL_ENGINE)
-   end
+   else
+      if not opt_pattern then print("Rosie CLI warning: missing pattern argument"); end
 
-end
+      if opt_filenames then
+	 for _,fn in ipairs(opt_filenames) do
+	    if (not QUIET) or (#opt_filenames>1) then print("\n" .. fn .. ":"); end
+	    process_pattern_against_file(fn)
+	 end -- for each file
+      else
+	 print("Rosie CLI warning: missing filename arguments")
+      end
+   end
+end -- function run
 
 ----------------------------------------------------------------------------------------
 -- Do stuff
