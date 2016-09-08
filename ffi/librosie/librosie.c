@@ -87,7 +87,13 @@ static int require_api (lua_State *L) {
 	  lua_pop(L, 1);	/* discard error because the details don't matter */
 	  return FALSE;
      }
-     /* IMPORTANT: leave the api table on the stack! */  
+     /* IMPORTANT: leave the api table on the stack!
+      * For each call to the API, we will index into this table to
+      * find the Lua function that implements the API.  An
+      * alternative, which may be slightly faster, is to store each
+      * API function in LUA_REGISTRY, each with its own unique
+      * integer key (see luaL_ref).
+      */
      return TRUE;
 }  
 
