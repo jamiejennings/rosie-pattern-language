@@ -1,3 +1,11 @@
+2016-09-13  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99d
+
+	Added node.js sample program (that uses librosie)
+
+	
+
 2016-08-15  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* v0.99c
@@ -11,6 +19,7 @@
 
 	Added patterns for extracting Python's block comments, as well as code
 	only (no comments) to rpl/language-comments.rpl
+
 
 2016-08-09  Jamie Jennings  <jjennings@us.ibm.com>
 
