@@ -10,7 +10,8 @@
 
 ffi/librosie/librosie_gen.c
 ffi/librosie/librosie_gen.h
-ffi/sample/C/rtest
+ffi/samples/C/rtest
+ffi/samples/nodejs/node_modules/*
 
 src/c/repl/rosie
 src/c/librosie/node_modules/*
