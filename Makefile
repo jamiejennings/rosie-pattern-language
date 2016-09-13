@@ -20,7 +20,7 @@ PLATFORMS = linux macosx windows
 
 LUA_ARCHIVE = 'http://www.lua.org/ftp/lua-5.3.2.tar.gz'
 LPEG_ARCHIVE = 'http://www.inf.puc-rio.br/~roberto/lpeg/lpeg-1.0.0.tar.gz'
-JSON_ARCHIVE = 'http://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.tar.gz'
+JSON_ARCHIVE = 'https://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.tar.gz'
 
 LUA = lua-5.3.2
 LPEG = lpeg-1.0.0
@@ -40,21 +40,21 @@ JSON_DIR = $(TMP)/$(JSON)
 download: $(LUA_DIR) $(LPEG_DIR) $(JSON_DIR)
 
 $(LUA_DIR): $(LUA_DIR).tar.gz
-	cd $(TMP) && tar -xf $(LUA).tar.gz
+	cd $(TMP) && tar -xf $(LUA).tar.gz  || (echo "File obtained from $(LUA_ARCHIVE) was corrupted"; exit 1)
 	cd $(LUA_DIR)/src && sed -e 's/CC=cc/CC=$$(CC)/' Makefile > Makefile2
 	echo 'macosx: CC=cc' >$(LUA_DIR)/src/extra
 	cd $(LUA_DIR)/src && cat Makefile2 extra > Makefile
 	cd $(LUA_DIR) && ln -sf src include	    # Needed for lpeg to compile
 
 $(LPEG_DIR): $(LPEG_DIR).tar.gz
-	cd $(TMP) && tar -xf $(LPEG).tar.gz
+	cd $(TMP) && tar -xf $(LPEG).tar.gz  || (echo "File obtained from $(LPEG_ARCHIVE) was corrupted"; exit 1)
 	echo '#!/bin/bash' > $(LPEG_DIR)/makedebug
 	echo 'make clean' >> $(LPEG_DIR)/makedebug
 	echo 'make LUADIR=../lua-5.3.2/src COPT="-DLPEG_DEBUG -g" macosx' >> $(LPEG_DIR)/makedebug
 	chmod a+x $(LPEG_DIR)/makedebug
 
 $(JSON_DIR): $(JSON_DIR).tar.gz
-	cd $(TMP) && tar -xf $(JSON).tar.gz
+	cd $(TMP) && tar -xzf $(JSON).tar.gz || (echo "File obtained from $(JSON_ARCHIVE) was corrupted"; exit 1)
 
 $(LUA_DIR).tar.gz:
 	mkdir -p $(TMP)
@@ -122,7 +122,7 @@ lib/cjson.so: $(JSON_DIR)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
-compile:
+compile: bin/lua
 	bin/lua -e "ROSIE_HOME=\"`pwd`\"" src/rosie-compile.lua
 
 ln:
