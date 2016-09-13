@@ -35,6 +35,27 @@ The current release is the "version 1.0 candidate".  The RPL language syntax and
 semantics are stable, as is the (relatively new) API.  The current release is
 labeled "v0.99x" where x begins with "a" and will be advanced as bugs are fixed.
 
+## How you can help
+
+### Calling Rosie from Go, Python, node.js, Ruby, Java, or ...?
+
+Rosie is available as a [C library](ffi/librosie) that is callable from these
+languages.  There are [sample programs](ffi/samples) that demonstrate it, and
+these could be improved by turning them into proper libraries, one for each
+target language.
+
+If you're a Python hacker, we could use your help turning our
+sample `librosie` client into a Python module.  Same for the other languages.
+
+And since `librosie` is built on `libffi`, it's pretty easy to access Rosie from
+other languages.  This is another great area to make a contribution to the
+project.
+
+### Write new patterns!
+
+We are happy to add more patterns to the initial library we've started in the
+[rpl directory](rpl), whether they build on what we have or are entirely new.
+
 ## Docs
 
 Rosie documentation:
