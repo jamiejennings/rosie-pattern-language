@@ -51,6 +51,12 @@ And since `librosie` is built on `libffi`, it's pretty easy to access Rosie from
 other languages.  This is another great area to make a contribution to the
 project.
 
+Note: There is currently no Lua library for Rosie, ironically.  It has not been
+a priority so far, but we will get to it in 2016 (most likely).  Contributions
+along these lines are welcome!  (The engine abstraction may be a good place to
+start, because it has outgrown its original design and needs refactoring
+anyway.)
+
 ### Write new patterns!
 
 We are happy to add more patterns to the initial library we've started in the
