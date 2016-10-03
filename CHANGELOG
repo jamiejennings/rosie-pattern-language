@@ -4,7 +4,9 @@
 
 	Added node.js sample program (that uses librosie)
 
-	
+	Updated csv.rpl to include pipe separator, and to work better
+
+	Added doc/data (sample data directory)
 
 2016-08-15  Jamie Jennings  <jjennings@us.ibm.com>
 
