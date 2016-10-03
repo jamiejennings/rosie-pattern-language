@@ -33,9 +33,9 @@ Mac OSX system log (from the Rosie test suite):
 ![Screen capture](doc/images/system.log-example.jpg "Rosie processing a MacOS system log")
 
 Rosie is parsing the log file into fields that are printed in various colors.
-Unparsed data is shown in black text.  To see which colors correspond to which
-RPL patterns, type `./run -patterns` to see all defined and loaded patterns and
-the color (if any) that is assigned to them for output at the terminal.
+To see which colors correspond to which RPL patterns, type `./run -patterns` to
+see all defined and loaded patterns and the color (if any) that is assigned to
+them for output at the terminal.
 
 To see the JSON version of the Rosie output, use the `-encode` option to specify
 `json`.  In the example below, the pattern being matched is `common.word
@@ -61,10 +61,11 @@ jamiejennings$ rosie -encode json 'common.word basic.network_patterns' /etc/reso
                 "pos": 12.0}}]}}]}}
 jamiejennings$ 
 ``` 
+(Note: `rjsonpp` is a json pretty-printer, similar to `json_pp`.)
 
 ## How to build: clone the repo, and type 'make'
 
-After cloning the repository, there is just one step: `make`  The `makefile` will download the
+After cloning the repository, there is just one step: `make`.  The `makefile` will download the
 needed prerequisites, compile them, and run a quick test.
 
 You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
