@@ -22,6 +22,46 @@ old MacBook Pro, where other (popular) solutions do not achieve 10,000 lines/sec
 
 For the PL and comp sci geeks among us, some technical notes are [here](doc/geek.md).
 
+## A quick look at Rosie
+
+For a quick test of Rosie's capabilities, use the Rosie Pattern Engine to look
+for a basic set of patterns in any text file on your system.  Good candidates
+may be `/etc/resolv.conf` or `/var/log/system.log`.  Use the pattern
+`basic.matchall` for this.  In the example below, we use a few lines from the
+Mac OSX system log (from the Rosie test suite):
+
+![Screen capture](doc/images/system.log-example.jpg "Rosie processing a MacOS system log")
+
+Rosie is parsing the log file into fields that are printed in various colors.
+Unparsed data is shown in black text.  To see which colors correspond to which
+RPL patterns, type `./run -patterns` to see all defined and loaded patterns and
+the color (if any) that is assigned to them for output at the terminal.
+
+To see the JSON version of the Rosie output, use the `-encode` option to specify
+`json`.  In the example below, the pattern being matched is `common.word
+basic.network_patterns`.  Rosie finds a line matching this pattern, and the
+pattern matches at position 1 of the input line.  The sub-match `common.word`
+also begins at position 1, and the sub-match `basic.network_patterns` begins at
+position 12:
+```
+jamiejennings$ rosie -encode json 'common.word basic.network_patterns' /etc/resolv.conf | rjsonpp
+{"*": 
+   {"pos": 1.0, 
+    "text": "nameserver 10.0.1.1", 
+    "subs": 
+      [{"common.word": 
+         {"text": "nameserver", 
+          "pos": 1.0}}, 
+       {"basic.network_patterns": 
+         {"pos": 12.0, 
+          "text": "10.0.1.1", 
+          "subs": 
+            [{"network.ip_address": 
+               {"text": "10.0.1.1", 
+                "pos": 12.0}}]}}]}}
+jamiejennings$ 
+``` 
+
 ## How to build: clone the repo, and type 'make'
 
 After cloning the repository, there is just one step: `make`  The `makefile` will download the
@@ -33,28 +73,8 @@ You should see this message if all went well: `Rosie Pattern Engine installed su
 
 The current release is the "version 1.0 candidate".  The RPL language syntax and
 semantics are stable, as is the (relatively new) API.  The current release is
-labeled "v0.99x" where x begins with "a" and will be advanced as bugs are fixed.
-
-## How you can help
-
-### Calling Rosie from Go, Python, node.js, Ruby, Java, or ...?
-
-Rosie is available as a [C library](ffi/librosie) that is callable from these
-languages.  There are [sample programs](ffi/samples) that demonstrate it, and
-these could be improved by turning them into proper libraries, one for each
-target language.
-
-If you're a Python hacker, we could use your help turning our
-sample `librosie` client into a Python module.  Same for the other languages.
-
-And since `librosie` is built on `libffi`, it's pretty easy to access Rosie from
-other languages.  This is another great area to make a contribution to the
-project.
-
-### Write new patterns!
-
-We are happy to add more patterns to the initial library we've started in the
-[rpl directory](rpl), whether they build on what we have or are entirely new.
+labeled "v0.99x" where x begins with "a" and will be advanced as bugs are fixed
+and small enhancements are made.
 
 ## Docs
 
@@ -62,7 +82,6 @@ Rosie documentation:
 * [Command Line Interface documentation](doc/cli.md)
 * [Rosie Pattern Language Reference](doc/rpl.md)
 * [Interactive read-eval-print loop (repl)](doc/repl.md)
-
 
 Blog posts on Rosie:
 * [Project Overview](https://developer.ibm.com/open/rosie-pattern-language/)
@@ -77,32 +96,7 @@ For an introduction to Rosie and explanations of the key concepts, see
 Rosie's internal components, as well as the utilities needed to build Rosie are
 listed [here](doc/arch.md).
 
-## A quick test
-
-For a quick test of Rosie's capabilities, use the Rosie Pattern Engine to look
-for a basic set of patterns in any text file on your system.  Good candidates
-may be `/etc/resolv.conf` or `/var/log/system.log`.  Use the pattern
-`basic.matchall` for this, e.g.
-
-![Screen capture](doc/images/system.log-example.jpg "Rosie processing a MacOS system log")
-
-*Note:* In order to show just a few lines, the output of Rosie in the example
-above is piped into the Unix utility `head`, which will print (in this case) the
-first 5 lines.  Try removing `head` to see the entire log file, i.e. `./run
-basic.matchall /var/log/system.log`.
-
-Rosie is parsing the log file into fields that are printed in various colors.
-Unparsed data is shown in black text.  To see which colors correspond to which
-RPL patterns, type `./run -patterns` to see all defined and loaded patterns and
-the color (if any) that is assigned to them for output at the terminal.
-
-To see the JSON version of this output, use the `-encode` flag to specify JSON.
-And since the JSON can be long, perhaps display just one line of output, as in this example:
-
-```
-./run -encode json basic.matchall /var/log/system.log | head -1
-```
-
+Rosie announcements on Twitter: https://twitter.com/jamietheriveter
 
 ## Useful tips
 
@@ -118,7 +112,7 @@ You can write patterns on the command line, e.g.:  (output will be in color,
 which is not shown here)
 
 ```
-bash-3.2$ ./run 'network.ip_address common.word' /etc/hosts
+jamiejennings$ rosie 'network.ip_address common.word' /etc/hosts
 127.0.0.1 localhost 
 255.255.255.255 broadcasthost 
 ```
@@ -126,7 +120,7 @@ bash-3.2$ ./run 'network.ip_address common.word' /etc/hosts
 And the same command but with JSON output:
 
 ``` 
-bash-3.2$ ./run -encode json 'network.ip_address common.word' /etc/hosts 
+bash-3.2$ rosie -encode json 'network.ip_address common.word' /etc/hosts 
 {"*":{"1":{"network.ip_address":{"text":"127.0.0.1","pos":1}},"2":{"common.word":{"text":"localhost","pos":11}},"text":"127.0.0.1\tlocalhost","pos":1}}
 {"*":{"1":{"network.ip_address":{"text":"255.255.255.255","pos":1}},"2":{"common.word":{"text":"broadcasthost","pos":17}},"text":"255.255.255.255\tbroadcasthost","pos":1}}
 ``` 
@@ -138,7 +132,7 @@ want grep-like functionality, where a pattern may be found anywhere in the
 input?  Try a command like this:
 
 ``` 
-./run -grep basic.network_patterns /etc/resolv.conf
+rosie -grep basic.network_patterns /etc/resolv.conf
 ```
 
 For example:
@@ -165,4 +159,25 @@ When Rosie starts, all the Rosie Pattern Language (rpl) files listed in
 pattern file to the end of the manifest, so that Rosie will load them.
 (Currently, this is the only way to add new patterns.)
 
+
+## How you can help
+
+### Calling Rosie from Go, Python, node.js, Ruby, Java, or ...?
+
+Rosie is available as a [C library](ffi/librosie) that is callable from these
+languages.  There are [sample programs](ffi/samples) that demonstrate it, and
+these could be improved by turning them into proper libraries, one for each
+target language.
+
+If you're a Python hacker, we could use your help turning our
+sample `librosie` client into a Python module.  Same for the other languages.
+
+And since `librosie` is built on `libffi`, it's pretty easy to access Rosie from
+other languages.  This is another great area to make a contribution to the
+project.
+
+### Write new patterns!
+
+We are happy to add more patterns to the initial library we've started in the
+[rpl directory](rpl), whether they build on what we have or are entirely new.
 
