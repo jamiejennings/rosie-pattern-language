@@ -16,35 +16,38 @@
 -- two quotes in a row.
    
 alias csv.dquote = "\""				    -- "
-csv.escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\""   -- \" or \"\" or "" 
+alias csv.escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\""   -- \" or \"\" or "" 
 alias csv.squote = "'"				    -- '
-csv.escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
+alias csv.escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
 
--- Capture the contents of a quoted field by assigning it to an RPL name:
-csv.dquoted_field = {csv.escaped_dquote / {!csv.dquote .}}*
-csv.squoted_field = {csv.escaped_squote / {!csv.squote .}}*
+-- Capture the contents of a quoted field (inside the quotes) by assigning it to an RPL name:
+alias csv.text_until_dquote = {!csv.dquote .}
+alias csv.text_until_squote = {!csv.squote .}
+csv.dquoted_field_contents = {csv.escaped_dquote / csv.text_until_dquote}*
+csv.squoted_field_contents = {csv.escaped_squote / csv.text_until_squote}*
 
 -- Wrap the field contents with quotation marks:
-alias csv.dq = {csv.dquote csv.dquoted_field csv.dquote}
-alias csv.sq = {csv.squote csv.squoted_field csv.squote}
+alias csv.dquoted_field = {csv.dquote csv.dquoted_field_contents csv.dquote}
+alias csv.squoted_field = {csv.squote csv.squoted_field_contents csv.squote}
 
 -- Look for either double or single quoted fields
-csv.quoted_field = csv.dq / csv.sq
+csv.quoted_field = csv.dquoted_field / csv.squoted_field
 
 -- These match any unquoted field:
-csv.unquoted_comma = common.number / {!"," .}*	    -- common.number has no comma in it
-csv.unquoted_semicolon = common.number / {!";" .}*  -- nor any semicolon in it
-csv.unquoted_pipe = {!"|" .}*
+csv.unquoted_field_comma = {!"," .}* 
+csv.unquoted_field_semicolon = {!";" .}*
+csv.unquoted_field_pipe = {!"|" .}*
 
 -- Look for quoted fields first, then anything else
-alias csv.field_comma = csv.quoted_field / csv.unquoted_comma
-alias csv.field_semicolon = csv.quoted_field / csv.unquoted_semicolon
-alias csv.field_pipe = csv.quoted_field / csv.unquoted_pipe
+alias csv.field_comma = csv.quoted_field / csv.unquoted_field_comma
+alias csv.field_semicolon = csv.quoted_field / csv.unquoted_field_semicolon
+alias csv.field_pipe = csv.quoted_field / csv.unquoted_field_pipe
 
--- Two patterns, one for each separator:
-csv.line_comma = csv.field_comma ("," csv.field_comma)* $
-csv.line_semicolon = csv.field_semicolon (";" csv.field_semicolon)* $
-csv.line_pipe = csv.field_pipe ("|" csv.field_pipe)* $
+-----------------------------------------------------------------------------
+-- Top level patterns
+-----------------------------------------------------------------------------
 
--- Use this pattern if you don't know which separator your file will use:
-csv.line = csv.line_comma / csv.line_semicolon / csv.line_pipe
+csv.comma = csv.field_comma {"," csv.field_comma}* ","? $
+csv.semicolon = csv.field_semicolon {";" csv.field_semicolon}* ";"? $
+csv.pipe = csv.field_pipe {"|" csv.field_pipe}* "|"? $
+
