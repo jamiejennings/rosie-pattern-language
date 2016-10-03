@@ -169,7 +169,7 @@ pattern file to the end of the manifest, so that Rosie will load them.
 
 ### Calling Rosie from Go, Python, node.js, Ruby, Java, or ...?
 
-Rosie is available as a [C library](ffi/librosie) that is callable from these
+Rosie is available as a [C library](ffi) that is callable from these
 languages.  There are [sample programs](ffi/samples) that demonstrate it, and
 these could be improved by turning them into proper libraries, one for each
 target language.
