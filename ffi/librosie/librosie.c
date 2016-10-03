@@ -347,7 +347,7 @@ static struct stringArray call_api(lua_State *L, char *api_name, int nargs) {
      LOGf("Stack at end of call to Rosie api: %s\n", api_name); 
      LOGstack(L); 
 
-     LOGprintArray(retvals, "match");
+     LOGprintArray(retvals, api_name);
      return retvals;
 }
      
