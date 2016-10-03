@@ -132,7 +132,6 @@ Rosie's pattern expressions are as follows (note the similarity to regexes):
 |  RPL expression | Meaning                      |
 |  -------------- | -------                      |
 |  `"abcdef"`     | (String literal) Matches the string `abcdef`.  E.g. `"Hello, world"` matches only the input "Hello, world", with exactly one space after the comma |
-|  `pat?`         | Zero or one instances of `pat`                      |
 |  `pat*`         | Zero or more instances of `pat`                      |
 |  `pat+`         | One or more instances of `pat`                      |
 |  `pat?`         | Zero or one instances of `pat`                      |

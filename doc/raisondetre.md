@@ -237,7 +237,6 @@ When writing PEG patterns, then, we must pay attention to the order of choices i
 |  `pat?`         | Zero or one instances of `pat`                      |
 |  `pat*`         | Zero or more instances of `pat`                      |
 |  `pat+`         | One or more instances of `pat`                      |
-|  `pat?`         | Zero or one instances of `pat`                      |
 |  `!pat`         | Not looking at `pat` (consumes no input)                      |
 |  `@pat`         | Looking at `pat` (consumes no input)                       |
 |  `p / q`        | Ordered choice between `p` and `q`     |
