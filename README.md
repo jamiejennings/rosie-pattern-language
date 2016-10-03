@@ -20,7 +20,11 @@ The Rosie Pattern Engine takes less than 400KB (yes, *kilobytes*) of disk space,
 memory.  Typical log files are parsed at around 40,000 lines/second on my 4-year
 old MacBook Pro, where other (popular) solutions do not achieve 10,000 lines/second.
 
-For the PL and comp sci geeks among us, some technical notes are [here](doc/geek.md).
+Rosie Pattern Language is ideal for big data analytics, because Rosie is fast,
+has predictable performance (unlike most regex engines), and generates json
+output for downstream analysis.
+
+For the PL and CS geeks among us, some technical notes are [here](doc/geek.md).
 
 ## A quick look at Rosie
 
