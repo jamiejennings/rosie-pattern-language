@@ -40,21 +40,29 @@
 
 #define LOG(msg) \
      do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): %s", __FILE__, \
-			     __LINE__, __func__, msg); } while (0)
+			       __LINE__, __func__, msg);	   \
+	  fflush(NULL);						   \
+     } while (0)
 
 #define LOGf(fmt, ...) \
      do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-			     __LINE__, __func__, __VA_ARGS__); } while (0)
+			       __LINE__, __func__, __VA_ARGS__);     \
+	  fflush(NULL);						     \
+     } while (0)
 
-#define LOGstack(L) \
-     do { if (LOGGING) stackDump(L); } while (0)
+#define LOGstack(L)		      \
+     do { if (LOGGING) stackDump(L);  \
+	  fflush(NULL);		      \
+     } while (0)
 
 #define LOGprintArray(sa, caller_name) \
-     do { if (LOGGING) print_stringArray(sa, caller_name); } while (0)
+     do { if (LOGGING) print_stringArray(sa, caller_name);	\
+	  fflush(NULL);						\
+     } while (0)
 
 
-#define new_TRUE_string() (new_string("true", 4))
-#define new_FALSE_string() (new_string("false", 5))
+#define new_TRUE_string() (new_string((byte_ptr) "true", 4))
+#define new_FALSE_string() (new_string((byte_ptr) "false", 5))
 
 #define prelude(L, name) \
      do { lua_getfield(L, -1, name); } while (0)
@@ -69,13 +77,17 @@
  * ----------------------------------------------------------------------------------------
  */
 
+/* TODO: First try to load bin/bootstrap.luac and then fall back to src/bootstrap.lua */
 static int bootstrap (lua_State *L, struct string *rosie_home) {
      const char *bootscript = "/src/bootstrap.lua";
      LOG("About to bootstrap\n");
      char *name = malloc(rosie_home->len + strlen(bootscript) + 1);
      memcpy(name, rosie_home->ptr, rosie_home->len);
-     memcpy(name+(rosie_home->len), bootscript, strlen(bootscript));
-     return (luaL_dofile(L, name) == LUA_OK);
+     memcpy(name+(rosie_home->len), bootscript, strlen(bootscript)+1); /* +1 copies the NULL terminator */
+     int status = luaL_loadfile(L, name);
+     if (status != LUA_OK) return status;
+     status = lua_pcall(L, 0, LUA_MULTRET, 0);
+     return status;
 }
 
 static int require_api (lua_State *L) {  
@@ -141,6 +153,7 @@ static void stackDump (lua_State *L) {
         printf("  ");
       }
       printf("\n");
+      fflush(NULL);
     }
 
 static void print_stringArray(struct stringArray sa, char *caller_name) {
@@ -150,6 +163,7 @@ static void print_stringArray(struct stringArray sa, char *caller_name) {
 	  struct string *cstrptr = sa.ptr[i];
 	  printf("  [%d] len = %d, ptr = %s\n", i, cstrptr->len, cstrptr->ptr);
      }
+     fflush(NULL);
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -176,8 +190,10 @@ void *initialize(struct string *rosie_home, struct stringArray *msgs) {
   lua_pushlstring(L, (char *) rosie_home->ptr, rosie_home->len);
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home->ptr);
-  if (bootstrap(L, rosie_home)) {
-       LOG("Bootstrap succeeded\n");
+  int status = bootstrap(L, rosie_home);
+  LOGf("Call to bootstrap() completed: status=%d\n", status); fflush(NULL);
+  if (status==LUA_OK) {
+       LOG("Bootstrap succeeded\n"); fflush(NULL);
        fflush(stderr);
        if (require_api(L)) { 
 	    lua_getfield(L, -1, "initialize");
@@ -201,12 +217,24 @@ void *initialize(struct string *rosie_home, struct stringArray *msgs) {
 	    return NULL;
        }
   }
+  LOG("Bootstrap failed... building return value array\n");
   struct string **list = malloc(sizeof(struct string *) * 2);
   list[0] = new_FALSE_string();
   list[1] = malloc(sizeof(struct string));
-  byte_ptr str = (byte_ptr) lua_tolstring(L, -1, (size_t *) &(list[1]->len));
-  memcpy(list[1]->ptr, str, list[1]->len);
+  if (luaL_checkstring(L, -1)) {
+       LOG("There is an error message on the Lua stack\n");
+       byte_ptr str = (byte_ptr) lua_tolstring(L, -1, (size_t *) &(list[1]->len));
+       LOGf("The message has length %d and reads: %s\n", list[1]->len, str);
+       list[1] = new_string(str, list[1]->len);
+  }
+  else {
+       const char *msg =  "Unknown error encountered while trying to bootstrap";
+       LOGf("%s\n", msg);
+       list[1] = new_string((byte_ptr) msg, strlen(msg));
+  }       
+  LOG("About to close the Lua state... ");
   lua_close(L);
+  LOG("Done closing the Lua state.");
   msgs->n = 2;
   msgs->ptr = list;
   return NULL;
@@ -247,7 +275,7 @@ struct stringArray construct_retvals(lua_State *L) {
      return retvals;
 }
 
-struct string *new_string(char *msg, size_t len) {
+struct string *new_string(byte_ptr msg, size_t len) {
      byte_ptr ptr = malloc(len+1);     /* to return a string, we must make */
      memcpy((char *)ptr, msg, len);    /* sure it is allocated on the heap. */
      ptr[len]=0;		       /* add null terminator. */
