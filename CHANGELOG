@@ -1,13 +1,19 @@
-2016-09-13  Jamie Jennings  <jjennings@us.ibm.com>
+2016-10-04  Jamie Jennings  <jjennings@us.ibm.com>
 
-	* v0.99d
+	* v0.99e
 
-	Added node.js sample program (uses librosie)
+	Added python sample program (uses librosie)
 
 	Updated csv.rpl to include pipe separator, and to work better
 	Added csv1.rpl for blog post on IBM developerWorks Open
 
 	Added doc/data (sample data directory)
+
+2016-09-13  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99d
+
+	Added nodejs sample program (uses librosie)
 
 2016-08-15  Jamie Jennings  <jjennings@us.ibm.com>
 
