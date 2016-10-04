@@ -1,0 +1,30 @@
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- csv1.rpl     Developing production-quality csv parsing (See blog on IBM developerWorks Open)
+----
+---- © Copyright IBM Corporation 2016.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+alias csv.dquote = "\""				    -- "
+alias csv.escaped_dquote = "\\\""		    -- \"
+
+-- Capture the contents of a quoted field (inside the quotes) by assigning it to an RPL name:
+alias csv.text_until_dquote = {!csv.dquote .}
+csv.dquoted_field_contents = {csv.escaped_dquote / csv.text_until_dquote}*
+
+-- The pattern for a quoted field is a quote mark, the field contents, and another quote mark:
+alias csv.dquoted_field = {csv.dquote csv.dquoted_field_contents csv.dquote}
+
+-- A pattern for unquoted fields, i.e. match everything until the next comma:
+csv.unquoted_field_comma = {!"," .}* 
+
+-- Look for quoted fields first, then anything else
+alias csv.field_comma = csv.quoted_field / csv.unquoted_field_comma
+
+-----------------------------------------------------------------------------
+-- Top level pattern
+-----------------------------------------------------------------------------
+
+csv.line = csv.field_comma {"," csv.field_comma}* ","? $
+
