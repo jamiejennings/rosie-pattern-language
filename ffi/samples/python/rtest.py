@@ -82,6 +82,10 @@ engine = Rosie.initialize(to_cstr_ptr("/Users/jjennings/Work/Dev/public/rosie-pa
 printArray(messages, "initialize")
 Rosie.free_stringArray_ptr(messages)
 
+if engine == ffi.NULL:
+    print "Error initializing librosie.  Exiting..."
+    exit(-1)
+
 config_raw = "{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"
 config = to_cstr_ptr(config_raw)
 print("config (as cstr pointer): " + from_cstr_ptr(config))

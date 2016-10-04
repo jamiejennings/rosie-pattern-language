@@ -89,6 +89,8 @@ int main () {
      else
 	  printf("\nTo enable lots of logging messages, build librosie.so with: make DEBUG=1\n\n");
 
+     printf("ROSIE_HOME is set to: %s\n", ROSIE_HOME);
+
      struct stringArray retvals;
      void *engine = initialize(&(CONST_STRING(ROSIE_HOME)), &retvals);
      if (!engine) {

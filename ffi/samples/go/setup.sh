@@ -17,7 +17,7 @@ LIB=`cd ../../../tmp/lua-5.3.2/src && pwd`
 mkdir -p src/rtest/libs
 ln -fs $LIB/liblua.a src/rtest/libs/liblua.a
 
-echo "Use 'source setgopath' to set '$GOPATH' to the current directory, then:"
+echo "Use 'source setgopath' to set GOPATH to the current directory, then:"
 echo "go build rtest"
 echo "./rtest"
 
