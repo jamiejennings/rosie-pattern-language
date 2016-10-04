@@ -45,16 +45,26 @@ func gostring_to_structStringptr(s string) *C.struct_string {
 	return cstr_ptr
 }
 
+func print_structStringArray(cstr_array C.struct_stringArray) {
+	var n = int(cstr_array.n)
+	for i:=0; i<n; i++ {
+		fmt.Printf("[%d] %s\n", i, structString_to_GoString(*C.string_array_ref(cstr_array, C.int(i))));
+	}
+}
+
 func main() {
-	fmt.Printf("Hello, world.\n")
+	fmt.Printf("Initializing Rosie... ")
 	
 	var messages C.struct_stringArray
 	
-	home := gostring_to_structStringptr("/Users/jjennings/Work/Dev/rosie-pattern-language")
+	home := gostring_to_structStringptr("/Users/jjennings/Work/Dev/public/rosie-pattern-language")
 	engine, err := C.initialize(home, &messages)
+	fmt.Printf("done.\n")
 	if engine==nil {
 		fmt.Printf("Return value from initialize was NULL!")
 		fmt.Printf("Err field returned by initialize was: %s\n", err)
+		fmt.Printf("Messages returned from initialize:\n")
+		print_structStringArray(messages)
 		os.Exit(-1)
 	}
 
@@ -62,11 +72,11 @@ func main() {
 	cfg := gostring_to_structStringptr("{\"expression\":\"[:digit:]+\", \"encode\":\"json\"}")
 	a, err = C.configure_engine(engine, cfg)
 	retval := structString_to_GoString(*C.string_array_ref(a,0))
-	fmt.Printf("Code from configure_engine: %s\n", retval)
+	fmt.Printf("Return code from configure_engine: %s\n", retval)
 
 	a, err = C.inspect_engine(engine)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
-	fmt.Printf("Code from inspect_engine: %s\n", retval)
+	fmt.Printf("Return code from inspect_engine: %s\n", retval)
 	fmt.Printf("Config from inspect_engine: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
 	C.free_stringArray(a)
 
@@ -75,7 +85,7 @@ func main() {
 
 	a, err = C.match(engine, foo_string, nil)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
-	fmt.Printf("Code from match: %s\n", retval)
+	fmt.Printf("Return code from match: %s\n", retval)
 	fmt.Printf("Data|false from match: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
 	fmt.Printf("Leftover chars from match: %s\n", structString_to_GoString(*C.string_array_ref(a,2)))
 
@@ -93,7 +103,7 @@ func main() {
 	if code != "true" {
 		fmt.Printf("Error in match: %s\n", js_str)
 	} else {
-		fmt.Printf("Code from match: %s\n", code)
+		fmt.Printf("Return code from match: %s\n", code)
 		fmt.Printf("Data|false from match: %s\n", js_str)
 		fmt.Printf("Leftover chars from match: %d\n", leftover)
 
