@@ -21,7 +21,7 @@ require 'json'
 # end
 
 messages = Rosie::CStringArray.new
-engine = Rosie.initialize(Rosie.to_CString("/Users/jjennings/Work/Dev/rosie-pattern-language"), messages)
+engine = Rosie.initialize(Rosie.to_CString("/Users/jjennings/Work/Dev/public/rosie-pattern-language"), messages)
 Rosie.print_string_array(messages)
 
 config_string = Rosie.to_CString("{\"name\":\"Ruby engine\"}")
@@ -107,7 +107,7 @@ obj = JSON.parse(json_string)
 assert(obj.keys.length==1)      # the one item will be indexed by "*"
 items = obj[obj.keys[0]]        # items will contain "text" and "pos" fields
 assert(items)
-items.each_key { |k| puts k }
+#items.each_key { |k| puts k,items[k] }
 if (obj.keys.length!=1) then raise "Multiple return values from match!" end
 
 print " done.\n"
