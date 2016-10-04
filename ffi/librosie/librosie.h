@@ -21,10 +21,10 @@ struct stringArray {
      struct string **ptr;
 };
 
-#define CONST_STRING(str) (struct string) {strlen(str), (byte_ptr)str}
+#define CONST_STRING(str) (struct string) {strlen(str), (byte_ptr)str} /* NOTE: Allocates on the stack! */
 #define stringArrayRef(name, pos) (((name).n > (pos)) ? ((name).ptr[(pos)]) : '\0')
 
-struct string *new_string(char *msg, size_t len);
+struct string *new_string(byte_ptr msg, size_t len);
 struct stringArray *new_stringArray();
 void free_string(struct string s);
 void free_string_ptr(struct string *s);
