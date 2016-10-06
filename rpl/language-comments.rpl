@@ -36,8 +36,8 @@
 
 -- require "csv"
 
-alias dquoted_field = csv.contents_dquote
-alias squoted_field = csv.contents_squote
+alias dquoted_field = csv.dquoted_field_contents
+alias squoted_field = csv.squoted_field_contents
 
 alias string_constant = csv.dquoted_field / csv.squoted_field
 
