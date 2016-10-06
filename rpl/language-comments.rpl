@@ -36,13 +36,10 @@
 
 -- require "csv"
 
-alias dquoted_field = {csv.escaped_dquote / {!csv.dquote .}}*
-alias squoted_field = {csv.escaped_squote / {!csv.squote .}}*
+alias dquoted_field = csv.contents_dquote
+alias squoted_field = csv.contents_squote
 
-alias dq = {csv.dquote dquoted_field csv.dquote}
-alias sq = {csv.squote squoted_field csv.squote}
-
-alias string_constant = dq / sq
+alias string_constant = csv.dquoted_field / csv.squoted_field
 
 comment = {!"\n" .}*		-- terminates at newline or end of input
 alias hash_comment = {[:space:]* "#" comment "\n"?} -- note: eats newline if not at end of input
