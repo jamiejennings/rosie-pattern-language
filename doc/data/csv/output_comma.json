@@ -1,0 +1,152 @@
+{"csv.comma": 
+   {"subs": 
+      [{"csv.uqf_comma": 
+         {"pos": 1.0, 
+          "text": "2011-11-11"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 12.0, 
+          "text": "X12334"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 19.0, 
+          "text": "customerdetails"}}], 
+    "pos": 1.0, 
+    "text": "2011-11-11,X12334,customerdetails"}}
+{"csv.comma": 
+   {"subs": 
+      [{"csv.uqf_comma": 
+         {"pos": 1.0, 
+          "text": "Bob"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 5.0, 
+          "text": "Dyson"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 11.0, 
+          "text": "true"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 16.0, 
+          "text": "23"}}, 
+       {"csv.dquoted_field": 
+         {"subs": 
+            [{"csv.dquoted_field_contents": 
+               {"pos": 20.0, 
+                "text": "23,456"}}], 
+          "pos": 19.0, 
+          "text": "\"23,456\""}}, 
+       {"csv.uqf_comma": 
+         {"pos": 28.0, 
+          "text": "0"}}, 
+       {"csv.dquoted_field": 
+         {"subs": 
+            [{"csv.dquoted_field_contents": 
+               {"pos": 31.0, 
+                "text": "1,543,543.36"}}], 
+          "pos": 30.0, 
+          "text": "\"1,543,543.36\""}}, 
+       {"csv.dquoted_field": 
+         {"subs": 
+            [{"csv.dquoted_field_contents": 
+               {"pos": 46.0, 
+                "text": "\"\"Interstate 80 Revisted\"\""}}], 
+          "pos": 45.0, 
+          "text": "\"\"\"Interstate 80 Revisted\"\"\""}}], 
+    "pos": 1.0, 
+    "text": "Bob,Dyson,true,23,\"23,456\",0,\"1,543,543.36\",\"\"\"Interstate 80 Revisted\"\"\""}}
+{"csv.comma": 
+   {"subs": 
+      [{"csv.uqf_comma": 
+         {"pos": 1.0, 
+          "text": "Jimmy"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 7.0, 
+          "text": "Pace"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 12.0, 
+          "text": ""}}], 
+    "pos": 1.0, 
+    "text": "Jimmy,Pace,"}}
+{"csv.comma": 
+   {"subs": 
+      [{"csv.uqf_comma": 
+         {"pos": 1.0, 
+          "text": "Saul"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 6.0, 
+          "text": "McCartney"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 16.0, 
+          "text": "false"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 22.0, 
+          "text": "67"}}, 
+       {"csv.dquoted_field": 
+         {"subs": 
+            [{"csv.dquoted_field_contents": 
+               {"pos": 26.0, 
+                "text": "89,125"}}], 
+          "pos": 25.0, 
+          "text": "\"89,125\""}}, 
+       {"csv.dquoted_field": 
+         {"subs": 
+            [{"csv.dquoted_field_contents": 
+               {"pos": 35.0, 
+                "text": "4,324,307.5"}}], 
+          "pos": 34.0, 
+          "text": "\"4,324,307.5\""}}, 
+       {"csv.dquoted_field": 
+         {"subs": 
+            [{"csv.dquoted_field_contents": 
+               {"pos": 49.0, 
+                "text": "986,545.12"}}], 
+          "pos": 48.0, 
+          "text": "\"986,545.12\""}}], 
+    "pos": 1.0, 
+    "text": "Saul,McCartney,false,67,\"89,125\",\"4,324,307.5\",\"986,545.12\""}}
+{"csv.comma": 
+   {"subs": 
+      [{"csv.uqf_comma": 
+         {"pos": 1.0, 
+          "text": "Elvis"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 7.0, 
+          "text": "John"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 12.0, 
+          "text": ""}}], 
+    "pos": 1.0, 
+    "text": "Elvis,John,"}}
+{"csv.comma": 
+   {"subs": 
+      [{"csv.uqf_comma": 
+         {"pos": 1.0, 
+          "text": "Eric"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 6.0, 
+          "text": "Clayton"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 14.0, 
+          "text": "true"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 19.0, 
+          "text": "461"}}, 
+       {"csv.dquoted_field": 
+         {"subs": 
+            [{"csv.dquoted_field_contents": 
+               {"pos": 24.0, 
+                "text": "33,101"}}], 
+          "pos": 23.0, 
+          "text": "\"33,101\""}}, 
+       {"csv.uqf_comma": 
+         {"pos": 32.0, 
+          "text": "1.11"}}, 
+       {"csv.uqf_comma": 
+         {"pos": 37.0, 
+          "text": "100.01"}}, 
+       {"csv.dquoted_field": 
+         {"subs": 
+            [{"csv.dquoted_field_contents": 
+               {"pos": 45.0, 
+                "text": "\\\"Greatest Hits\\\""}}], 
+          "pos": 44.0, 
+          "text": "\"\\\"Greatest Hits\\\"\""}}], 
+    "pos": 1.0, 
+    "text": "Eric,Clayton,true,461,\"33,101\",1.11,100.01,\"\\\"Greatest Hits\\\"\""}}
