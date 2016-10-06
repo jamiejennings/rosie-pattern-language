@@ -25,15 +25,16 @@ alias csv.escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
 -- equivalent because in rpl any character can be escaped.  (Some characters, like 'n', have special
 -- meanings when escaped: \n means newline.)
 
-csv.contents_dquote = {csv.escaped_dquote / [^\"]}*         -- contents of a quoted field
-csv.dquoted_field = [\"] csv.contents_dquote [\"]             -- the actual quoted field
+csv.dquoted_field_contents = {csv.escaped_dquote / [^\"]}*         -- contents of a quoted field
+csv.dquoted_field = [\"] csv.dquoted_field_contents [\"]	   -- the actual quoted field
 
-csv.contents_squote = {csv.escaped_squote / [^']}*          -- contents of a quoted field
-csv.squoted_field = ['] csv.contents_squote [']             -- the actual quoted field
+csv.squoted_field_contents = {csv.escaped_squote / [^']}*          -- contents of a quoted field
+csv.squoted_field = ['] csv.squoted_field_contents [']             -- the actual quoted field
 
-csv.quoted_field = csv.dquoted_field / csv.squoted_field
+-- No need to see 'quoted_field' in the json output, so make it an alias:
+alias csv.quoted_field = csv.dquoted_field / csv.squoted_field
 
--- Patterns to match a single field
+-- Patterns to match a single field:
 alias csv.field_comma = csv.quoted_field / csv.uqf_comma
 alias csv.field_semicolon = csv.quoted_field / csv.uqf_semicolon
 alias csv.field_pipe = csv.quoted_field / csv.uqf_pipe
