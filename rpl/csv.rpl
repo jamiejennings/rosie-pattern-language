@@ -6,48 +6,45 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- Strings are always in quotes, so this pattern matches a quote, then stuff, then another quote.
--- The stuff in the string can be single characters or escaped quotation mark.  Note that it's
--- important to look for the escaped quote first, and only if that is not found do we look for any
--- single character.
+-- A pattern for unquoted fields, i.e. match everything until the next delimeter:
+csv.uqf_comma = [^,]*
+csv.uqf_semicolon = [^;]*
+csv.uqf_pipe = [^|]*
+
+-- Next, we build up some definitions needed for parsing quoted fields.
 
 -- Note: Some CSV files may use a pair of quote marks in a row to embed a quote mark in a string.
 -- So we will defined an escaped quote as either the escape character (\) followed by a quote, or
--- two quotes in a row.
-   
-alias csv.dquote = "\""				    -- "
+-- two quotes in a row.  And for good measure, also for two escaped quotes in a row.
+
 alias csv.escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\""   -- \" or \"\" or "" 
-alias csv.squote = "'"				    -- '
 alias csv.escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
 
--- Capture the contents of a quoted field (inside the quotes) by assigning it to an RPL name:
-alias csv.text_until_dquote = {!csv.dquote .}
-alias csv.text_until_squote = {!csv.squote .}
-csv.dquoted_field_contents = {csv.escaped_dquote / csv.text_until_dquote}*
-csv.squoted_field_contents = {csv.escaped_squote / csv.text_until_squote}*
+-- The character set that contains one double quote character can be written ["], but this can
+-- interfere with syntax highlighting in some editors.  So we will use [\"] instead.  This is
+-- equivalent because in rpl any character can be escaped.  (Some characters, like 'n', have special
+-- meanings when escaped: \n means newline.)
 
--- Wrap the field contents with quotation marks:
-alias csv.dquoted_field = {csv.dquote csv.dquoted_field_contents csv.dquote}
-alias csv.squoted_field = {csv.squote csv.squoted_field_contents csv.squote}
+csv.contents_dquote = {csv.escaped_dquote / [^\"]}*         -- contents of a quoted field
+csv.dquoted_field = [\"] csv.contents_dquote [\"]             -- the actual quoted field
 
--- Look for either double or single quoted fields
+csv.contents_squote = {csv.escaped_squote / [^']}*          -- contents of a quoted field
+csv.squoted_field = ['] csv.contents_squote [']             -- the actual quoted field
+
 csv.quoted_field = csv.dquoted_field / csv.squoted_field
 
--- These match any unquoted field:
-csv.unquoted_field_comma = {!"," .}* 
-csv.unquoted_field_semicolon = {!";" .}*
-csv.unquoted_field_pipe = {!"|" .}*
+-- Patterns to match a single field
+alias csv.field_comma = csv.quoted_field / csv.uqf_comma
+alias csv.field_semicolon = csv.quoted_field / csv.uqf_semicolon
+alias csv.field_pipe = csv.quoted_field / csv.uqf_pipe
 
--- Look for quoted fields first, then anything else
-alias csv.field_comma = csv.quoted_field / csv.unquoted_field_comma
-alias csv.field_semicolon = csv.quoted_field / csv.unquoted_field_semicolon
-alias csv.field_pipe = csv.quoted_field / csv.unquoted_field_pipe
 
 -----------------------------------------------------------------------------
 -- Top level patterns
 -----------------------------------------------------------------------------
 
-csv.comma = csv.field_comma {"," csv.field_comma}* ","? $
-csv.semicolon = csv.field_semicolon {";" csv.field_semicolon}* ";"? $
-csv.pipe = csv.field_pipe {"|" csv.field_pipe}* "|"? $
+csv.comma = csv.field_comma {[,] csv.field_comma}* $
+csv.semicolon = csv.field_semicolon {[;] csv.field_semicolon}* $
+csv.pipe = csv.field_pipe {[|] csv.field_pipe}* $
+
 
