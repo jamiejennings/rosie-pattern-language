@@ -134,13 +134,9 @@ OFS = " "					    -- output field separator
 ORS = "\n"					    -- output record separator
 NR = 0;
 
-function get(varname)
-   return _G[varname]
-end
-
 function print(...)
    for _,v in ipairs({...}) do
-      io.write(tostring(v), get("OFS"))
+      io.write(tostring(v), OFS)
    end
 end   
 
