@@ -134,9 +134,13 @@ OFS = " "					    -- output field separator
 ORS = "\n"					    -- output record separator
 NR = 0;
 
+function get(varname)
+   return _G[varname]
+end
+
 function print(...)
    for _,v in ipairs({...}) do
-      io.write(tostring(v), OFS)
+      io.write(tostring(v), get("OFS"))
    end
 end   
 
@@ -166,10 +170,8 @@ function transform(s, table_name)
    return ex
 end
 
-env = {require=require, print=print, println=println, printf=printf, quote=quote, NR=NR, ORS=ORS, OFS=OFS}
-setmetatable(env, {__index=_ENV})
 transformed = transform(script, "LINE")
-local f, err = load(transformed, "rprint script", "t", env)
+local f, err = load(transformed, "rprint script", "t")
 if (not f) then
    error(string.format("Failed to compile script: %q\nExpanded script is: %q\nError: %s",
 		       script,
@@ -180,7 +182,7 @@ end
 
 l = io.stdin:read("l")
 while l do
-   env.NR = env.NR + 1;
+   NR = NR + 1
    t = {};
    ok, thing = pcall(json.decode, l)
    if not ok then
@@ -188,9 +190,9 @@ while l do
    elseif type(thing)=="table" then
       name, t[0] = next(thing)
       t[0].name = name
-      env.LINE=t
+      LINE=t
       for i,s in ipairs(t[0].subs) do name, t[i] = next(s); t[i].name = name; end
-      env.NF = #t
+      NF = #t
       f()
    elseif thing==json.null then
       io.stdout:write("null\n")
