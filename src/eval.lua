@@ -350,7 +350,7 @@ function eval.eval(pat, input, start, env, fail_output_only)
    -- N.B. source will be nil (below) when pattern_EXP_to_grep_pattern is used, so the compiler and
    -- parser cannot explain errors. and it will think there are errors... probably because the
    -- pattern_EXP_to_grep_pattern function uses a temporary environment to define p and q...
-   -- sigh.  time to implement real closures.
+   -- sigh.  it is time to implement real closures.
 
    assert(pattern.is(pat), "Internal error: eval.eval was not passed a compiled pattern: " .. tostring(pat))
    return eval_exp(pat.ast, input, start, gmr, source, env, indent, fail_output_only, step, "")
