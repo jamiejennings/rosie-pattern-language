@@ -92,7 +92,7 @@ Blog posts on Rosie:
 * [Project Overview](https://developer.ibm.com/open/rosie-pattern-language/)
 * [Introduction](https://developer.ibm.com/open/2016/02/20/world-data-science-needs-rosie-pattern-language/)
 * [Parsing Spark logs](https://developer.ibm.com/open/2016/04/26/develop-test-rosie-pattern-language-patterns-part-1-parsing-log-files/)
-* Parsing CSV files (forthcoming)
+* [Parsing CSV files](https://developer.ibm.com/open/2016/10/14/develop-test-rosie-pattern-language-patterns-part-2-csv-data/)
 * Generating patterns automatically (forthcoming)
 
 For an introduction to Rosie and explanations of the key concepts, see
