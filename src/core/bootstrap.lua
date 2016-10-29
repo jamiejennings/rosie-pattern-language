@@ -27,7 +27,7 @@ if (value and not(value=="")) then
 end
 
 -- Restrict Lua's search for modules and shared objects to just the Rosie install directory
-package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/?.lua"
+package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 local function print_rosie_info()
