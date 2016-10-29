@@ -31,13 +31,13 @@ end
 local thunk, msg = loadfile(ROSIE_HOME .. "/bin/bootstrap.luac")
 if not thunk then
    io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
-   dofile(ROSIE_HOME.."/src/bootstrap.lua")
+   dofile(ROSIE_HOME.."/src/core/bootstrap.lua")
 else
    local ok, msg = pcall(thunk)
    if not ok then
       io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
       io.stderr:write(msg, "\n")
-      dofile(ROSIE_HOME.."/src/bootstrap.lua")
+      dofile(ROSIE_HOME.."/src/core/bootstrap.lua")
    end
 end
 
