@@ -1,3 +1,10 @@
+2016-10-30  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99g
+
+	Moved core source files into src/core
+	Makefile now compiles src/core/*.lua using bin/luac as needed
+
 2016-10-06  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* v0.99f
