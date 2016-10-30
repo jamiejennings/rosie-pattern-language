@@ -122,8 +122,15 @@ lib/cjson.so: $(JSON_DIR)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
-compile: bin/lua
-	bin/lua -e "ROSIE_HOME=\"`pwd`\"" src/rosie-compile.lua
+# compile: bin/lua
+# 	bin/lua -e "ROSIE_HOME=\"`pwd`\"" src/rosie-compile.lua
+
+bin/%.luac: src/core/%.lua
+	bin/luac -o $@ $<
+
+luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
+
+compile: $(luaobjects)
 
 ln:
 	@/usr/bin/env echo -n "Linking $(HOME)/run to ./rosie... "
