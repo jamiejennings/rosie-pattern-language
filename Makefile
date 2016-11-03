@@ -106,6 +106,7 @@ linux: bin/lua lib/lpeg.so lib/cjson.so compile ln sniff
 windows:
 	@echo Windows installation not yet supported.
 
+bin/luac:
 bin/lua: $(LUA_DIR)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p bin
@@ -122,7 +123,7 @@ lib/cjson.so: $(JSON_DIR)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
-bin/%.luac: src/core/%.lua
+bin/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 
 luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
