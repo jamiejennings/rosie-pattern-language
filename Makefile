@@ -86,7 +86,7 @@ clean:
 none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
-CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua-5.3.2 
+CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua 
 CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-fpic
 CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
 CJSON_MAKE_ARGS += CJSON_CFLAGS+="-pthread -DMULTIPLE_THREADS"
@@ -108,6 +108,9 @@ linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 windows:
 	@echo Windows installation not yet supported.
 
+submodules/lua/include:
+	cd $(LUA_DIR) && ln -sf src include
+
 bin/luac:
 bin/lua: $(LUA_DIR)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
@@ -115,12 +118,12 @@ bin/lua: $(LUA_DIR)
 	cp $(LUA_DIR)/src/lua bin
 	cp $(LUA_DIR)/src/luac bin
 
-lib/lpeg.so: $(LPEG_DIR)
+lib/lpeg.so: $(LPEG_DIR) submodules/lua/include
 	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua/src
 	mkdir -p lib
 	cp $(LPEG_DIR)/src/lpeg.so lib
 
-lib/cjson.so: $(JSON_DIR)
+lib/cjson.so: $(JSON_DIR) submodules/lua/include
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
