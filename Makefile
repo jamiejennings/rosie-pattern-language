@@ -30,6 +30,7 @@ JSON = lua-cjson
 
 HOME = "`pwd`"
 TMP = submodules
+ROSIEBIN = "$(HOME)/bin/rosie"	# how to run rosie once installed
 
 default: $(PLATFORM)
 
@@ -131,24 +132,24 @@ luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
 compile: $(luaobjects)
 
 ln:
-	@/usr/bin/env echo -n "Linking $(HOME)/run to ./rosie... "
-	@-ln -sf "$(HOME)/run" "./rosie" && chmod 755 "./rosie" && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
+	@/usr/bin/env echo -n "Linking $(HOME)/src/run to $(ROSIEBIN)... "
+	@-ln -sf "$(HOME)/src/run" $(ROSIEBIN) && chmod 755 $(ROSIEBIN) && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
 
 install:
-	@/usr/bin/env echo -n "Linking $(HOME)/run to $(DESTDIR)/rosie... "
-	@-ln -sf "$(HOME)/run" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie" && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
+	@/usr/bin/env echo -n "Linking $(HOME)/src/run to $(DESTDIR)/rosie... "
+	@-ln -sf "$(HOME)/src/run" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie" && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
 
 sniff:
 	@echo "Rosie home is $(HOME)"
-	@echo "Attempting to execute $(HOME)/run ..."
-	@RESULT="$(shell $(HOME)/run 2>&1 >/dev/null)"; \
+	@echo "Attempting to execute $(HOME)/bin/rosie ..."
+	@RESULT="$(shell $(HOME)/bin/rosie 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
             echo ""; \
             echo "Rosie Pattern Engine installed successfully!"; \
 	    echo ""; \
             echo "Use 'make install' to install binary in $(DESTDIR)"; \
-            echo "Try this and look for color text output: ./rosie basic.matchall /etc/resolv.conf"; \
+            echo "Try this and look for color text output: $(ROSIEBIN) basic.matchall /etc/resolv.conf"; \
             true; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
@@ -157,5 +158,5 @@ sniff:
 
 test:
 	@echo Running tests in test/all.lua
-	echo "dofile 'test/all.lua'" | ./rosie -D
+	echo "dofile 'test/all.lua'" | $(ROSIEBIN) -D
 
