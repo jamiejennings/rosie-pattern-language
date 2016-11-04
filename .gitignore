@@ -19,7 +19,6 @@ src/c/librosie/go/src/ffi/libs/*
 src/c/librosie/go/src/hello/
 
 # These are symlinks within the repo:
-rosie
 src/c/librosie/go/src/ffi/librosie.c
 src/c/librosie/go/src/ffi/librosie.h
 
