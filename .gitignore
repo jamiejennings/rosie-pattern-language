@@ -8,9 +8,9 @@
 **/*~
 *.tar.gz
 
+**/rtest			# All the test executables
 ffi/librosie/librosie_gen.c
 ffi/librosie/librosie_gen.h
-ffi/samples/C/rtest
 ffi/samples/nodejs/node_modules/*
 
 src/c/repl/rosie
