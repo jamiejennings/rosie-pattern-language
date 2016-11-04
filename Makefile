@@ -28,9 +28,10 @@ JSON = lua-cjson
 
 ## ----------------------------------------------------------------------------- ##
 
-HOME = "`pwd`"
+HOME = $(shell pwd)
 TMP = submodules
-ROSIEBIN = "$(HOME)/bin/rosie"	# how to run rosie once installed
+ROSIEBIN = bin/rosie
+EXECROSIE = "$(HOME)/$(ROSIEBIN)"	      # how to run rosie once installed
 
 default: $(PLATFORM)
 
@@ -96,13 +97,13 @@ macosx: PLATFORM=macosx
 # Change the next line to CC=gcc if you prefer to use gcc on MacOSX
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: bin/lua lib/lpeg.so lib/cjson.so compile ln sniff
+macosx: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
 linux: PLATFORM=linux
 linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
-linux: bin/lua lib/lpeg.so lib/cjson.so compile ln sniff
+linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
 windows:
 	@echo Windows installation not yet supported.
@@ -131,32 +132,38 @@ luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
 
 compile: $(luaobjects)
 
-ln:
-	@/usr/bin/env echo -n "Linking $(HOME)/src/run to $(ROSIEBIN)... "
-	@-ln -sf "$(HOME)/src/run" $(ROSIEBIN) && chmod 755 $(ROSIEBIN) && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
+$(ROSIEBIN):
+	@/usr/bin/env echo "Linking $(HOME)/src/run to $(EXECROSIE)"
+	@-ln -sf "$(HOME)/src/run" "$(ROSIEBIN)" && chmod 755 "$(ROSIEBIN)"
 
 install:
-	@/usr/bin/env echo -n "Linking $(HOME)/src/run to $(DESTDIR)/rosie... "
-	@-ln -sf "$(HOME)/src/run" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie" && ([ $$? -eq 0 ] && echo "done.") || echo "failed!" 
+	@/usr/bin/env echo "Linking $(HOME)/src/run to $(DESTDIR)/rosie"
+	@-ln -sf "$(HOME)/src/run" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie"
 
-sniff:
-	@echo "Rosie home is $(HOME)"
-	@echo "Attempting to execute $(HOME)/bin/rosie ..."
+sniff: $(ROSIEBIN)
 	@RESULT="$(shell $(HOME)/bin/rosie 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
-            echo ""; \
             echo "Rosie Pattern Engine installed successfully!"; \
-	    echo ""; \
-            echo "Use 'make install' to install binary in $(DESTDIR)"; \
-            echo "Try this and look for color text output: $(ROSIEBIN) basic.matchall /etc/resolv.conf"; \
+	    if [ -n "$$BREW"]; then \
+	      	    echo "    Use 'make install' to install binary in $(DESTDIR)"; \
+	      	    echo "    Use 'make test' to run the test suite"; \
+	    fi; \
+            echo "    Try this example, and look for color text output: ./bin/rosie basic.matchall /etc/resolv.conf"; \
             true; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
+	    echo "    Rosie executable is $(HOME)/bin/rosie"; \
+	    echo "    Expected this output: $$EXPECTED"; \
+	    if [ -n "$$RESULT" ]; then \
+		echo "    But received this output: $$RESULT"; \
+	    else \
+		echo "    But received no output."; \
+	    fi; \
 	    false; \
         fi
 
 test:
 	@echo Running tests in test/all.lua
-	echo "dofile 'test/all.lua'" | $(ROSIEBIN) -D
+	echo "dofile 'test/all.lua'" | $(EXECROSIE) -D
 

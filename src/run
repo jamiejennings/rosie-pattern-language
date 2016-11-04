@@ -28,7 +28,7 @@ if [[ "$1" = "-D" ]]; then
 fi
 
 if ([ -x $SCRIPT_PATH/../bin/lua ]); then
-    ROSIE_LUA_PATH=$SCRIPT_PATH/..;
+    ROSIE_LUA_PATH=$(cd -P $SCRIPT_PATH/.. && pwd)
 elif ([ -x $ROSIE_HOME/bin/lua ]); then
     ROSIE_LUA_PATH=$ROSIE_HOME;
 else
