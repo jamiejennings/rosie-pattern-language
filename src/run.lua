@@ -94,7 +94,7 @@ local function valid_option_is(opt)
    return false
 end
 
-local usage_message = "Rosie usage: "..(SCRIPTNAME or "<this script>").." <options> <pattern> <filename>*\n"
+local usage_message = "Usage: "..(SCRIPTNAME or "<this script>").." <options> <pattern> <filename>*\n"
 usage_message = usage_message .. "Valid <options> are: " .. table.concat(valid_options, " ")
 
 ----------------------------------------------------------------------------------------
