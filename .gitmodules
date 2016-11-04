@@ -1,9 +1,10 @@
 [submodule "submodules/lua"]
 	path = submodules/lua
-	url = git@github.com:jamiejennings/lua.git
+	url = https://github.com/jamiejennings/lua.git
 [submodule "submodules/lua-cjson"]
 	path = submodules/lua-cjson
-	url = git@github.com:jamiejennings/lua-cjson.git
+	url = https://github.com/jamiejennings/lua-cjson.git
 [submodule "submodules/rosie-lpeg"]
 	path = submodules/rosie-lpeg
-	url = git@github.com:jamiejennings/rosie-lpeg.git
+	url = https://github.com/jamiejennings/rosie-lpeg.git
+	
