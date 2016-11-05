@@ -74,6 +74,11 @@ needed prerequisites, compile them, and run a quick test.
 
 You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
 
+See also:
+* [RHEL 7 install tips](doc/rhel.md)
+* [Ubuntu 16 install tips](doc/ubuntu.md)
+* [Sample docker files](docker/) *These may need updating*
+
 ## Current status
 
 The current release is the "version 1.0 candidate".  The RPL language syntax and
