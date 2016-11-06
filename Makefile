@@ -1,7 +1,7 @@
 ## ----------------------------------------------------------------------------- ##
 ## Customizable options:
 
-## The place to put a link to rosie binary when using 'make install'
+# The place to put a link to rosie executable when using 'make install'
 DESTDIR=/usr/local/bin
 
 ## End of customizable options
@@ -18,20 +18,14 @@ endif
 
 PLATFORMS = linux macosx windows
 
-# LUA_ARCHIVE = 'http://www.lua.org/ftp/lua-5.3.2.tar.gz'
-# LPEG_ARCHIVE = 'http://www.inf.puc-rio.br/~roberto/lpeg/lpeg-1.0.0.tar.gz'
-# JSON_ARCHIVE = 'https://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.tar.gz'
-
 LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
 
-## ----------------------------------------------------------------------------- ##
-
 HOME = $(shell pwd)
 TMP = submodules
 ROSIEBIN = bin/rosie
-EXECROSIE = "$(HOME)/$(ROSIEBIN)"	      # how to run rosie once installed
+EXECROSIE = "$(HOME)/$(ROSIEBIN)"
 
 default: $(PLATFORM)
 
@@ -39,36 +33,7 @@ LUA_DIR = $(TMP)/$(LUA)
 LPEG_DIR = $(TMP)/$(LPEG)
 JSON_DIR = $(TMP)/$(JSON)
 
-# download: $(LUA_DIR)/src $(LPEG_DIR)/src $(JSON_DIR)/src
-
-# $(LUA_DIR)/src: 
-# 	cd $(LUA_DIR) && git submodule init && git submodule update
-# 	cd $(LUA_DIR) && sed -e 's/CC=cc/CC=$$(CC)/' Makefile > Makefile2
-# 	echo 'macosx: CC=cc' >$(LUA_DIR)/src/extra
-# 	cd $(LUA_DIR)/src && cat Makefile2 extra > Makefile
-# 	cd $(LUA_DIR) && ln -sf src include	    # Needed for lpeg to compile
-
-# $(LPEG_DIR): $(LPEG_DIR).tar.gz
-# 	cd $(TMP) && tar -xf $(LPEG).tar.gz  || (echo "File obtained from $(LPEG_ARCHIVE) was corrupted"; exit 1)
-# 	echo '#!/bin/bash' > $(LPEG_DIR)/makedebug
-# 	echo 'make clean' >> $(LPEG_DIR)/makedebug
-# 	echo 'make LUADIR=../lua-5.3.2/src COPT="-DLPEG_DEBUG -g" macosx' >> $(LPEG_DIR)/makedebug
-# 	chmod a+x $(LPEG_DIR)/makedebug
-
-# $(JSON_DIR): $(JSON_DIR).tar.gz
-# 	cd $(TMP) && tar -xzf $(JSON).tar.gz || (echo "File obtained from $(JSON_ARCHIVE) was corrupted"; exit 1)
-
-# $(LUA_DIR).tar.gz:
-# 	mkdir -p $(TMP)
-# 	curl -o $(LUA_DIR).tar.gz $(LUA_ARCHIVE)
-
-# $(LPEG_DIR).tar.gz:
-# 	mkdir -p $(TMP)
-# 	curl -o $(LPEG_DIR).tar.gz $(LPEG_ARCHIVE)
-
-# $(JSON_DIR).tar.gz:
-# 	mkdir -p $(TMP)
-# 	curl -o $(JSON_DIR).tar.gz $(JSON_ARCHIVE)
+## ----------------------------------------------------------------------------- ##
 
 .PHONY: clean none sniff test
 
@@ -77,14 +42,11 @@ clean:
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
-#	-cd $(LUA_DIR) && ln -sf src include	    # Needed for lpeg to compile
-#       @echo "Use 'make superclean' to remove local copies of prerequisites"
-
-# superclean: clean
-# 	rm -rf $(TMP)
 
 none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
+
+## ----------------------------------------------------------------------------- ##
 
 CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua 
 CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-fpic
@@ -144,12 +106,15 @@ luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
 compile: $(luaobjects)
 
 $(ROSIEBIN):
-	@/usr/bin/env echo "Linking $(HOME)/src/run to $(EXECROSIE)"
-	@-ln -sf "$(HOME)/src/run" "$(ROSIEBIN)" && chmod 755 "$(ROSIEBIN)"
+	@/usr/bin/env echo "Creating $(EXECROSIE)"
+	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(EXECROSIE)"
+	@/usr/bin/env echo -n "$(HOME)/src/run-rosie $(HOME)" >> "$(EXECROSIE)"
+	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
+	@chmod 755 "$(ROSIEBIN)"
 
 install:
-	@/usr/bin/env echo "Linking $(HOME)/src/run to $(DESTDIR)/rosie"
-	@-ln -sf "$(HOME)/src/run" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie"
+	@/usr/bin/env echo "Creating symbolic link $(DESTDIR)/rosie pointing to $(EXECROSIE)"
+	@-ln -sf "$(EXECROSIE)" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie"
 
 sniff: $(ROSIEBIN)
 	@RESULT="$(shell $(HOME)/bin/rosie 2>&1 >/dev/null)"; \

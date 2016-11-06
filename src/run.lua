@@ -182,16 +182,20 @@ function print_rosie_info()
    local rosie_home_message = ((SCRIPT_ROSIE_HOME and " (from environment variable $ROSIE_HOME)") or
 			       " (provided by the program that initialized Rosie)")
    print("Local installation information:")
-   if env_ROSIE_HOME ~= "" then
-      print("  Note: the environment variable of $ROSIE_HOME is set to: " .. env_ROSIE_HOME)
-   else
-      print("  Note: the environment variable $ROSIE_HOME is not defined.")
-   end
    print("  ROSIE_HOME = " .. ROSIE_HOME)
    print("  ROSIE_VERSION = " .. ROSIE_VERSION)
    print("  HOSTNAME = " .. (os.getenv("HOSTNAME") or ""))
    print("  HOSTTYPE = " .. (os.getenv("HOSTTYPE") or ""))
    print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
+   print("Current invocation: ")
+   print("  current working directory = " .. (os.getenv("CWD") or ""))
+   print("  executable script name = " .. (SCRIPTNAME or ""))
+   print("  script value of Rosie home = " .. (os.getenv("ROSIE_SCRIPT_HOME") or ""))
+   if env_ROSIE_HOME then
+      print("  environment variable $ROSIE_HOME is set to: " .. env_ROSIE_HOME)
+   else
+      print("  environment variable $ROSIE_HOME is not set")
+   end
 end
 
 function help()
