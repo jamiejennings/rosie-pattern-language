@@ -329,7 +329,6 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="grammar_" or name=="new_grammar")
    assert(type(subs[1])=="table")
-   assert(type(source)=="string")
    local gtable = common.new_env(env)
    local first = subs[1]			    -- first rule in grammar
    assert(first, "not getting first rule in compile_grammar_rhs")

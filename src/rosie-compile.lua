@@ -9,7 +9,7 @@
 
 function luac(name)
    local luac_bin = ROSIE_HOME .. "/bin/luac"
-   return os.execute(luac_bin .. " -o bin/" .. name .. ".luac src/" .. name .. ".lua")
+   return os.execute(luac_bin .. " -o bin/" .. name .. ".luac src/core/" .. name .. ".lua")
 end
 
 function compile_system()

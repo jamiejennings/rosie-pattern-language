@@ -1,0 +1,10 @@
+[submodule "submodules/lua"]
+	path = submodules/lua
+	url = https://github.com/jamiejennings/lua.git
+[submodule "submodules/lua-cjson"]
+	path = submodules/lua-cjson
+	url = https://github.com/jamiejennings/lua-cjson.git
+[submodule "submodules/rosie-lpeg"]
+	path = submodules/rosie-lpeg
+	url = https://github.com/jamiejennings/rosie-lpeg.git
+	

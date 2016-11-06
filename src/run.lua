@@ -31,13 +31,13 @@ end
 local thunk, msg = loadfile(ROSIE_HOME .. "/bin/bootstrap.luac")
 if not thunk then
    io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
-   dofile(ROSIE_HOME.."/src/bootstrap.lua")
+   dofile(ROSIE_HOME.."/src/core/bootstrap.lua")
 else
    local ok, msg = pcall(thunk)
    if not ok then
       io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
       io.stderr:write(msg, "\n")
-      dofile(ROSIE_HOME.."/src/bootstrap.lua")
+      dofile(ROSIE_HOME.."/src/core/bootstrap.lua")
    end
 end
 
@@ -55,13 +55,14 @@ local function greeting()
 end
 
 local options_without_args = {"-help", "-patterns", "-verbose", "-all",
-			      "-repl", "-grep", "-eval", "-wholefile" }
+			      "-repl", "-grep", "-eval", "-wholefile", "-info"}
 local options_with_args = {"-manifest", "-f", "-e", "-encode"}
 
 local valid_options = append(options_without_args, options_with_args)
 
 local help_messages =
    { ["-help"] = {"prints this message"},
+     ["-info"] = {"prints information about the local rosie installation"},
      ["-verbose"] = {"output warnings and other informational messages"},
      ["-repl"] = {"start Rosie in the interactive mode (read-eval-print loop)"},
      ["-patterns"] = {"print list of available patterns"},
@@ -94,7 +95,7 @@ local function valid_option_is(opt)
    return false
 end
 
-local usage_message = "Rosie usage: "..(SCRIPTNAME or "<this script>").." <options> <pattern> <filename>*\n"
+local usage_message = "Usage: "..(SCRIPTNAME or "<this script>").." <options> <pattern> <filename>*\n"
 usage_message = usage_message .. "Valid <options> are: " .. table.concat(valid_options, " ")
 
 ----------------------------------------------------------------------------------------
@@ -167,10 +168,39 @@ function process_command_line_options()
 
 end
 
+function print_rosie_info()
+
+   -- Find the value of the environment variable "ROSIE_HOME", if it is defined
+   if not ((type(os)=="table") and (type(os.getenv)=="function")) then
+      error("Internal error: os functions unavailable; cannot use getenv to find ROSIE_HOME")
+   end
+   local ok, env_ROSIE_HOME = pcall(os.getenv, "ROSIE_HOME")
+   if not ok then
+      error("Internal error: call to os.getenv failed")
+   end
+
+   local rosie_home_message = ((SCRIPT_ROSIE_HOME and " (from environment variable $ROSIE_HOME)") or
+			       " (provided by the program that initialized Rosie)")
+   print("Local installation information:")
+   print("  ROSIE_HOME = " .. ROSIE_HOME)
+   print("  ROSIE_VERSION = " .. ROSIE_VERSION)
+   print("  HOSTNAME = " .. (os.getenv("HOSTNAME") or ""))
+   print("  HOSTTYPE = " .. (os.getenv("HOSTTYPE") or ""))
+   print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
+   print("Current invocation: ")
+   print("  current working directory = " .. (os.getenv("CWD") or ""))
+   print("  invocation command = " .. (SCRIPTNAME or ""))
+   print("  script value of Rosie home = " .. (os.getenv("ROSIE_SCRIPT_HOME") or ""))
+   if env_ROSIE_HOME then
+      print("  environment variable $ROSIE_HOME is set to: " .. env_ROSIE_HOME)
+   else
+      print("  environment variable $ROSIE_HOME is not set")
+   end
+end
+
 function help()
    greeting()
-   print("The Rosie install directory is: " .. ROSIE_HOME)
-   print("Rosie help:")
+   print("Help:")
    print(usage_message)
    print()
    local line
@@ -282,6 +312,12 @@ function run()
    if OPTION["-help"] then
       if #arg > 1 then print("Rosie CLI warning: ignoring extraneous command line arguments"); end
       help()
+      os.exit()
+   end
+
+   if OPTION["-info"] then
+      if #arg > 1 then print("Rosie CLI warning: ignoring extraneous command line arguments"); end
+      print_rosie_info()
       os.exit()
    end
 

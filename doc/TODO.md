@@ -16,12 +16,12 @@
 
 - [x] Support an optional ROSIE_HOME environment variable to facilitate the Rosie port to Windows.
 
-- [ ] Create and expose a comprehensive Rosie API
+- [x] Create and expose a comprehensive Rosie API
     - [x] Lua API (lapi)
 	- [x] External API (api) using JSON encoding
     - [x] Expose the Rosie API as a C library; make it available through libffi.
-	- [ ] Provide proof-of-concept librosie-using sample programs: C, go,
-          Python, Ruby, node.js, java
+	- [x] Provide proof-of-concept librosie-using sample programs: C, go,
+          Python, Ruby, node.js
 
 - [x] Enhance character expressions to include:
     - [x] Union of character sets, e.g. `[[a-f][0-9]`
@@ -32,7 +32,7 @@
       it. Support CRUD on color assignments for color output. (Need to rewrite
       color-output.lua, which was a quick hack.)
 
-- [ ] Maybe have an option to output the entire line containing a match, in
+- [x] Maybe have an option to output the entire line containing a match, in
       order to make Rosie an alternative to grep.  This would be useful for
       "playing" with Rosie to understand how rpl expressions ("rosex"?) differ
       from regex, and maybe for use in shell scripts as well.
