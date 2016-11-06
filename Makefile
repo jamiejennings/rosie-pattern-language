@@ -70,7 +70,7 @@ JSON_DIR = $(TMP)/$(JSON)
 # 	mkdir -p $(TMP)
 # 	curl -o $(JSON_DIR).tar.gz $(JSON_ARCHIVE)
 
-.PHONY: clean none sniff test
+.PHONY: clean none sniff test submodules
 
 clean:
 	rm -rf bin/* lib/*
@@ -107,6 +107,15 @@ linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
 windows:
 	@echo Windows installation not yet supported.
+
+submodules: submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/Makefile
+
+submodules/lua/Makefile:
+submodules/lua-cjson/Makefile:
+submodules/rosie-lpeg/src/Makefile:
+	git submodule init
+	git submodule update
+
 
 submodules/lua/include:
 	cd $(LUA_DIR) && ln -sf src include
@@ -147,6 +156,7 @@ sniff: $(ROSIEBIN)
 	@RESULT="$(shell $(HOME)/bin/rosie 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
+	    echo "";\
             echo "Rosie Pattern Engine installed successfully!"; \
 	    if [ -n "$$BREW"]; then \
 	      	    echo "    Use 'make install' to install binary in $(DESTDIR)"; \
