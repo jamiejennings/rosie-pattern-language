@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+if [[ -z "${1}" ]]; then
+    echo "Error: missing required first argument (Rosie installation directory)"
+    echo "Note that this argument, while required, will be ignored if \$ROSIE_HOME is set"
+    exit -1
+fi
+
+if [[ -n "${ROSIE_HOME}" ]]; then
+    # echo ROSIE_HOME is: ${ROSIE_HOME}
+    # echo Ignoring first arg, whose value is: ${1}
+    home=${ROSIE_HOME}
+else
+    # echo ROSIE_HOME is empty
+    # echo Using first arg, whose value is: ${1}
+    home=${1}
+fi
+
+ROSIE_SCRIPT_HOME="${1}"
+shift
+executable="${home}/bin/lua"
+cmd="$(ps -o args= $PPID)"
+
+#echo Testing to see if ${home} is a Rosie installation directory
+if [[ ! -d "${home}" ]]; then
+    echo Error: ${home} is not a directory
+    exit -1
+elif [[ ! -x "${executable}" ]]; then
+    echo Error: ${executable} not found or not executable
+    exit -1
+fi
+
+#
+# -D is an 'undocumented' command line option that launches Rosie in development mode
+#
+i=""
+dev="false"
+if [[ "$1" = "-D" ]]; then
+   i="-i"
+   dev="true"
+   shift
+fi
+
+export ROSIE_HOME
+export ROSIE_SCRIPT_HOME
+export HOSTNAME
+export HOSTTYPE
+export OSTYPE
+export CWD=`pwd`
+
+${executable} $i -e "ROSIE_HOME=\"${home}\"; SCRIPTNAME=\"$cmd\"; ROSIE_DEV=$dev" ${home}/src/run.lua "$@"
+
+

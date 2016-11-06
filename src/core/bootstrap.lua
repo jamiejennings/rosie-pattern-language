@@ -27,11 +27,11 @@ if (value and not(value=="")) then
 end
 
 -- Restrict Lua's search for modules and shared objects to just the Rosie install directory
-package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/?.lua"
+package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 local function print_rosie_info()
-   local rosie_home_message = ((SCRIPT_ROSIE_HOME and " (from environment variable $ROSIE_HOME)") or
+   local rosie_home_message = ((SCRIPT_ROSIE_HOME and " (from environment variable $ROSIE_HOME, which has precedence)") or
 			       " (provided by the program that initialized Rosie)")
    print("Rosie run-time information:")
    print("  ROSIE_HOME = " .. ROSIE_HOME .. rosie_home_message)
@@ -46,7 +46,8 @@ local function load_module(name)
    local ok, thing = pcall(require, name)
    if (not ok) then
       print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME .. "/src")
-      print("Reported error was: " .. tostring(thing))
+      print("The likely cause is an improper value of the environment variable $ROSIE_HOME (see below).")
+      --print("Reported error was: " .. tostring(thing))
       print_rosie_info()
       os.exit(-1)
    end

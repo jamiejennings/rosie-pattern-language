@@ -32,11 +32,8 @@ tool | description
 make | processes makefile to build Rosie
 cc   | on MacOSX, the compiler that is part of Apple's developer tools
 gcc  | on Linux, the GNU C compiler that is most prevalent
-curl | a utility used here to download files
-sed  | text editing utility used in the makefile to edit the Lua makefile
 
-Note: You can override the choice of compiler on the command line, if (for
-example) you want to use `gcc` on MacOSX:
+Note: You can override the choice of compiler on the command line, e.g. if you want to use `gcc` on MacOSX:
 
 ```
 make CC=gcc macosx
