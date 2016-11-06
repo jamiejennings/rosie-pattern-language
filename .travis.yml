@@ -14,7 +14,7 @@ before_install:
 language: C
 compiler: gcc
 
-install: make download
-script: make && make test
+install: make
+script: make test
 
 
