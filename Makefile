@@ -70,7 +70,7 @@ JSON_DIR = $(TMP)/$(JSON)
 # 	mkdir -p $(TMP)
 # 	curl -o $(JSON_DIR).tar.gz $(JSON_ARCHIVE)
 
-.PHONY: clean none sniff test submodules
+.PHONY: clean none sniff test
 
 clean:
 	rm -rf bin/* lib/*
@@ -160,8 +160,10 @@ sniff: $(ROSIEBIN)
 	    if [ -n "$$BREW"]; then \
 	      	    echo "    Use 'make install' to install binary in $(DESTDIR)"; \
 	      	    echo "    Use 'make test' to run the test suite"; \
+	      	    echo "    To run rosie from the installation directory, use ./bin/rosie"; \
 	    fi; \
-            echo "    Try this example, and look for color text output: ./bin/rosie basic.matchall /etc/resolv.conf"; \
+            echo "    Try this example, and look for color text output: rosie basic.matchall /etc/resolv.conf"; \
+	    echo "";\
             true; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
