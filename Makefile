@@ -116,23 +116,22 @@ submodules/rosie-lpeg/src/Makefile:
 	git submodule init
 	git submodule update
 
-
 submodules/lua/include:
 	cd $(LUA_DIR) && ln -sf src include
 
 bin/luac:
-bin/lua: $(LUA_DIR)
+bin/lua: submodules
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p bin
 	cp $(LUA_DIR)/src/lua bin
 	cp $(LUA_DIR)/src/luac bin
 
-lib/lpeg.so: $(LPEG_DIR) submodules/lua/include
+lib/lpeg.so: submodules submodules/lua/include
 	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua/src
 	mkdir -p lib
 	cp $(LPEG_DIR)/src/lpeg.so lib
 
-lib/cjson.so: $(JSON_DIR) submodules/lua/include
+lib/cjson.so: submodules submodules/lua/include
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
