@@ -16,9 +16,10 @@ else
     home=${1}
 fi
 
-ROSIE_SCRIPT_HOME=${1}
+ROSIE_SCRIPT_HOME="${1}"
 shift
 executable="${home}/bin/lua"
+cmd="$(ps -o args= $PPID)"
 
 #echo Testing to see if ${home} is a Rosie installation directory
 if [[ ! -d "${home}" ]]; then
@@ -47,6 +48,6 @@ export HOSTTYPE
 export OSTYPE
 export CWD=`pwd`
 
-${executable} $i -e "ROSIE_HOME=\"${home}\"; SCRIPTNAME=\"$0\"; ROSIE_DEV=$dev" ${home}/src/run.lua "$@"
+${executable} $i -e "ROSIE_HOME=\"${home}\"; SCRIPTNAME=\"$cmd\"; ROSIE_DEV=$dev" ${home}/src/run.lua "$@"
 
 

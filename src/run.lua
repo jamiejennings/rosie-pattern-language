@@ -189,7 +189,7 @@ function print_rosie_info()
    print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
    print("Current invocation: ")
    print("  current working directory = " .. (os.getenv("CWD") or ""))
-   print("  executable script name = " .. (SCRIPTNAME or ""))
+   print("  invocation command = " .. (SCRIPTNAME or ""))
    print("  script value of Rosie home = " .. (os.getenv("ROSIE_SCRIPT_HOME") or ""))
    if env_ROSIE_HOME then
       print("  environment variable $ROSIE_HOME is set to: " .. env_ROSIE_HOME)
