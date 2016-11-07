@@ -144,5 +144,5 @@ sniff: $(ROSIEBIN)
 
 test:
 	@echo Running tests in test/all.lua
-	echo 'rosie="$(EXECROSIE)"; dofile "$(HOME)/test/all.lua"' | $(EXECROSIE) -D
+	echo "rosie=\"$(EXECROSIE)\"; dofile \"$(HOME)/test/all.lua\"" | $(EXECROSIE) -D
 
