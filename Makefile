@@ -117,12 +117,12 @@ install:
 	@-ln -sf "$(EXECROSIE)" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie"
 
 sniff: $(ROSIEBIN)
-	@RESULT="$(shell $(HOME)/bin/rosie 2>&1 >/dev/null)"; \
-	EXPECTED="This is Rosie v$(shell head -1 VERSION)"; \
+	@RESULT="$(shell $(EXECROSIE) 2>&1 >/dev/null)"; \
+	EXPECTED="This is Rosie v$(shell head -1 $(HOME)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
             echo "Rosie Pattern Engine installed successfully!"; \
-	    if [ -n "$$BREW"]; then \
+	    if [ -z "$$BREW" ]; then \
 	      	    echo "    Use 'make install' to install binary in $(DESTDIR)"; \
 	      	    echo "    Use 'make test' to run the test suite"; \
 	      	    echo "    To run rosie from the installation directory, use ./bin/rosie"; \
@@ -132,7 +132,7 @@ sniff: $(ROSIEBIN)
             true; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
-	    echo "    Rosie executable is $(HOME)/bin/rosie"; \
+	    echo "    Rosie executable is $(EXECROSIE)"; \
 	    echo "    Expected this output: $$EXPECTED"; \
 	    if [ -n "$$RESULT" ]; then \
 		echo "    But received this output: $$RESULT"; \
@@ -144,5 +144,5 @@ sniff: $(ROSIEBIN)
 
 test:
 	@echo Running tests in test/all.lua
-	echo "dofile 'test/all.lua'" | $(EXECROSIE) -D
+	echo 'rosie="$(EXECROSIE)"; dofile "$(HOME)/test/all.lua"' | $(EXECROSIE) -D
 
