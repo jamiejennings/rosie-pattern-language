@@ -126,9 +126,9 @@ sniff: $(ROSIEBIN)
 	      	    echo "    Use 'make install' to install binary in $(DESTDIR)"; \
 	      	    echo "    Use 'make test' to run the test suite"; \
 	      	    echo "    To run rosie from the installation directory, use ./bin/rosie"; \
+	            echo "    Try this example, and look for color text output: rosie basic.matchall /etc/resolv.conf"; \
+		    echo "";\
 	    fi; \
-            echo "    Try this example, and look for color text output: rosie basic.matchall /etc/resolv.conf"; \
-	    echo "";\
             true; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \

@@ -24,6 +24,15 @@ cmd="$(ps -o args= $PPID)"
 #echo Testing to see if ${home} is a Rosie installation directory
 if [[ ! -d "${home}" ]]; then
     echo Error: ${home} is not a directory
+    if [[ -z ${ROSIE_HOME} ]]; then
+	echo "This value is named in the executable script that launches rosie,"
+	echo "and an invalid value suggests the rosie installation failed."
+	echo "Try uninstalling and reinstalling rosie."
+    else
+	echo "This directory is the value of the environment variable \$ROSIE_HOME,"
+	echo "which should point to a rosie installation."
+	echo "Try 'unset ROSIE_HOME' to use the default system installation of rosie."
+    fi
     exit -1
 elif [[ ! -x "${executable}" ]]; then
     echo Error: ${executable} not found or not executable
