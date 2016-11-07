@@ -190,12 +190,18 @@ function print_rosie_info()
    print("Current invocation: ")
    print("  current working directory = " .. (os.getenv("CWD") or ""))
    print("  invocation command = " .. (SCRIPTNAME or ""))
-   print("  script value of Rosie home = " .. (os.getenv("ROSIE_SCRIPT_HOME") or ""))
+   print("  script value of Rosie home = " .. (os.getenv("ROSIE_SCRIPT_HOME") or "(not set???)"))
+   local env_var_msg = "  environment variable $ROSIE_HOME "
    if env_ROSIE_HOME then
-      print("  environment variable $ROSIE_HOME is set to: " .. env_ROSIE_HOME)
+      if env_ROSIE_HOME=="" then
+	 env_var_msg = env_var_msg .. "is set to the empty string"
+      else
+	 env_var_msg = env_var_msg .. "= " .. tostring(env_ROSIE_HOME)
+      end
    else
-      print("  environment variable $ROSIE_HOME is not set")
+      env_var_msg = env_var_msg .. "is not set"
    end
+   print(env_var_msg)
 end
 
 function help()
