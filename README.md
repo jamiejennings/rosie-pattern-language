@@ -37,7 +37,7 @@ Mac OSX system log (from the Rosie test suite):
 ![Screen capture](doc/images/system.log-example.jpg "Rosie processing a MacOS system log")
 
 Rosie is parsing the log file into fields that are printed in various colors.
-To see which colors correspond to which RPL patterns, type `./run -patterns` to
+To see which colors correspond to which RPL patterns, type `./bin/rosie -patterns` to
 see all defined and loaded patterns and the color (if any) that is assigned to
 them for output at the terminal.
 
@@ -74,7 +74,9 @@ needed prerequisites, compile them, and run a quick test.
 
 You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
 
-See also:
+The rosie executable is in `./bin/rosie`.  More installation information is available:
+
+* [Installation details and tips](doc/install.md)
 * [RHEL 7 install tips](doc/rhel.md)
 * [Ubuntu 16 install tips](doc/ubuntu.md)
 * [Sample docker files](docker/) *These may need updating*
