@@ -294,7 +294,7 @@ But this is not quite enough, because this pattern will consume characters as lo
 The pattern above says "while not looking at _ear_, consume all characters; then match _ear_ at the end of the line."  Using this expression, we get:
 
 ```shell 
-bash-3.2$ ./run '{{!"ear" .}* "ear"}$' /usr/share/dict/words | head -5
+bash-3.2$ ./bin/rosie '{{!"ear" .}* "ear"}$' /usr/share/dict/words | head -5
 abear 
 afear 
 anear 
@@ -306,7 +306,7 @@ Observe that the form of this pattern is `{{ !X .}* X}`, in other words, "consum
 
 
 ```shell 
-bash-3.2$ ./run '{"c" {!"ear" .}* "ear"$}' /usr/share/dict/words
+bash-3.2$ ./bin/rosie '{"c" {!"ear" .}* "ear"$}' /usr/share/dict/words
 circumnuclear 
 clear 
 coappear 

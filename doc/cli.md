@@ -10,23 +10,20 @@
 
 ### Running Rosie
 
-The `run` script in the Rosie install directory starts the command line interface (CLI), which can be used to match rpl pattern expressions against files of data.  (To match against a single string, use the [interactive read-eval-print loop (repl)](repl.md).)
+The `bin/rosie` script in the Rosie install directory starts the command line interface (CLI), which can be used to match rpl pattern expressions against files of data.  (To match against a single string, use the [interactive read-eval-print loop (repl)](repl.md).)
 
 The Rosie Pattern Engine reads input files one line at a time, and tries to match each line against the pattern expression given on the command line.
 
-A good way to run Rosie is to define an alias.  In the bash shell, you can write (substituting your Rosie install directory for mine):
+One way to run Rosie is to define an alias.  In the bash shell, you can write (substituting your Rosie install directory for mine):
 
 ```
-alias rosie='/Users/jjennings/Dev/rosie-pattern-language/run'
+alias rosie='/Users/jjennings/Dev/rosie-pattern-language/bin/rosie'
 ``` 
 
-Or if you cd into the Rosie install directory, this:
+Or use `make install` to place a link in `/usr/local/bin/rosie`.
 
-``` 
-alias rosie=`pwd`/run
-``` 
+More detail about the way Rosie is installed can be found [here](install.md).
 
-Putting this alias definition into your `~/.bashrc` file will load it every time an interactive bash shell starts.  Now you can type `rosie` to start the Rosie CLI. 
 
 ### A quick "sniff test" to see if things are working
 
@@ -47,11 +44,11 @@ Rosie supports output in a few formats, which are controlled by the value of the
 ### Help is available
 
 ``` 
-bash-3.2$ ./run -help
+bash-3.2$ ./bin/rosie -help
 This is Rosie v0.99a
 The Rosie install directory is: /Users/jjennings/Work/Dev/rosie-pattern-language
 Rosie help:
-Rosie usage: ./run <options> <pattern> <filename>*
+Rosie usage: ./bin/rosie <options> <pattern> <filename>*
 Valid <options> are: -help -patterns -verbose -all -repl -grep -eval -wholefile -manifest -f -e -encode
 
 -help              prints this message
