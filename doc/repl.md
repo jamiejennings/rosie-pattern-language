@@ -7,7 +7,7 @@ In the [Rosie Command Line Interface documentation](cli.md) you will find the
 processing any other command line options.  For example:
 
 ```
-jjennings$ ./run -repl
+jjennings$ ./bin/rosie -repl
 Rosie CLI warning: missing pattern argument
 Rosie CLI warning: missing filename arguments
 This is Rosie v0.99a
