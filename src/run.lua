@@ -6,6 +6,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+--function assert(x) return x; end
+
 
 -- Notes:
 --
@@ -45,7 +47,7 @@ local common = require "common"
 local lapi = require "lapi"
 local json = require "cjson"
 require("repl")
-require "list"
+require("list")
 
 CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
@@ -240,8 +242,10 @@ function setup_engine()
       os.exit(-1)
    end
    local eval = OPTION["-eval"]
+
    -- (1a) Load the manifest
    if opt_manifest then
+      if not QUIET then io.stdout:write("Compiling files listed in manifest ", opt_manifest, "\n"); end
       local success, messages = lapi.load_manifest(CL_ENGINE, opt_manifest)
       if not success then
 	 for _,msg in ipairs(messages) do if msg then io.stdout:write(msg, "\n"); end; end
