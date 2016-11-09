@@ -6,7 +6,6 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-
 -- Notes:
 --
 -- This lua script must be called with the variable ROSIE_HOME set to be the full path of the
@@ -45,7 +44,7 @@ local common = require "common"
 local lapi = require "lapi"
 local json = require "cjson"
 require("repl")
-require "list"
+require("list")
 
 CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
