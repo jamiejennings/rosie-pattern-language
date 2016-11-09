@@ -1,3 +1,22 @@
+2016-11-09  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99h
+
+	Fixed a CLI bug introduced in v0.99g in which patterns entered at the
+	command line could not contain quotes.  (The bug appeared when more
+	debugging information was added to 'rosie -info', which now prints the
+	command line (with arguments) that invoked rosie.
+
+	The rosie-lpeg makefile had a default setting of debug ENABLED.  This
+	slows down lpeg and is only useful for development of Rosie itself.  The
+	default is now to DISABLE debugging, which then enables optimization
+	level -O2 for the compiler.
+
+	The old ./run command was deprecated (and disappeared) in v0.99g.  In
+	its place now is a script that announces the deprecation of that
+	command.  Anyone reading an older Rosie blog or presentation may try
+	./run, and they will now be guided to bin/rosie instead.
+
 2016-11-07  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* v0.99g
