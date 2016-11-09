@@ -41,11 +41,10 @@ local function print_rosie_info()
    print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
 end
 
-
 local function load_module(name)
    local ok, thing = pcall(require, name)
    if (not ok) then
-      print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME .. "/src")
+      print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME)
       print("The likely cause is an improper value of the environment variable $ROSIE_HOME (see below).")
       --print("Reported error was: " .. tostring(thing))
       print_rosie_info()
@@ -60,6 +59,7 @@ compile = load_module("compile")
 common = load_module("common")
 load_module("engine")
 load_module("os")
+
 
 ----------------------------------------------------------------------------------------
 -- Driver functions for RPL parser written in RPL
