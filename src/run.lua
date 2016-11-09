@@ -6,6 +6,9 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+--function assert(x) return x; end
+
+
 -- Notes:
 --
 -- This lua script must be called with the variable ROSIE_HOME set to be the full path of the
@@ -239,8 +242,10 @@ function setup_engine()
       os.exit(-1)
    end
    local eval = OPTION["-eval"]
+
    -- (1a) Load the manifest
    if opt_manifest then
+      if not QUIET then io.stdout:write("Compiling files listed in manifest ", opt_manifest, "\n"); end
       local success, messages = lapi.load_manifest(CL_ENGINE, opt_manifest)
       if not success then
 	 for _,msg in ipairs(messages) do if msg then io.stdout:write(msg, "\n"); end; end
