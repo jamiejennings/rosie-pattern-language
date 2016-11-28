@@ -87,10 +87,12 @@ function util.table_to_pretty_string(t, max_item_length, js_style)
    local key = function(k, tbl, array_p, sep, indent)
 		  local fmt = (js_style and "%q") or "%s"
 		  if array_p then
-		     return "", 0
+		     return "", (js_style and 1 or 0)
 		  else 
 		     if type(k)=="number" then
-			return tostring(k) .. key_value_sep, #tostring(k) + #key_value_sep + 1
+			return (js_style and '"' or "") .. tostring(k) .. (js_style and '"' or "")
+		               .. key_value_sep, 
+	                       #tostring(k) + #key_value_sep + 1
 		     else
 			return string.format(fmt, k) .. key_value_sep ..
 			((tbl and ("\n" .. string.rep(" ", indent+delta))) or ""), delta+1
