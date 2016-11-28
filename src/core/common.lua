@@ -34,6 +34,7 @@ b5_lead = lpeg.R(string.char(0xF8)..string.char(0xFB))
 b6_lead = lpeg.R(string.char(0xFC)..string.char(0xFD))
 c_byte = lpeg.R(string.char(0x80)..string.char(0xBF)) -- continuation byte
 
+-- This is denoted \X in Perl, PCRE and some other regex
 utf8_char_peg = b1_lead +
                (b2_lead * c_byte) +
 	       (b3_lead * c_byte * c_byte) +
