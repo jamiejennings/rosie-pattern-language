@@ -13,7 +13,7 @@ ln -fs $LIB/librosie_gen.h src/rtest/include/librosie_gen.h
 ln -fs $LIB/librosie_gen.c src/rtest/include/librosie_gen.c
 
 echo "Creating 'libs' directory in 'src/rtest' and symlink to liblua"
-LIB=`cd ../../../tmp/lua-5.3.2/src && pwd`
+LIB=`cd ../../../submodules/lua/src && pwd`
 mkdir -p src/rtest/libs
 ln -fs $LIB/liblua.a src/rtest/libs/liblua.a
 
