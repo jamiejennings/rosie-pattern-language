@@ -1,3 +1,11 @@
+2016-11-29  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99i
+
+	Relative to the new submodules directory:
+	  Updated the makefile for librosie (the ffi library).
+	  Updated some sample files that use librosie.
+
 2016-11-09  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* v0.99h
