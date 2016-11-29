@@ -35,7 +35,7 @@ With argument, position cursor at end of buffer."
       (set 'rosie-home (concat rosie-home "/")))
   (if (string-suffix-p "src/" rosie-home)
       (set 'rosie-home (substring rosie-home 0 -4))) ; chop off the "src/"
-  (let ((rosie-program (concat rosie-home "run"))
+  (let ((rosie-program (concat rosie-home "bin/rosie"))
 	(rosie-switches '("-D")))
     (if (not (file-executable-p rosie-program))
 	(error "Rosie executable does not exist or is not executable: %s" rosie-program))

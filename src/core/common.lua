@@ -22,6 +22,41 @@ local common = {}				    -- interface
 
 assert(ROSIE_HOME, "The variable ROSIE_HOME is not set in common.lua")
 
+----------------------------------------------------------------------------------------
+-- UTF-8 considerations
+----------------------------------------------------------------------------------------
+--local
+b1_lead = lpeg.R(string.char(0x00)..string.char(0x7F))   -- ASCII (1 byte)
+b2_lead = lpeg.R(string.char(0xC0)..string.char(0xDF))
+b3_lead = lpeg.R(string.char(0xE0)..string.char(0xEF))
+b4_lead = lpeg.R(string.char(0xF0)..string.char(0xF7))
+b5_lead = lpeg.R(string.char(0xF8)..string.char(0xFB))
+b6_lead = lpeg.R(string.char(0xFC)..string.char(0xFD))
+c_byte = lpeg.R(string.char(0x80)..string.char(0xBF)) -- continuation byte
+
+-- This is denoted \X in Perl, PCRE and some other regex
+utf8_char_peg = b1_lead +
+               (b2_lead * c_byte) +
+	       (b3_lead * c_byte * c_byte) +
+	       (b4_lead * c_byte * c_byte * c_byte) +
+	       (b5_lead * c_byte * c_byte * c_byte * c_byte) +
+	       (b6_lead * c_byte * c_byte * c_byte * c_byte * c_byte)
+
+-- Examples:
+-- > utf8_char_peg:match("A")
+-- 2
+-- > snowman = "\u{002603}"
+-- > snowman
+-- ☃
+-- > utf8_char_peg:match(snowman)
+-- 4
+-- > face = "\u{1f600}"
+-- > face
+-- 😀
+-- > utf8_char_peg:match(face)
+-- 5
+-- >
+	    
 common.dirsep = package.config:sub(1, (package.config:find("\n"))-1)
 assert(#common.dirsep==1, "directory separator should be a forward or a backward slash")
 
@@ -83,10 +118,13 @@ common.escape_substitutions =			    -- characters that change when escaped are:
      v = "\v"; 					    -- vertical tab
      ['\\'] = '\\';				    -- backslash
      ['"'] = '"';				    -- double quote
-     ["'"] = "'";				    -- single quote
+--     ["'"] = "'";				    -- single quote
   },
-   -- any other escaped characters just return themselves:
-   {__index = function(self, key) return key end})
+   {__index = function(self, key) return key end}   -- TEMP
+   -- FUTURE:
+   -- any other escaped characters are errors
+   -- {__index = function(self, key) error("Invalid escape sequence: \\" .. key); end}
+)
 
 function common.unescape_string(s)
    -- the only escape character is \
@@ -313,7 +351,7 @@ common.boundary = boundary
 -- Base environment, which can be extended with new_env, but not written to directly,
 -- because it is shared between match engines:
 
-local ENV = {[dot_id] = pattern{name=dot_id; peg=lpeg.P(1); alias=true; raw=true};  -- any single character
+local ENV = {[dot_id] = pattern{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
              [eol_id] = pattern{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
              [b_id] = pattern{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
        }

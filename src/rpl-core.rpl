@@ -15,10 +15,10 @@ alias ignore = { { [[:space:]] / comment }* }
 alias id_char = { [[:alnum:]] / [[_]] }
 alias id = { [[:alpha:]] id_char* }
 
-identifier = { { id {[[.]]id}* }			    -- hierarchical identifier name
-	       / [[.]]				    -- a single dot
-	       / [[$]]				    -- a single dollar sign
-	       / [[~]]				    -- a single tilde
+identifier = { { id {[[.]]id}* } -- hierarchical identifier name
+	       / [[.]]		 -- a single dot
+	       / [[$]]		 -- a single dollar sign
+	       / [[~]]		 -- a single tilde
 	    }
 
 alias dquote = { [[\"]] }

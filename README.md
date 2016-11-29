@@ -47,6 +47,7 @@ basic.network_patterns`.  Rosie finds a line matching this pattern, and the
 pattern matches at position 1 of the input line.  The sub-match `common.word`
 also begins at position 1, and the sub-match `basic.network_patterns` begins at
 position 12:
+
 ```
 jamiejennings$ rosie -encode json 'common.word basic.network_patterns' /etc/resolv.conf | rjsonpp
 {"*": 
@@ -65,7 +66,8 @@ jamiejennings$ rosie -encode json 'common.word basic.network_patterns' /etc/reso
                 "pos": 12.0}}]}}]}}
 jamiejennings$ 
 ``` 
-(Note: `rjsonpp` is a json pretty-printer, similar to `json_pp`.)
+
+(Note: `rjsonpp` is my own json pretty-printer, similar to `json_pp`.)
 
 ## How to build: clone the repo, and type 'make'
 
@@ -79,7 +81,8 @@ The rosie executable is in `./bin/rosie`.  More installation information is avai
 * [Installation details and tips](doc/install.md)
 * [RHEL 7 install tips](doc/rhel.md)
 * [Ubuntu 16 install tips](doc/ubuntu.md)
-* [Sample docker files](docker/) *These may need updating*
+* [Windows 10 Anniversary Edition install tips](doc/windows10ae.md)
+* [Sample docker files](docker/) *Note: These may need updating*
 
 ## Current status
 
@@ -108,7 +111,7 @@ For an introduction to Rosie and explanations of the key concepts, see
 Rosie's internal components, as well as the utilities needed to build Rosie are
 listed [here](doc/arch.md).
 
-Rosie announcements on Twitter: https://twitter.com/jamietheriveter
+Rosie author on Twitter: [@jamietheriveter](https://twitter.com/jamietheriveter)
 
 ## Useful tips
 
