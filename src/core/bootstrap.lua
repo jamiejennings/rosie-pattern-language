@@ -6,6 +6,14 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+-- Ensure we can fit any current (up to 0x10FFFF) and future (up to 0xFFFFFFFF) Unicode code
+-- points in a single Lua integer.
+if (not math) then
+   error("Internal error: math functions unavailable")
+elseif (0xFFFFFFFF > math.maxinteger) then
+   error("Internal error: max integer on this platform is too small")
+end
+
 -- Find the value of the environment variable "ROSIE_HOME", if it is defined
 if not ((type(os)=="table") and (type(os.getenv)=="function")) then
    error("Internal error: os functions unavailable; cannot use getenv to find ROSIE_HOME")

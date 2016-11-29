@@ -1,4 +1,4 @@
-## -*- Mode: BSDmakefile; -*-                                         
+## -*- Mode: Makefile; -*-                                             
 ##
 ## Makefile for building librosie.so, on which Rosie's foreign function interface is based. 
 ##
@@ -8,8 +8,8 @@
 
 ## Use "DEBUG=1" on the command line to enable verbose debugging output
 
-HOME = `cd ../..; pwd`
-ROSIE = "$(HOME)/rosie"
+HOME = $(shell cd ../..; pwd)
+ROSIE = "$(HOME)/bin/rosie"
 
 ifdef DEBUG
 COPT = "-DDEBUG"
@@ -39,12 +39,12 @@ SYSCFLAGS=
 SYSLDFLAGS=
 SYSLIBS=
 
-MYCFLAGS=  -I$(HOME)/tmp/lua-5.3.2/include
-MYLDFLAGS= -L$(HOME)/tmp/lua-5.3.2/src
+MYCFLAGS=  -I$(HOME)/submodules/lua/include
+MYLDFLAGS= -L$(HOME)/submodules/lua/src
 MYLIBS= 
 MYOBJS=
 
-LUA_A=	$(HOME)/tmp/lua-5.3.2/src/liblua.a
+LUA_A=	$(HOME)/submodules/lua/src/liblua.a
 
 ALL= librosie.so
 

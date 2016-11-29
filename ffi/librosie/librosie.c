@@ -77,9 +77,9 @@
  * ----------------------------------------------------------------------------------------
  */
 
-/* TODO: First try to load bin/bootstrap.luac and then fall back to src/bootstrap.lua */
+/* TODO: First try to load bin/bootstrap.luac and then fall back to src/core/bootstrap.lua */
 static int bootstrap (lua_State *L, struct string *rosie_home) {
-     const char *bootscript = "/src/bootstrap.lua";
+     const char *bootscript = "/src/core/bootstrap.lua";
      LOG("About to bootstrap\n");
      char *name = malloc(rosie_home->len + strlen(bootscript) + 1);
      memcpy(name, rosie_home->ptr, rosie_home->len);

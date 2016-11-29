@@ -91,30 +91,30 @@ Matching against "421" now gives:
 
 Grammars can have mutually recursive rules.  PEGs allow you to define grammars for recursive structures like nested lists (e.g. JSON, XML) or things like "strings that have an equal number of a's and b's".  Here is an interactive Rosie session in which a grammar called `same` has been defined to match strings that have equal a's and b's:
 
-	``` 
-	Rosie> same
-	same = grammar
+``` 
+Rosie> same
+same = grammar
+  assignment same = S $
+  alias S = ({"a" B} / ({"b" A} / ""))
+  alias A = ({"a" S} / {"b" A A})
+  alias B = ({"b" S} / {"a" B B})
+end
+Rosie> .match same, "aabaabbb"
+[same: 
+[pos: 1, 
+ text: "aabaabbb"]]
+Rosie> .match same, "aab"
+ 1..GRAMMAR:
+	grammar
 	   assignment same = S $
 	   alias S = ({"a" B} / ({"b" A} / ""))
 	   alias A = ({"a" S} / {"b" A A})
 	   alias B = ({"b" S} / {"a" B B})
 	end
-	Rosie> .match same, "aabaabbb"
-	[same: 
-	 [pos: 1, 
-	  text: "aabaabbb"]]
-	Rosie> .match same, "aab"
-	  1..GRAMMAR:
-		 grammar
-			assignment same = S $
-			alias S = ({"a" B} / ({"b" A} / ""))
-			alias A = ({"a" S} / {"b" A A})
-			alias B = ({"b" S} / {"a" B B})
-		 end
-		 FAILED to match against input "aab"
-	Repl: No match (turn debug off to hide the match trace)
+	FAILED to match against input "aab"
+Repl: No match (turn debug off to hide the match trace)
 	Rosie>
-    ``` 
+``` 
 
 **IMPORTANT NOTE:** Debugging grammars using the `-debug` command line option is not currently supported.  Even worse, the syntax error reporting for grammars is atrocious.  This is on the TO DO list and will be addressed soon.
 
@@ -153,7 +153,7 @@ Rosie's pattern expressions are as follows (note the similarity to regexes):
 
 
 **NOTES:**
-1. The "quantified expressions" `pat?`, `pat*`, `pat+`, and `pat?` are _greedy_.  They will consume as many repetitions as possible, always.
+1. The "quantified expressions" (`pat?`, `pat*`, `pat+`, `pat?`, and `pat{n,m}`) are _greedy_.  They will consume as many repetitions as possible, always.
 2. The two grouping constructs (raw and cooked) are used in the way that parentheses are usually used in programming: to force the order of operations that you want.  So if you want "a or b, followed by c", write `(a / b) c` or `{ {a / b} c }`.
 3. Inside of quotation marks, the only special character is `\` (backslash), which is the escape character.  Inside of a character set (in square brackets `[]`), the special characters are `-` (which is only special when it is the middle of three characters, specifying a character range) and square brackets `[` `]` and caret `^`.  These characters must be escaped to use them literally within a character set, e.g. a class containing a single right bracket and a caret is `[\]\^]`.
 
