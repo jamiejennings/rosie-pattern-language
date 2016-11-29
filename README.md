@@ -81,7 +81,8 @@ The rosie executable is in `./bin/rosie`.  More installation information is avai
 * [Installation details and tips](doc/install.md)
 * [RHEL 7 install tips](doc/rhel.md)
 * [Ubuntu 16 install tips](doc/ubuntu.md)
-* [Sample docker files](docker/) *These may need updating*
+* [Windows 10 Anniversary Edition install tips](doc/windows10ae.md)
+* [Sample docker files](docker/) *Note: These may need updating*
 
 ## Current status
 
