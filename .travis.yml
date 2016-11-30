@@ -1,12 +1,14 @@
-# safelist
+# foo
+os:
+  - linux
+  - osx
+  
 branches:
   only:
   - master
-  - v0.99a
-  - v0.99b
-  - v0.99c
-  - v0.99d
-  - v0.99e
+  - v0.99g
+  - v0.99h
+  - v0.99i
   
 before_install:
 - sudo apt-get update -qq
