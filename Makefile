@@ -123,7 +123,7 @@ install:
 	@-ln -sf "$(EXECROSIE)" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie"
 
 sniff: $(EXECROSIE)
-	@RESULT="$(shell $(EXECROSIE) 2>&1 >/dev/null)"; \
+	@RESULT="$(shell $(EXECROSIE) --version 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 $(HOME)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
