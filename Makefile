@@ -18,6 +18,7 @@ endif
 
 PLATFORMS = linux macosx windows
 
+ARGPARSE = argparse
 LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
@@ -29,6 +30,7 @@ EXECROSIE = "$(HOME)/$(ROSIEBIN)"
 
 default: $(PLATFORM)
 
+ARGP_DIR = $(TMP)/$(ARGPARSE)
 LUA_DIR = $(TMP)/$(LUA)
 LPEG_DIR = $(TMP)/$(LPEG)
 JSON_DIR = $(TMP)/$(JSON)
@@ -97,10 +99,13 @@ lib/cjson.so: $(submodules) submodules/lua/include
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
+bin/argparse.luac: submodules/argparse/src/argparse.lua
+	bin/luac -o $@ $<
+
 bin/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 
-luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
+luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua)) bin/argparse.luac
 
 compile: $(luaobjects)
 
