@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+# There was once a spurious carriage return in this file (^M, \r,
+# 0x0D).  Or perhaps GitHub for some mysterious reason inserted one.
+# I have enabled git's auto crlf handling with:
+#
+#              git config --global core.autocrlf input
+#
+# This comment is here to force an update of the file on GitHub.
+
 if [[ -z "${1}" ]]; then
     echo "Error: missing required first argument (Rosie installation directory)"
     echo "Note that this argument, while required, will be ignored if \$ROSIE_HOME is set"
