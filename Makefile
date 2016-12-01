@@ -105,18 +105,18 @@ luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
 
 compile: $(luaobjects)
 
-$(ROSIEBIN):
+$(EXECROSIE):
 	@/usr/bin/env echo "Creating $(EXECROSIE)"
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(EXECROSIE)"
 	@/usr/bin/env echo -n "$(HOME)/src/run-rosie $(HOME)" >> "$(EXECROSIE)"
 	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
-	@chmod 755 "$(ROSIEBIN)"
+	@chmod 755 "$(EXECROSIE)"
 
 install:
 	@/usr/bin/env echo "Creating symbolic link $(DESTDIR)/rosie pointing to $(EXECROSIE)"
 	@-ln -sf "$(EXECROSIE)" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie"
 
-sniff: $(ROSIEBIN)
+sniff: $(EXECROSIE)
 	@RESULT="$(shell $(EXECROSIE) 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 $(HOME)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
