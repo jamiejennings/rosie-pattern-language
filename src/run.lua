@@ -213,11 +213,16 @@ end -- function run
 ----------------------------------------------------------------------------------------
 
 -- create Parser
-local parser = argparse("rosie", "Rosie Pattern Language")
+local parser = argparse("rosie", "Rosie Pattern Language v" .. ROSIE_VERSION)
 	:epilog("Additional information.")
 -- global flags/options can go here
 -- -h,--help is generated automatically
 -- usage message is generated automatically
+parser:flag("--version", "Print rosie version")
+	:action(function(args,_,exceptions)
+		greeting()
+		os.exit()
+	end)
 parser:flag("-v --verbose", "Output additional messages")
 	:default(false)
 	:action("store_true")
