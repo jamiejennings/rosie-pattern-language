@@ -288,6 +288,11 @@ match:argument("pattern", "RPL pattern")
 match:argument("filename", "Input filename")
 	:args("*")
 	:default("-") -- in case no filenames are passed, default to stdin
--- parse command-line
-local args = parser:parse()
-run(args)
+-- in order to catch dev mode for "make test"
+if (not arg[1]) then
+	print(parser:get_help())
+else
+	-- parse command-line
+	local args = parser:parse()
+	run(args)
+end
