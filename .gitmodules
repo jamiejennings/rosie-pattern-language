@@ -8,3 +8,6 @@
 	path = submodules/rosie-lpeg
 	url = https://github.com/jamiejennings/rosie-lpeg.git
 	
+[submodule "submodules/lua-readline"]
+	path = submodules/lua-readline
+	url = https://github.com/bcnjr5/lua-readline.git
