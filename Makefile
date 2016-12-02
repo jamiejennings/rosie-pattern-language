@@ -22,6 +22,7 @@ ARGPARSE = argparse
 LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
+READLINE = lua-readline
 
 HOME = $(shell pwd)
 TMP = submodules
@@ -34,6 +35,7 @@ ARGP_DIR = $(TMP)/$(ARGPARSE)
 LUA_DIR = $(TMP)/$(LUA)
 LPEG_DIR = $(TMP)/$(LPEG)
 JSON_DIR = $(TMP)/$(JSON)
+READLINE_DIR = $(TMP)/$(READLINE)
 
 ## ----------------------------------------------------------------------------- ##
 
@@ -44,6 +46,7 @@ clean:
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
+	-cd $(READLINE_DIR) && rm readline.so && rm src/lua_readline.o
 
 none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
@@ -68,8 +71,7 @@ linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
 linux: LINUX_CFLAGS=MYCFLAGS=-fPIC
-linux: LINUX_LDFLAGS=MYLDFLAGS=-Wl,--export-dynamic
-linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
+linux: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
 
 windows:
 	@echo Windows installation not yet supported.
@@ -99,8 +101,15 @@ lib/cjson.so: $(submodules) submodules/lua/include
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
+
 bin/argparse.luac: submodules/argparse/src/argparse.lua
 	bin/luac -o $@ $<
+
+lib/readline.so: submodules submodules/lua/include
+	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) CFLAGS="-fPIC -O2 -I../lua/include"
+	mkdir -p lib
+	cp $(READLINE_DIR)/readline.so lib
+
 
 bin/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
