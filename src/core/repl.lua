@@ -9,6 +9,7 @@
 lapi = require "lapi"
 common = require "common"
 json = require "cjson"
+local readline = require "readline"
 
 local repl_patterns = [==[
       rpl_expression = expression
@@ -58,8 +59,9 @@ function repl(en)
    if (not ok) then
       error("Argument to repl is not a live engine: " .. tostring(en))
    end
-   io.write(repl_prompt)
-   local s = io.stdin:read("l")
+   --io.write(repl_prompt)
+   --local s = io.stdin:read("l")
+   local s = readline.readline(repl_prompt)
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
       local ok, msg = lapi.configure_engine(repl_engine, {expression="input", encode=false})
@@ -195,6 +197,7 @@ function repl(en)
 	 end -- switch on type of input received
       end
    end
+   readline.add_history(s)
    repl(en)
 end
 
