@@ -1,0 +1,136 @@
+
+alias ALPHA = letter
+alias DIGIT = digit
+alias HEXDIG =	DIGIT /
+				"A" / "a" /
+				"B" / "b" /
+				"C" / "c" /
+				"D" / "d" /
+				"E" / "e" /
+				"F" / "f"
+
+alias sub_delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
+alias gen_delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+alias reserved = gen_delims / sub_delims
+
+alias unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
+
+alias pct_encoded = "%" HEXDIG HEXDIG
+
+alias pchar = unreserved / pct_encoded / sub_delims / ":" / "@"
+
+fragment = ({ pchar / "/" / "?" }*)
+
+query = ({ pchar / "/" / "?" }*)
+
+alias segment_nz_nc = ( unreserved / pct_encoded / sub_delims / "@" )+
+alias segment_nz = pchar+
+alias segment = pchar*
+
+path_empty = pchar{0,0}
+path_rootless = segment_nz { "/" segment }*
+path_noscheme = segment_nz_nc { "/" segment }*
+path_absolute = "/" { segment_nz { "/" segment }* }*
+path_abempty = { "/" segment }*
+
+path = path_empty / path_rootless / path_noscheme / path_absolute / path_abempty
+
+alias reg_name = { unreserved / pct_encoded / sub_delims }*
+
+alias dec_octet = {{"25" [0-5]} / {"2" [0-4] digit} / {"1" digit digit} / {[1-9] digit} / {digit}}
+
+alias IPv4address = dec_octet "." dec_octet "." dec_octet "." dec_octet
+
+alias h16 = HEXDIG{1,4}
+alias ls32 = { h16 ":" h16 } / IPv4address
+
+-- This is RFC3986's definition, but since rosie is always greedy matching it has to be exploded out to be more specific
+--alias IPv6address = {                               { h16 ":" }{6,6} ls32 } /
+--					{                          "::" { h16 ":" }{5,5} ls32 } /
+--					{ {                 h16 }? "::" { h16 ":" }{4,4} ls32 } /
+--					{ { { h16 ":" }{,1} h16 }? "::" { h16 ":" }{3,3} ls32 } /
+--					{ { { h16 ":" }{,2} h16 }? "::" { h16 ":" }{2,2} ls32 } /
+--					{ { { h16 ":" }{,3} h16 }? "::"   h16 ":"        ls32 } /
+--					{ { { h16 ":" }{,4} h16 }? "::"                  ls32 } /
+--					{ { { h16 ":" }{,5} h16 }? "::"                  h16  } /
+--					{ { { h16 ":" }{,6} h16 }? "::"                       }
+
+-- I'm fairly certain this can be optimized a little more
+alias IPv6address = {                                { h16 ":" }{6,6} ls32 } / -- exactly 8 groups
+					{                           "::" { h16 ":" }{5,5} ls32 } / -- leading 0 group, 7 trailing groups
+					{ {                  h16 }? "::" { h16 ":" }{4,4} ls32 } / -- one optional first group  or two   0 groups, 6 trailing groups
+					{ {                  h16 }? "::" { h16 ":" }{3,3} ls32 } / -- one optional first group  or three 0 groups, 5 trailing groups
+					{ {          h16 ":" h16 }? "::" { h16 ":" }{3,3} ls32 } / -- two optional first groups or three 0 groups, 5 trailing groups
+					{ {                  h16 }? "::" { h16 ":" }{2,2} ls32 } /
+					{ {          h16 ":" h16 }? "::" { h16 ":" }{2,2} ls32 } /
+					{ { { h16 ":" }{2,2} h16 }? "::" { h16 ":" }{2,2} ls32 } / -- {h16":"}{,2}
+					{ {                  h16 }? "::"   h16 ":"        ls32 } /
+					{ {          h16 ":" h16 }? "::"   h16 ":"        ls32 } /
+					{ { { h16 ":" }{2,2} h16 }? "::"   h16 ":"        ls32 } /
+					{ { { h16 ":" }{3,3} h16 }? "::"   h16 ":"        ls32 } / -- {h16":"}{,3}
+					{ {                  h16 }? "::"                  ls32 } /
+					{ {          h16 ":" h16 }? "::"                  ls32 } /
+					{ { { h16 ":" }{2,2} h16 }? "::"                  ls32 } /
+					{ { { h16 ":" }{3,3} h16 }? "::"                  ls32 } /
+					{ { { h16 ":" }{4,4} h16 }? "::"                  ls32 } / -- {h16":"}{,4}
+					{ {                  h16 }? "::"                  h16  } /
+					{ {          h16 ":" h16 }? "::"                  h16  } /
+					{ { { h16 ":" }{2,2} h16 }? "::"                  h16  } /
+					{ { { h16 ":" }{3,3} h16 }? "::"                  h16  } /
+					{ { { h16 ":" }{4,4} h16 }? "::"                  h16  } /
+					{ { { h16 ":" }{5,5} h16 }? "::"                  h16  } / -- {h16":"}{,5}
+					{ {                  h16 }? "::"                       } /
+					{ {          h16 ":" h16 }? "::"                       } /
+					{ { { h16 ":" }{2,2} h16 }? "::"                       } /
+					{ { { h16 ":" }{3,3} h16 }? "::"                       } /
+					{ { { h16 ":" }{4,4} h16 }? "::"                       } /
+					{ { { h16 ":" }{5,5} h16 }? "::"                       } /
+					{ { { h16 ":" }{6,6} h16 }? "::"                       }   -- {h16":"}{,6}
+
+alias IPvFuture = "v" HEXDIG+ "." { unreserved / sub_delims / ":" }+
+
+alias IP_literal = "[" { IPv6address / IPvFuture } "]"
+
+port = DIGIT*
+host = IP_literal / IPv4address / reg_name
+userinfo = { unreserved / pct_encoded / sub_delims / ":" }*
+authority = { userinfo "@" }? host { ":" port }?
+
+scheme = { ALPHA { ALPHA / DIGIT / "+" / "-" / "." }* }
+
+relative_part = { "//" authority path_abempty } /
+				path_absolute /
+				path_noscheme /
+				path_empty
+
+relative_ref = relative_part { "?" query }? { "#" fragment }?
+
+hier_part = { "//" authority path_abempty } /
+			path_absolute /
+			path_rootless /
+			path_empty
+
+absolute_URI = scheme ":" hier_part { "?" query }?
+
+URI = scheme ":" hier_part { "?" query }? { "#" fragment }?
+
+URI_reference = URI / relative_ref
+
+
+-- RFC3986 POSIX Regular Expression, Appendix B
+-- ^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?
+--  12            3  4          5       6  7        8 9
+-- scheme = 2
+-- authority = 4
+-- path = 5
+-- query = 7
+-- fragment = 9
+uri.alt.scheme = [^:/?#]+
+uri.alt.authority = [^/?#]*
+uri.alt.path = [^?#]*
+uri.alt.query = [^#]*
+uri.alt.fragment = .*
+-- This should match much faster than URI definition (less internal branching)
+uri.alt = { uri.alt.scheme ":" }? { "//" uri.alt.authority }? uri.alt.path { "?" uri.alt.query }? { "#" uri.alt.fragment }?
+-- This alt2 breaks down the authority section
+uri.alt2 = { uri.alt.scheme ":" }? { "//" authority }? uri.alt.path { "?" uri.alt.query }? { "#" uri.alt.fragment }?
