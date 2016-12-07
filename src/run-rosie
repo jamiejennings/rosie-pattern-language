@@ -65,6 +65,8 @@ export HOSTTYPE
 export OSTYPE
 export CWD=`pwd`
 
+# escape double ]] to prevent premature ending of lua long string
+cmd=${cmd//]]/\\]\\]}
 # Lua's "long string" syntax [[...]] is needed because command line args could contain single and/or double quotes
 ${executable} $i -e "ROSIE_HOME=[[${home}]]; SCRIPTNAME=[[${cmd}]]; ROSIE_DEV=[[${dev}]];" -- "${home}/src/run.lua" "$@"
 
