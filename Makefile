@@ -1,8 +1,7 @@
 ## ----------------------------------------------------------------------------- ##
 ## Customizable options:
 
-# The place to put a link to rosie executable when using 'make install'
-DESTDIR=/usr/local/bin
+DESTDIR=/usr/local
 
 ## End of customizable options
 ## ----------------------------------------------------------------------------- ##
@@ -22,27 +21,34 @@ LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
 
-HOME = $(shell pwd)
-TMP = submodules
-ROSIEBIN = bin/rosie
-EXECROSIE = "$(HOME)/$(ROSIEBIN)"
+BUILD_ROOT = $(shell pwd)
 
+# ROSIED is root of where all of the important files will be installed
+ROSIED = $(DESTDIR)/share/rosie
+
+SUBMOD = submodules
+ROSIEBIN = $(BUILD_ROOT)/bin/rosie
+INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
+
+.PHONY: default
 default: $(PLATFORM)
 
-LUA_DIR = $(TMP)/$(LUA)
-LPEG_DIR = $(TMP)/$(LPEG)
-JSON_DIR = $(TMP)/$(JSON)
+LUA_DIR = $(SUBMOD)/$(LUA)
+LPEG_DIR = $(SUBMOD)/$(LPEG)
+JSON_DIR = $(SUBMOD)/$(JSON)
+INSTALL_BIN_DIR = $(ROSIED)/bin
+INSTALL_LIB_DIR = $(ROSIED)/lib
 
 ## ----------------------------------------------------------------------------- ##
 
-.PHONY: clean none sniff test
-
+.PHONY: clean
 clean:
 	rm -rf bin/* lib/*
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
 
+.PHONY: none
 none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
@@ -55,18 +61,21 @@ CJSON_MAKE_ARGS += CJSON_CFLAGS+="-pthread -DMULTIPLE_THREADS"
 CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
 
 
+.PHONY: macosx
 macosx: PLATFORM=macosx
 # Change the next line to CC=gcc if you prefer to use gcc on MacOSX
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
 macosx: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
+.PHONY: linux
 linux: PLATFORM=linux
 linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
 linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
+.PHONY: windows
 windows:
 	@echo Windows installation not yet supported.
 
@@ -103,22 +112,72 @@ bin/%.luac: src/core/%.lua bin/luac
 
 luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
 
+.PHONY: compile
 compile: $(luaobjects)
 
 $(ROSIEBIN):
-	@/usr/bin/env echo "Creating $(EXECROSIE)"
-	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(EXECROSIE)"
-	@/usr/bin/env echo -n "$(HOME)/src/run-rosie $(HOME)" >> "$(EXECROSIE)"
-	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
-	@chmod 755 "$(ROSIEBIN)"
+	@/usr/bin/env echo "Creating $(ROSIEBIN)"
+	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(ROSIEBIN)"
+	@/usr/bin/env echo -n "$(BUILD_ROOT)/src/run-rosie $(BUILD_ROOT)" >> "$(ROSIEBIN)"
+	@/usr/bin/env echo ' "$$@"' >> "$(ROSIEBIN)"
+	chmod 755 "$(ROSIEBIN)"
 
-install:
-	@/usr/bin/env echo "Creating symbolic link $(DESTDIR)/rosie pointing to $(EXECROSIE)"
-	@-ln -sf "$(EXECROSIE)" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie"
+$(INSTALL_ROSIEBIN):
+	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
+	mkdir -p `dirname "$(INSTALL_ROSIEBIN)"` "$(ROSIED)"/{bin,src}
+	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo -n "$(ROSIED)/src/run-rosie $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo ' "$$@"' >> "$(INSTALL_ROSIEBIN)"
+	cp "$(BUILD_ROOT)"/src/run-rosie "$(ROSIED)"/src
+	chmod 755 "$(INSTALL_ROSIEBIN)"
 
+# Install the lua interpreter
+.PHONY: install_lua
+install_lua: bin/lua
+	mkdir -p "$(INSTALL_BIN_DIR)"
+	cp bin/lua "$(INSTALL_BIN_DIR)"
+
+# Install all of the shared objects
+.PHONY: install_so
+install_so: lib/lpeg.so lib/cjson.so
+	mkdir -p "$(INSTALL_LIB_DIR)"
+	cp lib/lpeg.so lib/cjson.so "$(INSTALL_LIB_DIR)"
+
+# Install any metadata needed by rosie
+.PHONY: install_metadata
+install_metadata:
+	mkdir -p "$(ROSIED)"
+	cp VERSION MANIFEST "$(ROSIED)"
+
+# Install the needed lua source files
+.PHONY: install_lua_src
+install_lua_src:
+	@# we only need this one .lua file in the installation
+	mkdir -p "$(ROSIED)"/src
+	@cp src/run.lua "$(ROSIED)"/src
+
+# Install the lua pre-compiled binary files (.luac)
+.PHONY: install_luac_bin
+install_luac_bin:
+	mkdir -p "$(ROSIED)"/bin
+	cp bin/*.luac "$(ROSIED)"/bin
+
+# Install the provided RPL patterns
+.PHONY: install_rpl
+install_rpl:
+	mkdir -p "$(ROSIED)"/{src,rpl}
+	cp rpl/*.rpl "$(ROSIED)"/rpl
+	cp src/rpl-core.rpl "$(ROSIED)"/src
+
+# Main install rule
+.PHONY: install
+install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
+	 install_lua_src install_luac_bin install_rpl
+
+.PHONY: sniff
 sniff: $(ROSIEBIN)
-	@RESULT="$(shell $(EXECROSIE) 2>&1 >/dev/null)"; \
-	EXPECTED="This is Rosie v$(shell head -1 $(HOME)/VERSION)"; \
+	@RESULT="$(shell $(ROSIEBIN) 2>&1 >/dev/null)"; \
+	EXPECTED="This is Rosie v$(shell head -1 $(BUILD_ROOT)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
             echo "Rosie Pattern Engine installed successfully!"; \
@@ -132,7 +191,7 @@ sniff: $(ROSIEBIN)
             true; \
         else \
             echo "Rosie Pattern Engine test FAILED."; \
-	    echo "    Rosie executable is $(EXECROSIE)"; \
+	    echo "    Rosie executable is $(ROSIEBIN)"; \
 	    echo "    Expected this output: $$EXPECTED"; \
 	    if [ -n "$$RESULT" ]; then \
 		echo "    But received this output: $$RESULT"; \
@@ -142,7 +201,8 @@ sniff: $(ROSIEBIN)
 	    false; \
         fi
 
+.PHONY: test
 test:
 	@echo Running tests in test/all.lua
-	echo "rosie=\"$(EXECROSIE)\"; dofile \"$(HOME)/test/all.lua\"" | $(EXECROSIE) -D
+	echo "rosie=\"$(ROSIEBIN)\"; dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D
 
