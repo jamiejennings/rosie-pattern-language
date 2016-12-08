@@ -275,10 +275,15 @@ function util.os_execute_capture(command, mode, readmode)
       str = handle:read(readmode)
    end
    local ok, status, code = handle:close()
-   if not ok then
-      error("Command '" .. command .. "' failed, returning:\n" ..
-	    table.tostring{results, status, code})
-   end
+   -- Turns out that the first return value of handle:close() simply reflects whether the value of
+   -- the error code is 0 or not.  We will pass the code back to the caller and let the user
+   -- decide which codes indicate success.
+   --
+   -- if not ok then
+   --    error("Command '" .. command .. "' failed, returning:\n" ..
+   -- 	    table.tostring{results, status, code})
+   -- end
+   --
    return results, status, code
 end
    
