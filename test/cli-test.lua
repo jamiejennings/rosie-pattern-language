@@ -109,4 +109,13 @@ ok, ignore = pcall(run, '"Gold"', nil, nil)
 check(ok, [[testing for a shell quoting error in which rpl expressions containing double quotes
       were not properly passed to lua in bin/run-rosie]])
 
+print("\nChecking that the command line expression can contain [[...]] per Issue #22")
+cmd = rosie .. " -e 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+' -patterns"
+print(cmd)
+results, status, code = util.os_execute_capture(cmd, nil)
+check(results, "Expression on command line can contain [[.,.]]") -- command succeeded
+check(code==0, "Return code is zero")
+check(results[#results]:sub(-9):find("patterns")==1)
+
+
 return test.finish()
