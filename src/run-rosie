@@ -65,7 +65,9 @@ export HOSTTYPE
 export OSTYPE
 export CWD=`pwd`
 
-# Lua's "long string" syntax [[...]] is needed because command line args could contain single and/or double quotes
-${executable} $i -e "ROSIE_HOME=[[${home}]]; SCRIPTNAME=[[${cmd}]]; ROSIE_DEV=[[${dev}]];" -- "${home}/src/run.lua" "$@"
+# Lua's "long string" syntax is needed because command line args could contain single and/or double quotes.
+# Since RPL contains expressions delimited by [[ ... ]], we use Lua's [====[ ... ]====] for scriptname.
+# The need to wrap the args will be removed or implemented more robustly before or in Rosie Version 1.0.
+${executable} $i -e "ROSIE_HOME=[[${home}]]; SCRIPTNAME=[====[${cmd}]====]; ROSIE_DEV=[[${dev}]];" -- "${home}/src/run.lua" "$@"
 
 
