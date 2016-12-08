@@ -194,16 +194,27 @@ end
 -- numbers, except for tz_sign, which is always either "-" or "+" or nil.
 -- Return an integer number of milliseconds, ignoring any fractions of a millisecond.
 function util.time_since_epoch(year, month, day, hour, min, sec, tz_sign, tz_hours, tz_mins)
+   if type(year)=="table" then
+      -- we were given a table of the kind used by os.date, os.time
+      local dt = year
+      year = dt.year
+      month = dt.month
+      day = dt.day
+      hour = dt.hour
+      min = dt.min
+      sec = dt.sec
+      tz_sign = nil				    -- no timezone info 
+   end
    -- cast to numbers, in case they were passed as strings such as after parsing
-   local year = tonumber(year)
-   local month = tonumber(month)
-   local day = tonumber(day)
-   local hour = tonumber(hour)
-   local min = tonumber(min)
-   local sec = tonumber(sec)
+   year = tonumber(year)
+   month = tonumber(month)
+   day = tonumber(day)
+   hour = tonumber(hour)
+   min = tonumber(min)
+   sec = tonumber(sec)
    local days_since_epoch = day_of_year(year, month, day) + 
                             365 * (year - 1970) + 
-                           (leap_years_through(year-1) - leap_years_through_1970) - 1;
+                            (leap_years_through(year-1) - leap_years_through_1970) - 1;
    local seconds = (days_since_epoch * seconds_per_day)
           + (hour * seconds_per_hour)
           + (min * 60)
