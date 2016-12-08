@@ -207,6 +207,23 @@ check(type(env_js)=="string", "environment is returned as a JSON string")
 env = json.decode(env_js)
 check(env["S"].type=="definition")
 
+g2_defn = [[grammar
+  alias g2 = S ~
+  alias S = { {"a" B} / {"b" A} / "" }
+  alias A = { {"a" S} / {"b" A A} }
+  alias B = { {"b" S} / {"a" B B} }
+end]]
+
+ok, msg = wapi.load_string(g2_defn)
+check(ok)
+check(not msg)
+
+ok, env_js = wapi.get_environment("null")
+check(ok)
+check(type(env_js)=="string", "environment is returned as a JSON string")
+env = json.decode(env_js)
+check(env["g2"].type=="alias")
+
 
 subheading("clear_environment")
 check(type(wapi.clear_environment)=="function")

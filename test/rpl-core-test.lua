@@ -1248,6 +1248,31 @@ check_match('{g1 [[:digit:]]}', "ab 4", true)	    -- because g1 is defined to en
 check_match('g1 [[:digit:]]', "ab4", false)
 check_match('{g1 [[:digit:]]}', "ab4", false)
 
+-- This grammar captures nothing!
+g2_defn = [[grammar
+  alias g2 = S ~
+  alias S = { {"a" B} / {"b" A} / "" }
+  alias A = { {"a" S} / {"b" A A} }
+  alias B = { {"b" S} / {"a" B B} }
+end]]
+
+ok, msg = pcall(lapi.load_string, e, g2_defn)
+check(ok)
+check_match('g2', "", true, 0, "")
+check_match('g2', "ab", true, 0, "ab")
+check_match('g2', "baab", true, 0, "baab")
+check_match('g2', "abaab", false, 0, "")
+
+ok, ast, warnings = pcall(lapi.load_string, e, 'use_g2 = g1 g2')
+check(ok, "Failed to define use_g2")
+m, leftover = check_match('use_g2', "ab baab", true, 0, "ab baab")
+check(m)
+check(m.use_g2)
+check(m.use_g2.subs)
+check(#m.use_g2.subs==1)
+check(m.use_g2.subs[1].g1)
+
+
 heading("Invariants")
 
 subheading("Raw and cooked versions of . and equiv identifiers")
