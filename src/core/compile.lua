@@ -346,7 +346,9 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
       local id_node = rsubs[1]			    -- identifier clause
       assert(id_node and next(id_node)=="identifier")
       local iname, ipos, id = common.decode_match(id_node)
-      local alias_flag = rule.capture
+      local exp_node = rsubs[2]
+      assert(exp_node)
+      local alias_flag = not exp_node.capture
       gtable[id] = pattern{name=id, peg=V(id), alias=alias_flag}
    end						    -- for
 
