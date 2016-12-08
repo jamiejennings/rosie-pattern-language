@@ -1,3 +1,11 @@
+2016-12-08  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99j
+
+	Fixed issue #22 (CLI bug when using expressions containing [[...]])
+	Added test to cli-test.lua for issue #22
+	
+
 2016-11-29  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* v0.99i
