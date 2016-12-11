@@ -65,11 +65,21 @@ CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
 
 
 .PHONY: macosx
+# Sigh.  Once we get to Version 1.0 and we support Linux packages (like RPM), we won't need this test.
+# Note that this test should ALWAYS pass on OS X, since it ships with readline.
+readlinetest:
+	@(bash -c 'printf "#include <readline/readline.h>\nint main() { }\n"' | \
+	           cc -std=gnu99 -lreadline -o /dev/null -xc -) && \
+	   echo "READLINE TEST: libreadline and readline.h appear to be installed" || \
+	   (echo "READLINE TEST: Missing readline library or readline.h" && \
+	    echo "READLINE TEST: See https://github.com/jamiejennings/rosie-pattern-language#how-to-build-clone-the-repo-and-type-make" && \
+	    /usr/bin/false)
+
 macosx: PLATFORM=macosx
 # Change the next line to CC=gcc if you prefer to use gcc on MacOSX
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: bin/lua lib/lpeg.so lib/cjson.so compile sniff
+macosx: readlinetest bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
 .PHONY: linux
 linux: PLATFORM=linux
@@ -77,7 +87,7 @@ linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
 linux: LINUX_CFLAGS=MYCFLAGS=-fPIC
-linux: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
+linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
 
 .PHONY: windows
 windows:
