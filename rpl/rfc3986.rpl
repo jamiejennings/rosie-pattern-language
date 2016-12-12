@@ -15,22 +15,22 @@ alias reserved = gen_delims / sub_delims
 
 alias unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
 
-alias pct_encoded = "%" HEXDIG HEXDIG
+alias pct_encoded = { "%" HEXDIG HEXDIG }
 
 alias pchar = unreserved / pct_encoded / sub_delims / ":" / "@"
 
-fragment = ({ pchar / "/" / "?" }*)
+fragment = { pchar / "/" / "?" }*
 
-query = ({ pchar / "/" / "?" }*)
+query = { pchar / "/" / "?" }*
 
-alias segment_nz_nc = ( unreserved / pct_encoded / sub_delims / "@" )+
+alias segment_nz_nc = { unreserved / pct_encoded / sub_delims / "@" }+
 alias segment_nz = pchar+
 alias segment = pchar*
 
 path_empty = pchar{0,0}
-path_rootless = segment_nz { "/" segment }*
-path_noscheme = segment_nz_nc { "/" segment }*
-path_absolute = "/" { segment_nz { "/" segment }* }*
+path_rootless = { segment_nz { "/" segment }* }
+path_noscheme = { segment_nz_nc { "/" segment }* }
+path_absolute = { "/" { segment_nz { "/" segment }* }* }
 path_abempty = { "/" segment }*
 
 path = path_empty / path_rootless / path_noscheme / path_absolute / path_abempty
@@ -39,7 +39,7 @@ alias reg_name = { unreserved / pct_encoded / sub_delims }*
 
 alias dec_octet = {{"25" [0-5]} / {"2" [0-4] digit} / {"1" digit digit} / {[1-9] digit} / {digit}}
 
-alias IPv4address = dec_octet "." dec_octet "." dec_octet "." dec_octet
+alias IPv4address = { dec_octet "." dec_octet "." dec_octet "." dec_octet }
 
 alias h16 = HEXDIG{1,4}
 alias ls32 = { h16 ":" h16 } / IPv4address
@@ -87,32 +87,32 @@ alias IPv6address = {                                { h16 ":" }{6,6} ls32 } / -
 					{ { { h16 ":" }{5,5} h16 }? "::"                       } /
 					{ { { h16 ":" }{6,6} h16 }? "::"                       }   -- {h16":"}{,6}
 
-alias IPvFuture = "v" HEXDIG+ "." { unreserved / sub_delims / ":" }+
+alias IPvFuture = { "v" HEXDIG+ "." { unreserved / sub_delims / ":" }+ }
 
-alias IP_literal = "[" { IPv6address / IPvFuture } "]"
+alias IP_literal = { "[" { IPv6address / IPvFuture } "]" }
 
 port = DIGIT*
 host = IP_literal / IPv4address / reg_name
 userinfo = { unreserved / pct_encoded / sub_delims / ":" }*
-authority = { userinfo "@" }? host { ":" port }?
+authority = { { userinfo "@" }? host { ":" port }? }
 
 scheme = { ALPHA { ALPHA / DIGIT / "+" / "-" / "." }* }
 
-relative_part = { "//" authority path_abempty } /
+relative_part = { { "//" authority path_abempty } /
 				path_absolute /
 				path_noscheme /
-				path_empty
+				path_empty }
 
-relative_ref = relative_part { "?" query }? { "#" fragment }?
+relative_ref = { relative_part { "?" query }? { "#" fragment }? }
 
-hier_part = { "//" authority path_abempty } /
+hier_part = { { "//" authority path_abempty } /
 			path_absolute /
 			path_rootless /
-			path_empty
+			path_empty }
 
-absolute_URI = scheme ":" hier_part { "?" query }?
+absolute_URI = { scheme ":" hier_part { "?" query }? }
 
-URI = scheme ":" hier_part { "?" query }? { "#" fragment }?
+URI = { scheme ":" hier_part { "?" query }? { "#" fragment }? }
 
 URI_reference = URI / relative_ref
 
@@ -131,6 +131,6 @@ uri.alt.path = [^?#]*
 uri.alt.query = [^#]*
 uri.alt.fragment = .*
 -- This should match much faster than URI definition (less internal branching)
-uri.alt = { uri.alt.scheme ":" }? { "//" uri.alt.authority }? uri.alt.path { "?" uri.alt.query }? { "#" uri.alt.fragment }?
+uri.alt = { { uri.alt.scheme ":" }? { "//" uri.alt.authority }? uri.alt.path { "?" uri.alt.query }? { "#" uri.alt.fragment }? }
 -- This alt2 breaks down the authority section
-uri.alt2 = { uri.alt.scheme ":" }? { "//" authority }? uri.alt.path { "?" uri.alt.query }? { "#" uri.alt.fragment }?
+uri.alt2 = { { uri.alt.scheme ":" }? { "//" authority }? uri.alt.path { "?" uri.alt.query }? { "#" uri.alt.fragment }? }
