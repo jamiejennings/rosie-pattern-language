@@ -136,7 +136,7 @@ function common.escape_string(s)
    return (string.format("%q", s)):sub(2,-2)
 end
 
-function common.print_env(env, skip_header, total)
+function common.print_env(env, filter, skip_header, total)
    -- print a sorted list of patterns contained in the flattened table 'env'
    local pattern_list = {}
 
@@ -148,6 +148,8 @@ function common.print_env(env, skip_header, total)
    table.sort(pattern_list)
    local patterns_loaded = #pattern_list
    total = (total or 0) + patterns_loaded
+   local filter = string.lower(filter) or nil
+   local filter_total = 0
 
    local fmt = "%-30s %-15s %-8s"
 
@@ -157,15 +159,29 @@ function common.print_env(env, skip_header, total)
       print("------------------------------ --------------- --------")
    end
    local kind, color;
-   for _,v in ipairs(pattern_list) do 
-      print(string.format(fmt, v, env[v].type, env[v].color))
+   if filter == nil then
+      for _,v in ipairs(pattern_list) do
+         print(string.format(fmt, v, env[v].type, env[v].color))
+      end
+   else
+      for _,v in ipairs(pattern_list) do
+         local s,e = string.find(string.lower(tostring(v)), filter)
+         if s ~= nil then
+            print(string.format(fmt, v, env[v].type, env[v].color))
+            filter_total = filter_total + 1
+         end
+      end
    end
    if patterns_loaded==0 then
       print("<empty>");
    end
    if not skip_header then
       print()
-      print(total .. " patterns")
+      if filter == nil then
+         print(total .. " patterns")
+      else
+         print(filter_total .. " / " .. total .. " patterns")
+      end
    end
 end
 

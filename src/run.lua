@@ -190,7 +190,7 @@ function run(args)
 	if args.command == "patterns" then
 		if not args.verbose then greeting(); end
 		local env = lapi.get_environment(CL_ENGINE)
-		common.print_env(env)
+		common.print_env(env, args.filter)
 		os.exit()
 	end
 
@@ -247,6 +247,10 @@ local info = parser:command("info")
 -- patterns command
 local patterns = parser:command("patterns")
 	:description("List installed patterns")
+patterns:argument("filter")
+	:description("Filter pattern names that have substring 'filter'")
+	:args("?")
+	:default("")
 -- repl command
 local repl = parser:command("repl")
 	:description("Run rosie in interactive mode")
