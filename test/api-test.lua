@@ -25,9 +25,9 @@ package.loaded.api = false			    -- force a re-load of the api
 api = require "api"
 
 check(type(api)=="table")
-check(api.API_VERSION and type(api.API_VERSION=="string"))
-check(api.VERSION and type(api.ROSIE_VERSION=="string"))
-check(api.HOME and type(api.ROSIE_HOME=="string"))
+check(api.API_VERSION and type(api.API_VERSION)=="string")
+check(api.VERSION and type(api.VERSION)=="string")
+check(api.HOME and type(api.HOME)=="string")
 
 ---------------------------------------------------------------------------------------------------
 -- Convenience
