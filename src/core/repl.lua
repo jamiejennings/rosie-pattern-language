@@ -22,7 +22,7 @@ local repl_patterns = [==[
       eval = ".eval" args
       on_off = "on" / "off"
       debug = ".debug" on_off?
-      patterns = ".patterns"
+      patterns = ".patterns" identifier?
       star = "*"
       clear = ".clear" (identifier / star)?
       help = ".help"
@@ -114,7 +114,11 @@ function repl(en)
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
 	    elseif cname=="patterns" then
 	       local env = lapi.get_environment(en)
-	       common.print_env(env)
+	       local filter = nil
+	       if csubs then
+	          _,_,filter,_ = common.decode_match(csubs[1])
+	       end
+	       common.print_env(env, filter)
 	    elseif cname=="clear" then
 	       if csubs and csubs[1] then
 		  local name, pos, id, subs = common.decode_match(csubs[1])
@@ -210,7 +214,7 @@ local help_text = [[
    .match exp quoted_string      match RPL exp against (quoted) input data
    .eval exp quoted_string       show full evaluation (trace)
    .debug {on|off}               show debug state; with an argument, set it
-   .patterns                     list patterns in the environment
+   .patterns [filter]            list patterns in the environment
    .clear <id>                   clear the pattern definition of <id>, * for all
    .help                         print this message
 
