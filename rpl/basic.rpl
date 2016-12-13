@@ -1,4 +1,5 @@
 ---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
 ----
 ----  basic.rpl    A set of basic patterns that can be used to look for interesting things when the
 ----               input structure is unknown.  

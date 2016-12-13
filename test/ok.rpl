@@ -1,4 +1,5 @@
 -- -*- Mode: rpl; -*- 
+-- vim:syn=rosie
 --
 -- ok.rpl   Rosie Pattern Language tests that compile ok
 --

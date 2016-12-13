@@ -1,4 +1,5 @@
 ---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
 ----
 ---- spark.rpl       patterns for Apache Spark logs
 ----
@@ -49,4 +50,3 @@ spark.patterns = spark.typical /
 		 spark.command /
 		 spark.using_message /
 		 spark.ignore
-      
