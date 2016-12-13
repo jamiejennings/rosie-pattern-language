@@ -1,4 +1,5 @@
 ---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
 ----
 ---- network.rpl     Rosie Pattern Language patterns for hostnames, ip addresses, and such
 ----
