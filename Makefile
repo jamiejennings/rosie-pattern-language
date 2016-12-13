@@ -18,6 +18,7 @@ endif
 
 PLATFORMS = linux macosx windows
 
+ARGPARSE = argparse
 LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
@@ -29,6 +30,7 @@ EXECROSIE = "$(HOME)/$(ROSIEBIN)"
 
 default: $(PLATFORM)
 
+ARGP_DIR = $(TMP)/$(ARGPARSE)
 LUA_DIR = $(TMP)/$(LUA)
 LPEG_DIR = $(TMP)/$(LPEG)
 JSON_DIR = $(TMP)/$(JSON)
@@ -70,8 +72,9 @@ linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 windows:
 	@echo Windows installation not yet supported.
 
-submodules: submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/Makefile
+submodules: submodules/argparse submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/Makefile
 
+submodules/argparse:
 submodules/lua/Makefile:
 submodules/lua-cjson/Makefile:
 submodules/rosie-lpeg/src/Makefile:
@@ -98,10 +101,13 @@ lib/cjson.so: submodules submodules/lua/include
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
+bin/argparse.luac: submodules/argparse/src/argparse.lua
+	bin/luac -o $@ $<
+
 bin/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 
-luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
+luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua)) bin/argparse.luac
 
 compile: $(luaobjects)
 
@@ -117,7 +123,7 @@ install:
 	@-ln -sf "$(EXECROSIE)" "$(DESTDIR)/rosie" && chmod 755 "$(DESTDIR)/rosie"
 
 sniff: $(EXECROSIE)
-	@RESULT="$(shell $(EXECROSIE) 2>&1 >/dev/null)"; \
+	@RESULT="$(shell $(EXECROSIE) --version 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 $(HOME)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
