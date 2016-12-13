@@ -1,4 +1,5 @@
 ---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
 ----
 ---- datetime.rpl    Common date/time patterns in Rosie Pattern Language
 ----

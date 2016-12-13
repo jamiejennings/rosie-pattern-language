@@ -1,4 +1,5 @@
 ---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
 ----
 ---- csv1.rpl     Developing production-quality csv parsing (See blog on IBM developerWorks Open)
 ----
