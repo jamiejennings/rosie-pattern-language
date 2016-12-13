@@ -1,4 +1,5 @@
 -- -*- Mode: rpl; -*- 
+-- vim:syn=rosie
 --
 -- synerr.rpl   Rosie Pattern Language tests with syntax errors
 --
