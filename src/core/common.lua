@@ -148,7 +148,7 @@ function common.print_env(env, filter, skip_header, total)
    table.sort(pattern_list)
    local patterns_loaded = #pattern_list
    total = (total or 0) + patterns_loaded
-   local filter = string.lower(filter) or nil
+   local filter = filter and string.lower(filter) or nil
    local filter_total = 0
 
    local fmt = "%-30s %-15s %-8s"
