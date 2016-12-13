@@ -250,7 +250,6 @@ local patterns = parser:command("patterns")
 patterns:argument("filter")
 	:description("Filter pattern names that have substring 'filter'")
 	:args("?")
-	:default("")
 -- repl command
 local repl = parser:command("repl")
 	:description("Run rosie in interactive mode")
