@@ -169,6 +169,7 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
    local match = peg.match
    local l = nextline(); 
    while l do
+      local _
       if eval_flag then _, _, trace = engine_eval(e, l); end
       m, nextpos = match(peg, l);
       -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?

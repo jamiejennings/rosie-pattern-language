@@ -103,16 +103,16 @@ check(env["."].type=="alias", "env contains built-in alias '.'")
 check(env["$"].type=="alias", "env contains built-in alias '$'")
 ok, msg = wapi.get_environment("hello")
 check(not ok)
-check(msg:find("not a json", 1, true))
+check(msg:find("not json", 1, true))
 
 subheading("get_environment to look at individual bindings")
 check(type(wapi.get_environment)=="function")
 ok, msg = wapi.get_environment()
 check(not ok)
-check(msg:find("not a json", 1, true))
+check(msg:find("not json", 1, true))
 ok, msg = wapi.get_environment("hello")
 check(not ok)
-check(msg:find("not a json", 1, true))
+check(msg:find("not json", 1, true))
 ok, def = wapi.get_environment(json.encode("$"))
 check(ok, "can get a definition for '$'")
 check(json.decode(def).binding:find("built-in RPL pattern", 1, true))
@@ -124,7 +124,7 @@ subheading("load_string")
 check(type(wapi.load_string)=="function")
 ok, msg = wapi.load_string()
 check(not ok)
-check(msg:find("input not a string", 1, true))
+check(msg:find("not a string", 1, true))
 ok, msg = wapi.load_string("foo")
 check(not ok)
 check(msg:find("Compile error: reference to undefined identifier: foo"))
@@ -158,7 +158,7 @@ def = json.decode(def)
 check(def)
 check(type(def)=="table")
 check(def.binding:find('bar = foo / %('), "checking binding defn which relies on reveal_ast")
-ok, msg = wapi.load_string('x = //', "syntax error")
+ok, msg = wapi.load_string('x = //')
 check(not ok)
 check(msg:find("Syntax error at line 1"), "Exact message depends on syntax error reporting")
 ok, env_js = wapi.get_environment("null")
@@ -169,18 +169,21 @@ check(not env["x"])
 for _, exp in ipairs{"[0-9]", "[abcdef123]", "[:alpha:]", 
 		     "[^0-9]", "[^abcdef123]", "[:^alpha:]", 
 		     "[^[a][b]]"} do
-   ok, msg = wapi.load_string('cs = '..exp)
+   local ok, msg = wapi.load_string('csx = '..exp)
    check(ok)
-   ok, msg = wapi.get_environment(json.encode("cs"))
-   check(ok, "failed to get binding for cs when it is bound to " .. exp)
-   def = json.decode(msg)
-   check(def.binding:find(exp, 1, true), "failed to observe this in binding of cs: " .. exp)
+   --io.write("\n*****   ", tostring(ok), "  ", tostring(msg), "   *****\n")
+   ok, msg = wapi.get_environment(json.encode("csx"))
+   check(ok, "call to get_environment failed (cs was bound to " .. exp .. ")")
+   local def = json.decode(msg)
+   if check(def, "Definition returned from get_environment was null") then
+      check(def.binding:find(exp, 1, true), "failed to observe this in binding of cs: " .. exp)
+   end
 end
 
 
 
-ok, msg = wapi.load_string('-- comments and \n -- whitespace\t\n\n',
-   "an empty list of ast's is the result of parsing comments and whitespace")
+ok, msg = wapi.load_string('-- comments and \n -- whitespace\t\n\n')
+-- "an empty list of ast's is the result of parsing comments and whitespace"
 check(ok)
 check(not msg)
 
@@ -431,7 +434,7 @@ check(c_in==4 and c_out==2 and c_err==2, "ensure processing of first lines of te
 
 local function check_output_file()
    -- check the structure of the output file
-   nextline = io.lines("/tmp/out")
+   local nextline = io.lines("/tmp/out")
    for i=1, c_out do
       local l = nextline()
       local j = json.decode(l)
@@ -455,7 +458,7 @@ check(c_in==4 and c_out==2 and c_err==2, "ensure processing of error lines of te
 
 local function check_error_file()
    -- check the structure of the error file
-   nextline = io.lines("/tmp/err")
+   local nextline = io.lines("/tmp/err")
    for i=1,c_err do
       local l = nextline()
       check(l:find("MUpdate"), "reading contents of error file")
@@ -535,7 +538,9 @@ check(ok)
 retvals = {table.unpack(results, 2)}
 check(retvals[1])
 check(retvals[2]=="0")
-check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+if check(retvals[3]) then
+   check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+end
 
 ok, msg = wapi.configure_engine(json.encode{expression="[[:digit:]]", encode="json"})
 check(ok)
@@ -545,7 +550,9 @@ check(ok)
 retvals = {table.unpack(results, 2)}
 check(not retvals[1])
 check(retvals[2]=="3")
-check(retvals[3]:find('FAILED to match against input "foo"'))
+if check(retvals[3]) then
+   check(retvals[3]:find('FAILED to match against input "foo"'))
+end
 
 ok, msg = wapi.configure_engine(json.encode{expression="[[:alpha:]]*", encode="json"})
 check(ok)
@@ -555,7 +562,9 @@ check(ok)
 retvals = {table.unpack(results, 2)}
 check(retvals[1])
 check(retvals[2]=="5")
-check(retvals[3]:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
+if check(retvals[3]) then
+   check(retvals[3]:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
+end
 
 ok, msg = wapi.configure_engine(json.encode{expression="common.number", encode="json"})
 check(ok)
@@ -568,7 +577,9 @@ check(retvals[2]=="2")				    -- leftover
 --trace = retvals[3]
 --check(match["common.number"])
 --check(match["common.number"].text=="abc")
-check(retvals[3]:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
+if check(retvals[3]) then
+   check(retvals[3]:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
+end
 
 subheading("eval_file")
 check(type(wapi.eval_file)=="function")
