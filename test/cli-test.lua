@@ -10,7 +10,8 @@ util = require "util"
 require "test-functions"
 check = test.check
 
-assert(rosie, "lua variable rosie not defined as the path to the rosie executable")
+rosie = ROSIE_HOME .. "/bin/rosie"
+--assert(rosie, "lua variable rosie not defined as the path to the rosie executable")
 
 test.start(test.current_filename())
 

@@ -353,7 +353,7 @@ function eval.eval(pat, input, start, env, fail_output_only)
    -- sigh.  it is time to implement real closures.
 
    assert(pattern.is(pat), "Internal error: eval.eval was not passed a compiled pattern: " .. tostring(pat))
-   return eval_exp(pat.ast, input, start, gmr, source, env, indent, fail_output_only, step, "")
+   return eval_exp(pat.ast, input, start, false, false, env, indent, fail_output_only, step, "")
 end
 
 

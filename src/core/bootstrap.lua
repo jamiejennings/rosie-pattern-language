@@ -38,6 +38,10 @@ end
 package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
+require "strict"
+
+
+
 local function print_rosie_info()
    local rosie_home_message = ((SCRIPT_ROSIE_HOME and " (from environment variable $ROSIE_HOME, which has precedence)") or
 			       " (provided by the program that initialized Rosie)")
@@ -54,10 +58,13 @@ local function load_module(name)
    if (not ok) then
       print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME)
       print("The likely cause is an improper value of the environment variable $ROSIE_HOME (see below).")
-      --print("Reported error was: " .. tostring(thing))
-      print_rosie_info()
+      if ROSIE_DEV then
+	 print("Reported error was: " .. tostring(thing));
+      else
+	 print_rosie_info()
+      end
       os.exit(-1)
-   end
+   end -- if not ok
    return thing
 end
 
@@ -112,6 +119,8 @@ end
 ----------------------------------------------------------------------------------------
 
 BOOTSTRAP_COMPLETE = false;
+ROSIE_VERSION = nil;				    -- read from file VERSION
+ROSIE_ENGINE = nil;				    -- the engine that will parse all the rpl files
 
 function bootstrap()
    ROSIE_VERSION = common.read_version_or_die()

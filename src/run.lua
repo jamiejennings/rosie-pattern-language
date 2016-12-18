@@ -115,8 +115,20 @@ function invalid_option(j)
    os.exit(-1)
 end
 
+----------------------------------------------------------------------------------------
+-- Globals set up by process_command_line_options()
+--
+QUIET = true;
+OPTION = {}				    -- indexed by option name
+opt_filenames = nil
+opt_pattern = nil
+opt_manifest = nil
+opt_eval = nil
+infilename, outfilename, errfilename = nil, nil, nil
+----------------------------------------------------------------------------------------
+
 function process_command_line_options()
-   OPTION = {}				    -- GLOBAL array indexed by option name
+   OPTION = {}
    local last_option = 0		    -- index of last command line option found
    local value
    local i=1
@@ -241,7 +253,7 @@ function setup_engine()
       print("Error: currently, the -grep option and the -eval option are incompatible.  Use one or the other.")
       os.exit(-1)
    end
-   local eval = OPTION["-eval"]
+   opt_eval = OPTION["-eval"]
 
    -- (1a) Load the manifest
    if opt_manifest then
@@ -293,13 +305,13 @@ function process_pattern_against_file(infilename)
    if OPTION["-all"] then errfilename = ""; end	    -- stderr
 
    -- (4) Set up what kind of encoding we want done on the output
-   encode = OPTION["-encode"] or "color"
-   success, msg = lapi.configure_engine(CL_ENGINE, {encode=encode})
+   local encode = OPTION["-encode"] or "color"
+   local success, msg = lapi.configure_engine(CL_ENGINE, {encode=encode})
    if not success then io.write("Engine configuration error: ", msg, "\n"); os.exit(-1); end
 
    -- (5) Iterate through the lines in the input file
    local match_function = lapi.match_file
-   if eval then match_function = lapi.eval_file; end
+   if opt_eval then match_function = lapi.eval_file; end
    local cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename, OPTION["-wholefile"])
    if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
 

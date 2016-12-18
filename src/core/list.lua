@@ -12,9 +12,6 @@
 --   The cdr implementation conses (sigh).
 --   An eq function on lists isn't possible, because eq(cdr(ls), cdr(ls)) ==> false.
 
-list_metatable =
-   { __tostring = list_tostring }
-
 function to_list(tbl)
    if type(tbl)=="table" then
       return setmetatable(map(to_list, tbl), list_metatable)
@@ -183,3 +180,9 @@ function reverse(ls)
    else return append(reverse(cdr(ls)), list(car(ls)))
    end
 end
+
+-- Metatable
+
+list_metatable =
+   { __tostring = list_tostring }
+
