@@ -68,6 +68,7 @@ local function load_module(name)
    return thing
 end
 
+list = load_module("list")
 parse = load_module("parse")
 syntax = load_module("syntax")
 compile = load_module("compile")
@@ -79,6 +80,8 @@ load_module("os")
 ----------------------------------------------------------------------------------------
 -- Driver functions for RPL parser written in RPL
 ----------------------------------------------------------------------------------------
+
+
 
 local function rosie_parse_without_error_check(str, pos, tokens)
    pos = pos or 1
@@ -97,7 +100,7 @@ local function rosie_parse(str, pos, tokens)
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   return map(syntax.top_level_transform, astlist), errlist, astlist
+   return list.map(syntax.top_level_transform, astlist), errlist, astlist
 end
 
 function parse_and_explain(source)

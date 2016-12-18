@@ -54,7 +54,7 @@ local function rosie_parse(str, pos, tokens)
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   return map(syntax.top_level_transform, astlist), errlist, astlist
+   return list.map(syntax.top_level_transform, astlist), errlist, astlist
 end
 
 local function HOSTED_parse_and_explain(source)

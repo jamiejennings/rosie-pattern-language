@@ -125,7 +125,7 @@ package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 json = require "cjson"
 util = require "util"
-require "list"
+list = require "list"
 
 orig = {}
 orig.print = print;

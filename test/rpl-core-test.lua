@@ -7,6 +7,8 @@
 
 test = require "test-functions"
 
+list = require("list")
+
 check = test.check
 heading = test.heading
 subheading = test.subheading
@@ -1111,8 +1113,8 @@ check(msg:find("named charset not defined"))
 subheading("Named character sets")
 
 function test_charsets(exp, true_inputs, false_inputs)
-   map(function(input) return check_match(exp, input, true, nil, nil, 2); end, true_inputs)
-   map(function(input) return check_match(exp, input, false, nil, nil, 2); end, false_inputs)
+   list.map(function(input) return check_match(exp, input, true, nil, nil, 2); end, true_inputs)
+   list.map(function(input) return check_match(exp, input, false, nil, nil, 2); end, false_inputs)
 end
 
 
@@ -1233,15 +1235,15 @@ check(leftover==1, "one char left over for this match")
 function collect_names(ast)
    local name = next(ast)
    if ast[name].subs then
-      return cons(name, flatten(map(collect_names, ast[name].subs)))
+      return list.cons(name, list.flatten(list.map(collect_names, ast[name].subs)))
    else
-      return list(name)
+      return list.new(name)
    end
 end
 ids = collect_names(match)
-check(member('g1', ids))
-check(member('B', ids))
-check(not member('A', ids))			    -- an alias
+check(list.member('g1', ids))
+check(list.member('B', ids))
+check(not list.member('A', ids))			    -- an alias
 
 check_match('g1 [[:digit:]]', "ab 4", true)
 check_match('{g1 [[:digit:]]}', "ab 4", true)	    -- because g1 is defined to end on a boundary

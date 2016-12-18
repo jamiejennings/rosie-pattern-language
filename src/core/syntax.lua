@@ -6,7 +6,7 @@
 ----
 
 local common = require "common"			    -- AST functions
-require "list"
+local list = require "list"
 
 
 syntax = {}
@@ -74,7 +74,7 @@ function syntax.make_transformer(fcn, target_name, recursive)
 	 -- Or a single node type
       elseif (type(target_name)=="string") then return (name==target_name);
 	 -- Or a member of a list
-      elseif (type(target_name)=="table") then return member(name, target_name)
+      elseif (type(target_name)=="table") then return list.member(name, target_name)
       else error("illegal target type: " .. name .. "is not a string or list")
       end
    end -- function target_match
@@ -88,7 +88,7 @@ function syntax.make_transformer(fcn, target_name, recursive)
 	 new = common.create_match(name,
 				   body.pos,
 				   body.text,
-				   table.unpack((recursive and map(mapped_transform, body.subs))
+				   table.unpack((recursive and list.map(mapped_transform, body.subs))
 					     or body.subs))
       else
 	 new = common.create_match(name,
@@ -123,7 +123,7 @@ end
 function syntax.flatten_choice(ast)
    local name, body = next(ast)
    if name=="choice" then
-      return apply(append, map(syntax.flatten_choice, body.subs))
+      return list.apply(list.append, list.map(syntax.flatten_choice, body.subs))
    else
       return {ast}
    end
@@ -134,7 +134,7 @@ function syntax.rebuild_choice(choices)
    if #choices==2 then
       return syntax.generate("choice", choices[1], choices[2])
    else
-      return syntax.generate("choice", choices[1], syntax.rebuild_choice(cdr(choices)))
+      return syntax.generate("choice", choices[1], syntax.rebuild_choice(list.cdr(choices)))
    end
 end
 		    
@@ -222,7 +222,7 @@ syntax.raw =
 			      else
 				 local new
 				 if body.subs then
-				    new = syntax.generate(name, table.unpack(map(syntax.raw, body.subs)))
+				    new = syntax.generate(name, table.unpack(list.map(syntax.raw, body.subs)))
 				 else
 				    new = syntax.generate(name)
 				 end
@@ -272,7 +272,7 @@ syntax.cook =
 			       else
 				 local new
 				 if body.subs then
-				    new = syntax.generate(name, table.unpack(map(syntax.cook, body.subs)))
+				    new = syntax.generate(name, table.unpack(list.map(syntax.cook, body.subs)))
 				 else
 				    new = syntax.generate(name)
 				 end
@@ -317,7 +317,7 @@ syntax.expand_charset_exp =
 			      local name, pos, text, subs = common.decode_match(ast)
 			      assert(subs and subs[1])
 			      local complement = (next(subs[1])=="complement")
-			      if complement then subs=cdr(subs); end
+			      if complement then subs=list.cdr(subs); end
 			      assert(subs and subs[1])
 			      local exp 
 			      if subs[2] then
@@ -424,7 +424,7 @@ function syntax.top_level_transform(ast)
    if (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
    elseif (name=="grammar_") then
-      local new_bindings = map(syntax.to_binding, ast.grammar_.subs)
+      local new_bindings = list.map(syntax.to_binding, ast.grammar_.subs)
       local new = syntax.generate("new_grammar", table.unpack(new_bindings))
       new.new_grammar.text = ast.grammar_.text
       new.new_grammar.pos = ast.grammar_.pos

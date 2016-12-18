@@ -9,7 +9,7 @@
 
 local common = require "common"
 local util = require "util"
-
+local list = require "list"
 local syntax = require "syntax"
 
 local parse = {}
@@ -554,7 +554,7 @@ function parse.core_parse_and_explain(source)
       end
       return false, msg
    else -- successful parse
-      local new_astlist = map(syntax.top_level_transform, astlist)
+      local new_astlist = list.map(syntax.top_level_transform, astlist)
       return new_astlist, astlist
    end
 end
