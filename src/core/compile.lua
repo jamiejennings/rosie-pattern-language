@@ -223,7 +223,7 @@ function cinternals.compile_predicate(a, gmr, source, env)
    elseif pred_name=="lookat" then peg = (# peg)
    else error("Internal compiler error: unknown predicate type: " .. tostring(pred_name))
    end
-   return pattern{name=pred, peg=peg, ast=a}
+   return pattern{name=pred_name, peg=peg, ast=a}
 end
 
 -- Sequences from the parser are always binary, i.e. with 2 subs.
@@ -267,8 +267,8 @@ function cinternals.compile_range_charset(a, gmr, source, env)
    end
    local cname1, cpos1, ctext1 = common.decode_match(rsubs[(complement and 2) or 1])
    local cname2, cpos2, ctext2 = common.decode_match(rsubs[(complement and 3) or 2])
-   peg = R(common.unescape_string(ctext1)..common.unescape_string(ctext2))
-   return pattern{name=name,
+   local peg = R(common.unescape_string(ctext1)..common.unescape_string(ctext2))
+   return pattern{name=rname,
 		  peg=(complement and (1-peg)) or peg,
 		  ast=a}
 end
@@ -285,7 +285,7 @@ function cinternals.compile_charlist(a, gmr, source, env)
       local cname, cpos, ctext = common.decode_match(v)
       exps = exps .. common.unescape_string(ctext)
    end
-   return pattern{name=name, peg=((complement and (1-S(exps))) or S(exps)), ast=a}
+   return pattern{name=clname, peg=((complement and (1-S(exps))) or S(exps)), ast=a}
 end
 
 function cinternals.compile_charset(a, gmr, source, env)
@@ -394,6 +394,9 @@ function cinternals.compile_grammar(a, gmr, source, env)
       if env[name] then msg = "Warning: reassignment to identifier " .. name; end
       env[name] = pat
       return pat, msg
+   else
+      -- should never get here.  when compile_grammar_rhs fails, it throws.
+      error("Internal error (compiler): compilation of grammar \""..tostring(name).."\" failed")
    end
 end
 
@@ -509,7 +512,7 @@ end
 ----------------------------------------------------------------------------------------
 
 local function compile_astlist(astlist, source, env)
-   assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(a))
+   assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(astlist))
    assert(type(source)=="string")
    local results, messages = {}, {}
    for i,a in ipairs(astlist) do
