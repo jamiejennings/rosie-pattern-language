@@ -89,13 +89,13 @@ alias py.comments_to_skip =
      {"#" {!"\n" .}* }
    }
 
-py.line_comments_only = hash_comment
+py.line_comments = hash_comment
 py.code = {!py.long_string_delimeter !"#" .}+         -- keep chars up to a comment
 
 -- Top level patterns to use:
 alias py.code_only = { py.comments_to_skip / py.code}*  -- discard comments, keep code
 py.long_strings_only = {py.long_string / .}*
-py.line_comments_only = ( [^#]* py.line_comments_only )*
+py.line_comments_only = ( [^#]* py.line_comments )*
 
 
 ----------------------------------------------------------------------------------------
