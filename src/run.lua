@@ -46,8 +46,8 @@ end
 local common = require "common"
 local lapi = require "lapi"
 local json = require "cjson"
+local list = require("list")
 require("repl")
-require("list")
 
 CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
@@ -60,7 +60,7 @@ local options_without_args = {"-help", "-patterns", "-verbose", "-all",
 			      "-repl", "-grep", "-eval", "-wholefile", "-info"}
 local options_with_args = {"-manifest", "-f", "-e", "-encode"}
 
-local valid_options = append(options_without_args, options_with_args)
+local valid_options = list.append(options_without_args, options_with_args)
 
 local help_messages =
    { ["-help"] = {"prints this message"},
@@ -87,7 +87,7 @@ local help_messages =
   }
 
 local function option_takes_arg(optname)
-   return member(optname, options_with_args)
+   return list.member(optname, options_with_args)
 end
 
 local function valid_option_is(opt)
@@ -225,7 +225,7 @@ function help()
    print()
    local line
    for _, cmd in ipairs(valid_options) do
-      if member(cmd, options_without_args) then
+      if list.member(cmd, options_without_args) then
 	 line = string.format("%-18s %s", cmd, help_messages[cmd][1])
       else
 	 line = string.format("%-18s %s", cmd .. " <arg>", help_messages[cmd][1])
