@@ -18,7 +18,7 @@
 local list = {}
 
 local list_metatable =
-   { __tostring = list.list_tostring }
+   { __tostring = list.tostring }
 
 function list.from_table(tbl)
    if type(tbl)=="table" then
@@ -33,6 +33,11 @@ end
 
 function list.is(obj)				    -- in scheme: list?
    return (getmetatable(obj)==list_metatable)
+end
+
+function list.length(obj)
+   if type(obj)=="table" then return #obj; end
+   error("not a table: " .. tostring(obj))
 end
 
 function list.validate_structure(obj)
@@ -100,10 +105,11 @@ function list.equal(e1, e2)
    if list.is(e1) then
       if (e1==e2) then return true		    -- same table
       elseif not list.is(e2) then return false
-      else
-	 return list.reduce(list.andf, true, list.map(list.equal, e1, e2))
+      elseif list.length(e1)~=list.length(e2) then return false
+      else return list.reduce(list.andf, true, list.map(list.equal, e1, e2))
       end
    else
+      -- compare atoms
       return (e1==e2)
    end
 end
@@ -180,7 +186,7 @@ function list.foreach(fn, ls1, ...)
    end
 end
 
-function reduce(fn, init, lst, i)
+function list.reduce(fn, init, lst, i)
    i = i or 1
    if i > #lst then
       return init
