@@ -376,6 +376,8 @@ function common.flatten_env(env, output_table)
    output_table = output_table or {}
    local kind, color
    for item, value in pairs(env) do
+      -- environments are nested, so we if already have a binding for 'item', we don't want to
+      -- overwrite it with one from a parent environment:
       if not output_table[item] then
 	 kind = (value.alias and "alias") or "definition"
 	 if colormap then color = colormap[item] or ""; else color = ""; end;

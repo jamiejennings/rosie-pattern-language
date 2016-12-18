@@ -15,7 +15,7 @@ assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 -- One engine per Lua state, in order to be thread-safe.  Also, engines sharing a Lua state do not
 -- share anything, so what is the benefit (beyond a small-ish savings of memory)?
-local default_engine;
+default_engine = nil
 
 ----------------------------------------------------------------------------------------
 
@@ -116,7 +116,7 @@ local function get_env(optional_identifier)
    local en = default_engine
    local ok, identifier = pcall(json.decode, optional_identifier)
    if (not ok) then
-      arg_error("identifier not a json string (or json null)")
+      arg_error("could not decode argument (not json format): " .. tostring(optional_identifier))
    elseif (identifier==json.null) then
       identifier = nil
    elseif type(identifier)~="string" then
@@ -185,11 +185,19 @@ end
 
 api.load_file = api_wrap(load_file, "string", "string*")
 
-local function load_string(input)
+local function load_string(encoded_input)
    local en = default_engine
-   if type(input)~="string" then
+
+   -- print("*************** FOO")
+   -- local ok, input = pcall(json.decode, encoded_input)
+   local ok, input = true, encoded_input
+   --
+   if (not ok) then
+      arg_error("cannot decode input (not json format):" .. tostring(encoded_input))
+   elseif type(input)~="string" then
       arg_error("input not a string")
    end
+
    local results, messages = lapi.load_string(en, input)
    check_results(results, messages, "dummy")
    return table.unpack(messages)
