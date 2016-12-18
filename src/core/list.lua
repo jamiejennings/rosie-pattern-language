@@ -12,113 +12,137 @@
 --   The cdr implementation conses (sigh).
 --   An eq function on lists isn't possible, because eq(cdr(ls), cdr(ls)) ==> false.
 
-function to_list(tbl)
+-- Some functions are designed to operate on the consecutively numbered entries in any table.
+-- I.e. the table does NOT have to be a proper list.  
+
+local list = {}
+
+local list_metatable =
+   { __tostring = list.list_tostring }
+
+function list.from_table(tbl)
    if type(tbl)=="table" then
-      return setmetatable(map(to_list, tbl), list_metatable)
-   else
-      return tbl
-   end
-end
-
-function list_p(obj)
-   if (type(obj)=="table") then
-      for k,v in pairs(obj) do
-	 if type(k)~="number" then return false; end
+      if list.validate_structure(tbl) then
+	 return setmetatable(tbl, list_metatable)
+      else
+	 error("arg to from_table cannot be coerced to a list (gaps or non-numeric indices present)")
       end
-      return true
    end
-   return false
+   error("not a table: " .. tostring(tbl))
 end
 
-function null_p(ls)
-   if list_p(ls) then return (#ls==0); end
+function list.is(obj)				    -- in scheme: list?
+   return (getmetatable(obj)==list_metatable)
+end
+
+function list.validate_structure(obj)
+   if (type(obj)~="table") then return false; end
+   local len = 0
+   -- Only numeric indices in our lists
+   for k,v in pairs(obj) do
+      if type(k)~="number" then return false; end
+      len = (k > len) and k or len
+   end
+   -- No gaps in the numbers
+   for i=1,len do
+      if not obj[len] then return false; end	    -- a gap
+   end
+   return true
+end
+
+function list.is_null(ls)			    -- in scheme: null?
+   --if list.is(ls) then return (#ls==0); end
+   if type(ls)=="table" then return (#ls==0); end
    error("not a list: " .. tostring(ls))
 end
 
-function cons(elt, ls)
-   if not list_p(ls) then error("not a list: " .. tostring(ls)); end
-   return setmetatable({elt, table.unpack(ls)}, list_metatable)
+function list.cons(elt, ls)
+   --if list.is(ls) then
+   if type(ls)=="table" then
+      return setmetatable({elt, table.unpack(ls)}, list_metatable)
+   end
+   error("not a list: " .. tostring(ls))
 end
 
-function car(ls)
-   if null_p(ls) then error("empty list"); end
+function list.car(ls)
+   if list.is_null(ls) then error("empty list"); end
    return ls[1]
 end
 
 -- this implementation of cdr breaks 'eq':
 -- eq(cdr(l), cdr(l)) ==> false
-function cdr(ls)
-   if null_p(ls) then error("empty list"); end
+function list.cdr(ls)
+   if list.is_null(ls) then error("empty list"); end
    return setmetatable({ table.unpack(ls, 2) }, list_metatable)
 end
 
-function list(...)
+function list.new(...)				    -- ugh. looks like OO.
    return setmetatable({...}, list_metatable)
 end
 
-function append(l1, ...)
-   local result = list(table.unpack(l1))	    -- shallow copy
+function list.append(l1, ...)
+   local result = list.new(table.unpack(l1))	    -- shallow copy
    for _, l in ipairs({...}) do
       table.move(l, 1, #l, #result+1, result)
    end
    return result
 end
 
-function and_function(a, b)
+function list.andf(a, b)
    return (a and b)
 end
 
-function or_function(a, b)
+function list.orf(a, b)
    return (a or b)
 end
 
-function equal(e1, e2)
-   if type(e1)=="table" then
+function list.equal(e1, e2)
+   if list.is(e1) then
       if (e1==e2) then return true		    -- same table
-      elseif type(e2)~="table" then return false
+      elseif not list.is(e2) then return false
       else
-	 return reduce(and_function, true, map(equal, e1, e2))
+	 return list.reduce(list.andf, true, list.map(list.equal, e1, e2))
       end
    else
       return (e1==e2)
    end
 end
 
-function member(elt, ls)
-   if null_p(ls) then return false; end
+function list.member(elt, ls)
+   if list.is_null(ls) then return false; end
    for _, item in ipairs(ls) do
-      if equal(elt, item) then return true; end
+      if list.equal(elt, item) then return true; end
    end
    return false
 end
 
-function last(ls)
-   if null_p(ls) then error("empty list"); end
+function list.last(ls)
+   if list.is_null(ls) then error("empty list"); end
    return ls[#ls]
 end
 
-function list_tostring(ls)
-   if null_p(ls) then return("{}"); end
+function list.tostring(ls)
+   if list.is_null(ls) then return("{}"); end
    local str, elt_str
    for _,elt in ipairs(ls) do
-      elt_str = ((list_p(elt) and list_tostring(elt)) or tostring(elt))
+      elt_str = ((list.is(elt) and list.tostring(elt)) or tostring(elt))
       if str then str = str .. ", " .. elt_str
       else str = "{" .. elt_str; end
    end
    return str .. "}"
 end
    
-function list_print(ls)
-   print(list_tostring(ls))
+function list.print(ls)
+   print(list.tostring(ls))
 end
 
-function apply(fn, ls)
+function list.apply(fn, ls)
    return fn(table.unpack(ls))
 end
 
-function apply_at_i(fn, i, ...)
+function list.apply_at_i(fn, i, ...)
    assert(type(i)=="number")
-   local args = list()
+   local args = list.new()
    local lists = {...}
    for _,lst in ipairs(lists) do
       table.insert(args, lst[i])
@@ -127,21 +151,21 @@ function apply_at_i(fn, i, ...)
 end
 
 -- limitation: the fn can only return one value.
-function map(fn, ls1, ...)
-   local results = list()
+function list.map(fn, ls1, ...)
+   local results = list.new()
    for i=1,#ls1 do
-      results[i] = apply_at_i(fn, i, ls1, ...)
+      results[i] = list.apply_at_i(fn, i, ls1, ...)
    end
    return results
 end
 
 -- limitation: the fn can only return one value.
 -- limitation: only the first list's elements are present in the result.
-function filter(fn, ls1, ...)
-   local results = list()
+function list.filter(fn, ls1, ...)
+   local results = list.new()
    local out_index = 1
    for i=1,#ls1 do
-      local temp = apply_at_i(fn, i, ls1, ...)
+      local temp = list.apply_at_i(fn, i, ls1, ...)
       if temp then
 	 results[out_index] = ls1[i]
 	 out_index = out_index + 1
@@ -150,9 +174,9 @@ function filter(fn, ls1, ...)
    return results
 end
 
-function foreach(fn, ls1, ...)
+function list.foreach(fn, ls1, ...)
    for i=1,#ls1 do
-      apply_at_i(fn, i, ls1, ...)
+      list.apply_at_i(fn, i, ls1, ...)
    end
 end
 
@@ -161,28 +185,24 @@ function reduce(fn, init, lst, i)
    if i > #lst then
       return init
    else
-      return reduce(fn, fn(init, lst[i]), lst, i+1)
+      return list.reduce(fn, fn(init, lst[i]), lst, i+1)
    end
 end
 
-function flatten(ls)
-   if null_p(ls) then return ls;
-   elseif list_p(car(ls)) then
-      return append(flatten(car(ls)), flatten(cdr(ls)))
+function list.flatten(ls)
+   if list.is_null(ls) then return ls;
+   elseif list.is(list.car(ls)) then
+      return list.append(list.flatten(list.car(ls)), list.flatten(list.cdr(ls)))
    else
-      return cons(car(ls), flatten(cdr(ls)))
+      return list.cons(list.car(ls), list.flatten(list.cdr(ls)))
    end
 end
 
-function reverse(ls)
-   if null_p(ls) then return ls;
+function list.reverse(ls)
+   if list.is_null(ls) then return ls;
    elseif #ls==1 then return ls;
-   else return append(reverse(cdr(ls)), list(car(ls)))
+   else return list.append(list.reverse(list.cdr(ls)), list(list.car(ls)))
    end
 end
 
--- Metatable
-
-list_metatable =
-   { __tostring = list_tostring }
-
+return list

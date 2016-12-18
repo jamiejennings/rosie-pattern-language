@@ -19,6 +19,7 @@ local common = require "common"
 local parse = require "parse"			    -- RPL parser and AST functions
 local lpeg = require "lpeg"
 local util = require "util"
+local list = require "list"
 require "recordtype"
 local unspecified = recordtype.unspecified
 local syntax = require "syntax"
@@ -543,7 +544,7 @@ function compile.compile_source(source, env)
    local results, messages = cinternals.compile_astlist(astlist, source, env)
    if results then
       assert(type(messages)=="table")
-      foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
+      list.foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
       return results, messages			    -- message may contain compiler warnings
    else
       assert(type(messages)=="string")
