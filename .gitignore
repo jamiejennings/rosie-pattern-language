@@ -8,7 +8,8 @@
 **/*~
 *.tar.gz
 
-**/rtest			# All the test executables
+# All the test executables are called 'rtest'
+ffi/samples/**/rtest
 ffi/librosie/librosie_gen.c
 ffi/librosie/librosie_gen.h
 ffi/samples/nodejs/node_modules/*
