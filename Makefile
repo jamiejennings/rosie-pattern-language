@@ -137,7 +137,7 @@ $(ROSIEBIN):
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(ROSIEBIN)"
 	@/usr/bin/env echo -n "$(BUILD_ROOT)/src/run-rosie $(BUILD_ROOT)" >> "$(ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(ROSIEBIN)"
-	chmod 755 "$(ROSIEBIN)"
+	@chmod 755 "$(ROSIEBIN)"
 
 # See comment above re: ROSIEBIN
 .PHONY: $(INSTALL_ROSIEBIN)
@@ -148,7 +148,7 @@ $(INSTALL_ROSIEBIN):
 	@/usr/bin/env echo -n "$(ROSIED)/src/run-rosie $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(INSTALL_ROSIEBIN)"
 	cp "$(BUILD_ROOT)"/src/run-rosie "$(ROSIED)"/src
-	chmod 755 "$(INSTALL_ROSIEBIN)"
+	@chmod 755 "$(INSTALL_ROSIEBIN)"
 
 # Install the lua interpreter
 .PHONY: install_lua
@@ -193,6 +193,7 @@ install_rpl:
 install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
 	 install_lua_src install_luac_bin install_rpl
 	@echo 
+	@echo TO TEST: make installtest
 	@echo TO UNINSTALL: Remove file $(INSTALL_ROSIEBIN) and directory $(ROSIED)
 	@echo 
 
@@ -227,4 +228,15 @@ sniff: $(ROSIEBIN)
 test:
 	@echo Running tests in test/all.lua
 	echo "rosie=\"$(ROSIEBIN)\"; dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D
+
+.PHONY: installtest
+installtest:
+	@echo Creating links in $(ROSIED) to testing code in $(BUILD_ROOT)
+	-ln -s $(BUILD_ROOT)/src/test-functions.lua $(ROSIED)/src
+	-ln -s $(BUILD_ROOT)/test $(ROSIED)
+	@echo Running tests in test/all.lua
+	echo "rosie=\"$(INSTALL_ROSIEBIN)\"; dofile \"$(ROSIED)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D
+	@echo Removing links in $(ROSIED) to testing code in $(BUILD_ROOT)
+	-rm $(ROSIED)/src/test-functions.lua
+	-rm $(ROSIED)/test
 

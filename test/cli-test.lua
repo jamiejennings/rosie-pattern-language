@@ -11,7 +11,18 @@ require "test-functions"
 check = test.check
 
 rosie = ROSIE_HOME .. "/bin/rosie"
---assert(rosie, "lua variable rosie not defined as the path to the rosie executable")
+local try = io.open(rosie, "r")
+if try then
+   try:close()					    -- found it.  will use it.
+else
+   local tbl, status, code = util.os_execute_capture("which rosie")
+   if code==0 and tbl and tbl[1] and type(tbl[1])=="string" then
+      rosie = tbl[1]:sub(1,-2)			    -- remove lf at end
+   else
+      error("Cannot find rosie executable")
+   end
+end
+print("Found rosie executable: " .. rosie)
 
 test.start(test.current_filename())
 
