@@ -28,7 +28,7 @@ end
 
 -- Environment variable, when present, overrides the value of ROSIE_HOME that is calculated in the
 -- shell script ('run') that launches Rosie.
-local SCRIPT_ROSIE_HOME
+SCRIPT_ROSIE_HOME = false;
 if (value and not(value=="")) then
    SCRIPT_ROSIE_HOME=ROSIE_HOME
    ROSIE_HOME = value
