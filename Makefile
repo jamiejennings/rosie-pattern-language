@@ -60,7 +60,7 @@ CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
 CJSON_MAKE_ARGS += CJSON_CFLAGS+="-pthread -DMULTIPLE_THREADS"
 CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
 
-.PHONY readlinetest
+.PHONY: readlinetest
 
 # Sigh.  Once we get to Version 1.0 and we support Linux packages (like RPM), we won't need this test.
 # Note that this test should ALWAYS pass on OS X, since it ships with readline.
@@ -127,6 +127,11 @@ luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
 .PHONY: compile
 compile: $(luaobjects)
 
+# The PHONY declaration will force the creation of bin/rosie every time.  This is needed
+# only because the user may move the working directory.  When that happens, the user should
+# be able to run 'make' again to reconstruct a new bin/rosie script (which contains a
+# reference to the working directory).
+.PHONY: $(ROSIEBIN)
 $(ROSIEBIN):
 	@/usr/bin/env echo "Creating $(ROSIEBIN)"
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(ROSIEBIN)"
@@ -134,6 +139,8 @@ $(ROSIEBIN):
 	@/usr/bin/env echo ' "$$@"' >> "$(ROSIEBIN)"
 	chmod 755 "$(ROSIEBIN)"
 
+# See comment above re: ROSIEBIN
+.PHONY: $(INSTALL_ROSIEBIN)
 $(INSTALL_ROSIEBIN):
 	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
 	mkdir -p `dirname "$(INSTALL_ROSIEBIN)"` "$(ROSIED)"/{bin,src}
@@ -164,9 +171,9 @@ install_metadata:
 # Install the needed lua source files
 .PHONY: install_lua_src
 install_lua_src:
-	@# we only need this one .lua file in the installation
 	mkdir -p "$(ROSIED)"/src
 	@cp src/run.lua "$(ROSIED)"/src
+	@cp src/strict.lua "$(ROSIED)"/src
 
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
@@ -185,6 +192,9 @@ install_rpl:
 .PHONY: install
 install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
 	 install_lua_src install_luac_bin install_rpl
+	@echo 
+	@echo TO UNINSTALL: Remove file $(INSTALL_ROSIEBIN) and directory $(ROSIED)
+	@echo 
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)
