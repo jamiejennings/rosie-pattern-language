@@ -28,6 +28,10 @@ end
 --    os.exit(-2)
 -- end
 
+-- This will be set by bootstrap.lua to be the value of ROSIE_HOME provided by the start script
+-- (as opposed to the env variable $ROSIE_HOME).
+SCRIPT_ROSIE_HOME=false;
+
 -- Start the Rosie Pattern Engine
 
 local thunk, msg = loadfile(ROSIE_HOME .. "/bin/bootstrap.luac")
