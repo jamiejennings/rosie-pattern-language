@@ -17,8 +17,7 @@
 
 local list = {}
 
-local list_metatable =
-   { __tostring = list.tostring }
+local list_metatable = {}
 
 function list.from_table(tbl)
    if type(tbl)=="table" then
@@ -93,18 +92,20 @@ function list.append(l1, ...)
    return result
 end
 
-function list.andf(a, b)
+function list.andf(a, b, ...)
+   if next{...} then error("andf takes exactly 2 args"); end
    return (a and b)
 end
 
-function list.orf(a, b)
+function list.orf(a, b, ...)
+   if next{...} then error("orf takes exactly 2 args"); end
    return (a or b)
 end
 
 function list.equal(e1, e2)
-   if list.is(e1) then
+   if type(e1)=="table" then			    -- can we treat e1 as a list?
       if (e1==e2) then return true		    -- same table
-      elseif not list.is(e2) then return false
+      elseif type(e2)~="table" then return false
       elseif list.length(e1)~=list.length(e2) then return false
       else return list.reduce(list.andf, true, list.map(list.equal, e1, e2))
       end
@@ -131,16 +132,14 @@ function list.tostring(ls)
    if list.is_null(ls) then return("{}"); end
    local str, elt_str
    for _,elt in ipairs(ls) do
-      elt_str = ((list.is(elt) and list.tostring(elt)) or tostring(elt))
+      elt_str = ((type(elt)=="table" and list.tostring(elt)) or tostring(elt))
       if str then str = str .. ", " .. elt_str
       else str = "{" .. elt_str; end
    end
    return str .. "}"
 end
    
-function list.print(ls)
-   print(list.tostring(ls))
-end
+list_metatable.__tostring = list.tostring
 
 function list.apply(fn, ls)
    return fn(table.unpack(ls))
@@ -207,7 +206,7 @@ end
 function list.reverse(ls)
    if list.is_null(ls) then return ls;
    elseif #ls==1 then return ls;
-   else return list.append(list.reverse(list.cdr(ls)), list(list.car(ls)))
+   else return list.append(list.reverse(list.cdr(ls)), new(list.car(ls)))
    end
 end
 
