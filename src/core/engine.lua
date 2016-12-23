@@ -19,11 +19,12 @@ local common = require "common"
 local compile = require "compile"
 local eval = require "eval"
 local json = require "cjson"
-local recordtype = require("recordtype")
+local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified;
-require "color-output"
+local co = require "color-output"
+local lpeg = require "lpeg"
 
-engine = 
+local engine = 
    recordtype.define(
    {  name=unspecified;				    -- for reference, debugging
       env=false;
@@ -68,17 +69,17 @@ end
 
 local encode_table =
    {json = json.encode,
-    color = color_string_from_leaf_nodes,
-    nocolor = string_from_leaf_nodes,
+    color = co.color_string_from_leaf_nodes,
+    nocolor = co.string_from_leaf_nodes,
     fulltext = common.match_to_text,
     [false] = function(...) return ...; end
  }
 
-function name_to_encode(name)
+local function name_to_encode(name)
    return encode_table[name]
 end
 
-function encode_to_name(fcn)
+local function encode_to_name(fcn)
    for k,v in pairs(encode_table) do
       if v==fcn then return k; end
    end
@@ -145,7 +146,7 @@ end
 
 local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename, wholefileflag)
    local peg = (e.pattern and e.pattern.peg) or engine_error(e, "No pattern expression set")
-   peg = (peg * Cp())
+   peg = (peg * lpeg.Cp())
    if type(eval_flag)~="boolean" then engine_error(e, "bad eval flag"); end
    if not e.encode_function then engine_error(e, "output encode required, but not set"); end
    local ok, infile, outfile, errfile = pcall(open3, e, infilename, outfilename, errfilename);
@@ -230,3 +231,4 @@ engine.create_function =
       return _new(params)
    end
 
+return engine

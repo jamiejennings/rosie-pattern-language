@@ -9,6 +9,7 @@
 lapi = require "lapi"
 common = require "common"
 json = require "cjson"
+list = require "list"
 
 local repl_patterns = [==[
       rpl_expression = expression
@@ -100,7 +101,7 @@ function repl(en)
 		     ok, messages, full_path = lapi.load_manifest(en, path)
 		  end
 		  if ok then
-		     if messages then foreach(print, messages); end
+		     if messages then list.foreach(print, messages); end
 		     io.write("Loaded ", full_path, "\n")
 		  else
 		     io.write(messages, "\n")
