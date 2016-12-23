@@ -38,7 +38,8 @@ end
 package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
-require "strict"
+io.stderr:write("* NOT LOADING STRICT *\n")
+--require "strict"
 
 
 
@@ -53,19 +54,27 @@ local function print_rosie_info()
    print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
 end
 
-local function load_module(name)
-   local ok, thing = pcall(require, name)
-   if (not ok) then
+function load_module(name)
+   local path = ROSIE_HOME .. "/src/core/" .. name .. ".lua"
+   --io.write("Loading " .. path .. "... ")
+   if package.loaded[name] then
+      --print("already loaded.")
+      return package.loaded[name]
+   end
+   local thing, msg = loadfile(path)
+   if (not thing) then
       print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME)
       print("The likely cause is an improper value of the environment variable $ROSIE_HOME (see below).")
       if ROSIE_DEV then
-	 print("Reported error was: " .. tostring(thing));
+	 print("Reported error was: " .. tostring(msg));
       else
 	 print_rosie_info()
       end
       os.exit(-1)
    end -- if not ok
-   return thing
+   package.loaded[name] = thing()
+   --print("done.")
+   return package.loaded[name]
 end
 
 list = load_module("list")
@@ -73,8 +82,7 @@ parse = load_module("parse")
 syntax = load_module("syntax")
 compile = load_module("compile")
 common = load_module("common")
-load_module("engine")
-load_module("os")
+engine = load_module("engine")
 
 
 ----------------------------------------------------------------------------------------
@@ -144,7 +152,8 @@ function bootstrap()
    ROSIE_ENGINE.encode_function = function(m) return m; end;
    -- skip the assignment below to leave the original parser in place
    if true then
-      compile.parser = parse_and_explain;
+      --print("In bootstrap, parse_and_explain is " .. tostring(parse_and_explain))
+      compile.set_parser(parse_and_explain);
    end
    BOOTSTRAP_COMPLETE = true
 end
