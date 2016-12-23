@@ -6,18 +6,20 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+local util = require "util"
 local common = require "common"
+local pattern = common.pattern
 local compile = require "compile"
 local parse = require "parse"
-require "engine"
+local engine = require "engine"
 local manifest = require "manifest"
 local eval = require "eval"
-require "color-output"
+local co = require "color-output"
 
 -- temporary:
 require "grep"
-lpeg = require "lpeg"
-Cp = lpeg.Cp
+local lpeg = require "lpeg"
+local Cp = lpeg.Cp
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 

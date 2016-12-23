@@ -9,8 +9,11 @@
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
+local util = require "util"
 local common = require "common"
+local pattern = common.pattern
 local compile = require "compile"
+local engine = require "engine"
 
 local manifest = {}
 

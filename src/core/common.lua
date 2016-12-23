@@ -12,10 +12,13 @@
 -- are now match functions, and vice versa.
 ----------------------------------------------------------------------------------------
 
-lpeg = require "lpeg"
+--local co = require "color-output"
+
+local lpeg = require "lpeg"
 local Cc, Cg, Ct, Cp, C = lpeg.Cc, lpeg.Cg, lpeg.Ct, lpeg.Cp, lpeg.C
 
-recordtype = require "recordtype"
+local util = require "util"
+local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified
 
 local common = {}				    -- interface
@@ -25,17 +28,16 @@ assert(ROSIE_HOME, "The variable ROSIE_HOME is not set in common.lua")
 ----------------------------------------------------------------------------------------
 -- UTF-8 considerations
 ----------------------------------------------------------------------------------------
---local
-b1_lead = lpeg.R(string.char(0x00)..string.char(0x7F))   -- ASCII (1 byte)
-b2_lead = lpeg.R(string.char(0xC0)..string.char(0xDF))
-b3_lead = lpeg.R(string.char(0xE0)..string.char(0xEF))
-b4_lead = lpeg.R(string.char(0xF0)..string.char(0xF7))
-b5_lead = lpeg.R(string.char(0xF8)..string.char(0xFB))
-b6_lead = lpeg.R(string.char(0xFC)..string.char(0xFD))
-c_byte = lpeg.R(string.char(0x80)..string.char(0xBF)) -- continuation byte
+local b1_lead = lpeg.R(string.char(0x00)..string.char(0x7F))   -- ASCII (1 byte)
+local b2_lead = lpeg.R(string.char(0xC0)..string.char(0xDF))
+local b3_lead = lpeg.R(string.char(0xE0)..string.char(0xEF))
+local b4_lead = lpeg.R(string.char(0xF0)..string.char(0xF7))
+local b5_lead = lpeg.R(string.char(0xF8)..string.char(0xFB))
+local b6_lead = lpeg.R(string.char(0xFC)..string.char(0xFD))
+local c_byte = lpeg.R(string.char(0x80)..string.char(0xBF)) -- continuation byte
 
 -- This is denoted \X in Perl, PCRE and some other regex
-utf8_char_peg = b1_lead +
+local utf8_char_peg = b1_lead +
                (b2_lead * c_byte) +
 	       (b3_lead * c_byte * c_byte) +
 	       (b4_lead * c_byte * c_byte * c_byte) +
@@ -324,7 +326,7 @@ end
 --    table.insert(pat.ast_history, 1, ast)
 -- end
 
-pattern = 
+common.pattern = 
    recordtype.define(
    {  name=unspecified;			 -- for reference, debugging
       peg=unspecified;			 -- lpeg pattern
@@ -367,6 +369,8 @@ common.boundary = boundary
 -- Base environment, which can be extended with new_env, but not written to directly,
 -- because it is shared between match engines:
 
+local pattern = common.pattern
+	   
 local ENV = {[dot_id] = pattern{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
              [eol_id] = pattern{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
              [b_id] = pattern{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
@@ -396,7 +400,7 @@ function common.flatten_env(env, output_table)
       -- overwrite it with one from a parent environment:
       if not output_table[item] then
 	 kind = (value.alias and "alias") or "definition"
-	 if colormap then color = colormap[item] or ""; else color = ""; end;
+	 if (co and co.colormap) then color = co.colormap[item] or ""; else color = ""; end;
 	 output_table[item] = {type=kind, color=color}
       end
    end
@@ -433,7 +437,7 @@ function common.print_env_internal(env, skip_header, total)
    local kind, color;
    for _,v in ipairs(pattern_list) do 
       local kind = (v.alias and "alias") or "definition";
-      if colormap then color = colormap[v] or ""; else color = ""; end;
+      if (co and co.colormap) then color = co.colormap[v] or ""; else color = ""; end;
       print(string.format(fmt, v, kind, color))
    end
 

@@ -7,6 +7,8 @@
 
 test = require "test-functions"
 json = require "cjson"
+common = require "common"
+pattern = common.pattern
 
 check = test.check
 heading = test.heading
