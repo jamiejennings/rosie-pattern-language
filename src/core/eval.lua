@@ -17,6 +17,8 @@ local parse = require "parse"
 local compile = require "compile"
 local cinternals = compile.cinternals
 local common = require "common"
+local pattern = common.pattern
+local lpeg = require "lpeg"
 
 local eval = {}
 

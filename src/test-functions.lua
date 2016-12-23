@@ -7,14 +7,15 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
+--co = require("color-output")
+
 -- color_write comes from color_output.lua
-if not color_write then
-   color_write = function(channel, ignore_color, ...)
-		    for _,v in ipairs({...}) do
-		       channel:write(v)
-		    end
-		 end
-end
+color_write = (co and co.color_write) or function(channel, ignore_color, ...)
+					    for _,v in ipairs({...}) do
+					       channel:write(v)
+					    end
+					 end
+
 
 local function red_write(...)
    local str = ""

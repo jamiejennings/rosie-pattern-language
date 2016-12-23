@@ -11,16 +11,17 @@ local compile = {}				    -- exported top level interface
 local cinternals = {}				    -- exported interface to compiler internals
 
 -- forward reference
-parse_and_explain = function(...)
-		       error("Self-hosted parser not loaded")
-		    end
+-- parse_and_explain = function(...)
+-- 		       error("Self-hosted parser not loaded")
+-- 		    end
 
 local common = require "common"
+local pattern = common.pattern
 local parse = require "parse"			    -- RPL parser and AST functions
 local lpeg = require "lpeg"
 local util = require "util"
 local list = require "list"
-require "recordtype"
+local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified
 local syntax = require "syntax"
 
@@ -533,10 +534,14 @@ function cinternals.compile_astlist(astlist, source, env)
    end
 end
 
-compile.parser = parse.core_parse_and_explain;	    -- Using this as a dynamic variable
+local parser = parse.core_parse_and_explain	    -- Using this as a dynamic variable
+function compile.set_parser(fcn)
+--   print("In compile.set_parser, changing from " .. tostring(parser) .. " to " .. tostring(fcn))
+   parser = fcn
+end
 
 function compile.compile_source(source, env)
-   local astlist, original_astlist = compile.parser(source)
+   local astlist, original_astlist = parser(source)
    if not astlist then return false, original_astlist; end -- original_astlist is msg
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
@@ -554,7 +559,7 @@ end
 
 function compile.compile_match_expression(source, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local astlist, original_astlist = compile.parser(source)
+   local astlist, original_astlist = parser(source)
    if (not astlist) then
       return false, original_astlist		    -- original_astlist is msg
    end
