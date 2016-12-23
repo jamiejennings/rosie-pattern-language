@@ -8,7 +8,7 @@
 	Fixed issue #12 (a grammar with no captures breaks the matcher)
 	Added tests to rpl-core-test.lua for issue #12
 	Added tests to api-test.lua for issue #12
-	
+
 
 2016-11-29  Jamie Jennings  <jjennings@us.ibm.com>
 
