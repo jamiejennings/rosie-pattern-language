@@ -17,14 +17,26 @@ endif
 
 PLATFORMS = linux macosx windows
 
+## submodule names
 LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
 
 BUILD_ROOT = $(shell pwd)
 
-# ROSIED is root of where all of the important files will be installed
-ROSIED = $(DESTDIR)/share/rosie
+# Note: Most of the installation is arch-dependent (compiled C and Lua code).
+# The arch-independent files are rpl source and, of course, doc.  These will
+# be installed in:
+#   $(ROSIED)/share/rosie/rpl/maj.min
+#   $(ROSIED)/share/doc/rosie/maj.min
+#   $(ROSIED)/share/man/man1/rosie.1
+
+# ROSIED is root of where everything needed to run rosie will be installed
+ROSIED = $(DESTDIR)/lib/rosie
+# ROSIE_DOC will hold docs in html format
+ROSIE_DOC = $(DESTDIR)/share/doc
+# ROSIE_ROOT will hold rpl (source in rpl, compiled in pkg)
+ROSIE_DOC = $(DESTDIR)/share/rosie
 
 SUBMOD = submodules
 ROSIEBIN = $(BUILD_ROOT)/bin/rosie
