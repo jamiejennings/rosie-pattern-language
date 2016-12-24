@@ -6,6 +6,17 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+-- TODO:
+--
+-- ROSIE_HOME is a real global now, no need to set it e.g. lapi.home
+-- How best to set ROSIE_HOME so that rosie.lua will work?
+-- Write a real loader that checks for .luac first
+-- Return not lapi but a better rosie engine interface (in rosie.lua)
+-- Change lpeg.setmaxstack() to return the current value instead of an error.
+-- Prob need to change lpeg to support multiple instantiations like cjson does.
+
+
+
 -- Ensure we can fit any current (up to 0x10FFFF) and future (up to 0xFFFFFFFF) Unicode code
 -- points in a single Lua integer.
 if (not math) then
@@ -62,6 +73,8 @@ function require(name)
    return module.loaded[name] or error("Module " .. tostring(name) .. " not loaded")
 end
 
+local rosie_env = _ENV
+
 -- TODO: add support for loading .luac files
 function load_module(name, optional_subdir)
    local loud = false
@@ -70,9 +83,9 @@ function load_module(name, optional_subdir)
       if loud then print("already loaded."); end
       return module.loaded[name]
    end
-   optional_subdir = optional_subdir or "core/"
-   local path = ROSIE_HOME .. "/src/" .. optional_subdir .. name .. ".lua"
-   local thing, msg = loadfile(path, "t", _ENV)
+   optional_subdir = optional_subdir or "src/core"
+   local path = ROSIE_HOME .. "/" .. optional_subdir .. "/" .. name .. ".lua"
+   local thing, msg = loadfile(path, "t", rosie_env)
    if (not thing) then
       print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME)
       print("The likely cause is an improper value of the environment variable $ROSIE_HOME (see below).")

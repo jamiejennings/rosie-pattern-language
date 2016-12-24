@@ -6,17 +6,22 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- TODO: use load_module
-local loader = loadfile(ROSIE_HOME.."/src/test-functions.lua", "t")
-test = loader()
-module.loaded["test-functions"] = test
+-- When running rosie as a module within a plain Lua instance:
+--   r = require "rosie"
+--   ROSIE_DEV=true
+--   r.load_module("all", "test")
 
+-- When running rosie as "rosie -D" to get a Lua prompt after rosie is already loaded:
+--   dofile "test/all.lua"
+
+test = load_module("test-functions", "src")
 json = require "cjson"
 
 local results = {}
 
 function do_test(fn)
-   table.insert(results, {fn, dofile(fn)})
+   local doer = loadfile(fn, "t", _ENV)
+   table.insert(results, {fn, doer()})
 end		   
       
 do_test(ROSIE_HOME .. "/test/api-test.lua")
