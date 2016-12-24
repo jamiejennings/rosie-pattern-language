@@ -17,13 +17,13 @@ local eval = require "eval"
 local co = require "color-output"
 
 -- temporary:
-require "grep"
+local grep = require "grep"
 local lpeg = require "lpeg"
 local Cp = lpeg.Cp
 
-assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
+--assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
-function reconstitute_pattern_definition(id, p)
+local function reconstitute_pattern_definition(id, p)
    if p then
       return ( --((p.alias and "alias ") or "") .. id .. " = " ..
 	       ((p.original_ast and parse.reveal_ast(p.original_ast)) or
@@ -36,6 +36,8 @@ end
 
 ----------------------------------------------------------------------------------------
 local lapi = {}
+
+lapi.home = false;				    -- set to ROSIE_HOME after loading
 
 local function arg_error(msg)
    error("Argument error: " .. msg, 0)
@@ -99,14 +101,14 @@ end
 function lapi.load_manifest(en, full_path)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    -- local full_path, proper_path = common.compute_full_path(manifest_file)
-   local ok, messages, full_path = manifest.process_manifest(en, full_path)
+   local ok, messages, full_path = manifest.process_manifest(en, full_path, lapi.home)
    return ok, common.compact_messages(messages), full_path
 end
 
 function lapi.load_file(en, path)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if type(path)~="string" then arg_error("path not a string: " .. tostring(path)); end
-   local full_path, msg = common.compute_full_path(path)
+   local full_path, msg = common.compute_full_path(path, nil, lapi.home)
    if not full_path then return false, msg; end
    local input, msg = util.readfile(full_path)
    if not input then return false, msg; end
@@ -161,7 +163,7 @@ end
 function lapi.set_match_exp_grep_TEMPORARY(en, pattern_exp, encoder_name)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if type(pattern_exp)~="string" then arg_error("pattern expression not a string"); end
-   local pat, msg = pattern_EXP_to_grep_pattern(pattern_exp, en.env);
+   local pat, msg = grep.pattern_EXP_to_grep_pattern(pattern_exp, en.env);
    if pattern.is(pat) then
       en.expression = "grep(" .. pattern_exp .. ")"
       en.pattern = pat

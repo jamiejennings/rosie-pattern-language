@@ -35,7 +35,7 @@ if (value and not(value=="")) then
 end
 
 -- Restrict Lua's search for modules and shared objects to just the Rosie install directory
-package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
+--package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
 package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 io.stderr:write("* NOT LOADING STRICT *\n")
@@ -55,10 +55,11 @@ local function print_rosie_info()
 end
 
 function load_module(name)
+   local loud = false
    local path = ROSIE_HOME .. "/src/core/" .. name .. ".lua"
-   --io.write("Loading " .. path .. "... ")
+   if loud then io.write("Loading " .. path .. "... "); end
    if package.loaded[name] then
-      --print("already loaded.")
+      if loud then print("already loaded."); end
       return package.loaded[name]
    end
    local thing, msg = loadfile(path)
@@ -73,16 +74,27 @@ function load_module(name)
       os.exit(-1)
    end -- if not ok
    package.loaded[name] = thing()
-   --print("done.")
+   if loud then print("done."); end
    return package.loaded[name]
 end
 
-list = load_module("list")
-parse = load_module("parse")
-syntax = load_module("syntax")
-compile = load_module("compile")
+recordtype = load_module("recordtype")
+util = load_module("util")
 common = load_module("common")
+list = load_module("list")
+syntax = load_module("syntax")
+parse = load_module("parse")
+compile = load_module("compile")
+eval = load_module("eval")
+color_output = load_module("color-output")
 engine = load_module("engine")
+
+manifest = load_module("manifest")
+grep = load_module("grep")
+lapi = load_module("lapi"); lapi.home = ROSIE_HOME
+api = load_module("api")
+
+repl = load_module("repl")
 
 
 ----------------------------------------------------------------------------------------
@@ -134,7 +146,7 @@ ROSIE_VERSION = nil;				    -- read from file VERSION
 ROSIE_ENGINE = nil;				    -- the engine that will parse all the rpl files
 
 function bootstrap()
-   ROSIE_VERSION = common.read_version_or_die()
+   ROSIE_VERSION = common.read_version_or_die(ROSIE_HOME)
    
    -- During bootstrapping, we have to compile the rpl using the "core" compiler, and
    -- manually configure ROSIE_ENGINE without calling engine_configure.
