@@ -65,21 +65,27 @@ syn	region	rosieString		start=+"+	skip=+\\\\\|\\"+	end=+"+	oneline
 
 syn	region	rosieComment	start="--"	end="$" oneline
 
-highlight	link	rosieKeyword			Keyword
-highlight	link	rosieGrammar			Typedef
-highlight	link	rosieString				String
-highlight	link	rosieComment			Comment
-highlight	link	rosieAssignment			Operator
-highlight	link	rosieChoice				Operator
-highlight	link	rosieRepetition			Operator
-highlight	link	rosieRepetitionRange	Define
-highlight	link	rosieRawGroup			Structure
-highlight	link	rosieCookedGroup		StorageClass
-highlight	link	rosiePredicate			Delimiter
-highlight	link	rosieCharset			Macro
-highlight	link	rosieCharlist			Label
-highlight	link	rosieRange				Delimiter
-highlight	link	rosieNamedCharset		Include
+syn	keyword	rosieTestKeyword	accepts rejects	contained
+syn	region	rosieTest		start="-- test"	end="$"	oneline	contains=rosieString,rosieTestKeyword
+
+highlight link rosieKeyword 	Keyword
+highlight link rosieGrammar		Typedef
+highlight link rosieString		String
+highlight link rosieComment		Comment
+highlight link rosieAssignment	Operator
+highlight link rosieChoice		Operator
+highlight link rosieRepetition	Operator
+highlight link rosieRepetitionRange	Define
+highlight link rosieRawGroup	Structure
+highlight link rosieCookedGroup	StorageClass
+highlight link rosiePredicate	Delimiter
+highlight link rosieCharset		Macro
+highlight link rosieCharlist	Label
+highlight link rosieRange		Delimiter
+highlight link rosieNamedCharset	Include
+
+highlight link rosieTest		Special
+highlight link rosieTestKeyword	Debug
 
 let b:current_syntax = "rosie"
 
