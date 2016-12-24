@@ -21,7 +21,7 @@ local grep = require "grep"
 local lpeg = require "lpeg"
 local Cp = lpeg.Cp
 
---assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
+assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 local function reconstitute_pattern_definition(id, p)
    if p then
@@ -37,7 +37,8 @@ end
 ----------------------------------------------------------------------------------------
 local lapi = {}
 
-lapi.home = false;				    -- set to ROSIE_HOME after loading
+--lapi.home = false;				    -- set to ROSIE_HOME after loading
+lapi.home = ROSIE_HOME;
 
 local function arg_error(msg)
    error("Argument error: " .. msg, 0)
