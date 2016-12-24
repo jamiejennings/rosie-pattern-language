@@ -24,7 +24,7 @@ test.start(test.current_filename())
 heading("Require api")
 ----------------------------------------------------------------------------------------
 package.loaded.api = false			    -- force a re-load of the api
-api = require "api"
+api = load_module "api"
 
 check(type(api)=="table")
 check(api.API_VERSION and type(api.API_VERSION=="string"))

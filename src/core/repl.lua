@@ -6,10 +6,12 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-lapi = require "lapi"
-common = require "common"
-json = require "cjson"
-list = require "list"
+local repl = {}
+
+local lapi = require "lapi"
+local common = require "common"
+local json = require "cjson"
+local list = require "list"
 
 local repl_patterns = [==[
       rpl_expression = expression
@@ -32,11 +34,12 @@ local repl_patterns = [==[
       input = command / statement / identifier
 ]==]
 
-repl_engine = lapi.new_engine({name="repl"})
+local repl_engine = lapi.new_engine({name="repl"})
+repl.repl_engine = repl_engine
 lapi.load_file(repl_engine, "$sys/src/rpl-core.rpl")
 lapi.load_string(repl_engine, repl_patterns)
 
-repl_prompt = "Rosie> "
+local repl_prompt = "Rosie> "
 
 local function print_match(m, left, eval_p)
    if m then 
@@ -54,7 +57,7 @@ local function print_match(m, left, eval_p)
    end
 end
 
-function repl(en)
+function repl.repl(en)
    local ok = lapi.inspect_engine(en)
    if (not ok) then
       error("Argument to repl is not a live engine: " .. tostring(en))
@@ -181,7 +184,7 @@ function repl(en)
 		  end -- if unable to parse argtext into: stuff "," quoted_string
 	       end -- if pat
 	    elseif cname=="help" then
-	       repl_help();
+	       repl.repl_help();
 	    else
 	       io.write("Repl: Unknown command (Type .help for help.)\n")
 	    end -- switch on command
@@ -196,7 +199,7 @@ function repl(en)
 	 end -- switch on type of input received
       end
    end
-   repl(en)
+   repl.repl(en)
 end
 
 local help_text = [[
@@ -223,7 +226,8 @@ local help_text = [[
    EOF (^D) will exit the read/eval/print loop.
 ]]      
 
-function repl_help()
+function repl.repl_help()
    io.write(help_text)
 end
 
+return repl

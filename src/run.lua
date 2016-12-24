@@ -51,7 +51,7 @@ local common = require "common"
 local lapi = require "lapi"
 local json = require "cjson"
 local list = require("list")
-require("repl")
+local repl = require("repl")
 
 CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
@@ -360,7 +360,7 @@ function run()
 
    if OPTION["-repl"] then
       if QUIET then greeting(); end
-      repl(CL_ENGINE)
+      repl.repl(CL_ENGINE)
    else
       if not opt_pattern then print("Rosie CLI warning: missing pattern argument"); end
 

@@ -7,7 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
-assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
+--assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
 
 local util = require "util"
 local common = require "common"
@@ -31,7 +31,7 @@ if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
 assert(pattern.is(manifest_engine.env.line))
 assert(manifest_engine:configure({expression="line", encode=false}))
 
-local function process_manifest_line(en, line, manifest_path)
+local function process_manifest_line(en, line, manifest_path, home)
    -- always return a success code and a TABLE of messages
    local m = manifest_engine:match(line)
    assert(type(m)=="table", "Uncaught error processing manifest file!")
@@ -39,7 +39,7 @@ local function process_manifest_line(en, line, manifest_path)
    if subs then
       -- the only sub-match of "line" is "path", because "comment" is an alias
       local name, pos, path = common.decode_match(subs[1])
-      local filename, msg = common.compute_full_path(path, manifest_path)
+      local filename, msg = common.compute_full_path(path, manifest_path, home)
       if not filename then return false, {msg}; end
 
       local info = "Compiling " .. filename
@@ -55,9 +55,9 @@ local function process_manifest_line(en, line, manifest_path)
    end
 end
 
-function manifest.process_manifest(en, manifest_filename)
+function manifest.process_manifest(en, manifest_filename, home)
    assert(engine.is(en))
-   local full_path, manifest_path = common.compute_full_path(manifest_filename)
+   local full_path, manifest_path = common.compute_full_path(manifest_filename, nil, home)
    if not full_path then return false, manifest_path, nil; end
 
    local success, nextline = pcall(io.lines, full_path)
@@ -76,7 +76,7 @@ function manifest.process_manifest(en, manifest_filename)
    local all_messages = {"Reading manifest file " .. full_path}
    local messages
    while line and success do
-      success, messages = process_manifest_line(en, line, manifest_path)
+      success, messages = process_manifest_line(en, line, manifest_path, home)
       for _, msg in ipairs(messages) do
 	 if msg then table.insert(all_messages, msg); end;
       end -- for
