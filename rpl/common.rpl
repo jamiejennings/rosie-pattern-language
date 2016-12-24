@@ -16,17 +16,29 @@ alias letter = [:alpha:]
 -- [:graph:] won't match unicode, but these will:
 alias common.graph = {![:space:] .}
 alias common.id_char = [_-] / {![:space:] ![:punct:] .}
+-- test common.id_char accepts "_", "-", "i", "3"
+-- test common.id_char rejects "#", "%", "`"
 
 alias hex_only = { [a-f] / [A-F] }
 alias hex_digits = { digit / [a-f] / [A-F] }
 --alias common.hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
 common.int = { [+-]? digit+ !hex_only}	     -- at least one digit, and not a hex number
+-- test common.int accepts "34", "+34", "-34"
+-- test common.int rejects "BEEF", "0x20"
 common.float = { [+-]? digit+ "." digit+ }  -- float with digits on either side of radix
+-- test common.float accepts "1.23", "+1.23", "-1.23"
+-- test common.float rejects "12", "bob", "1."
 common.hex = hex_digits+ 		     --  use with care! will match words and decimal numbers
+-- test common.hex accepts "BEEF", "f4c3b00c"
+-- test common.hex rejects "0xBEEF", "Facebook"
 common.denoted_hex = { "0x" common.hex }
+-- test common.denoted_hex accepts "0xBEEF", "0x20"
+-- test common.denoted_hex rejects "BEEF", "0x2o"
 common.number =  (common.denoted_hex /  common.float / common.int / common.hex)
 
 common.word = letter+
+-- test common.word accepts "foo"
+-- test common.word rejects "12356", "  ", "#!", "ac475"
 
 -- This definition is essentially what grok uses, which isn't great:
 -- common.unix_path = { "/" ([:alnum:]/[_%!$@:.,~-])+ / ".." / "." }+
