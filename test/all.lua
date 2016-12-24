@@ -6,7 +6,11 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-test = require "test-functions"
+-- TODO: use load_module
+local loader = loadfile(ROSIE_HOME.."/src/test-functions.lua", "t")
+test = loader()
+module.loaded["test-functions"] = test
+
 json = require "cjson"
 
 local results = {}

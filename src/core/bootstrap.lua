@@ -35,8 +35,8 @@ if (value and not(value=="")) then
 end
 
 -- Restrict Lua's search for modules and shared objects to just the Rosie install directory
-package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
-package.cpath = ROSIE_HOME .. "/lib/?.so"
+--package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
+--package.cpath = ROSIE_HOME .. "/lib/?.so"
 
 io.stderr:write("* NOT LOADING STRICT *\n")
 --require "strict"
@@ -54,14 +54,25 @@ local function print_rosie_info()
    print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
 end
 
-function load_module(name)
-   local path = ROSIE_HOME .. "/src/core/" .. name .. ".lua"
-   --io.write("Loading " .. path .. "... ")
-   if package.loaded[name] then
-      --print("already loaded.")
-      return package.loaded[name]
+module = {loaded = {}}
+module.loaded.math = math
+module.loaded.os = os
+
+function require(name)
+   return module.loaded[name] or error("Module " .. tostring(name) .. " not loaded")
+end
+
+-- TODO: add support for loading .luac files
+function load_module(name, optional_subdir)
+   local loud = false
+   if loud then io.write("Loading " .. name .. "... "); end
+   if module.loaded[name] then
+      if loud then print("already loaded."); end
+      return module.loaded[name]
    end
-   local thing, msg = loadfile(path)
+   optional_subdir = optional_subdir or "core/"
+   local path = ROSIE_HOME .. "/src/" .. optional_subdir .. name .. ".lua"
+   local thing, msg = loadfile(path, "t", _ENV)
    if (not thing) then
       print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME)
       print("The likely cause is an improper value of the environment variable $ROSIE_HOME (see below).")
@@ -72,11 +83,24 @@ function load_module(name)
       end
       os.exit(-1)
    end -- if not ok
-   package.loaded[name] = thing()
-   --print("done.")
-   return package.loaded[name]
+   module.loaded[name] = thing()
+   if loud then print("done."); end
+   return module.loaded[name]
 end
 
+-- TODO: Create a .so loader and add error checking
+local json_loader = package.loadlib(ROSIE_HOME .. "/lib/cjson.so", "luaopen_cjson")
+local initial_json = json_loader()
+json = initial_json.new()
+module.loaded.cjson = json
+local lpeg_loader = package.loadlib(ROSIE_HOME .. "/lib/lpeg.so", "luaopen_lpeg")
+lpeg = lpeg_loader()
+module.loaded.lpeg = lpeg
+
+
+recordtype = load_module("recordtype")
+util = load_module("util")
+common = load_module("common")
 list = load_module("list")
 parse = load_module("parse")
 syntax = load_module("syntax")
@@ -84,12 +108,9 @@ compile = load_module("compile")
 common = load_module("common")
 engine = load_module("engine")
 
-
 ----------------------------------------------------------------------------------------
 -- Driver functions for RPL parser written in RPL
 ----------------------------------------------------------------------------------------
-
-
 
 local function rosie_parse_without_error_check(str, pos, tokens)
    pos = pos or 1
