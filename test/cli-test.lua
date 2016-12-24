@@ -128,5 +128,8 @@ check(results, "Expression on command line can contain [[.,.]]") -- command succ
 check(code==0, "Return code is zero")
 check(results[#results]:sub(-9):find("patterns")==1)
 
+print("\nSniff test of the lightweight test facility (MORE TESTS LIKE THIS ARE NEEDED)")
+cmd = rosie .. " test -f " .. ROSIE_HOME .. "/test/lightweight-test.rpl"
+
 
 return test.finish()
