@@ -6,6 +6,17 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+-- TODO:
+--
+-- ROSIE_HOME is a real global now, no need to set it e.g. lapi.home
+-- How best to set ROSIE_HOME so that rosie.lua will work?
+-- Write a real loader that checks for .luac first
+-- Return not lapi but a better rosie engine interface (in rosie.lua)
+-- Change lpeg.setmaxstack() to return the current value instead of an error.
+-- Prob need to change lpeg to support multiple instantiations like cjson does.
+
+
+
 -- Ensure we can fit any current (up to 0x10FFFF) and future (up to 0xFFFFFFFF) Unicode code
 -- points in a single Lua integer.
 if (not math) then
@@ -35,10 +46,11 @@ if (value and not(value=="")) then
 end
 
 -- Restrict Lua's search for modules and shared objects to just the Rosie install directory
-package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
-package.cpath = ROSIE_HOME .. "/lib/?.so"
+--package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
+--package.cpath = ROSIE_HOME .. "/lib/?.so"
 
-require "strict"
+io.stderr:write("* NOT LOADING STRICT *\n")
+--require "strict"
 
 
 
@@ -53,28 +65,70 @@ local function print_rosie_info()
    print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
 end
 
-local function load_module(name)
-   local ok, thing = pcall(require, name)
-   if (not ok) then
+module = {loaded = {}}
+module.loaded.math = math
+module.loaded.os = os
+
+function require(name)
+   return module.loaded[name] or error("Module " .. tostring(name) .. " not loaded")
+end
+
+local rosie_env = _ENV
+
+-- TODO: add support for loading .luac files
+function load_module(name, optional_subdir)
+   local loud = false
+   if loud then io.write("Loading " .. name .. "... "); end
+   if module.loaded[name] then
+      if loud then print("already loaded."); end
+      return module.loaded[name]
+   end
+   optional_subdir = optional_subdir or "src/core"
+   local path = ROSIE_HOME .. "/" .. optional_subdir .. "/" .. name .. ".lua"
+   local thing, msg = loadfile(path, "t", rosie_env)
+   if (not thing) then
       print("Error in bootstrap process: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME)
       print("The likely cause is an improper value of the environment variable $ROSIE_HOME (see below).")
       if ROSIE_DEV then
-	 print("Reported error was: " .. tostring(thing));
+	 print("Reported error was: " .. tostring(msg));
       else
 	 print_rosie_info()
       end
       os.exit(-1)
    end -- if not ok
-   return thing
+   module.loaded[name] = thing()
+   if loud then print("done."); end
+   return module.loaded[name]
 end
 
-list = load_module("list")
-parse = load_module("parse")
-syntax = load_module("syntax")
-compile = load_module("compile")
+-- TODO: Create a .so loader and add error checking
+local json_loader = package.loadlib(ROSIE_HOME .. "/lib/cjson.so", "luaopen_cjson")
+local initial_json = json_loader()
+json = initial_json.new()
+module.loaded.cjson = json
+local lpeg_loader = package.loadlib(ROSIE_HOME .. "/lib/lpeg.so", "luaopen_lpeg")
+lpeg = lpeg_loader()
+module.loaded.lpeg = lpeg
+
+
+argparse = load_module("argparse", "submodules/argparse/src")
+recordtype = load_module("recordtype")
+util = load_module("util")
 common = load_module("common")
-load_module("engine")
-load_module("os")
+list = load_module("list")
+syntax = load_module("syntax")
+parse = load_module("parse")
+compile = load_module("compile")
+eval = load_module("eval")
+color_output = load_module("color-output")
+engine = load_module("engine")
+
+manifest = load_module("manifest")
+grep = load_module("grep")
+lapi = load_module("lapi"); --lapi.home = ROSIE_HOME
+api = load_module("api")
+
+repl = load_module("repl")
 
 
 ----------------------------------------------------------------------------------------
@@ -126,7 +180,7 @@ ROSIE_VERSION = nil;				    -- read from file VERSION
 ROSIE_ENGINE = nil;				    -- the engine that will parse all the rpl files
 
 function bootstrap()
-   ROSIE_VERSION = common.read_version_or_die()
+   ROSIE_VERSION = common.read_version_or_die(ROSIE_HOME)
    
    -- During bootstrapping, we have to compile the rpl using the "core" compiler, and
    -- manually configure ROSIE_ENGINE without calling engine_configure.
@@ -144,7 +198,8 @@ function bootstrap()
    ROSIE_ENGINE.encode_function = function(m) return m; end;
    -- skip the assignment below to leave the original parser in place
    if true then
-      compile.parser = parse_and_explain;
+      --print("In bootstrap, parse_and_explain is " .. tostring(parse_and_explain))
+      compile.set_parser(parse_and_explain);
    end
    BOOTSTRAP_COMPLETE = true
 end

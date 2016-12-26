@@ -8,6 +8,8 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
+local co = {}
+
 -- Rewrite notes
 --
 -- (1) Write node_to_color_text
@@ -64,7 +66,7 @@ local shell_color_table =
   }
 
 
-colormap = {["."] = "black";
+co.colormap = {["."] = "black";
 	    ["basic.unmatched"] = "black";
 	    ["simplified_json"] = "yellow";	    -- won't work. need aliases within grammars.
 	    ["common.word"] = "yellow";
@@ -107,8 +109,8 @@ colormap = {["."] = "black";
 
 local already_warned = {}
 
-function color(key)
-   local c = colormap[key]
+function co.color(key)
+   local c = co.colormap[key]
    if not c then
       if not QUIET and not already_warned[key] then
 	 io.stderr:write("Warning: No color defined in color map for object of type: '",
@@ -134,22 +136,22 @@ local reset_color_attributes = shell_color_table["none"]
 --   io.write("\n");
 --end
 
-function color_print_leaf_nodes(t)
+function co.color_print_leaf_nodes(t)
    -- t is a match
    local name, pos, text, subs = common.decode_match(t)
    if (not subs) or (#subs==0) then
       -- already at a leaf node
-      local cname, ccode = color(name)
+      local cname, ccode = co.color(name)
       text = tostring(text);			    -- just in case!
       io.write(ccode, text, reset_color_attributes, " ");
    else
       for i = 1, #subs do
-	 color_print_leaf_nodes(subs[i]);
+	 co.color_print_leaf_nodes(subs[i]);
       end -- for all sub-matches
    end
 end
 
-function color_write(channel, color, ...)
+function co.color_write(channel, color, ...)
    channel:write(shell_color_table[color])
    for _,v in ipairs({...}) do
       channel:write(v)
@@ -157,25 +159,25 @@ function color_write(channel, color, ...)
    channel:write(reset_color_attributes)
 end
 
-function color_string_from_leaf_nodes(t)
+function co.color_string_from_leaf_nodes(t)
    -- t is a match
    if not t then return ""; end
    local output = ""
    local name, pos, text, subs = common.decode_match(t)
    if (not subs) or (#subs==0) then
       -- already at a leaf node
-      local cname, ccode = color(name)
+      local cname, ccode = co.color(name)
       text = tostring(text);			    -- just in case!
       return ccode .. text .. reset_color_attributes .. " ";
    else
       for i = 1, #subs do
-	 output = output .. color_string_from_leaf_nodes(subs[i]);
+	 output = output .. co.color_string_from_leaf_nodes(subs[i]);
       end -- for all sub-matches
       return output
    end
 end
 
-function string_from_leaf_nodes(t)
+function co.string_from_leaf_nodes(t)
    -- t is a match
    if not t then return ""; end
    local output = ""
@@ -185,8 +187,10 @@ function string_from_leaf_nodes(t)
       return tostring(text) .. " "		    -- tostring is just in case!
    else
       for i = 1, #subs do
-	 output = output .. string_from_leaf_nodes(subs[i]);
+	 output = output .. co.string_from_leaf_nodes(subs[i]);
       end -- for all sub-matches
       return output
    end
 end
+
+return co
