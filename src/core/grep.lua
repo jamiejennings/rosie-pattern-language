@@ -17,12 +17,14 @@
 --    {"*":{"pos":1,"text":"nameserver 2606:a000:1120:8152:2f7:6fff:fed4:dc1","subs":[{"int":{"pos":12,"text":"2606","subs":{}}},{"int":{"pos":18,"text":"000","subs":{}}},{"int":{"pos":22,"text":"1120","subs":{}}},{"int":{"pos":27,"text":"8152","subs":{}}},{"int":{"pos":32,"text":"2","subs":{}}},{"int":{"pos":34,"text":"7","subs":{}}},{"int":{"pos":36,"text":"6","subs":{}}},{"int":{"pos":44,"text":"4","subs":{}}},{"int":{"pos":48,"text":"1","subs":{}}}]}}
 --
 
-compile = require "compile"
+local grep = {}
+
+local compile = require "compile"
 
 -- Forthcoming: RPL macros will be implemented as transformations on ASTs, not transformations of
 -- RPL source (as in the example below).
 
-function pattern_EXP_to_grep_pattern(pattern_exp, env)
+function grep.pattern_EXP_to_grep_pattern(pattern_exp, env)
    local env = common.new_env(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
    local pat, msg = compile.compile_source(pattern_exp, env)
@@ -38,4 +40,4 @@ function pattern_EXP_to_grep_pattern(pattern_exp, env)
 end
 
 
-
+return grep
