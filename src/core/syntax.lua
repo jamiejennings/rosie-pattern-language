@@ -9,7 +9,7 @@ local common = require "common"			    -- AST functions
 local list = require "list"
 
 
-syntax = {}
+local syntax = {}
 
 -- When a syntax transformation uses the boundary, it uses a reference to the boundary
 -- identifier so that it gets the current value of the boundary pattern.
@@ -175,7 +175,7 @@ syntax.append_boundary_to_rhs =
 			   "binding",
 			   false)
 
-function transform_quantified_exp(ast)
+local function transform_quantified_exp(ast)
    local new_exp = syntax.id_to_ref(ast.quantified_exp.subs[1])
    local name, body = next(new_exp)
    local original_body = body
