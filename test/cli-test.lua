@@ -53,8 +53,8 @@ function run(expression, grep_flag, expectations)
    test.subheading((grep_flag and "Using grep option") or "No grep option")
    local verb = (grep_flag and "Grepping for") or "Matching"
    print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
-   local grep = (grep_flag and " -grep") or ""
-   local cmd = rosie .. grep .. " '" .. expression .. "' " .. infilename
+   local grep = (grep_flag and " --grep") or ""
+   local cmd = rosie .. " match".. grep .. " '" .. expression .. "' " .. infilename
    print(cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
@@ -122,7 +122,7 @@ check(ok, [[testing for a shell quoting error in which rpl expressions containin
       were not properly passed to lua in bin/run-rosie]])
 
 print("\nChecking that the command line expression can contain [[...]] per Issue #22")
-cmd = rosie .. " -e 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+' -patterns"
+cmd = rosie .. " patterns -r 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+'"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(results, "Expression on command line can contain [[.,.]]") -- command succeeded

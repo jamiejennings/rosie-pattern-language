@@ -18,6 +18,7 @@ endif
 PLATFORMS = linux macosx windows
 
 ## submodule names
+ARGPARSE = argparse
 LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
@@ -45,6 +46,7 @@ INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
 .PHONY: default
 default: $(PLATFORM)
 
+ARGP_DIR = $(SUBMOD)/$(ARGPARSE)
 LUA_DIR = $(SUBMOD)/$(LUA)
 LPEG_DIR = $(SUBMOD)/$(LPEG)
 JSON_DIR = $(SUBMOD)/$(JSON)
@@ -103,11 +105,9 @@ linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so compile sniff
 windows:
 	@echo Windows installation not yet supported.
 
-submodules: submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/Makefile
+submodules: submodules/argparse/src submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/Makefile
 
-submodules/lua/Makefile:
-submodules/lua-cjson/Makefile:
-submodules/rosie-lpeg/src/Makefile:
+submodules/argparse/src submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/Makefile:
 	git submodule init
 	git submodule update
 
@@ -131,13 +131,17 @@ lib/cjson.so: submodules submodules/lua/include
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
+bin/argparse.luac: submodules/argparse/src/argparse.lua
+	bin/luac -o $@ $<
+
 bin/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 
-luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
+luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua)) bin/argparse.luac
 
 .PHONY: compile
 compile: $(luaobjects)
+
 
 # The PHONY declaration will force the creation of bin/rosie every time.  This is needed
 # only because the user may move the working directory.  When that happens, the user should
@@ -211,7 +215,7 @@ install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)
-	@RESULT="$(shell $(ROSIEBIN) 2>&1 >/dev/null)"; \
+	@RESULT="$(shell $(ROSIEBIN) --version 2>&1 >/dev/null)"; \
 	EXPECTED="This is Rosie v$(shell head -1 $(BUILD_ROOT)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
