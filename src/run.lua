@@ -236,10 +236,10 @@ parser:flag("--version", "Print rosie version")
 parser:flag("-v --verbose", "Output additional messages")
 	:default(false)
 	:action("store_true")
-parser:option("-m --manifest", "Load a manifest file")
+parser:option("-m --manifest", "Load a manifest file (single dash '-' for none)")
 	:default("$sys/MANIFEST")
 	:args(1)
-parser:option("-f --load", "Load an RPL file")
+parser:option("-f --file", "Load an RPL file")
 	:args(1)
 	:count("*") -- allow multiple loads of a file
 	:target("rpls") -- set name of variable index (args.rpls)
@@ -266,41 +266,43 @@ local repl = parser:command("repl")
 -- match command
 local match = parser:command("match")
 	:description("Run RPL match")
--- match flags (true/false)
-match:flag("-s --wholefile", "Read input file as single string")
-	:default(false)
-	:action("store_true")
-match:flag("-a --all", "Output non-matching lines to stderr")
-	:default(false)
-	:action("store_true")
--- mutually exclusive flags
-match:mutex(
-	match:flag("-e --eval", "Output detailed trace evaluation of pattern process.")
-		:default(false)
-		:action("store_true"),
-	match:flag("-g --grep", "Weakly emulate grep using RPL syntax")
-		:default(false)
-		:action("store_true")
-)
--- match options (takes an argument)
-match:option("-o --encode", "Output format")
-	:convert(function(a)
-		-- validation of argument, will fail if not in choices array
-		local choices={"color","nocolor","fulltext","json"}
-		for j=1,#choices do
-			if a == choices[j] then
-				return a
-			end
-		end
-		return nil
-		end)
-	:default("color")
-	:args(1) -- consume argument after option
--- match arguments (required options)
-match:argument("pattern", "RPL pattern")
-match:argument("filename", "Input filename")
-	:args("*")
-	:default("-") -- in case no filenames are passed, default to stdin
+-- eval command
+local eval = parser:command("eval")
+	:description("Run RPL evaluator (generates trace of every match)")
+-- grep command
+local grep = parser:command("grep")
+	:description("Run RPL match in the style of Unix grep (match anywhere in a line)")
+
+for _, cmd in ipairs{match, eval, grep} do
+   -- match/eval/grep flags (true/false)
+   cmd:flag("-s --wholefile", "Read input file as single string")
+       :default(false)
+       :action("store_true")
+   cmd:flag("-a --all", "Output non-matching lines to stderr")
+      :default(false)
+      :action("store_true")
+
+   -- match/eval/grep arguments (required options)
+   cmd:argument("pattern", "RPL pattern")
+   cmd:argument("filename", "Input filename")
+      :args("*")
+      :default("-") -- in case no filenames are passed, default to stdin
+   -- match/eval/grep options (takes an argument)
+   cmd:option("-o --encode", "Output format")
+      :convert(function(a)
+		  -- validation of argument, will fail if not in choices array
+		  local choices={"color","nocolor","fulltext","json"}
+		  for j=1,#choices do
+		     if a == choices[j] then
+			return a
+		     end
+		  end
+		  return nil
+	       end)
+      :default("color")
+      :args(1) -- consume argument after option
+end
+
 -- in order to catch dev mode for "make test"
 if (not arg[1]) then
 	print(parser:get_help())
