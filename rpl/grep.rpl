@@ -1,4 +1,5 @@
 ---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
 ----
 ---- grep.rpl   grep-like patterns in Rosie Pattern Language
 ----

@@ -1,4 +1,5 @@
 ---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
 ----
 ---- language-comments.rpl   Extract comments (or just code) from source files
 ----
