@@ -1,4 +1,5 @@
 -- -*- Mode: rpl; -*- 
+-- vim:syn=rosie
 --
 -- undef.rpl   Rosie Pattern Language tests that fail
 --
