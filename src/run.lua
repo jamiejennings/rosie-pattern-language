@@ -52,7 +52,7 @@ local common = require "common"
 local lapi = require "lapi"
 local json = require "cjson"
 local list = require("list")
-local repl = require("repl")
+local repl_mod = require("repl")
 
 CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
@@ -206,7 +206,7 @@ function run(args)
 
 	if args.command == "repl" then
 		if not args.verbose then greeting(); end
-		repl(CL_ENGINE)
+		repl_mod.repl(CL_ENGINE)
 		os.exit()
 	end
 
