@@ -50,11 +50,10 @@ print("Input file (" .. infilename .. ") created successfully")
 
 function run(expression, grep_flag, expectations)
    test.heading(expression)
-   test.subheading((grep_flag and "Using grep option") or "No grep option")
+   test.subheading((grep_flag and "Using grep command") or "Using match command")
    local verb = (grep_flag and "Grepping for") or "Matching"
    print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
-   local grep = (grep_flag and " --grep") or ""
-   local cmd = rosie .. " match".. grep .. " '" .. expression .. "' " .. infilename
+   local cmd = rosie .. (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
    print(cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end

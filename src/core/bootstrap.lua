@@ -49,7 +49,7 @@ end
 --package.path = ROSIE_HOME .. "/bin/?.luac;" .. ROSIE_HOME .. "/src/core/?.lua;" .. ROSIE_HOME .. "/src/?.lua"
 --package.cpath = ROSIE_HOME .. "/lib/?.so"
 
-io.stderr:write("* NOT LOADING STRICT *\n")
+--io.stderr:write("* NOT LOADING STRICT *\n")
 --require "strict"
 
 
