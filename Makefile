@@ -62,7 +62,7 @@ macosx: PLATFORM=macosx
 # Change the next line to CC=gcc if you prefer to use gcc on MacOSX
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: bin/lua lib/lpeg.so lib/cjson.so compile sniff
+macosx: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
 
 linux: PLATFORM=linux
 linux: CC=gcc
@@ -103,7 +103,13 @@ lib/cjson.so: submodules submodules/lua/include
 	cp $(JSON_DIR)/cjson.so lib
 
 lib/readline.so: submodules submodules/lua/include
+ifeq ($(PLATFORM),linux)
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) CFLAGS="-fPIC -O2 -I../lua/include"
+else ifeq ($(PLATFORM),macosx)
+	cd $(READLINE_DIR) && $(MAKE) USE_LIBEDIT=true LUA_INCLUDE_DIR=$(BUILD_ROOT)/submodules/lua/src CC=$(CC)
+else
+	false
+endif
 	mkdir -p lib
 	cp $(READLINE_DIR)/readline.so lib
 
