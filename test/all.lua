@@ -20,7 +20,8 @@ json = require "cjson"
 local results = {}
 
 function do_test(fn)
-   local doer = loadfile(fn, "t", _ENV)
+   local doer, err = loadfile(fn, "t", _ENV)
+   if not doer then error("Error loading test file: " .. tostring(err)); end
    table.insert(results, {fn, doer()})
 end		   
       
