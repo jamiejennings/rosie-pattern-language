@@ -7,7 +7,9 @@
 [submodule "submodules/rosie-lpeg"]
 	path = submodules/rosie-lpeg
 	url = https://github.com/jamiejennings/rosie-lpeg.git
-	
 [submodule "submodules/argparse"]
 	path = submodules/argparse
 	url = https://github.com/mpeterv/argparse.git
+[submodule "submodules/lua-readline"]
+	path = submodules/lua-readline
+	url = https://github.com/jamiejennings/lua-readline.git

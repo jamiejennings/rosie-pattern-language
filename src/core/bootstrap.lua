@@ -109,6 +109,9 @@ module.loaded.cjson = json
 local lpeg_loader = package.loadlib(ROSIE_HOME .. "/lib/lpeg.so", "luaopen_lpeg")
 lpeg = lpeg_loader()
 module.loaded.lpeg = lpeg
+local readline_loader = package.loadlib(ROSIE_HOME .. "/lib/readline.so", "luaopen_readline")
+readline = readline_loader()
+module.loaded.readline = readline
 
 
 argparse = load_module("argparse", "submodules/argparse/src")
