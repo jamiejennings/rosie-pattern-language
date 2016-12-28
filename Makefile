@@ -80,7 +80,7 @@ CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
 # Sigh.  Once we get to Version 1.0 and we support Linux packages (like RPM), we won't need this test.
 # Note that this test should ALWAYS pass on OS X, since it ships with readline.
 readlinetest:
-	@(bash -c 'printf "#include <readline/readline.h>\nint main() { }\n"' | \
+	@(bash -c 'printf "#include <stdio.h>\n#include <readline/readline.h>\nint main() { }\n"' | \
 	           cc -std=gnu99 -lreadline -o /dev/null -xc -) && \
 	   echo "READLINE TEST: libreadline and readline.h appear to be installed" || \
 	   (echo "READLINE TEST: Missing readline library or readline.h" && \
