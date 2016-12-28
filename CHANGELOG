@@ -1,12 +1,17 @@
 
-2016-12-28  Jamie Jennings  <jjennings@us.ibm.com>
+	* v1-tranche-1
+
+	Fixed issue #22 (CLI bug when using expressions containing [[...]])
+	Added test to cli-test.lua for issue #22
 
 	* v0.99j
 
-	Branch name is 99j.  Release will be tagged v0.99j.
-	Issue #22 (error using charset expressions [[...]] on command line)
-	Issue #12 (error matching a grammar that has no captures)
-	Issue #18 (Add RFC3986 expressions)
+	PR #13: new set of CLI arguments (now based on commands like 'match' and
+	'repl')
+	PR #15: added readline support to the repl
+	PR #24: new install layout (copies files into /usr/local so that the
+	install directory can be deleted)
+	PR #26: added Vim syntax highlighting
 
 2016-11-29  Jamie Jennings  <jjennings@us.ibm.com>
 
