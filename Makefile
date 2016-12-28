@@ -78,10 +78,9 @@ CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
 CJSON_MAKE_ARGS += CJSON_CFLAGS+="-pthread -DMULTIPLE_THREADS"
 CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
 
-.PHONY: readlinetest
-
 # Sigh.  Once we get to Version 1.0 and we support Linux packages (like RPM), we won't need this test.
 # Note that this test should ALWAYS pass on OS X, since it ships with readline.
+.PHONY: readlinetest
 readlinetest:
 	@(bash -c 'printf "#include <stdio.h>\n#include <readline/readline.h>\nint main() { }\n"' | \
 	           cc -std=gnu99 -lreadline -o /dev/null -xc -) && \
@@ -91,9 +90,7 @@ readlinetest:
 	    /usr/bin/false)
 
 .PHONY: macosx
-
 macosx: PLATFORM=macosx
-# Change the next line to CC=gcc if you prefer to use gcc on MacOSX
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
 macosx: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
@@ -122,8 +119,7 @@ $(submodules):
 submodules/lua/include:
 	cd $(LUA_DIR) && ln -sf src include
 
-bin/luac:
-bin/lua: submodules
+bin/luac bin/lua: submodules
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p bin
 	cp $(LUA_DIR)/src/lua bin
@@ -162,7 +158,7 @@ luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua)) b
 compile: $(luaobjects)
 
 
-# The PHONY declaration will force the creation of bin/rosie every time.  This is needed
+# The PHONY declaration below will force the creation of bin/rosie every time.  This is needed
 # only because the user may move the working directory.  When that happens, the user should
 # be able to run 'make' again to reconstruct a new bin/rosie script (which contains a
 # reference to the working directory).
