@@ -1,6 +1,6 @@
 2016-12-08  Jamie Jennings  <jjennings@us.ibm.com>
 
-	* v0.99j
+	* v1-tranche-1
 
 	Fixed issue #22 (CLI bug when using expressions containing [[...]])
 	Added test to cli-test.lua for issue #22
@@ -9,6 +9,12 @@
 	Added tests to rpl-core-test.lua for issue #12
 	Added tests to api-test.lua for issue #12
 
+	PR #13: new set of CLI arguments (now based on commands like 'match' and
+	'repl')
+	PR #15: added readline support to the repl
+	PR #24: new install layout (copies files into /usr/local so that the
+	install directory can be deleted)
+	PR #26: added Vim syntax highlighting
 
 2016-11-29  Jamie Jennings  <jjennings@us.ibm.com>
 
