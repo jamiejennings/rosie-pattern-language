@@ -5,6 +5,7 @@
 	Branch name is 99j.  Release will be tagged v0.99j.
 	Issue #22 (error using charset expressions [[...]] on command line)
 	Issue #12 (error matching a grammar that has no captures)
+	Issue #18 (Add RFC3986 expressions)
 
 2016-11-29  Jamie Jennings  <jjennings@us.ibm.com>
 
