@@ -231,7 +231,7 @@ install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
 .PHONY: sniff
 sniff: $(ROSIEBIN)
 	@RESULT="$(shell $(ROSIEBIN) --version 2>&1 >/dev/null)"; \
-	EXPECTED="This is Rosie v$(shell head -1 $(BUILD_ROOT)/VERSION)"; \
+	EXPECTED="This is Rosie $(shell head -1 $(BUILD_ROOT)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
             echo "Rosie Pattern Engine installed successfully!"; \
