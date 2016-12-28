@@ -385,8 +385,106 @@ function process_pattern_against_file(infilename)
    end
 end
 
-function run()
-   process_command_line_options()
+function setup_and_run_tests(args)
+   -- first, set up the rosie CLI engine and automatically load the file being tested (after
+   -- loading all the other stuff per the other command line args and defaults)
+   if not args.rpls then
+      args.rpls = { args.filename }
+   else
+      table.insert(args.rpls, args.filename)
+   end
+   setup_engine(args);
+      
+   local function startswith(str,sub)
+      return string.sub(str,1,string.len(sub))==sub
+   end
+   -- from http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html
+   local function split(s, sep)
+      sep = lpeg.P(sep)
+      local elem = lpeg.C((1 - sep)^0)
+      local p = lpeg.Ct(elem * (sep * elem)^0)
+      return lpeg.match(p, s)
+   end
+   local function find_test_lines(str)
+      local num = 0
+      local lines = {}
+      for _,line in pairs(split(str, "\n")) do
+	 if startswith(line,'-- test') then
+	    table.insert(lines, line)
+	    num = num + 1
+	 end
+      end
+      return num, lines
+   end
+   local f = io.open(args.filename, 'r')
+   local num_patterns, test_lines = find_test_lines(f:read('*a'))
+   f:close()
+   if num_patterns > 0 then
+      local function set_config_exp(exp, encode)
+	 local en = encode or false
+	 local success, msg = lapi.configure_engine(CL_ENGINE, {expression=exp, encode=en})
+	 if not success then
+	    print("Error configuring engine expression")
+	    print(msg)
+	    os.exit(-1)
+	 end
+      end
+      local function test_accepts_exp(q)
+	 local res, pos = lapi.match(CL_ENGINE, q)
+	 if pos ~= 0 then return false end
+	 return true
+      end
+      local function test_rejects_exp(q)
+	 local res, pos = lapi.match(CL_ENGINE, q)
+	 if pos == 0 then return false end
+	 return true
+      end
+      local test_funcs = {test_rejects_exp=test_rejects_exp,test_accepts_exp=test_accepts_exp}
+      local test_patterns =
+	 [==[
+	    testKeyword = "accepts" / "rejects"
+	    test_line = "-- test" identifier testKeyword quoted_string (ignore "," ignore quoted_string)*
+         ]==]
+
+      lapi.load_file(CL_ENGINE, "$sys/src/rpl-core.rpl")
+      lapi.load_string(CL_ENGINE, test_patterns)
+      local failures = 0
+      for _,p in pairs(test_lines) do
+	 set_config_exp("test_line")
+	 local m, left = lapi.match(CL_ENGINE, p)
+	 -- FIXME: need to test for failure to match
+	 local name = m.test_line.subs[1].identifier.text
+	 set_config_exp(name)
+	 local testtype = m.test_line.subs[2].testKeyword.text
+	 local testfunc = test_funcs["test_" .. testtype .. "_exp"]
+	 local literals = 3 -- literals will start at subs offset 3
+	 -- if we get here we have at least one per test_line expression rule
+	 while literals <= #m.test_line.subs do
+	    local teststr = m.test_line.subs[literals].literal.text
+	    if not testfunc(teststr) then
+	       print("FAIL: " .. name .. " did not " .. testtype:sub(1,-2) .. " " .. teststr)
+	       failures = failures + 1
+	    end
+	    literals = literals + 1
+	 end
+      end
+      if failures == 0 then
+	 print("All tests passed")
+      else
+	 os.exit(-1)
+      end
+   else
+      print("No tests found")
+   end
+   os.exit()
+end
+
+
+function run(args)
+	if args.command == "info" then
+		print_rosie_info()
+		os.exit()
+	end
 
    if OPTION["-verbose"] then
       QUIET = false;
@@ -394,94 +492,12 @@ function run()
       QUIET = true;
    end
 
-   if OPTION["-help"] then
-      if #arg > 1 then print("Rosie CLI warning: ignoring extraneous command line arguments"); end
-      help()
-      os.exit()
-   end
-
 	if args.command == "test" then
-		local function startswith(str,sub)
-			return string.sub(str,1,string.len(sub))==sub
-		end
-		-- from http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html
-		local function split(s, sep)
-			sep = lpeg.P(sep)
-			local elem = lpeg.C((1 - sep)^0)
-			local p = lpeg.Ct(elem * (sep * elem)^0)
-			return lpeg.match(p, s)
-		end
-		local function find_test_lines(str)
-			local num = 0
-			local lines = {}
-			for _,line in pairs(split(str, "\n")) do
-				if startswith(line,'-- test') then
-					table.insert(lines, line)
-					num = num + 1
-				end
-			end
-			return num, lines
-		end
-		local f = io.open(args.filename, 'r')
-		local num_patterns, test_lines = find_test_lines(f:read('*a'))
-		f:close()
-		if num_patterns > 0 then
-			local function set_config_exp(exp, encode)
-				local en = encode or false
-				local success, msg = lapi.configure_engine(CL_ENGINE, {expression=exp, encode=en})
-				if not success then
-					print("Error configuring engine expression")
-					print(msg)
-					os.exit(-1)
-				end
-			end
-			local function test_accepts_exp(q)
-				local res, pos = lapi.match(CL_ENGINE, q)
-				if pos ~= 0 then return false end
-				return true
-			end
-			local function test_rejects_exp(q)
-				local res, pos = lapi.match(CL_ENGINE, q)
-				if pos == 0 then return false end
-				return true
-			end
-			local test_funcs = {test_rejects_exp=test_rejects_exp,test_accepts_exp=test_accepts_exp}
-			local test_patterns = [==[
-				testKeyword = "accepts" / "rejects"
-				test_line = "-- test" identifier testKeyword quoted_string (ignore "," ignore quoted_string)*
-			]==]
-			lapi.load_file(CL_ENGINE, "$sys/src/rpl-core.rpl")
-			lapi.load_string(CL_ENGINE, test_patterns)
-			local failures = 0
-			for _,p in pairs(test_lines) do
-				set_config_exp("test_line")
-				local m, left = lapi.match(CL_ENGINE, p)
-				-- FIXME: need to test for failure to match
-				local name = m.test_line.subs[1].identifier.text
-				set_config_exp(name)
-				local testtype = m.test_line.subs[2].testKeyword.text
-				local testfunc = test_funcs["test_" .. testtype .. "_exp"]
-				local literals = 3 -- literals will start at subs offset 3
-				-- if we get here we have at least one per test_line expression rule
-				while literals <= #m.test_line.subs do
-					local teststr = m.test_line.subs[literals].literal.text
-					if not testfunc(teststr) then
-						print("FAIL: " .. name .. " did not " .. testtype:sub(1,-2) .. " " .. teststr)
-						failures = failures + 1
-					end
-					literals = literals + 1
-				end
-			end
-			if failures == 0 then
-				print("All tests passed")
-			else
-				os.exit(-1)
-			end
-		else
-			print("No tests found")
-		end
-		os.exit()
+	   -- lightweight pattern test framework does a custom setup
+	   setup_and_run_tests(args);
 	end
+	
+	setup_engine(args);
 
 	if args.command == "patterns" then
 		if not args.verbose then greeting(); end
