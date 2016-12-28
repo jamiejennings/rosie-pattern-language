@@ -58,7 +58,7 @@ CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
 
 local function greeting()
-	io.stderr:write("This is Rosie v" .. ROSIE_VERSION .. "\n")
+	io.stderr:write("This is Rosie " .. ROSIE_VERSION .. "\n")
 end
 
 function print_rosie_info()
@@ -323,7 +323,7 @@ end -- function run
 ----------------------------------------------------------------------------------------
 
 -- create Parser
-local parser = argparse("rosie", "Rosie Pattern Language v" .. ROSIE_VERSION)
+local parser = argparse("rosie", "Rosie Pattern Language " .. ROSIE_VERSION)
 	:epilog("Additional information.")
 -- global flags/options can go here
 -- -h,--help is generated automatically
