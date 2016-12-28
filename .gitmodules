@@ -8,3 +8,6 @@
 	path = submodules/rosie-lpeg
 	url = https://github.com/jamiejennings/rosie-lpeg.git
 	
+[submodule "submodules/argparse"]
+	path = submodules/argparse
+	url = https://github.com/mpeterv/argparse.git

@@ -44,46 +44,49 @@ Rosie supports output in a few formats, which are controlled by the value of the
 ### Help is available
 
 ``` 
-bash-3.2$ ./bin/rosie -help
-This is Rosie v0.99a
-The Rosie install directory is: /Users/jjennings/Work/Dev/rosie-pattern-language
-Rosie help:
-Rosie usage: ./bin/rosie <options> <pattern> <filename>*
-Valid <options> are: -help -patterns -verbose -all -repl -grep -eval -wholefile -manifest -f -e -encode
+$ rosie --help
+Usage: rosie [--version] [-v] [-m <manifest>] [-f <load>] [-r <rpl>]
+       [-h] <command> ...
 
--help              prints this message
--patterns          print list of available patterns
--verbose           output warnings and other informational messages
--all               write matches to stdout and non-matching lines to stderr
--repl              start Rosie in the interactive mode (read-eval-print loop)
--grep              emulate grep (weakly), but with RPL, by searching for all
-                   occurrences of <pattern> in the input
--eval              output a detailed "trace" evaluation of how the pattern
-                   processed the input; this feature generates LOTS of output,
-                   so best to use it on ONE LINE OF INPUT
--wholefile         read the whole input file into memory as a single string,
-                   instead of line by line
--manifest <arg>    load the manifest file <arg> instead of MANIFEST from $sys
-                   (the Rosie install directory); use a single dash '-' to
-                   load no manifest file
--f <arg>           load the RPL file <arg>, after manifest (if any) is loaded;
-                   use a single dash '-' to read from the stdin
--e <arg>           compile the RPL statements in <arg>, after manifest and
-                   RPL file (if any) are loaded
--encode <arg>      encode output in <arg> format: color (default), nocolor,
-                   fulltext, or json
+Rosie Pattern Language v0.99i
 
-<pattern>            RPL expression, which may be the name of a defined pattern,
-                     against which each line will be matched
-<filename>+          one or more file names to process, the last of which may be
-                     a dash "-" to read from standard input
+Options:
+   --version             Print rosie version
+   -v, --verbose         Output additional messages
+   -m <manifest>, --manifest <manifest>
+                         Load a manifest file (default: $sys/MANIFEST)
+   -f <load>, --load <load>
+                         Load an RPL file
+   -r <rpl>, --rpl <rpl> Inline RPL statements
+   -h, --help            Show this help message and exit.
 
-Notes: 
-(1) lines from the input file for which the pattern does NOT match are written
-    to stderr so they can be redirected, e.g. to /dev/null
-(2) the -eval option currently does not work with the -grep option
+Commands:
+   info                  Print rosie installation information
+   patterns              List installed patterns
+   repl                  Run rosie in interactive mode
+   match                 Run RPL match
 
-bash-3.2$
+Additional information.
 ```
 
+For help on a command, pass the `-h` or `--help` option after a command.
+```
+$ bin/rosie match --help
+Usage: rosie match ([-e] | [-g]) [-s] [-a] [-o <encode>] [-h]
+       <pattern> [[<filename>] ...]
 
+Run RPL match
+
+Arguments:
+   pattern               RPL pattern
+   filename              Input filename (default: -)
+
+Options:
+   -s, --wholefile       Read input file as single string
+   -a, --all             Output non-matching lines to stderr
+   -e, --eval            Output detailed trace evaluation of pattern process.
+   -g, --grep            Weakly emulate grep using RPL syntax
+   -o <encode>, --encode <encode>
+                         Output format (default: color)
+   -h, --help            Show this help message and exit.
+```
