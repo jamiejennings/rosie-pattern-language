@@ -8,8 +8,8 @@
 
 -- TODO:
 --
--- ROSIE_HOME is a real global now, no need to set it e.g. lapi.home
--- How best to set ROSIE_HOME so that rosie.lua will work?
+-- + ROSIE_HOME is a real global now, no need to set it e.g. lapi.home
+-- How best to set ROSIE_HOME so that rosie.lua will work?  Should it be the same as DESTDIR, e.g. "/usr/local"?
 -- Write a real loader that checks for .luac first
 -- Return not lapi but a better rosie engine interface (in rosie.lua)
 -- Change lpeg.setmaxstack() to return the current value instead of an error.
@@ -120,6 +120,14 @@ syntax = load_module("syntax")
 compile = load_module("compile")
 common = load_module("common")
 engine = load_module("engine")
+
+manifest = load_module("manifest")
+grep = load_module("grep")
+lapi = load_module("lapi");
+api = load_module("api")
+
+repl = load_module("repl")
+
 
 ----------------------------------------------------------------------------------------
 -- Driver functions for RPL parser written in RPL
