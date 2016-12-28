@@ -129,7 +129,30 @@ check(code==0, "Return code is zero")
 check(results[#results]:sub(-9):find("patterns")==1)
 
 print("\nSniff test of the lightweight test facility (MORE TESTS LIKE THIS ARE NEEDED)")
-cmd = rosie .. " test -f " .. ROSIE_HOME .. "/test/lightweight-test.rpl"
-
+-- Passing tests
+cmd = rosie .. " test " .. ROSIE_HOME .. "/test/lightweight-test-pass.rpl"
+print(cmd)
+results, status, code = util.os_execute_capture(cmd, nil)
+check(results)
+check(code==0, "Return code is zero")
+check(results[#results]:find("All tests passed"))
+-- Failing tests
+cmd = rosie .. " test " .. ROSIE_HOME .. "/test/lightweight-test-fail.rpl"
+print(cmd)
+results, status, code = util.os_execute_capture(cmd, nil)
+check(results)
+check(type(results[1])=="string")
+check(code~=0, "Return code not zero")
+-- The last two output lines explain the test failures in our sample input file
+local function split(s, sep)
+   sep = lpeg.P(sep)
+   local elem = lpeg.C((1 - sep)^0)
+   local p = lpeg.Ct(elem * (sep * elem)^0)
+   return lpeg.match(p, s)
+end
+lines = split(results[1], "\n")
+check(lines[#lines]=="")
+check(lines[#lines-1]:find("FAIL"))
+check(lines[#lines-2]:find("FAIL"))
 
 return test.finish()

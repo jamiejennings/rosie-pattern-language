@@ -28,8 +28,8 @@ end
       
 do_test(ROSIE_HOME .. "/test/api-test.lua")
 do_test(ROSIE_HOME .. "/test/rpl-core-test.lua")
-do_test(ROSIE_HOME .. "/test/cli-test.lua")
 do_test(ROSIE_HOME .. "/test/eval-test.lua")
+do_test(ROSIE_HOME .. "/test/cli-test.lua")
 
 passed = test.print_grand_total(results)
 

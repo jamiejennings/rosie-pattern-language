@@ -1,0 +1,16 @@
+-- -*- Mode: rpl; -*-                                                                               
+--
+-- lightweight-test.rpl    For testing the lightweight test facility
+--
+-- © Copyright IBM Corporation 2016.
+-- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+-- AUTHOR: Jamie A. Jennings
+
+foo = [:digit:]+
+-- test foo accepts "123", "0", "99", "this is not right"
+-- test foo accepts "123123123123123123123"
+-- test foo rejects "x", " ", "123.", "0"   zero is also a failing test!
+-- test foo rejects "!"
+
+
+
