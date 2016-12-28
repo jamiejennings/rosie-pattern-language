@@ -1,3 +1,11 @@
+2016-12-28  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* v0.99j
+
+	Branch name is 99j.  Release will be tagged v0.99j.
+	Issue #22 (error using charset expressions [[...]] on command line)
+	Issue #12 (error matching a grammar that has no captures)
+
 2016-11-29  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* v0.99i
