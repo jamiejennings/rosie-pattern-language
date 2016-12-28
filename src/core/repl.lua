@@ -24,7 +24,8 @@ local repl_patterns = [==[
       eval = ".eval" args
       on_off = "on" / "off"
       debug = ".debug" on_off?
-      patterns = ".patterns" identifier?
+      alnum = { [[:alpha:]] / [[:digit:]] }
+      patterns = ".patterns" { identifier / {alnum+} }?
       star = "*"
       clear = ".clear" (identifier / star)?
       help = ".help"
