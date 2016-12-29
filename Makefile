@@ -103,7 +103,11 @@ linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sni
 windows:
 	@echo Windows installation not yet supported.
 
-submodules = submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile
+submodules: submodules/argparse/src \
+		submodules/lua/Makefile \
+		submodules/lua-cjson/Makefile \
+		submodules/rosie-lpeg/src/makefile \
+		submodules/lua-readline/Makefile
 
 $(submodules):
 	git submodule init
