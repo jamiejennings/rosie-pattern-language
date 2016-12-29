@@ -234,11 +234,11 @@ sniff: $(ROSIEBIN)
 	EXPECTED="This is Rosie $(shell head -1 $(BUILD_ROOT)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
-            echo "Rosie Pattern Engine installed successfully!"; \
+            echo "Rosie Pattern Engine built successfully!"; \
 	    if [ -z "$$BREW" ]; then \
-	      	    echo "    Use 'make install' to install binary in $(DESTDIR)"; \
+	      	    echo "    Use 'make install' to install into $(DESTDIR)"; \
 	      	    echo "    Use 'make test' to run the test suite"; \
-	      	    echo "    To run rosie from the installation directory, use ./bin/rosie"; \
+	      	    echo "    To run rosie from the build directory, use ./bin/rosie"; \
 	            echo "    Try this example, and look for color text output: rosie basic.matchall /etc/resolv.conf"; \
 		    echo "";\
 	    fi; \
