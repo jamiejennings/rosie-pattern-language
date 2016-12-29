@@ -109,7 +109,7 @@ windows:
 submodules: submodules/argparse/src \
 		submodules/lua/Makefile \
 		submodules/lua-cjson/Makefile \
-		submodules/rosie-lpeg/src/Makefile \
+		submodules/rosie-lpeg/src/makefile \
 		submodules/lua-readline/Makefile
 
 $(submodules):
