@@ -6,8 +6,15 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
---function assert(x) return x; end
+-- This script is run in the lua interpreter by a shell script.  The script supplies the first two
+-- args (ROSIE_HOME and ROSIE_DEV) before user-supplied Rosie CLI args.
 
+SCRIPTNAME = arg[0]
+ROSIE_HOME = arg[1]
+ROSIE_DEV = arg[2]
+
+-- Shift args by 2
+arg[1]=nil; arg[2]=nil; local i=3; while arg[i] do arg[i-2] = arg[i]; arg[i]=nil; i=i+1; end
 
 -- Notes:
 --
@@ -23,27 +30,23 @@ if not ROSIE_HOME then
 	io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
 	os.exit(-2)
 end
--- if not SCRIPTNAME then
---    io.stderr:write("Installation error: Lua variable SCRIPTNAME is not defined\n")
---    os.exit(-2)
--- end
 
 -- This will be set by bootstrap.lua to be the value of ROSIE_HOME provided by the start script
 -- (as opposed to the env variable $ROSIE_HOME).
-SCRIPT_ROSIE_HOME=false;
+--SCRIPT_ROSIE_HOME=false;
 
 -- Start the Rosie Pattern Engine
 
-local thunk, msg = loadfile(ROSIE_HOME .. "/bin/bootstrap.luac")
+local thunk, msg = loadfile(ROSIE_HOME .. "/src/init.lua") -- FIXME
 if not thunk then
 	io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
-	dofile(ROSIE_HOME.."/src/core/bootstrap.lua")
+	dofile(ROSIE_HOME.."/src/core/init.lua")
 else
 	local ok, msg = pcall(thunk)
 	if not ok then
 		io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
 		io.stderr:write(msg, "\n")
-		dofile(ROSIE_HOME.."/src/core/bootstrap.lua")
+		dofile(ROSIE_HOME.."/src/core/init.lua")
 	end
 end
 
@@ -80,8 +83,8 @@ function print_rosie_info()
 	print("  HOSTTYPE = " .. (os.getenv("HOSTTYPE") or ""))
 	print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
 	print("Current invocation: ")
-	print("  current working directory = " .. (os.getenv("CWD") or ""))
-	print("  invocation command = " .. (SCRIPTNAME or ""))
+	print("  current working directory = " .. (os.getenv("PWD") or ""))
+--	print("  invocation command = " .. (SCRIPTNAME or ""))
 	print("  script value of Rosie home = " .. (os.getenv("ROSIE_SCRIPT_HOME") or "(not set???)"))
 	local env_var_msg = "  environment variable $ROSIE_HOME "
 	if env_ROSIE_HOME then

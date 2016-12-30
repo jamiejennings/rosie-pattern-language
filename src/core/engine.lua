@@ -6,23 +6,42 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+-- TODO: a module-aware version of strict.lua that works with _ENV and not _G
+--require "strict"
 
 ----------------------------------------------------------------------------------------
 -- Engine
 ----------------------------------------------------------------------------------------
--- A matching engine is a Lua object that has state as follows:
---   env: environment of defined patterns
---   config: various configuration settings, including the default pattern to match
---   id: a string meant to be a unique identifier (currently unique in the Lua state)
+-- A matching engine is a stateful Lua object instantiated in order to match patterns
+-- against input data.  An engine is the primary abstraction for using Rosie
+-- programmatically in Lua.
+--
+-- engine.new(optional_name) creates a new engine with only a "base" environment
+-- e:name(optional_name) sets or returns the engine name
+-- e:id() returns the engine id
+-- e:load(rpl_string, type) compiles rpl_string in the current engine environment
+--   type can be "file", "manifest", or "rpl" and tells the engine how to interpret rpl_string
+--   N.B. the type argument will go away in a later tranche on the way to v1.0
+-- e:match(expression, input) compiles the string expression and applies it to input string
+-- e:eval(expression, input) like match, but generates a trace output
+-- e:grep(expression, input) like match, but compiles this instead: {!expression .}* expression+
+-- e:output(optional_formatter) sets or returns the formatter (a function)
+--   for convenience, an engine calls formatter on each successful match result
+-- e:env(optional_identifier) returns the definition of optional_identifier or the entire environment
+-- e:clear(optional_identifier) erases the definition of optional_identifier or the entire environment
 
+-- File processing routines are defined in match_file.lua and exposed separately.
+
+local engine_module = {}
+
+local json = require "cjson"
+local lpeg = require "lpeg"
+local recordtype = require "recordtype"
+local unspecified = recordtype.unspecified;
 local common = require "common"
 local compile = require "compile"
 local eval = require "eval"
-local json = require "cjson"
-local recordtype = require "recordtype"
-local unspecified = recordtype.unspecified;
 local co = require "color-output"
-local lpeg = require "lpeg"
 
 local engine = 
    recordtype.define(
@@ -231,4 +250,8 @@ engine.create_function =
       return _new(params)
    end
 
-return engine
+-- recordtype package defines a creator function that is named after the record type name
+engine_module.new = engine
+engine_module.is = engine.is
+
+return engine_module

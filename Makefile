@@ -38,14 +38,16 @@ ROSIED = $(DESTDIR)/lib/rosie
 # ROSIE_DOC will hold docs in html format
 ROSIE_DOC = $(DESTDIR)/share/doc
 # ROSIE_ROOT will hold rpl (source in rpl, compiled in pkg)
-ROSIE_DOC = $(DESTDIR)/share/rosie
+ROSIE_ROOT = $(DESTDIR)/share/rosie
+
+.PHONY: default
+default: $(PLATFORM)
 
 SUBMOD = submodules
 ROSIEBIN = $(BUILD_ROOT)/bin/rosie
 INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
 
-.PHONY: default
-default: $(PLATFORM)
+BUILD_LUA_PACKAGE = $(BUILD_ROOT)/rosie.lua
 
 ARGP_DIR = $(SUBMOD)/$(ARGPARSE)
 LUA_DIR = $(SUBMOD)/$(LUA)
@@ -55,6 +57,7 @@ READLINE_DIR = $(SUBMOD)/$(READLINE)
 
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
+INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
 
 ## ----------------------------------------------------------------------------- ##
 
@@ -157,7 +160,6 @@ luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua)) b
 .PHONY: compile
 compile: $(luaobjects)
 
-
 # The PHONY declaration below will force the creation of bin/rosie every time.  This is needed
 # only because the user may move the working directory.  When that happens, the user should
 # be able to run 'make' again to reconstruct a new bin/rosie script (which contains a
@@ -166,9 +168,12 @@ compile: $(luaobjects)
 $(ROSIEBIN):
 	@/usr/bin/env echo "Creating $(ROSIEBIN)"
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(ROSIEBIN)"
-	@/usr/bin/env echo -n "$(BUILD_ROOT)/src/run-rosie $(BUILD_ROOT)" >> "$(ROSIEBIN)"
+	@/usr/bin/env echo -n "exec $(BUILD_ROOT)/src/run-rosie $(BUILD_ROOT)" >> "$(ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(ROSIEBIN)"
 	@chmod 755 "$(ROSIEBIN)"
+	@/usr/bin/env echo "Creating $(BUILD_LUA_PACKAGE)"
+	@/usr/bin/env echo "local home =  \"$(BUILD_ROOT)\"" > "$(BUILD_LUA_PACKAGE)"
+	@cat "$(BUILD_ROOT)/src/rosie-package-template.lua" >> "$(BUILD_LUA_PACKAGE)"
 
 # See comment above re: ROSIEBIN
 .PHONY: $(INSTALL_ROSIEBIN)
@@ -176,10 +181,12 @@ $(INSTALL_ROSIEBIN):
 	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
 	mkdir -p `dirname "$(INSTALL_ROSIEBIN)"` "$(ROSIED)"/{bin,src}
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo -n "$(ROSIED)/src/run-rosie $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo -n "exec $(ROSIED)/src/run-rosie $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(INSTALL_ROSIEBIN)"
 	cp "$(BUILD_ROOT)"/src/run-rosie "$(ROSIED)"/src
 	@chmod 755 "$(INSTALL_ROSIEBIN)"
+#	@/usr/bin/env echo "Creating $(INSTALL_LUA_PACKAGE)"
+#	@/usr/bin/env echo "return dofile\(\"$(ROSIED)/src/core/init.lua\"\)" > "$(BUILD_LUA_PACKAGE)"
 
 # Install the lua interpreter
 .PHONY: install_lua
