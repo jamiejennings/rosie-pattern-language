@@ -30,14 +30,14 @@
 --   load_string: function: 0x7fc58cd1ca60, 
 --   load_file: function: 0x7fc58cd1c9c0, 
 --
--- engine:env(optional_identifier)
+-- + engine:lookup(optional_identifier)
 --   get_environment: function: 0x7fc58cd1a640, 
 --
--- engine:clear(optional_identifier)
+-- + engine:clear(optional_identifier)
 --   clear_environment: function: 0x7fc58cd19660, 
 --
--- engine:id()
--- engine:name(optional_name)
+-- + engine:id()
+-- + engine:name()
 --   inspect_engine: function: 0x7fc58cd194d0, 
 --
 -- engine:match(expression, input)
