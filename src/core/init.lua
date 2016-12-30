@@ -107,8 +107,8 @@ if value then ROSIE_ROOT = value; end
 BOOTSTRAP_COMPLETE = true
 
 
-print("\nContents of rosie:")
-for k,v in pairs(_ENV) do print(k,v); end; print()
+--print("\nContents of rosie:")
+--for k,v in pairs(_ENV) do print(k,v); end; print()
 
 
 return _ENV
