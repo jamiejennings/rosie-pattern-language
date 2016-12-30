@@ -33,15 +33,15 @@ module = {loaded = {}}
 module.loaded.math = math
 module.loaded.os = os
 
--- We intentionally redefine Lua's require
+-- We intentionally redefine Lua's require, and use it in Rosie source files.
 function require(name)
    return module.loaded[name] or error("Module " .. tostring(name) .. " not loaded")
 end
 
 function load_module(name, optional_subdir)
-   if ROSIE_DEV then io.write("Loading " .. name .. "... "); end
+   if VERBOSE then io.write("Loading " .. name .. "... "); end
    if module.loaded[name] then
-      if ROSIE_DEV then print("already loaded."); end
+      if VERBOSE then print("already loaded."); end
       return module.loaded[name]
    end
    optional_subdir = optional_subdir or "src/core"
@@ -56,7 +56,7 @@ function load_module(name, optional_subdir)
       end -- if DEV mode
    end -- if loadfile failed
    module.loaded[name] = thing()
-   if ROSIE_DEV then print("done."); end
+   if VERBOSE then print("done."); end
    return module.loaded[name]
 end
 
