@@ -9,12 +9,18 @@
 -- This script is run in the lua interpreter by a shell script.  The script supplies the first two
 -- args (ROSIE_HOME and ROSIE_DEV) before user-supplied Rosie CLI args.
 
-SCRIPTNAME = arg[0]
+require "table"
+
 ROSIE_HOME = arg[1]
-ROSIE_DEV = arg[2]
+ROSIE_DEV = (arg[2]=="true")
+-- Construct the entire command line using all the arg information available.  Would be nice to
+-- replace long paths with "ROSIE_HOME" but gsub doesn't take plain patterns.
+local i=0; while arg[i] do i=i-1; end; i=i+1
+ROSIE_COMMAND = table.concat(arg, " ", i, #arg)
 
 -- Shift args by 2
-arg[1]=nil; arg[2]=nil; local i=3; while arg[i] do arg[i-2] = arg[i]; arg[i]=nil; i=i+1; end
+table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
+--arg[1]=nil; arg[2]=nil; local i=3; while arg[i] do arg[i-2] = arg[i]; arg[i]=nil; i=i+1; end
 
 -- Notes:
 --
@@ -61,42 +67,7 @@ CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
 
 local function greeting()
-	io.stderr:write("This is Rosie " .. ROSIE_VERSION .. "\n")
-end
-
-function print_rosie_info()
-	-- Find the value of the environment variable "ROSIE_HOME", if it is defined
-	if not ((type(os)=="table") and (type(os.getenv)=="function")) then
-		error("Internal error: os functions unavailable; cannot use getenv to find ROSIE_HOME")
-	end
-	local ok, env_ROSIE_HOME = pcall(os.getenv, "ROSIE_HOME")
-	if not ok then
-		error("Internal error: call to os.getenv failed")
-	end
-
-	local rosie_home_message = ((SCRIPT_ROSIE_HOME and " (from environment variable $ROSIE_HOME)") or
-			" (provided by the program that initialized Rosie)")
-	print("Local installation information:")
-	print("  ROSIE_HOME = " .. ROSIE_HOME)
-	print("  ROSIE_VERSION = " .. ROSIE_VERSION)
-	print("  HOSTNAME = " .. (os.getenv("HOSTNAME") or ""))
-	print("  HOSTTYPE = " .. (os.getenv("HOSTTYPE") or ""))
-	print("  OSTYPE = " .. (os.getenv("OSTYPE") or ""))
-	print("Current invocation: ")
-	print("  current working directory = " .. (os.getenv("PWD") or ""))
---	print("  invocation command = " .. (SCRIPTNAME or ""))
-	print("  script value of Rosie home = " .. (os.getenv("ROSIE_SCRIPT_HOME") or "(not set???)"))
-	local env_var_msg = "  environment variable $ROSIE_HOME "
-	if env_ROSIE_HOME then
-		if env_ROSIE_HOME=="" then
-			env_var_msg = env_var_msg .. "is set to the empty string"
-		else
-			env_var_msg = env_var_msg .. "= " .. tostring(env_ROSIE_HOME)
-		end
-	else
-		env_var_msg = env_var_msg .. "is not set"
-	end
-	print(env_var_msg)
+	io.write("This is Rosie " .. ROSIE_VERSION .. "\n")
 end
 
 function setup_engine(args)
@@ -358,56 +329,38 @@ end
 
 
 function run(args)
-	if args.command == "info" then
-		print_rosie_info()
-		os.exit()
-	end
-
-   if OPTION["-verbose"] then
-      QUIET = false;
-   else
-      QUIET = true;
-   end
-
-	if args.command == "test" then
-	   -- lightweight pattern test framework does a custom setup
-	   setup_and_run_tests(args);
-	end
-	
-	setup_engine(args);
-
-	if args.command == "patterns" then
-		if not args.verbose then greeting(); end
-		local env = lapi.get_environment(CL_ENGINE)
-		common.print_env(env, args.filter)
-		os.exit()
-	end
-
-   if not QUIET then greeting(); end
-
-   setup_engine();
-
-   if OPTION["-patterns"] then
-      if QUIET then greeting(); end
-      local env = lapi.get_environment(CL_ENGINE)
-      common.print_env(env)
+   if args.command == "info" then
+      common.print_rosie_info()
       os.exit()
    end
 
-   if OPTION["-repl"] then
-      if QUIET then greeting(); end
-      repl(CL_ENGINE)
-   else
-      if not opt_pattern then print("Rosie CLI warning: missing pattern argument"); end
+   if args.verbose then greeting(); end
 
-      if opt_filenames then
-	 for _,fn in ipairs(opt_filenames) do
-	    if (not QUIET) or (#opt_filenames>1) then print("\n" .. fn .. ":"); end
-	    process_pattern_against_file(fn)
-	 end -- for each file
-      else
-	 print("Rosie CLI warning: missing filename arguments")
+   if args.command == "test" then
+      -- lightweight pattern test framework does a custom setup
+      setup_and_run_tests(args);
+   end
+   
+   setup_engine(args);
+
+   if args.command == "patterns" then
+      if not args.verbose then greeting(); end
+      local env = lapi.get_environment(CL_ENGINE)
+      common.print_env(env, args.filter)
+      os.exit()
+   end
+
+   if args.command == "repl" then
+      if not args.verbose then greeting(); end
+      repl_mod.repl(CL_ENGINE)
+      os.exit()
+   end
+
+   for _,fn in ipairs(args.filename) do
+      if (args.verbose) or (#args.filename > 1) then
+	 print("\n" .. fn .. ":")
       end
+      process_pattern_against_file(args, fn)
    end
 end -- function run
 
