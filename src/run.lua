@@ -66,6 +66,22 @@ local repl_mod = require("repl")
 CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
 
+local function print_rosie_info()
+   local function printf(fmt, ...)
+      print(string.format(fmt, ...))
+   end
+   local fmt = "  %s = %s"
+   printf(fmt, "ROSIE_HOME", ROSIE_HOME)
+   printf(fmt, "ROSIE_VERSION", ROSIE_VERSION)
+   printf(fmt, "ROSIE_DEV", tostring(ROSIE_DEV))
+   printf(fmt, "HOSTNAME", (os.getenv("HOSTNAME") or ""))
+   printf(fmt, "HOSTTYPE", (os.getenv("HOSTTYPE") or ""))
+   printf(fmt, "OSTYPE", (os.getenv("OSTYPE") or ""))
+   printf(fmt, "current working directory", (os.getenv("PWD") or ""))
+   printf(fmt, "invocation command", ROSIE_COMMAND or "")
+end
+
+
 local function greeting()
 	io.write("This is Rosie " .. ROSIE_VERSION .. "\n")
 end
@@ -258,7 +274,8 @@ end
 
 function run(args)
    if args.command == "info" then
-      common.print_rosie_info()
+      greeting()
+      print_rosie_info()
       os.exit()
    end
 
