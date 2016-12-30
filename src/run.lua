@@ -221,12 +221,12 @@ function setup_and_run_tests(args)
 	    os.exit(-1)
 	 end
       end
-      local function test_accepts_exp(q)
+      local function test_accepts_exp(exp, q)
 	 local res, pos = lapi.match(CL_ENGINE, exp, q)
 	 if pos ~= 0 then return false end
 	 return true
       end
-      local function test_rejects_exp(q)
+      local function test_rejects_exp(exp, q)
 	 local res, pos = lapi.match(CL_ENGINE, exp, q)
 	 if pos == 0 then return false end
 	 return true
@@ -242,8 +242,9 @@ function setup_and_run_tests(args)
       lapi.load_string(CL_ENGINE, test_patterns)
       local failures = 0
       for _,p in pairs(test_lines) do
-	 set_config_exp("test_line")
-	 local m, left = lapi.match(CL_ENGINE, "test_line", p)
+	 local exp = "test_line"
+	 set_config_exp(exp)
+	 local m, left = lapi.match(CL_ENGINE, exp, p)
 	 -- FIXME: need to test for failure to match
 	 local name = m.test_line.subs[1].identifier.text
 	 set_config_exp(name)
@@ -253,7 +254,7 @@ function setup_and_run_tests(args)
 	 -- if we get here we have at least one per test_line expression rule
 	 while literals <= #m.test_line.subs do
 	    local teststr = m.test_line.subs[literals].literal.text
-	    if not testfunc(teststr) then
+	    if not testfunc(name, teststr) then
 	       print("FAIL: " .. name .. " did not " .. testtype:sub(1,-2) .. " " .. teststr)
 	       failures = failures + 1
 	    end
