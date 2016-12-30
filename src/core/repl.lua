@@ -71,7 +71,7 @@ function repl.repl(en)
    if s~="" then					   -- blank line input
       local ok, msg = lapi.configure_engine(repl_engine, {expression="input", encode=false})
       if not ok then io.write("Repl internal error: ", msg); os.exit(-6); end
-      local m, left = lapi.match(repl_engine, s)
+      local m, left = lapi.match(repl_engine, "input", s)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
       else
@@ -149,7 +149,7 @@ function repl.repl(en)
 		  assert(ename=="args")
 		  local ok, msg = lapi.configure_engine(repl_engine, {expression='parsed_args'})
 		  if not ok then io.write("Repl internal error: ", msg); os.exit(-6); end
-		  local m, msg = lapi.match(repl_engine, argtext)
+		  local m, msg = lapi.match(repl_engine, "parsed_args", argtext)
 		  assert(next(m)=="parsed_args")
 		  local msubs = m and m.parsed_args.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
@@ -174,7 +174,7 @@ function repl.repl(en)
 			if not ok then
 			   io.write(msg, "\n");		    -- syntax and compile errors
 			else
-			   local m, left = lapi.match(en, input_text)
+			   local m, left = lapi.match(en, exp, input_text)
 			   if cname=="match" then
 			      if debug and (not m) then
 				 local match, leftover, trace = lapi.eval(en, input_text)

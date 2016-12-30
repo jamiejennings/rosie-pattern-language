@@ -209,12 +209,12 @@ function setup_and_run_tests(args)
 	 end
       end
       local function test_accepts_exp(q)
-	 local res, pos = lapi.match(CL_ENGINE, q)
+	 local res, pos = lapi.match(CL_ENGINE, exp, q)
 	 if pos ~= 0 then return false end
 	 return true
       end
       local function test_rejects_exp(q)
-	 local res, pos = lapi.match(CL_ENGINE, q)
+	 local res, pos = lapi.match(CL_ENGINE, exp, q)
 	 if pos == 0 then return false end
 	 return true
       end
@@ -230,7 +230,7 @@ function setup_and_run_tests(args)
       local failures = 0
       for _,p in pairs(test_lines) do
 	 set_config_exp("test_line")
-	 local m, left = lapi.match(CL_ENGINE, p)
+	 local m, left = lapi.match(CL_ENGINE, "test_line", p)
 	 -- FIXME: need to test for failure to match
 	 local name = m.test_line.subs[1].identifier.text
 	 set_config_exp(name)

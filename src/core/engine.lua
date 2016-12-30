@@ -58,6 +58,9 @@ local engine =
       lookup=false;
       clear=false;
       name=false;
+      output=false;
+
+      match_=false;
 
       match=false;
       eval=false;
@@ -138,13 +141,25 @@ local function engine_inspect(e)
    return {name=e._name, expression=e.expression, encode=e.encode, id=e._id}
 end
 
+local function engine_match_(e, pat, input, start)
+   local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
+   if result then
+      return (e.encode_function(result)), nextpos;
+   else
+      return false, 1;
+   end
+end
+
+-- Maybe memoize expression?  But must invalidate the cache if env has changed.
 -- returns matches, nextpos
-local function engine_match(e, input, start)
+local function engine_match(e, expression, input, start)
    start = start or 1
-   local peg = (e.pattern and e.pattern.peg) or engine_error(e, "No pattern expression set")
-   local result, nextpos = (peg * lpeg.Cp()):match(input, start)
-   if result then return (e.encode_function(result)), nextpos;
-   else return false, 1; end
+   if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
+   if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
+--   print("In engine_match, about to compile: " .. expression .. "\nto match: " .. input)
+   local pat, msg = compile.compile_match_expression(expression, e.env)
+   if not pat then error(msg); end
+   return engine_match_(e, pat, input, start)
 end
 
 -- returns matches, nextpos, trace
@@ -220,6 +235,12 @@ local function clear_environment(en, identifier)
    end
 end
 
+local function get_set_encoder_function(en, f)
+   if not f then return en.encode_function; end
+   if type(f)~="function" then error("Output encoder not a function: " .. tostring(f)); end
+   en.encode_function = f
+end
+
 engine.create_function =
    function(_new, name, initial_env)
       initial_env = initial_env or common.new_env()
@@ -237,6 +258,9 @@ engine.create_function =
 		      clear=clear_environment,
 		      id=function(en) return en._id; end,
 		      name=function(en) return en._name; end,
+		      output=get_set_encoder_function,
+
+		      match_=engine_match_,
 
 		      match=engine_match,
 		      eval=engine_eval,
