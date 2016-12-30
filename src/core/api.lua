@@ -22,7 +22,7 @@ default_engine = nil
 
 ----------------------------------------------------------------------------------------
 
-local api = {VERSION = ROSIE_VERSION,		    -- code revision level
+local api = {ROSIE_VERSION = ROSIE_VERSION,	    -- code revision level
 	     ROSIE_HOME = ROSIE_HOME,		    -- install directory
              HOSTNAME = os.getenv("HOSTNAME"),
              HOSTTYPE = os.getenv("HOSTTYPE"),
