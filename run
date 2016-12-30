@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-echo This command has been deprecated.  Please use bin/rosie to run the Rosie Pattern Engine.
