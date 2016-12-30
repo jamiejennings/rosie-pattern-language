@@ -33,7 +33,7 @@ assert(manifest_engine:configure({expression="line", encode=false}))
 
 local function process_manifest_line(en, line, manifest_path)
    -- always return a success code and a TABLE of messages
-   local m = manifest_engine:match(line)
+   local m = manifest_engine:match("line", line)
    assert(type(m)=="table", "Uncaught error processing manifest file!")
    local name, pos, text, subs = common.decode_match(m)
    if subs then

@@ -124,8 +124,8 @@ end
 -- will be interrupted with a call to error().  The external API does more argument
 -- checking. 
 
-function lapi.match(en, input_text, start)
-   local result, nextpos = en:match(input_text, start)
+function lapi.match(en, expression, input_text, start)
+   local result, nextpos = en:match(expression, input_text, start)
    return result, (#input_text - nextpos + 1)
 end
 
