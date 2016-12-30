@@ -19,16 +19,20 @@
 -- + rosie.engine.new(optional_name)
 --   new_engine: function: 0x7fc58cd196a0, 
 --
--- rosie.file.match(engine, expression, infile, outfile, errfile)
--- rosie.file.eval(engine, expression, infile, outfile, errfile)
+-- + rosie.file.match(engine, expression, infile, outfile, errfile)
+-- + rosie.file.eval(engine, expression, infile, outfile, errfile)
 -- rosie.file.grep(engine, expression, infile, outfile, errfile)
 --   eval_file: function: 0x7fc58cd1c8d0, 
 --   match_file: function: 0x7fc58cd1c890}
 --
--- engine:load(string, type)
+-- rosie.temp.load_manifest
+-- rosie.temp.load_file
 --   load_manifest: function: 0x7fc58cd1c970, 
---   load_string: function: 0x7fc58cd1ca60, 
 --   load_file: function: 0x7fc58cd1c9c0, 
+--
+--
+-- engine:load(string, type)
+--   load_string: function: 0x7fc58cd1ca60, 
 --
 -- + engine:lookup(optional_identifier)
 --   get_environment: function: 0x7fc58cd1a640, 
@@ -49,7 +53,7 @@
 -- engine:grep(expression, input)
 --   set_match_exp_grep_TEMPORARY: function: 0x7fc58cd1c8f0, 
 --
--- engine:output(formatter)
+-- + engine:output(formatter)
 --   configure_engine: function: 0x7fc58cd1cab0, 
 
 ----------------------------------------------------------------------------------------
