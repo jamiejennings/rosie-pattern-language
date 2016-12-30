@@ -112,7 +112,7 @@ local already_warned = {}
 function co.color(key)
    local c = co.colormap[key]
    if not c then
-      if not QUIET and not already_warned[key] then
+      if VERBOSE and not already_warned[key] then
 	 io.stderr:write("Warning: No color defined in color map for object of type: '",
 			 tostring(key),
 			 "'\n");

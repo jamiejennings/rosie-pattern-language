@@ -7,39 +7,33 @@
 ---- AUTHOR: Jamie A. Jennings
 
 -- This script is run in the lua interpreter by a shell script.  The script supplies the first two
--- args (ROSIE_HOME and ROSIE_DEV) before user-supplied Rosie CLI args.
-
-require "table"
+-- args (ROSIE_HOME and ROSIE_DEV) before the user-supplied Rosie CLI args.  ROSIE_HOME is the
+-- full path to a Rosie install directory, and ROSIE_DEV is the string "true" if the CLI was
+-- launched in "development mode", which drops into a Lua repl after loading Rosie:
+--     "-D" is an 'undocumented' command line switch which, when it appears as the first command
+--     line argument to the Rosie run script, will launch Rosie in development mode.  The code
+--     below does not need to process that switch.
 
 ROSIE_HOME = arg[1]
 ROSIE_DEV = (arg[2]=="true")
--- Construct the entire command line using all the arg information available.  Would be nice to
--- replace long paths with "ROSIE_HOME" but gsub doesn't take plain patterns.
-local i=0; while arg[i] do i=i-1; end; i=i+1
-ROSIE_COMMAND = table.concat(arg, " ", i, #arg)
-
--- Shift args by 2
-table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
---arg[1]=nil; arg[2]=nil; local i=3; while arg[i] do arg[i-2] = arg[i]; arg[i]=nil; i=i+1; end
-
--- Notes:
---
--- This lua script must be called with the variable ROSIE_HOME set to be the full path of the
--- Rosie installation (not a relative path such as one starting with . or ..), and SCRIPTNAME set
--- to arg[0] of the shell script that invoked this code.
---
--- "-D" is an 'undocumented' command line switch which, when it appears as the first command line
--- argument to the Rosie run script, will launch Rosie in development mode.  The code below does
--- not need to process that switch.
 
 if not ROSIE_HOME then
 	io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
 	os.exit(-2)
 end
 
--- This will be set by bootstrap.lua to be the value of ROSIE_HOME provided by the start script
--- (as opposed to the env variable $ROSIE_HOME).
---SCRIPT_ROSIE_HOME=false;
+-- Reconstruct the command line using all the arg information available.  For readability, we
+-- replace instances of ROSIE_HOME with the string "ROSIE_HOME" at the start of each arg.
+local s=0; while arg[s] do s=s-1; end; s=s+1	                     -- Find first arg
+local function munge_arg(a)                                          -- Replace
+   local s, e = a:find(ROSIE_HOME, 1, true)
+   if s then return "ROSIE_HOME" .. a:sub(e+1); else return a; end
+end
+local str=""; for i=s,#arg do str=str..munge_arg(arg[i]).." "; end   -- Assemble string
+ROSIE_COMMAND = str:sub(1,-1)                                        -- Remove trailing space
+
+-- Shift args by 2, to remove ROSIE_HOME and ROSIE_DEV
+table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 
 -- Start the Rosie Pattern Engine
 
@@ -70,15 +64,8 @@ local function print_rosie_info()
    local function printf(fmt, ...)
       print(string.format(fmt, ...))
    end
-   local fmt = "  %s = %s"
-   printf(fmt, "ROSIE_HOME", ROSIE_HOME)
-   printf(fmt, "ROSIE_VERSION", ROSIE_VERSION)
-   printf(fmt, "ROSIE_DEV", tostring(ROSIE_DEV))
-   printf(fmt, "HOSTNAME", (os.getenv("HOSTNAME") or ""))
-   printf(fmt, "HOSTTYPE", (os.getenv("HOSTTYPE") or ""))
-   printf(fmt, "OSTYPE", (os.getenv("OSTYPE") or ""))
-   printf(fmt, "current working directory", (os.getenv("PWD") or ""))
-   printf(fmt, "invocation command", ROSIE_COMMAND or "")
+   local fmt = "%24s = %s"
+   for _,info in ipairs(ROSIE_INFO) do printf(fmt, info.name, info.value); end
 end
 
 
@@ -86,76 +73,15 @@ local function greeting()
 	io.write("This is Rosie " .. ROSIE_VERSION .. "\n")
 end
 
+-- global
+VERBOSE = false;
+
 function setup_engine(args)
-	-- (1a) Load the manifest
-	if args.manifest then
-		if args.verbose then
-			io.stdout:write("Compiling files listed in manifest ", args.manifest, "\n")
-		end
-		local success, messages = lapi.load_manifest(CL_ENGINE, args.manifest)
-		if not success then
-			for _,msg in ipairs(messages) do
-				if msg then
-					io.stdout:write(msg, "\n")
-				end
-			end
-			os.exit(-4)
-		end
-	end
-
-	-- (1b) Load an rpl file
-	if args.rpls then
-		for _,file in pairs(args.rpls) do
-			if args.verbose then
-				io.stdout:write("Compiling additional file ", file, "\n")
-			end
-			local success, msg = lapi.load_file(CL_ENGINE, file)
-			if not success then
-				io.stdout:write(msg, "\n")
-				os.exit(-4)
-			end
-		end
-	end
-
-	-- (1c) Load an rpl string from the command line
-	if args.statements then
-		for _,stm in pairs(args.statements) do
-			if args.verbose then
-				io.stdout:write(string.format("Compiling additional rpl code %q\n", stm))
-			end
-			local success, msg = lapi.load_string(CL_ENGINE, stm)
-			if not success then
-				io.stdout:write(msg, "\n")
-				os.exit(-4)
-			end
-		end
-	end
-
-	-- (2) Compile the expression
-	if args.pattern then
-		local success, msg
-		if args.grep then
-			success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, args.pattern, "json")
-		else
-			success, msg = lapi.configure_engine(CL_ENGINE, {expression=args.pattern, encode="json"})
-		end
-		if not success then
-			io.write(msg, "\n")
-			os.exit(-1);
-		end
-	end
-
-function help()
-   greeting()
-   print("Help:")
-   print(usage_message)
-   print()
-   local line
-   for _, cmd in ipairs(valid_options) do
-      if list.member(cmd, options_without_args) then
-	 line = string.format("%-18s %s", cmd, help_messages[cmd][1])
-      else
-	 line = string.format("%-18s %s", cmd .. " <arg>", help_messages[cmd][1])
+   -- (1a) Load the manifest
+   if args.manifest then
+      if args.verbose then
+	 VERBOSE = true;
+	 io.stdout:write("Compiling files listed in manifest ", args.manifest, "\n")
       end
       print(line)
       for i=2,#help_messages[cmd] do
