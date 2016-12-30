@@ -87,6 +87,8 @@ grep = load_module("grep")
 lapi = load_module("lapi");
 api = load_module("api")
 
+process_input_file = load_module("process_input_file")
+
 argparse = load_module("argparse", "submodules/argparse/src") -- FIXME
 repl = load_module("repl")
 

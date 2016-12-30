@@ -37,16 +37,17 @@ table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 
 -- Start the Rosie Pattern Engine
 
+local rosie
 local thunk, msg = loadfile(ROSIE_HOME .. "/src/init.lua") -- FIXME
 if not thunk then
 	io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
-	dofile(ROSIE_HOME.."/src/core/init.lua")
+	rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
 else
-	local ok, msg = pcall(thunk)
-	if not ok then
+	local rosie, msg = pcall(thunk)
+	if not rosie then
 		io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
 		io.stderr:write(msg, "\n")
-		dofile(ROSIE_HOME.."/src/core/init.lua")
+		rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
 	end
 end
 
@@ -149,29 +150,31 @@ function setup_engine()
    end
 end
 
-function process_pattern_against_file(infilename)
-   -- (3) Set up the input, output and error parameters
-   if infilename=="-" then infilename = ""; end	    -- stdin
-   outfilename = ""				    -- stdout
-   errfilename = "/dev/null"
-   if OPTION["-all"] then errfilename = ""; end	    -- stderr
+infilename, outfilename, errfilename = nil, nil, nil
 
-   -- (4) Set up what kind of encoding we want done on the output
-   local encode = OPTION["-encode"] or "color"
-   local success, msg = lapi.configure_engine(CL_ENGINE, {encode=encode})
-   if not success then io.write("Engine configuration error: ", msg, "\n"); os.exit(-1); end
+function process_pattern_against_file(args, infilename)
+	-- (3) Set up the input, output and error parameters
+	if infilename=="-" then infilename = ""; end	    -- stdin
+	outfilename = ""				    -- stdout
+	errfilename = "/dev/null"
+	if args.all then errfilename = ""; end	            -- stderr
 
-   -- (5) Iterate through the lines in the input file
-   local match_function = lapi.match_file
-   if opt_eval then match_function = lapi.eval_file; end
-   local cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename, OPTION["-wholefile"])
-   if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
+	-- (4) Set up what kind of encoding we want done on the output
+	local encode = args.encode -- default is color
+	local success, msg = lapi.configure_engine(CL_ENGINE, {encode=encode})
+	if not success then io.write("Engine configuration error: ", msg, "\n"); os.exit(-1); end
 
-   -- (6) Print summary
-   if not QUIET then
-      local fmt = "Rosie: %d input items processed (%d matches, %d items unmatched)\n"
-      io.stderr:write(string.format(fmt, cin, cout, cerr))
-   end
+	-- (5) Iterate through the lines in the input file
+	local match_function = rosie.file.match
+	if args.eval then match_function = rosie.file.eval; end
+	local cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename, args.wholefile)--OPTION["-wholefile"])
+	if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
+
+	-- (6) Print summary
+	if args.verbose then
+		local fmt = "Rosie: %d input items processed (%d matches, %d items unmatched)\n"
+		io.stderr:write(string.format(fmt, cin, cout, cerr))
+	end
 end
 
 function setup_and_run_tests(args)

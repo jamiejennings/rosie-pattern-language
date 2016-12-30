@@ -145,8 +145,8 @@ ROSIE_INFO = {
 -- Build the rosie module as seen by the Lua client
 ----------------------------------------------------------------------------------------
 local file_functions = {
-   match = engine.match_file,
-   eval = engine.eval_file,
+   match = process_input_file.match,
+   eval = process_input_file.eval,
    grep = function(...) error("rosie.file.grep not implemented"); end
 }
 
