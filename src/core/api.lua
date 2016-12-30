@@ -103,7 +103,7 @@ api.info = api_wrap(info, "object")
 
 local function initialize()
    if default_engine then error("Engine already created", 0); end
-   default_engine = engine("<anonymous>")
+   default_engine = engine.new("<anonymous>")
    return default_engine.id			    -- may be useful for client-side logging?
 end
 

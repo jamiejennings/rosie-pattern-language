@@ -1,35 +1,26 @@
 #!/usr/bin/env bash
+# 
+# Run the Rosie CLI
 
-# There was once a spurious carriage return in this file (^M, \r,
-# 0x0D).  Or perhaps GitHub for some mysterious reason inserted one.
-# I have enabled git's auto crlf handling with:
-#
-#              git config --global core.autocrlf input
-#
-# This comment is here to force an update of the file on GitHub.
+ROSIE_SCRIPT_HOME="{$1}"
 
-if [[ -z "${1}" ]]; then
+if [[ -z ROSIE_SCRIPT_HOME ]]; then
     echo "Error: missing required first argument (Rosie installation directory)"
+    echo "This script should NOT be invoked directly.  It is exec\'d by bin/rosie."
     echo "Note that this argument, while required, will be ignored if \$ROSIE_HOME is set"
     exit -1
 fi
 
+
 if [[ -n "${ROSIE_HOME}" ]]; then
-    # echo ROSIE_HOME is: ${ROSIE_HOME}
-    # echo Ignoring first arg, whose value is: ${1}
     home=${ROSIE_HOME}
 else
-    # echo ROSIE_HOME is empty
-    # echo Using first arg, whose value is: ${1}
     home=${1}
 fi
-
-ROSIE_SCRIPT_HOME="${1}"
 shift
 executable="${home}/bin/lua"
-cmd="$(ps -o args= $PPID)"
 
-#echo Testing to see if ${home} is a Rosie installation directory
+# Test to see if ${home} is a Rosie installation directory
 if [[ ! -d "${home}" ]]; then
     echo Error: ${home} is not a directory
     if [[ -z ${ROSIE_HOME} ]]; then
@@ -38,18 +29,19 @@ if [[ ! -d "${home}" ]]; then
 	echo "Try uninstalling and reinstalling rosie."
     else
 	echo "This directory is the value of the environment variable \$ROSIE_HOME,"
-	echo "which should point to a rosie installation."
+	echo "which should point to a rosie installation, but it does not."
 	echo "Try 'unset ROSIE_HOME' to use the default system installation of rosie."
     fi
     exit -1
 elif [[ ! -x "${executable}" ]]; then
     echo Error: ${executable} not found or not executable
+    echo "The directory ${home} does not appear to contain a rosie installation."
     exit -1
 fi
 
-#
+
 # -D is an 'undocumented' command line option that launches Rosie in development mode
-#
+
 i=""
 dev="false"
 if [[ "$1" = "-D" ]]; then
@@ -58,16 +50,17 @@ if [[ "$1" = "-D" ]]; then
    shift
 fi
 
+export ROSIE_COMMAND="$(ps -o args= $PPID)"
 export ROSIE_HOME
 export ROSIE_SCRIPT_HOME
 export HOSTNAME
 export HOSTTYPE
 export OSTYPE
-export CWD=`pwd`
+export PWD
 
 # Lua's "long string" syntax is needed because command line args could contain single and/or double quotes.
 # Since RPL contains expressions delimited by [[ ... ]], we use Lua's [====[ ... ]====] for scriptname.
 # The need to wrap the args will be removed or implemented more robustly before or in Rosie Version 1.0.
-${executable} $i -e "ROSIE_HOME=[[${home}]]; SCRIPTNAME=[====[${cmd}]====]; ROSIE_DEV=[[${dev}]];" -- "${home}/src/run.lua" "$@"
+${executable} $i "${home}/src/run.lua" "${home}" "${dev}" "$@"
 
 

@@ -25,7 +25,7 @@ local mpats = [==[
       line = comment / (path comment?) / blank
    ]==]
 
-local manifest_engine = engine("manifest")
+local manifest_engine = engine.new("manifest")
 local ok, msg = compile.compile_source(mpats, manifest_engine.env)
 if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
 assert(pattern.is(manifest_engine.env.line))
