@@ -393,17 +393,12 @@ function common.new_env(base_env)
    return env
 end
 
+-- return a flat representation of env (recall that environments are nested)
 function common.flatten_env(env, output_table)
    output_table = output_table or {}
-   local kind, color
    for item, value in pairs(env) do
-      -- environments are nested, so we if already have a binding for 'item', we don't want to
-      -- overwrite it with one from a parent environment:
-      if not output_table[item] then
-	 kind = (value.alias and "alias") or "definition"
-	 if (co and co.colormap) then color = co.colormap[item] or ""; else color = ""; end;
-	 output_table[item] = {type=kind, color=color}
-      end
+      -- if already seen, do not overwrite with value from parent env
+      if not output_table[item] then output_table[item] = value; end
    end
    local mt = getmetatable(env)
    if mt and mt.__index then

@@ -64,10 +64,9 @@ local function print_rosie_info()
    local function printf(fmt, ...)
       print(string.format(fmt, ...))
    end
-   local fmt = "%24s = %s"
+   local fmt = "%15s = %s"
    for _,info in ipairs(ROSIE_INFO) do printf(fmt, info.name, info.value); end
 end
-
 
 local function greeting()
 	io.write("This is Rosie " .. ROSIE_VERSION .. "\n")
