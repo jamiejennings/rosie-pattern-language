@@ -31,8 +31,6 @@
 -- Engines (now) know nothing about files.  File processing routines are defined in
 -- process_input_file.lua and exposed via the rosie module.
 
-process_input_file = load_module("process_input_file")		    -- TEMPORARY
-
 local engine_module = {}
 
 local json = require "cjson"
@@ -60,9 +58,6 @@ local engine =
       lookup=false;
       clear=false;
       name=false;
-
-      match_file=false;
-      eval_file=false;
 
       match=false;
       eval=false;
@@ -143,6 +138,7 @@ local function engine_inspect(e)
    return {name=e._name, expression=e.expression, encode=e.encode, id=e._id}
 end
 
+-- returns matches, nextpos
 local function engine_match(e, input, start)
    start = start or 1
    local peg = (e.pattern and e.pattern.peg) or engine_error(e, "No pattern expression set")
@@ -155,6 +151,28 @@ end
 local function engine_eval(e, input, start)
    local pat = e.pattern or engine_error(e, "No pattern expression set")
    return eval.eval(pat, input, start, e.env, false)
+end
+
+-- Having a grep function is a convenience.  It doesn't need to be here, but it's parallel in
+-- function to match and eval, plus until we implement macros/functions, it saves users the typing
+-- needed to do it for themselves.
+-- returns matches, nextpos
+local function engine_grep(e, input, start)
+   -- start = start or 1
+   -- local peg = (e.pattern and e.pattern.peg) or engine_error(e, "No pattern expression set")
+
+   -- local pat, msg = grep.pattern_EXP_to_grep_pattern(pattern_exp, en.env);
+   -- if pattern.is(pat) then
+   --    en.expression = "grep(" .. pattern_exp .. ")"
+   --    en.pattern = pat
+   --    return lapi.configure_engine(en, {encode=encoder_name})
+   -- end
+
+
+   
+   -- local result, nextpos = (peg * lpeg.Cp()):match(input, start)
+   -- if result then return (e.encode_function(result)), nextpos;
+   -- else return false, 1; end
 end
 
 ----------------------------------------------------------------------------------------
@@ -221,9 +239,7 @@ engine.create_function =
 		      name=function(en) return en._name; end,
 
 		      match=engine_match,
-		      match_file=process_input_file.engine_match_file,
 		      eval=engine_eval,
-		      eval_file=process_input_file.engine_eval_file,
 		      configure=engine_configure,
 		      inspect=engine_inspect}
       local idstring = tostring(params):match("0x(.*)") or "id/err"

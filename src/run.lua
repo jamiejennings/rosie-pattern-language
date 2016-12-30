@@ -37,16 +37,17 @@ table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 
 -- Start the Rosie Pattern Engine
 
+local rosie
 local thunk, msg = loadfile(ROSIE_HOME .. "/src/init.lua") -- FIXME
 if not thunk then
 	io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
-	dofile(ROSIE_HOME.."/src/core/init.lua")
+	rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
 else
-	local ok, msg = pcall(thunk)
-	if not ok then
+	local rosie, msg = pcall(thunk)
+	if not rosie then
 		io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
 		io.stderr:write(msg, "\n")
-		dofile(ROSIE_HOME.."/src/core/init.lua")
+		rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
 	end
 end
 
@@ -151,8 +152,8 @@ function process_pattern_against_file(args, infilename)
 	if not success then io.write("Engine configuration error: ", msg, "\n"); os.exit(-1); end
 
 	-- (5) Iterate through the lines in the input file
-	local match_function = lapi.match_file
-	if args.eval then match_function = lapi.eval_file; end
+	local match_function = rosie.file.match
+	if args.eval then match_function = rosie.file.eval; end
 	local cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename, args.wholefile)--OPTION["-wholefile"])
 	if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
 
