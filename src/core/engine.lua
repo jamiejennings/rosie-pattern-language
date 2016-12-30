@@ -17,11 +17,9 @@
 -- programmatically in Lua.
 --
 -- engine.new(optional_name) creates a new engine with only a "base" environment
--- e:name(optional_name) sets or returns the engine name
+-- e:name() returns the engine name
 -- e:id() returns the engine id
--- e:load(rpl_string, type) compiles rpl_string in the current engine environment
---   type can be "file", "manifest", or "rpl" and tells the engine how to interpret rpl_string
---   N.B. the type argument will go away in a later tranche on the way to v1.0
+-- e:load(rpl_string) compiles rpl_string in the current engine environment
 -- e:match(expression, input) compiles the string expression and applies it to input string
 -- e:eval(expression, input) like match, but generates a trace output
 -- e:grep(expression, input) like match, but compiles this instead: {!expression .}* expression+
@@ -30,7 +28,10 @@
 -- e:env(optional_identifier) returns the definition of optional_identifier or the entire environment
 -- e:clear(optional_identifier) erases the definition of optional_identifier or the entire environment
 
--- File processing routines are defined in match_file.lua and exposed separately.
+-- Engines (now) know nothing about files.  File processing routines are defined in
+-- process_input_file.lua and exposed via the rosie module.
+
+process_input_file = load_module("process_input_file")		    -- TEMPORARY
 
 local engine_module = {}
 
@@ -39,25 +40,32 @@ local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified;
 local common = require "common"
+local parse = require "parse"
 local compile = require "compile"
 local eval = require "eval"
 local co = require "color-output"
 
 local engine = 
    recordtype.define(
-   {  name=unspecified;				    -- for reference, debugging
+   {  _name=unspecified;			    -- for reference, debugging
       env=false;
-      id=unspecified;
+      _id=unspecified;
       --
       encode=false;
       encode_function=false;
       expression=false;
       pattern=false;
       --
-      match=false;
+      id=false;
+      lookup=false;
+      clear=false;
+      name=false;
+
       match_file=false;
-      eval=false;
       eval_file=false;
+
+      match=false;
+      eval=false;
       configure=false;
       inspect=false;
       --
@@ -68,12 +76,12 @@ local engine =
 )
 
 engine.tostring_function = function(orig, e)
-			      return '<engine: '..tostring(e.name)..' ('.. e.id ..')>'; end
+			      return '<engine: '..tostring(e._name)..' ('.. e._id ..')>'; end
 
 local locale = lpeg.locale()
 
 local function engine_error(e, msg)
-   error(string.format("Engine %s (%s): %s", e.name, e.id, tostring(msg)), 0)
+   error(string.format("Engine %s (%s): %s", e._name, e._id, tostring(msg)), 0)
 end
 
 local function no_pattern(e)
@@ -123,7 +131,7 @@ local function engine_configure(e, configuration)
 	    e.encode_function = f
 	 end
       elseif k=="name" then
-	 e.name = tostring(v)
+	 e._name = tostring(v)
       else
 	 return false, 'invalid configuration parameter: ' .. tostring(k)
       end
@@ -132,7 +140,7 @@ local function engine_configure(e, configuration)
 end
 
 local function engine_inspect(e)
-   return {name=e.name, expression=e.expression, encode=e.encode, id=e.id}
+   return {name=e._name, expression=e.expression, encode=e.encode, id=e._id}
 end
 
 local function engine_match(e, input, start)
@@ -143,94 +151,62 @@ local function engine_match(e, input, start)
    else return false, 1; end
 end
 
+-- returns matches, nextpos, trace
 local function engine_eval(e, input, start)
---   return matches, nextpos, trace
    local pat = e.pattern or engine_error(e, "No pattern expression set")
    return eval.eval(pat, input, start, e.env, false)
 end
 
-local function open3(e, infilename, outfilename, errfilename)
-   if type(infilename)~="string" then engine_error(e, "bad input file name"); end
-   if type(outfilename)~="string" then engine_error(e, "bad output file name"); end
-   if type(errfilename)~="string" then engine_error(e, "bad error file name"); end   
-   local infile, outfile, errfile, msg
-   if #infilename==0 then infile = io.stdin;
-   else infile, msg = io.open(infilename, "r"); if not infile then error(msg, 0); end; end
-   if #outfilename==0 then outfile = io.stdout
-   else outfile, msg = io.open(outfilename, "w"); if not outfile then error(msg, 0); end; end
-   if #errfilename==0 then errfile = io.stderr;
-   else errfile, msg = io.open(errfilename, "w"); if not errfile then error(msg, 0); end; end
-   return infile, outfile, errfile
-end
-
-local function engine_process_file(e, eval_flag, infilename, outfilename, errfilename, wholefileflag)
-   local peg = (e.pattern and e.pattern.peg) or engine_error(e, "No pattern expression set")
-   peg = (peg * lpeg.Cp())
-   if type(eval_flag)~="boolean" then engine_error(e, "bad eval flag"); end
-   if not e.encode_function then engine_error(e, "output encode required, but not set"); end
-   local ok, infile, outfile, errfile = pcall(open3, e, infilename, outfilename, errfilename);
-   if not ok then return false, infile; end	    -- infile is the error message in this case
-
-   local inlines, outlines, errlines = 0, 0, 0;
-   local trace, nextpos, m;
-   local encode = e.encode_function;
-   local nextline
-   if wholefileflag then
-      nextline = function()
-		    if wholefileflag then
-		       wholefileflag = false;
-		       return infile:read("a")
-		    end
-		 end
-   else
-      nextline = infile:lines();
-   end
-   local o_write, e_write = outfile.write, errfile.write
-   local match = peg.match
-   local l = nextline(); 
-   while l do
-      local _
-      if eval_flag then _, _, trace = engine_eval(e, l); end
-      m, nextpos = match(peg, l);
-      -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
-      if trace then o_write(outfile, trace, "\n"); end
-      if m then
-	 o_write(outfile, encode(m), "\n")
-	 outlines = outlines + 1
-      else --if not eval_flag then
-	 e_write(errfile, l, "\n")
-	 errlines = errlines + 1
-      end
-      if trace then o_write(outfile, "\n"); end
-      inlines = inlines + 1
-      l = nextline(); 
-   end -- while
-   infile:close(); outfile:close(); errfile:close();
-   return inlines, outlines, errlines
-end
-
-local function engine_match_file(e, infilename, outfilename, errfilename, wholefileflag)
-   return engine_process_file(e, false, infilename, outfilename, errfilename, wholefileflag)
-end
-
-local function engine_eval_file(e, infilename, outfilename, errfilename, wholefileflag)
-   return engine_process_file(e, true, infilename, outfilename, errfilename, wholefileflag)
-end
-
 ----------------------------------------------------------------------------------------
 
--- local default_pattern_name = "<uninitialized pattern>"
--- local function make_default_pattern(name)
---    return pattern{name=default_pattern_name,
--- 		  peg = lpeg.Cc('Error: no pattern set for engine "' .. name .. '"'),
--- 		  alias = false}
--- end
+local function reconstitute_pattern_definition(id, p)
+   if p then
+      return ( (p.original_ast and parse.reveal_ast(p.original_ast)) or
+	       (p.ast and parse.reveal_ast(p.ast)) or
+	        "// built-in RPL pattern //" )
+   end
+   error("undefined identifier: " .. id)
+end
+
+local function pattern_properties(name, pat)
+   local kind = (pat.alias and "alias") or "definition"
+   local color = (co and co.colormap and co.colormap[item]) or ""
+   local binding = reconstitute_pattern_definition(name, pat)
+   return {type=kind, color=color, binding=binding}
+end
+
+-- Lookup an identifier in the engine's environment, and get a human-readable definition of it
+-- (reconstituted from its ast).  If identifier is null, return the entire environment.
+function get_environment(en, identifier)
+   if identifier then
+      local val =  en.env[identifier]
+      return val and pattern_properties(identifier, val)
+   end
+   local flat_env = common.flatten_env(en.env)
+   -- Rewrite the flat_env table, replacing the pattern with a table of properties
+   for id, pat in pairs(flat_env) do flat_env[id] = pattern_properties(id, pat); end
+   return flat_env
+end
+
+local function clear_environment(en, identifier)
+   if identifier then
+      if en.env[identifier] then
+	 en.env[identifier] = nil
+	 return true
+      else
+	 return false
+      end
+   else -- no identifier arg supplied, so wipe the entire env
+      en.env = common.new_env()
+      return true
+   end
+end
 
 engine.create_function =
    function(_new, name, initial_env)
       initial_env = initial_env or common.new_env()
       -- assigning a unique instance id should be part of the recordtype module
-      local params = {name=name,
+      local params = {_name=name,
 		      env=initial_env,
 		      -- setting expression causes pattern to be set
 		      expression="<uninitialized>",
@@ -239,14 +215,19 @@ engine.create_function =
 		      encode=false,
 		      encode_function=name_to_encode(false),
 		      -- functions
+		      lookup=get_environment,
+		      clear=clear_environment,
+		      id=function(en) return en._id; end,
+		      name=function(en) return en._name; end,
+
 		      match=engine_match,
-		      match_file=engine_match_file,
+		      match_file=process_input_file.engine_match_file,
 		      eval=engine_eval,
-		      eval_file=engine_eval_file,
+		      eval_file=process_input_file.engine_eval_file,
 		      configure=engine_configure,
 		      inspect=engine_inspect}
-      local id = tostring(params):match("0x(.*)") or "id/err"
-      params.id = id
+      local idstring = tostring(params):match("0x(.*)") or "id/err"
+      params._id = idstring
       return _new(params)
    end
 
