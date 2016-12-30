@@ -25,19 +25,6 @@ elseif (0xFFFFFFFF > math.maxinteger) then
    error("Internal error: max integer on this platform is too small")
 end
 
-local function read_version_or_die(home)
-   assert(type(home)=="string")
-   local vfile = io.open(home.."/VERSION")
-   if not vfile then
-      io.stderr:write("Installation error: File "..tostring(home).."/VERSION does not exist or is not readable\n")
-      os.exit(-3)
-   end
-   local v = vfile:read("l"); vfile:close();
-   return v
-end
-
-ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
-
 ----------------------------------------------------------------------------------------
 -- Load modules
 ----------------------------------------------------------------------------------------

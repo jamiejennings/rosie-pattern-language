@@ -455,21 +455,4 @@ function common.print_env_internal(env, skip_header, total)
    end
 end
 
-function common.print_rosie_info()
-   local function printf(fmt, ...)
-      print(string.format(fmt, ...))
-   end
-   local fmt = "  %s = %s"
-   print("Local installation information:")
-   printf(fmt, "ROSIE_HOME", ROSIE_HOME)
-   printf(fmt, "ROSIE_VERSION", ROSIE_VERSION)
-   printf(fmt, "ROSIE_DEV", tostring(ROSIE_DEV))
-   printf(fmt, "HOSTNAME", (os.getenv("HOSTNAME") or ""))
-   printf(fmt, "HOSTTYPE", (os.getenv("HOSTTYPE") or ""))
-   printf(fmt, "OSTYPE", (os.getenv("OSTYPE") or ""))
-   print("Current invocation: ")
-   printf(fmt, "current working directory", (os.getenv("PWD") or ""))
-   printf(fmt, "invocation command", ROSIE_COMMAND or "")
-end
-
 return common

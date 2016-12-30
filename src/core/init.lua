@@ -60,6 +60,19 @@ BOOTSTRAP_COMPLETE = false;
 -- When init is loaded from run-rosie, ROSIE_DEV will always be true or false 
 if ROSIE_DEV==nil then ROSIE_DEV=true; end
 
+local function read_version_or_die(home)
+   assert(type(home)=="string")
+   local vfile = io.open(home.."/VERSION")
+   if not vfile then
+      io.stderr:write("Error while initializing: file "..tostring(home).."/VERSION does not exist or is not readable\n")
+      os.exit(-3)
+   end
+   local v = vfile:read("l"); vfile:close();
+   return v
+end
+
+ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
+
 local loader, msg = loadfile(ROSIE_HOME .. "/src/load-modules.lua", "t", _ENV)
 if not loader then error("Error while initializing: " .. msg); end
 loader()
