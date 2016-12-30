@@ -436,6 +436,24 @@ function syntax.top_level_transform(ast)
    end
 end
 
+-- return the ast version of {{!e .}* e}+ given the ast for e as an argument
+function syntax.grepify(ast_e)
+   local plus = syntax.generate("plus")
+   local star = syntax.generate("star")
+   local dot = syntax.generate("ref")		    -- THIS WON"T WORK
+   local not_e = syntax.generate("predicate", syntax.generate("negation"), ast_e)
+   local any_char_not_e = syntax.generate("raw_exp", syntax.generate("sequence", not_e, dot))
+   local discard_until_e = syntax.generate("new_quantified_exp", any_char_not_e, star)
+   local find_e = syntax.generate("raw_exp", syntax.generate("sequence", discard_until_e, ast_e))
+
+   local new = syntax.generate("raw_exp", syntax.generate("new_quantified_exp", find_e, plus))
+   new.new_quantified_exp.text = original_body.text
+   new.new_quantified_exp.pos = original_body.pos
+   return new
+end
+			  
+   
+
 return syntax
 
 

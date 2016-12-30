@@ -62,19 +62,7 @@ end
 -- environment 
 function lapi.get_environment(en, identifier)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
-   local env = common.flatten_env(en.env)
-   for id, info in pairs(env) do
-      local val = en.env[id]
-      if not(pattern.is(val)) then
-	 error("Internal error: object in environment not a pattern: " .. tostring(val))
-      end
-      info.binding = reconstitute_pattern_definition(id, val)
-   end -- for every id in the flattened env
-   if identifier then
-      return env[identifier]
-   else
-      return env
-   end
+   return en:lookup(identifier)
 end
 
 function lapi.clear_environment(en, identifier)
