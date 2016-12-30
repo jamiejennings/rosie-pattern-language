@@ -22,14 +22,11 @@ local default_engine = nil
 
 ----------------------------------------------------------------------------------------
 
-local api = {API_VERSION = "0.99b",		    -- api version
-	     RPL_VERSION = "0.99a",		    -- language version
-	     VERSION = ROSIE_VERSION,		    -- code revision level
-	     HOME = ROSIE_HOME,			    -- install directory
-             BUILD_HOSTNAME = os.getenv("HOSTNAME"),
-             BUILD_HOSTTYPE = os.getenv("HOSTTYPE"),
-             BUILD_OSTYPE = os.getenv("OSTYPE"),
-	     BUILD_TIME = os.date(),
+local api = {VERSION = ROSIE_VERSION,		    -- code revision level
+	     ROSIE_HOME = ROSIE_HOME,		    -- install directory
+             HOSTNAME = os.getenv("HOSTNAME"),
+             HOSTTYPE = os.getenv("HOSTTYPE"),
+             OSTYPE = os.getenv("OSTYPE"),
 	     SIGNATURE = {}} 			    -- args and return types for each api call
 
 -- If we wanted to do what the Makefile does, in order to report the same result (e.g. "Darwin" vs

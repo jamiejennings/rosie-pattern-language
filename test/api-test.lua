@@ -27,9 +27,8 @@ module.loaded.api = false			    -- force a re-load of the api
 api = load_module "api"
 
 check(type(api)=="table")
-check(api.API_VERSION and type(api.API_VERSION)=="string")
 check(api.VERSION and type(api.VERSION)=="string")
-check(api.HOME and type(api.HOME)=="string")
+check(api.ROSIE_HOME and type(api.ROSIE_HOME)=="string")
 
 ---------------------------------------------------------------------------------------------------
 -- Convenience
@@ -57,10 +56,8 @@ ok, api_v = pcall(json.decode, js)
 check(ok)
 check(type(api_v)=="table")
 
-check(type(api_v.API_VERSION)=="string")
-check(type(api_v.RPL_VERSION)=="string")
 check(type(api_v.VERSION)=="string")
-check(type(api_v.HOME)=="string")
+check(type(api_v.ROSIE_HOME)=="string")
 
 
 ----------------------------------------------------------------------------------------
