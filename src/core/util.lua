@@ -369,6 +369,15 @@ function util.where(lua_function)
    end
 end
 
-
+-- This is string.gsub if that function allowed a 'plain' flag like string.find does.
+-- Probably slow.
+function util.string_replace(input, plain_substring, replacement, start)
+   local s, e = string.find(input, plain_substring, start, true)
+   if not s then return input; end
+   return util.string_replace(input:sub(1, s-1) .. replacement .. input:sub(e+1),
+			      plain_substring,
+			      replacement,
+			      s+#replacement)
+end
 	 
 return util
