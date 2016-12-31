@@ -24,7 +24,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text, 
    expected_leftover = expected_leftover or 0
    addlevel = addlevel or 0
    set_expression(exp)
-   local m, leftover = lapi.match(e, exp, input)
+   local m, leftover = e:match(exp, input)
    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " '" .. input .. "'", 1+addlevel)
    local fmt = "expected leftover matching %s against '%s' was %d but received %d"
@@ -61,20 +61,20 @@ t = lapi.get_environment(e, "a")
 check(type(t)=="table")
 
 set_expression('a')
-match, leftover = lapi.match(e, 'a', "a")
+match, leftover = e:match('a', "a")
 check(type(match)=="table")
 check(type(leftover)=="number")
 check(leftover==0)
 check(next(match)=="a", "the match of an identifier is named for the identifier")
 
 set_expression('(a)')
-match, leftover = lapi.match(e, '(a)', "a")
+match, leftover = e:match('(a)', "a")
 check(next(match)=="a", "the match of an expression is usually anonymous, but cooking an identifier is redundant")
 subs = match["a"].subs
 check(not subs)
 
 set_expression('{a}')
-match, leftover = lapi.match(e, '{a}', "a")
+match, leftover = e:match('{a}', "a")
 check(next(match)=="*", "the match of an expression is anonymous")
 subs = match["*"].subs
 check(subs)
@@ -165,7 +165,7 @@ heading("Literals")
 subheading("Built-ins")
 
 set_expression('.')
-match, leftover = lapi.match(e, '.', "a")
+match, leftover = e:match('.', "a")
 check(next(match)=="*", "the match of an alias is anonymous")
 
 check_match(".", "a", true)
@@ -1229,7 +1229,7 @@ check_match('g1$', "a", false)
 check_match('g1$', "aabb", true)
 
 set_expression('g1')
-match, leftover = lapi.match(e, 'g1', "baab!")
+match, leftover = e:match('g1', "baab!")
 check(next(match)=='g1', "the match of a grammar is named for the identifier bound to the grammar")
 check(leftover==1, "one char left over for this match")
 function collect_names(ast)

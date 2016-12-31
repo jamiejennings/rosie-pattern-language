@@ -145,7 +145,7 @@ end
 local function engine_match_(e, pat, input, start)
    local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
    if result then
-      return (e.encode_function(result)), nextpos;
+      return (e.encode_function(result)), (#input - nextpos + 1);
    else
       return false, 1;
    end
@@ -153,7 +153,7 @@ end
 
 -- TODO: Memoize recent expressions.  But must invalidate the cache if env has changed.
 -- TODO: Refactor _match, _eval, and _grep which can share code.
--- returns matches, nextpos
+-- returns matches, leftover
 local function engine_match(e, expression, input, start)
    start = start or 1
    if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
@@ -164,7 +164,7 @@ local function engine_match(e, expression, input, start)
    return engine_match_(e, pat, input, start)
 end
 
--- returns matches, nextpos, trace
+-- returns matches, leftover, trace
 local function engine_eval(e, expression, input, start)
    if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
    if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
@@ -176,7 +176,7 @@ end
 -- Having a grep function is a convenience.  It doesn't need to be here, but it's parallel in
 -- function to match and eval, plus until we implement macros/functions, it saves users the typing
 -- needed to do it for themselves.
--- returns matches, nextpos
+-- returns matches, leftover
 local function engine_grep(e, expression, input, start)
    if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
    if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
@@ -233,6 +233,7 @@ end
 local function get_set_encoder_function(en, f)
    if not f then return en.encode_function; end
    if type(f)~="function" then error("Output encoder not a function: " .. tostring(f)); end
+   en.encode = "function"			    -- TEMP FIXME!
    en.encode_function = f
 end
 
