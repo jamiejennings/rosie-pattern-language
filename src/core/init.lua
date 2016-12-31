@@ -151,7 +151,7 @@ ROSIE_INFO = {
 local file_functions = {
    match = process_input_file.match,
    eval = process_input_file.eval,
-   grep = function(...) error("rosie.file.grep not implemented"); end
+   grep = process_input_file.grep
 }
 
 local rosie = {engine = engine, file = file_functions}

@@ -23,8 +23,8 @@ function check_match(...) error("Called check_match accidentally"); end
 trace = "no trace set"
 
 function check_eval(exp, input, expectation, expected_contents_list)
-   set_expression(exp)
-   local ok, m, leftover, localtrace = pcall(lapi.eval, e, input)
+--   set_expression(exp)
+   local ok, m, leftover, localtrace = pcall(lapi.eval, e, exp, input)
    check(ok, "failed call to lapi.eval: " .. tostring(m))
    if ok then
       check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
