@@ -58,13 +58,13 @@ function run(expression, grep_flag, expectations)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
    local mismatch_flag = false;
-   for i=1, #results do 
-      print(results[i])
-      if expectations then
-	 if results[i]~=expectations[i] then print("Mismatch"); mismatch_flag = true; end
-      end
-   end -- for
    if expectations then
+      for i=1, #expectations do 
+	 print(results[i])
+	 if expectations then
+	    if results[i]~=expectations[i] then print("Mismatch"); mismatch_flag = true; end
+	 end
+      end -- for
       if mismatch_flag then
 	 print("********** SOME MISMATCHED OUTPUT WAS FOUND. **********");
       else
@@ -74,6 +74,7 @@ function run(expression, grep_flag, expectations)
 	 print(string.format("********** Mismatched number of results (%d) versus expectations (%d) **********", #results, #expectations))
       end
       check((not mismatch_flag), "Mismatched output compared to expectations", 1)
+      check((#results==#expectations), "Mismatched number of results compared to expectations", 1)
    end -- if expectations
    return results
 end

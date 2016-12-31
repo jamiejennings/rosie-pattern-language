@@ -64,6 +64,7 @@ local engine =
 
       match=false;
       eval=false;
+      grep=false;
       configure=false;
       inspect=false;
       --
@@ -150,7 +151,8 @@ local function engine_match_(e, pat, input, start)
    end
 end
 
--- Maybe memoize expression?  But must invalidate the cache if env has changed.
+-- TODO: Memoize recent expressions.  But must invalidate the cache if env has changed.
+-- TODO: Refactor _match, _eval, and _grep which can share code.
 -- returns matches, nextpos
 local function engine_match(e, expression, input, start)
    start = start or 1
@@ -163,8 +165,11 @@ local function engine_match(e, expression, input, start)
 end
 
 -- returns matches, nextpos, trace
-local function engine_eval(e, input, start)
-   local pat = e.pattern or engine_error(e, "No pattern expression set")
+local function engine_eval(e, expression, input, start)
+   if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
+   if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
+   local pat, msg = compile.compile_match_expression(expression, e.env)
+   if not pat then error(msg); end
    return eval.eval(pat, input, start, e.env, false)
 end
 
@@ -172,22 +177,12 @@ end
 -- function to match and eval, plus until we implement macros/functions, it saves users the typing
 -- needed to do it for themselves.
 -- returns matches, nextpos
-local function engine_grep(e, input, start)
-   -- start = start or 1
-   -- local peg = (e.pattern and e.pattern.peg) or engine_error(e, "No pattern expression set")
-
-   -- local pat, msg = grep.pattern_EXP_to_grep_pattern(pattern_exp, en.env);
-   -- if pattern.is(pat) then
-   --    en.expression = "grep(" .. pattern_exp .. ")"
-   --    en.pattern = pat
-   --    return lapi.configure_engine(en, {encode=encoder_name})
-   -- end
-
-
-   
-   -- local result, nextpos = (peg * lpeg.Cp()):match(input, start)
-   -- if result then return (e.encode_function(result)), nextpos;
-   -- else return false, 1; end
+local function engine_grep(e, expression, input, start)
+   if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
+   if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
+   local pat, msg = grep.pattern_EXP_to_grep_pattern(expression, e.env)
+   if not pat then error(msg); end
+   return engine_match_(e, pat, input, start)
 end
 
 ----------------------------------------------------------------------------------------
@@ -263,6 +258,7 @@ engine.create_function =
 		      match_=engine_match_,
 
 		      match=engine_match,
+		      grep=engine_grep,
 		      eval=engine_eval,
 		      configure=engine_configure,
 		      inspect=engine_inspect}
