@@ -129,19 +129,20 @@ function lapi.match(en, expression, input_text, start)
    return result, (#input_text - nextpos + 1)
 end
 
-function lapi.match_file(en, infilename, outfilename, errfilename, wholefileflag)
-   return en:match_file(infilename, outfilename, errfilename, wholefileflag)
+function lapi.match_file(en, expression, infilename, outfilename, errfilename, wholefileflag)
+   return en:match_file(expression, infilename, outfilename, errfilename, wholefileflag)
 end
 
-function lapi.eval(en, input_text, start)
-   local result, nextpos, trace = en:eval(input_text, start)
+function lapi.eval(en, expression, input_text, start)
+   if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
+   local result, nextpos, trace = en:eval(expression, input_text, start)
    local leftover = 0;
    if nextpos then leftover = (#input_text - nextpos + 1); end
    return result, leftover, trace
 end
 
-function lapi.eval_file(en, infilename, outfilename, errfilename, wholefileflag)
-   return en:eval_file(infilename, outfilename, errfilename, wholefileflag)
+function lapi.eval_file(en, expression, infilename, outfilename, errfilename, wholefileflag)
+   return en:eval_file(expression, infilename, outfilename, errfilename, wholefileflag)
 end
 
 ----------------------------------------------------------------------------------------
