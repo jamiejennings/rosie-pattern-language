@@ -80,10 +80,10 @@ parse = load_module("parse")
 compile = load_module("compile")
 eval = load_module("eval")
 color_output = load_module("color-output")
+grep = load_module("grep")
 engine = load_module("engine")
 
 manifest = load_module("manifest")
-grep = load_module("grep")
 lapi = load_module("lapi");
 api = load_module("api")
 
