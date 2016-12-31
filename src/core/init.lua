@@ -146,6 +146,20 @@ ROSIE_INFO = {
 }
 
 ----------------------------------------------------------------------------------------
+-- Output encoding functions
+----------------------------------------------------------------------------------------
+-- Lua applications (including the Rosie CLI & REPL) can use this table to install known
+-- output encoders by name.
+
+local encoder_table =
+   {json = json.encode,
+    color = color_output.color_string_from_leaf_nodes,
+    nocolor = color_output.string_from_leaf_nodes,
+    fulltext = common.match_to_text,
+    [false] = function(...) return ...; end
+ }
+
+----------------------------------------------------------------------------------------
 -- Build the rosie module as seen by the Lua client
 ----------------------------------------------------------------------------------------
 local file_functions = {
@@ -154,7 +168,11 @@ local file_functions = {
    grep = process_input_file.grep
 }
 
-local rosie = {engine = engine, file = file_functions}
+local rosie = {
+   engine = engine,
+   file = file_functions,
+   encoders = encoder_table
+}
 
 function rosie.info() return ROSIE_INFO; end
 
