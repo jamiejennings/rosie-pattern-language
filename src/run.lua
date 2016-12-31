@@ -40,15 +40,15 @@ table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 local rosie
 local thunk, msg = loadfile(ROSIE_HOME .. "/src/init.lua") -- FIXME
 if not thunk then
-	io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
-	rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
+   io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
+   rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
 else
-	local rosie, msg = pcall(thunk)
-	if not rosie then
-		io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
-		io.stderr:write(msg, "\n")
-		rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
-	end
+   local rosie, msg = pcall(thunk)
+   if not rosie then
+      io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
+      io.stderr:write(msg, "\n")
+      rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
+   end
 end
 
 local argparse = require "argparse"
@@ -58,7 +58,7 @@ local json = require "cjson"
 local list = require("list")
 require("repl")
 
-CL_ENGINE, msg = lapi.new_engine({name="command line engine"})
+CL_ENGINE = rosie.engine.new("command line engine")
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
 
 local function print_rosie_info()
@@ -75,6 +75,16 @@ end
 
 -- global
 VERBOSE = false;
+
+local function set_encoder(name)
+   local encode_fcn = rosie.encoders[name]
+   if type(encode_fcn)~="function" then
+      local msg = "Invalid output encoder: " .. tostring(name)
+      if ROSIE_DEV then error(msg)
+      else io.write(msg, "\n"); os.exit(-1); end
+   end
+   CL_ENGINE:output(encode_fcn)
+end
 
 function setup_engine(args)
    -- (1a) Load the manifest
@@ -163,9 +173,7 @@ function process_pattern_against_file(args, infilename)
 	if args.all then errfilename = ""; end	            -- stderr
 
 	-- (4) Set up what kind of encoding we want done on the output
-	local encode = args.encode -- default is color
-	local success, msg = lapi.configure_engine(CL_ENGINE, {encode=encode})
-	if not success then io.write("Engine configuration error: ", msg, "\n"); os.exit(-1); end
+	set_encoder(args.encode)
 
 	-- (5) Iterate through the lines in the input file
 	local match_function
@@ -223,22 +231,13 @@ function setup_and_run_tests(args)
    local num_patterns, test_lines = find_test_lines(f:read('*a'))
    f:close()
    if num_patterns > 0 then
-      local function set_config_exp(exp, encode)
-	 local en = encode or false
-	 local success, msg = lapi.configure_engine(CL_ENGINE, {expression=exp, encode=en})
-	 if not success then
-	    print("Error configuring engine expression")
-	    print(msg)
-	    os.exit(-1)
-	 end
-      end
       local function test_accepts_exp(exp, q)
-	 local res, pos = lapi.match(CL_ENGINE, exp, q)
+	 local res, pos = CL_ENGINE:match(exp, q)
 	 if pos ~= 0 then return false end
 	 return true
       end
       local function test_rejects_exp(exp, q)
-	 local res, pos = lapi.match(CL_ENGINE, exp, q)
+	 local res, pos = CL_ENGINE:match(exp, q)
 	 if pos == 0 then return false end
 	 return true
       end
@@ -251,14 +250,13 @@ function setup_and_run_tests(args)
 
       lapi.load_file(CL_ENGINE, "$sys/src/rpl-core.rpl")
       lapi.load_string(CL_ENGINE, test_patterns)
+      set_encoder(false)
       local failures = 0
+      local exp = "test_line"
       for _,p in pairs(test_lines) do
-	 local exp = "test_line"
-	 set_config_exp(exp)
-	 local m, left = lapi.match(CL_ENGINE, exp, p)
+	 local m, left = CL_ENGINE:match(exp, p)
 	 -- FIXME: need to test for failure to match
 	 local name = m.test_line.subs[1].identifier.text
-	 set_config_exp(name)
 	 local testtype = m.test_line.subs[2].testKeyword.text
 	 local testfunc = test_funcs["test_" .. testtype .. "_exp"]
 	 local literals = 3 -- literals will start at subs offset 3
@@ -302,7 +300,7 @@ function run(args)
 
    if args.command == "patterns" then
       if not args.verbose then greeting(); end
-      local env = lapi.get_environment(CL_ENGINE)
+      local env = CL_ENGINE:lookup()
       common.print_env(env, args.filter)
       os.exit()
    end

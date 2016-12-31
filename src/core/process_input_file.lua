@@ -33,7 +33,7 @@ local function engine_process_file(e, expression, eval_flag, grep_flag, infilena
    if not ok then return false, infile; end	    -- infile is the error message in this case
 
    local inlines, outlines, errlines = 0, 0, 0;
-   local trace, nextpos, m;
+   local trace, leftover, m;
    local nextline
    if wholefileflag then
       nextline = function()
@@ -51,8 +51,8 @@ local function engine_process_file(e, expression, eval_flag, grep_flag, infilena
    while l do
       local _
       if eval_flag then _, _, trace = e:eval(expression, l); end
-      m, nextpos = match(e, expression, l);
-      -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
+      m, leftover = match(e, expression, l);
+      -- What to do with leftover?  User might want to see it.
       if trace then o_write(outfile, trace, "\n"); end
       if m then
 	 o_write(outfile, m, "\n")
