@@ -90,6 +90,8 @@ api = load_module("api")
 process_input_file = load_module("process_input_file")
 
 argparse = load_module("argparse", "submodules/argparse/src") -- FIXME
-repl = load_module("repl")
+
+-- Do this in run.lua if needed
+--repl = load_module("repl")
 
 
