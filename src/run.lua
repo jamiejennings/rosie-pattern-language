@@ -123,18 +123,18 @@ function setup_engine(args)
    end
 
    -- (2) Compile the expression
-   if args.pattern then
-      local success, msg
-      if args.grep then
-	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, args.pattern, "json")
-      else
-	 success, msg = lapi.configure_engine(CL_ENGINE, {expression=args.pattern, encode="json"})
-      end
-      if not success then
-	 io.write(msg, "\n")
-	 os.exit(-1);
-      end
-   end
+   -- if args.pattern then
+   --    local success, msg
+   --    if args.grep then
+   -- 	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, args.pattern, "json")
+   --    else
+   -- 	 success, msg = lapi.configure_engine(CL_ENGINE, {expression=args.pattern, encode="json"})
+   --    end
+   --    if not success then
+   -- 	 io.write(msg, "\n")
+   -- 	 os.exit(-1);
+   --    end
+   -- end
 end
 
 infilename, outfilename, errfilename = nil, nil, nil
@@ -152,9 +152,17 @@ function process_pattern_against_file(args, infilename)
 	if not success then io.write("Engine configuration error: ", msg, "\n"); os.exit(-1); end
 
 	-- (5) Iterate through the lines in the input file
-	local match_function = rosie.file.match
-	if args.eval then match_function = rosie.file.eval; end
-	local cin, cout, cerr = match_function(CL_ENGINE, infilename, outfilename, errfilename, args.wholefile)--OPTION["-wholefile"])
+	local match_function
+	if args.command=="match" then
+	   match_function = rosie.file.match
+	elseif args.command=="eval" then
+	   match_function = rosie.file.eval
+	elseif args.command=="grep" then
+	   match_function = rosie.file.grep
+	else
+	   error("Internal error: unrecognized command: " .. tostring(args.command))
+	end
+	local cin, cout, cerr = match_function(CL_ENGINE, args.pattern, infilename, outfilename, errfilename, args.wholefile)
 	if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
 
 	-- (6) Print summary
