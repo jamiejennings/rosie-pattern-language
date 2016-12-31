@@ -42,6 +42,7 @@ local parse = require "parse"
 local compile = require "compile"
 local eval = require "eval"
 local co = require "color-output"
+local grep = require "grep"
 
 local engine = 
    recordtype.define(
@@ -143,6 +144,7 @@ local function engine_inspect(e)
 end
 
 local function engine_match_(e, pat, input, start)
+   --start = start or 1
    local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
    if result then
       return (e.encode_function(result)), (#input - nextpos + 1);
@@ -151,39 +153,53 @@ local function engine_match_(e, pat, input, start)
    end
 end
 
--- TODO: Memoize recent expressions.  But must invalidate the cache if env has changed.
+-- TODO: Better cache.
+-- TODO: Must invalidate the cache if env has changed.
 -- TODO: Refactor _match, _eval, and _grep which can share code.
 -- returns matches, leftover
-local function engine_match(e, expression, input, start)
-   start = start or 1
-   if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
-   if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
---   print("In engine_match, about to compile: " .. expression .. "\nto match: " .. input)
-   local pat, msg = compile.compile_match_expression(expression, e.env)
-   if not pat then error(msg); end
-   return engine_match_(e, pat, input, start)
+local cache_key, cache_val
+local function cache(key, val)
+   if not val then return (cache_key==key) and cache_val; end -- lookup
+   cache_key, cache_val = key, val
+   return
 end
 
--- returns matches, leftover, trace
-local function engine_eval(e, expression, input, start)
-   if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
-   if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
-   local pat, msg = compile.compile_match_expression(expression, e.env)
-   if not pat then error(msg); end
-   return eval.eval(pat, input, start, e.env, false)
+local function make_matcher(compiler, processing_fcn)
+   return function(e, expression, input, start)
+	     if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
+	     if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
+	     local pat, msg
+	     pat = cache(expression)
+	     if not pat then
+		pat, msg = compiler(expression, e.env)
+		if not pat then error(msg); end
+		cache(expression, pat)
+	     end
+	     return processing_fcn(e, pat, input, start)
+	  end
 end
+
+-- returns matches, leftover
+local engine_match = make_matcher(compile.compile_match_expression, engine_match_)
+
+-- returns matches, leftover, trace
+local engine_eval = make_matcher(compile.compile_match_expression,
+				 function(e, pat, input, start)
+				    return eval.eval(pat, input, start, e.env, false)
+				 end)
 
 -- Having a grep function is a convenience.  It doesn't need to be here, but it's parallel in
 -- function to match and eval, plus until we implement macros/functions, it saves users the typing
 -- needed to do it for themselves.
 -- returns matches, leftover
-local function engine_grep(e, expression, input, start)
-   if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
-   if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
-   local pat, msg = grep.pattern_EXP_to_grep_pattern(expression, e.env)
-   if not pat then error(msg); end
-   return engine_match_(e, pat, input, start)
-end
+local engine_grep = make_matcher(grep.pattern_EXP_to_grep_pattern, engine_match_)
+
+--    if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
+--    if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
+--    local pat, msg = grep.pattern_EXP_to_grep_pattern(expression, e.env)
+--    if not pat then error(msg); end
+--    return engine_match_(e, pat, input, start)
+-- end
 
 ----------------------------------------------------------------------------------------
 

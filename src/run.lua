@@ -356,28 +356,28 @@ parser:option("-r --rpl", "Inline RPL statements")
 -- target variable for commands
 parser:command_target("command")
 -- info command
-local info = parser:command("info")
+local xinfo = parser:command("info")
 	:description("Print rosie installation information")
 -- patterns command
-local patterns = parser:command("patterns")
+local xpatterns = parser:command("patterns")
 	:description("List installed patterns")
-patterns:argument("filter")
+xpatterns:argument("filter")
 	:description("Filter pattern names that have substring 'filter'")
 	:args("?")
 -- repl command
-local repl = parser:command("repl")
+local xrepl = parser:command("repl")
 	:description("Run rosie in interactive mode")
 -- match command
-local match = parser:command("match")
+local xmatch = parser:command("match")
 	:description("Run RPL match")
 -- eval command
-local eval = parser:command("eval")
+local xeval = parser:command("eval")
 	:description("Run RPL evaluator (generates trace of every match)")
 -- grep command
-local grep = parser:command("grep")
+local xgrep = parser:command("grep")
 	:description("Run RPL match in the style of Unix grep (match anywhere in a line)")
 
-for _, cmd in ipairs{match, eval, grep} do
+for _, cmd in ipairs{xmatch, xeval, xgrep} do
    -- match/eval/grep flags (true/false)
    cmd:flag("-s --wholefile", "Read input file as single string")
        :default(false)
@@ -408,8 +408,8 @@ for _, cmd in ipairs{match, eval, grep} do
 end
 
 -- test command
-local test = parser:command("test")
-test:argument("filename", "RPL filename")
+local xtest = parser:command("test")
+xtest:argument("filename", "RPL filename")
 
 
 -- in order to catch dev mode for "make test"
