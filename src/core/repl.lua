@@ -6,9 +6,14 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-lapi = require "lapi"
-common = require "common"
-json = require "cjson"
+local repl = {}
+
+-- N.B. 'rosie' is a global defined by init and loaded by run.lua, which calls the repl
+
+local lapi = require "lapi"
+local common = require "common"
+local json = require "cjson"
+local list = require "list"
 local readline = require "readline"
 list = require "list"
 
@@ -34,7 +39,8 @@ local repl_patterns = [==[
       input = command / statement / identifier
 ]==]
 
-repl_engine = lapi.new_engine({name="repl"})
+local repl_engine = rosie.engine.new("repl")
+repl.repl_engine = repl_engine
 lapi.load_file(repl_engine, "$sys/src/rpl-core.rpl")
 lapi.load_string(repl_engine, repl_patterns)
 
@@ -56,8 +62,8 @@ local function print_match(m, left, eval_p)
    end
 end
 
-function repl(en)
-   local ok = lapi.inspect_engine(en)
+function repl.repl(en)
+   local ok = rosie.engine.is(en)
    if (not ok) then
       error("Argument to repl is not a live engine: " .. tostring(en))
    end
@@ -68,7 +74,7 @@ function repl(en)
    if s~="" then					   -- blank line input
       local ok, msg = lapi.configure_engine(repl_engine, {expression="input", encode=false})
       if not ok then io.write("Repl internal error: ", msg); os.exit(-6); end
-      local m, left = lapi.match(repl_engine, "input", s)
+      local m, left = repl_engine:match("input", s)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
       else
@@ -146,7 +152,7 @@ function repl(en)
 		  assert(ename=="args")
 		  local ok, msg = lapi.configure_engine(repl_engine, {expression='parsed_args'})
 		  if not ok then io.write("Repl internal error: ", msg); os.exit(-6); end
-		  local m, msg = lapi.match(repl_engine, "parsed_args", argtext)
+		  local m, msg = repl_engine:match("parsed_args", argtext)
 		  assert(next(m)=="parsed_args")
 		  local msubs = m and m.parsed_args.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
@@ -171,15 +177,15 @@ function repl(en)
 			if not ok then
 			   io.write(msg, "\n");		    -- syntax and compile errors
 			else
-			   local m, left = lapi.match(en, exp, input_text)
+			   local m, left = en:match(exp, input_text)
 			   if cname=="match" then
 			      if debug and (not m) then
-				 local match, leftover, trace = lapi.eval(en, input_text)
+				 local match, leftover, trace = en:eval(exp, input_text)
 				 io.write(trace, "\n")
 			      end
 			   else
 			      -- must be eval
-			      local match, leftover, trace = lapi.eval(en, input_text)
+			      local match, leftover, trace = en:eval(exp, input_text)
 			      io.write(trace, "\n")
 			   end
 			   print_match(m, left, (cname=="eval"))
