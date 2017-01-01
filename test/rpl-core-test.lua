@@ -6,7 +6,6 @@
 ----
 
 test = require "test-functions"
-
 list = require("list")
 
 check = test.check
@@ -15,9 +14,10 @@ subheading = test.subheading
 
 e = false;
 
+global_rplx = false;
+
 function set_expression(exp)
-   local ok, msg = pcall(lapi.configure_engine, e, {expression=exp, encode=false})
-   if not ok then error("Configuration error: " .. msg); end
+   global_rplx = e:compile(exp)
 end
 
 function check_match(exp, input, expectation, expected_leftover, expected_text, addlevel)
@@ -48,16 +48,15 @@ test.start(test.current_filename())
 heading("Setting up")
 ----------------------------------------------------------------------------------------
 
-check(type(lapi)=="table")
-check(type(lapi.new_engine)=="function")
-e, config_ok, msg = lapi.new_engine({name="rpl core test"})
-check(engine.is(e))
+check(type(rosie)=="table")
+e = rosie.engine.new("rpl core test")
+check(rosie.engine.is(e))
 
 subheading("Setting up assignments")
-t1, t2 = lapi.load_string(e, 'a = "a"  b = "b"  c = "c"  d = "d"')
+t1, t2 = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
 check(type(t1)=="table")
 if t2 then check(type(t2)=="table"); end
-t = lapi.get_environment(e, "a")
+t = e:lookup("a")
 check(type(t)=="table")
 
 set_expression('a')
@@ -81,31 +80,31 @@ check(subs)
 submatchname = next(subs[1])
 check(submatchname=="a", "the only sub of this expression is the identifier in the raw group")
 
-ok, msg = pcall(lapi.load_string, e, 'alias plain_old_alias = "p"')
+ok, msg = pcall(e.load, e, 'alias plain_old_alias = "p"')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_plain_old_alias = plain_old_alias')
+ok, msg = pcall(e.load, e, 'alias alias_to_plain_old_alias = plain_old_alias')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_a = a')
+ok, msg = pcall(e.load, e, 'alias alias_to_a = a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alternate_a = a')
+ok, msg = pcall(e.load, e, 'alternate_a = a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alternate_to_alias_to_a = alias_to_a')
+ok, msg = pcall(e.load, e, 'alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
+ok, msg = pcall(e.load, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'uses_a = a a')
+ok, msg = pcall(e.load, e, 'uses_a = a a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alternate_uses_a = uses_a')
+ok, msg = pcall(e.load, e, 'alternate_uses_a = uses_a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_uses_a = uses_a')
+ok, msg = pcall(e.load, e, 'alias alias_to_uses_a = uses_a')
 check(ok)
 
 
@@ -487,7 +486,7 @@ check_match('{(a)*}', ' a a   ', true, 7, "")
 subheading("Explicit boundary pattern")
 check_match('~(a)*', ' a a   ', true, 3, " a a")
 check_match('(~(a)*)', ' a a   ', true, 3, " a a")
-ok, msg = pcall(lapi.load_string, e, "token = { ![[:space:]] . {!~ .}* }")
+ok, msg = pcall(e.load, e, "token = { ![[:space:]] . {!~ .}* }")
 check(ok)
 check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 40, "The")
 check_match('token token token', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,")
@@ -1101,12 +1100,12 @@ for _, exp in ipairs{"[]]",
 		     "[[a-z] [def]",		    -- no final closing bracket
 		     "[]",			    -- this was legal before v0.99?
                      "[[abc][]]"} do
-   ok, msg = lapi.configure_engine(e, {expression=exp})
+   ok, msg = pcall(e.compile, e, exp)
    check(not ok, "this expression was expected to fail: " .. exp)
    check(msg:find("Syntax error at line 1"), "Did not get syntax error for exp " ..
       exp .. ".  Message was: " .. msg)
 end
-ok, msg = lapi.configure_engine(e, {expression="[:foobar:]"})
+ok, msg = pcall(e.compile, e, "[:foobar:]")
 check(not ok)
 check(msg:find("named charset not defined"))
 
@@ -1215,7 +1214,7 @@ g1_defn = [[grammar
   B = { {"b" S} / {"a" B B} }
 end]]
 
-ok, msg = pcall(lapi.load_string, e, g1_defn)
+ok, msg = pcall(e.load, e, g1_defn)
 check(ok)
 check_match('g1', "", true)
 check_match('g1', "ab", true)
@@ -1258,14 +1257,14 @@ g2_defn = [[grammar
   alias B = { {"b" S} / {"a" B B} }
 end]]
 
-ok, msg = pcall(lapi.load_string, e, g2_defn)
+ok, msg = pcall(e.load, e, g2_defn)
 check(ok)
 check_match('g2', "", true, 0, "")
 check_match('g2', "ab", true, 0, "ab")
 check_match('g2', "baab", true, 0, "baab")
 check_match('g2', "abaab", false, 0, "")
 
-ok, ast, warnings = pcall(lapi.load_string, e, 'use_g2 = g1 g2')
+ok, ast, warnings = pcall(e.load, e, 'use_g2 = g1 g2')
 check(ok, "Failed to define use_g2")
 m, leftover = check_match('use_g2', "ab baab", true, 0, "ab baab")
 check(m)
@@ -1279,9 +1278,9 @@ heading("Invariants")
 
 subheading("Raw and cooked versions of . and equiv identifiers")
 
-check((lapi.load_string(e, "dot = .")))
-check((lapi.load_string(e, "rawdot = {.}")))
-check((lapi.load_string(e, "cookeddot = (.)")))
+check((e:load("dot = .")))
+check((e:load("rawdot = {.}")))
+check((e:load("cookeddot = (.)")))
 
 check_match(".", "a", true)
 check_match("dot", "a", true)
@@ -1308,7 +1307,7 @@ check_match("cookeddot", "", false)
 
 subheading("Raw and cooked versions of the same definition")
 
-check((lapi.load_manifest(e, "$sys/MANIFEST")))
+check((rosie.file.load(e, "$sys/MANIFEST", "manifest")))
 
 m = check_match("common.int", "42", true)
 check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
@@ -1337,7 +1336,7 @@ check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
 m = check_match("{common.int common.word}", "42 x", false)
 m = check_match("(common.int common.word)", "42 x", true)
 
-check((api.load_string(e, "int = common.int word = common.word")))
+check((e:load("int = common.int word = common.word")))
        
 m = check_match("int", "42", true)
 --check((not m["*"]) and m["int"] and (#m["int"].subs==1))
@@ -1372,7 +1371,7 @@ m = check_match("(int word)", "42 x", true)
 check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
       (m["*"].subs[2]) and m["*"].subs[2]["word"])
 
-check((lapi.load_string(e, "alias int = common.int alias word = common.word")))
+check((e:load("alias int = common.int alias word = common.word")))
        
 m = check_match("int", "42", true)
 check(m["*"] and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
@@ -1404,7 +1403,7 @@ check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
 
 subheading("Bindings (equivalence of reference and referent)")
 
-check((lapi.load_string(e, "foo = a / b / c")))
+check((e:load("foo = a / b / c")))
 m = check_match("foo", "a!", true, 1, "a")
 check(m["foo"]); check(#m["foo"].subs==1); check(m["foo"].subs[1]["a"]); 
 
@@ -1420,17 +1419,17 @@ end
 
 test_foo()
 
-check((lapi.load_string(e, "foo = (a / b / c)")))
+check((e:load("foo = (a / b / c)")))
 m = check_match("foo", "a!", true, 1, "a")
 check(m["foo"]); check(#m["foo"].subs==1); check(m["foo"].subs[1]["a"]); 
 test_foo()
 
-check((lapi.load_string(e, "alias foo = a / b / c")))
+check((e:load("alias foo = a / b / c")))
 m = check_match("foo", "a!", true, 1, "a")
 check(m["*"]); check(#m["*"].subs==1); check(m["*"].subs[1]["a"]); 
 test_foo()
 
-check((lapi.load_string(e, "alias foo = (a / b / c)")))
+check((e:load("alias foo = (a / b / c)")))
 m = check_match("foo", "a!", true, 1, "a")
 check(m["*"]); check(#m["*"].subs==1); check(m["*"].subs[1]["a"]); 
 test_foo()
@@ -1449,7 +1448,7 @@ check_bc("b c")
 check_bc("(b c)")
 check_bc("{b ~ c}")
 
-check((lapi.load_string(e, "foo = a b c*")))
+check((e:load("foo = a b c*")))
 check_match('a b c*', 'a b x', true, 1, "a b ")
 check_match('foo', 'a b x', true, 1, "a b ")
 

@@ -10,7 +10,7 @@ local repl = {}
 
 -- N.B. 'rosie' is a global defined by init and loaded by run.lua, which calls the repl
 
-local lapi = require "lapi"
+--local lapi = require "lapi"
 local common = require "common"
 local json = require "cjson"
 local list = require "list"
@@ -40,8 +40,8 @@ local repl_patterns = [==[
 
 local repl_engine = rosie.engine.new("repl")
 repl.repl_engine = repl_engine
-lapi.load_file(repl_engine, "$sys/src/rpl-core.rpl")
-lapi.load_string(repl_engine, repl_patterns)
+rosie.file.load(repl_engine, "$sys/src/rpl-core.rpl", "rpl")
+repl_engine:load(repl_patterns)
 
 local repl_prompt = "Rosie> "
 
@@ -66,13 +66,10 @@ function repl.repl(en)
    if (not ok) then
       error("Argument to repl is not a live engine: " .. tostring(en))
    end
-   --io.write(repl_prompt)
-   --local s = io.stdin:read("l")
+   en:output(rosie.encoders.json)
    local s = readline.readline(repl_prompt)
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
-      local ok, msg = lapi.configure_engine(repl_engine, {expression="input", encode=false})
-      if not ok then io.write("Repl internal error: ", msg); os.exit(-6); end
       local m, left = repl_engine:match("input", s)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
@@ -85,7 +82,7 @@ function repl.repl(en)
 	 local _, _, _, subs = common.decode_match(m)
 	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
-	    local def = lapi.get_environment(en, text)
+	    local def = en:lookup(text)
 	    if def then io.write(def.binding, "\n")
 	    else
 	       io.write(string.format("Repl: undefined identifier %s\n", text))
@@ -104,9 +101,9 @@ function repl.repl(en)
 		  local pname, ppos, path = common.decode_match(csubs[1])
 		  local ok, messages, full_path
 		  if cname=="load" then 
-		     ok, messages, full_path = lapi.load_file(en, path)
+		     ok, messages, full_path = pcall(rosie.file.load, en, path, "rpl")
 		  else -- manifest command
-		     ok, messages, full_path = lapi.load_manifest(en, path)
+		     ok, messages, full_path = pcall(rosie.file.load, en, path, "manifest")
 		  end
 		  if ok then
 		     if messages then list.foreach(print, messages); end
@@ -122,7 +119,7 @@ function repl.repl(en)
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
 	    elseif cname=="patterns" then
-	       local env = lapi.get_environment(en)
+	       local env = en:lookup()
 	       local filter = nil
 	       if csubs then
 	          _,_,filter,_ = common.decode_match(csubs[1])
@@ -132,10 +129,9 @@ function repl.repl(en)
 	       if csubs and csubs[1] then
 		  local name, pos, id, subs = common.decode_match(csubs[1])
 		  if (name=="identifier") then
-		     if en.env[id] then en.env[id] = nil -- abstraction breakage?
-		     else io.write("Repl: undefined identifier: ", id, "\n"); end
+		     if not en:clear(id) then io.write("Repl: undefined identifier: ", id, "\n"); end
 		  elseif (name=="star") then
-		     lapi.clear_environment(en)
+		     en:clear()
 		     io.write("Pattern environment cleared\n")
 		  else
 		     io.write("Repl: internal error while processing clear command\n")
@@ -149,8 +145,6 @@ function repl.repl(en)
 	       else
 		  local ename, epos, argtext = common.decode_match(csubs[1])
 		  assert(ename=="args")
-		  local ok, msg = lapi.configure_engine(repl_engine, {expression='parsed_args'})
-		  if not ok then io.write("Repl internal error: ", msg); os.exit(-6); end
 		  local m, msg = repl_engine:match("parsed_args", argtext)
 		  assert(next(m)=="parsed_args")
 		  local msubs = m and m.parsed_args.subs
@@ -172,23 +166,19 @@ function repl.repl(en)
 			if ename=="literal" then exp = '"'..exp..'"'; end
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			input_text = common.unescape_string(input_text)
-			local ok, msg = lapi.configure_engine(en, {expression=exp, encode="json"})
-			if not ok then
-			   io.write(msg, "\n");		    -- syntax and compile errors
-			else
-			   local m, left = en:match(exp, input_text)
-			   if cname=="match" then
-			      if debug and (not m) then
-				 local match, leftover, trace = en:eval(exp, input_text)
-				 io.write(trace, "\n")
-			      end
-			   else
-			      -- must be eval
+			local ok, m, left = pcall(en.match, en, exp, input_text)
+			if not ok then io.write(m, "\n"); end -- syntax and compile errors
+			if cname=="match" then
+			   if debug and (not m) then
 			      local match, leftover, trace = en:eval(exp, input_text)
 			      io.write(trace, "\n")
 			   end
-			   print_match(m, left, (cname=="eval"))
-			end -- failed to configure engine to do the match
+			else
+			   -- must be eval
+			   local match, leftover, trace = en:eval(exp, input_text)
+			   io.write(trace, "\n")
+			end
+			print_match(m, left, (cname=="eval"))
 		     end -- could not parse out the expression and input string from the repl input
 		  end -- if unable to parse argtext into: stuff "," quoted_string
 	       end -- if pat
@@ -198,7 +188,7 @@ function repl.repl(en)
 	       io.write("Repl: Unknown command (Type .help for help.)\n")
 	    end -- switch on command
 	 elseif name=="alias_" or name=="assignment_" or name=="grammar_" then
-	    local ok, messages = lapi.load_string(en, text);
+	    local ok, messages = pcall(en.load, en, text);
 	    if not ok then io.write(messages, "\n")
 	    elseif messages then
 	       for _, msg in ipairs(messages) do if msg then io.write(msg, "\n"); end; end
