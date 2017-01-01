@@ -9,6 +9,15 @@
 -- TODO: a module-aware version of strict.lua that works with _ENV and not _G
 --require "strict"
 
+-- The two principle use case categories for Rosie may be characterized as Interactive and
+-- Production, where the latter includes big data scenarios in which performance is paramount and
+-- functions like compiling, tracing, and generating human-readable output are not needed.
+
+-- Type of use   | In Lua          | In API
+-- ------------- | --------------- | --------------
+-- Interactive   | 
+-- Production    | 
+
 ----------------------------------------------------------------------------------------
 -- Engine
 ----------------------------------------------------------------------------------------
@@ -17,19 +26,65 @@
 -- programmatically in Lua.
 --
 -- engine.new(optional_name) creates a new engine with only a "base" environment
--- e:name() returns the engine name
+--   returns id which is a string;
+--   never raises error (unless for internal rosie bug)
+-- e:name() returns the engine name (a string) or nil if not set
+--   never raises error (unless for internal rosie bug)
 -- e:id() returns the engine id
+--   never raises error (unless for internal rosie bug)
+-- 
 -- e:load(rpl_string) compiles rpl_string in the current engine environment
--- e:match(expression, input) compiles the string expression and applies it to input string
--- e:eval(expression, input) like match, but generates a trace output
--- e:grep(expression, input) like match, but compiles this instead: {!expression .}* expression+
+--   the rpl_string has file semantics
+--   returns messages where messages is a table of strings
+--   raises error if rpl_string fails to compile
+-- 
+-- e:compile(expression, flavor) compiles the rpl expression
+--   returns an rplx object and messages
+--   raises error if expression fails to compile
+--   API only: returns the (string) id of an rplx object with indefinite extent;
+--   The flavor argument, if nil or "match" compiles expression unmodified.  Otherwise:
+--     flavor=="search" compiles {{!expression .}* expression}+
+--     and more flavors can be added later, e.g.
+--     flavor==n, for integer n, compiles {{!expression .}* expression}{0,n}
+--   The flavor feature is a convenience function that is a stopgap until we have macros/functions 
+--
+-- r:match(input, optional_start) like e:match but r is a compiled rplx object
+--   returns matches, leftover;
+--   never raises an error (unless for internal rosie bug)
+--
+-- e:match(expression, input, optional_flavor, optional_start)
+--   behaves like: r=e:compile(expression, optional_flavor); r:match(input, optional_start)
+--   API only: expression can be an rplx id, in which case that compiled expression is used
+--   returns matches, leftover;
+--   raises error if expression fails to compile
+-- 
+-- e:tracematch(expression, input, optional_flavor, optional_start) like match, with tracing (was eval)
+--   API only: expression can be an rplx id, in which case that compiled expression is used
+--   returns matches, leftover, trace;
+--   raises error if expression fails to compile
+-- 
 -- e:output(optional_formatter) sets or returns the formatter (a function)
---   for convenience, an engine calls formatter on each successful match result
--- e:env(optional_identifier) returns the definition of optional_identifier or the entire environment
+--   an engine calls formatter on each successful match result;
+--   raises error if optional_formatter is not a function
+-- e:lookup(optional_identifier) returns the definition of optional_identifier or the entire environment
+--   never raises an error (unless for internal rosie bug)
 -- e:clear(optional_identifier) erases the definition of optional_identifier or the entire environment
+--   never raises an error (unless for internal rosie bug)
 
 -- Engines (now) know nothing about files.  File processing routines are defined in
 -- process_input_file.lua and exposed via the rosie module.
+
+-- FUTURE:
+--
+-- e:trace(id1, ... | nil) trace the listed identifiers, or if nil return the identifiers being traced
+-- e:traceall(flag) trace all identifiers if flag is true, or no indentifiers if flag is false
+-- e:untrace(id1, ...) untrace the listed identifiers
+-- e:tracesearch(identifier, input, optional_start) like search, but generates a trace output (was eval)
+--
+-- e:stats() returns number of patterns bound, some measure of env size (via lua collectgarbage), more...
+--
+-- e:match and e:search return a third argument which is the (user) cpu time that it took to match/search
+
 
 local engine_module = {}
 
@@ -61,27 +116,36 @@ local engine =
       name=false;
       output=false;
 
-      match_=false;
+      load=false;
+      compile=false;
 
       match=false;
       eval=false;
       grep=false;
+
+      _match=false;
+
+      _error=false;
+
       configure=false;
       inspect=false;
-      --
-      compile=false;
-      compile_match_exp=false;
+
   },
    "engine"
 )
 
-engine.tostring_function = function(orig, e)
-			      return '<engine: '..tostring(e._name)..' ('.. e._id ..')>'; end
+engine.tostring_function =
+   function(orig, e)
+      local name = ""
+      if e._name~=unspecified then name = tostring(e._name) .. " / "; end
+      name = name .. e._id
+      return '<engine ' .. name .. '>'
+   end
 
 local locale = lpeg.locale()
 
 local function engine_error(e, msg)
-   error(string.format("Engine %s (%s): %s", e._name, e._id, tostring(msg)), 0)
+   error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 3)
 end
 
 local function no_pattern(e)
@@ -91,6 +155,21 @@ end
 local function no_encode(e)
    engine_error(e, "no encode configured")
 end
+
+----------------------------------------------------------------------------------------
+
+local rplx = 
+   recordtype.define(
+   { _pattern=unspecified;
+     _engine=unspecified;
+     _id=unspecified;
+      --
+      match=false;
+  },
+   "rplx"
+)
+
+rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) .. '>'; end
 
 ----------------------------------------------------------------------------------------
 
@@ -143,7 +222,7 @@ local function engine_inspect(e)
    return {name=e._name, expression=e.expression, encode=e.encode, id=e._id}
 end
 
-local function engine_match_(e, pat, input, start)
+local function _engine_match(e, pat, input, start)
    --start = start or 1
    local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
    if result then
@@ -153,10 +232,9 @@ local function engine_match_(e, pat, input, start)
    end
 end
 
--- TODO: Better cache.
--- TODO: Must invalidate the cache if env has changed.
--- TODO: Refactor _match, _eval, and _grep which can share code.
--- returns matches, leftover
+-- FIXME: Invalidate cache if anything is written to the environment
+-- TODO: Bigger cache than just most recent?
+-- NOTE: this one-entry cache takes 'make test' from 35s user time to 25s user time
 local cache_key, cache_val
 local function cache(key, val)
    if not val then return (cache_key==key) and cache_val; end -- lookup
@@ -164,27 +242,32 @@ local function cache(key, val)
    return
 end
 
-local function make_matcher(compiler, processing_fcn)
+-- returns matches, leftover
+local function make_matcher(processing_fcn)
    return function(e, expression, input, start)
-	     if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
-	     if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
+	     if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
 	     local pat, msg
-	     pat = cache(expression)
-	     if not pat then
-		pat, msg = compiler(expression, e.env)
-		if not pat then error(msg); end
-		cache(expression, pat)
+	     if rplx.is(expression) then
+		return processing_fcn(e, rplx._pattern, input, start)
+	     elseif type(expression)=="string" then -- expression has not been compiled
+		pat = cache(expression)
+		if not pat then
+		   pat, msg = compile.compile_match_expression(expression, e.env)
+		   if not pat then engine_error(e, msg); end
+		   cache(expression, pat)
+		end
+		return processing_fcn(e, pat, input, start)
+	     else
+		engine_error(e, "Expression not a string or rplx: " .. tostring(expression));
 	     end
-	     return processing_fcn(e, pat, input, start)
-	  end
+	  end  -- matcher function
 end
 
 -- returns matches, leftover
-local engine_match = make_matcher(compile.compile_match_expression, engine_match_)
+local engine_match = make_matcher(_engine_match)
 
 -- returns matches, leftover, trace
-local engine_eval = make_matcher(compile.compile_match_expression,
-				 function(e, pat, input, start)
+local engine_eval = make_matcher(function(e, pat, input, start)
 				    return eval.eval(pat, input, start, e.env, false)
 				 end)
 
@@ -192,14 +275,32 @@ local engine_eval = make_matcher(compile.compile_match_expression,
 -- function to match and eval, plus until we implement macros/functions, it saves users the typing
 -- needed to do it for themselves.
 -- returns matches, leftover
-local engine_grep = make_matcher(grep.pattern_EXP_to_grep_pattern, engine_match_)
+local engine_grep = make_matcher(grep.pattern_EXP_to_grep_pattern, _engine_match)
 
---    if type(expression)~="string" then error("Expression not a string: " .. tostring(expression)); end
---    if type(input)~="string" then error("Input not a string: " .. tostring(input)); end
---    local pat, msg = grep.pattern_EXP_to_grep_pattern(expression, e.env)
---    if not pat then error(msg); end
---    return engine_match_(e, pat, input, start)
--- end
+local function engine_compile(en, expression, flavor)
+   flavor = flavor or "match"
+   if type(expression)~="string" then engine_error(en, "Expression not a string: " .. tostring(expression)); end
+   if type(flavor)~="string" then engine_error(en, "Flavor not a string: " .. tostring(flavor)); end
+   local pat, msg
+   if flavor=="match" then
+      pat, msg = compile.compile_match_expression(expression, en.env)
+   elseif flavor=="search" then
+      pat, msg = grep.pattern_EXP_to_grep_pattern(expression, en.env)
+   else
+      engine_error(en, "Unknown flavor: " .. flavor)
+   end
+   if not pat then engine_error(en, msg); end
+   return rplx(en, pat)
+end
+   
+
+----------------------------------------------------------------------------------------
+
+local function load_string(en, input)
+   local results, messages = compile.compile_source(input, en.env)
+   if not results then engine_error(e, messages); end -- messages is a string in this case
+   return common.compact_messages(messages)	    -- return a list of zero or more strings
+end
 
 ----------------------------------------------------------------------------------------
 
@@ -209,7 +310,7 @@ local function reconstitute_pattern_definition(id, p)
 	       (p.ast and parse.reveal_ast(p.ast)) or
 	        "// built-in RPL pattern //" )
    end
-   error("undefined identifier: " .. id)
+   engine_error(e, "undefined identifier: " .. id)
 end
 
 local function pattern_properties(name, pat)
@@ -248,10 +349,24 @@ end
 
 local function get_set_encoder_function(en, f)
    if not f then return en.encode_function; end
-   if type(f)~="function" then error("Output encoder not a function: " .. tostring(f)); end
+   if type(f)~="function" then engine_error(e, "Output encoder not a function: " .. tostring(f)); end
    en.encode = "function"			    -- TEMP FIXME!
    en.encode_function = f
 end
+
+rplx.create_function =
+   function(_new, engine, pattern)
+--      print("New rplx.  engine="..tostring(engine)..", pattern="..tostring(pattern))
+      local params = {
+	 _engine=engine,
+	 _pattern=pattern,
+	 match=function(self, ...) return engine._match(engine, pattern, ...); end,
+      }
+      local idstring = tostring(params):match("0x(.*)") or "id/err"
+      params._id = idstring
+      return _new(params)
+   end
+
 
 engine.create_function =
    function(_new, name, initial_env)
@@ -269,14 +384,19 @@ engine.create_function =
 		      lookup=get_environment,
 		      clear=clear_environment,
 		      id=function(en) return en._id; end,
-		      name=function(en) return en._name; end,
+		      name=function(en) return name; end,
 		      output=get_set_encoder_function,
-
-		      match_=engine_match_,
 
 		      match=engine_match,
 		      grep=engine_grep,
 		      eval=engine_eval,
+		      load=load_string,
+		      compile=engine_compile,
+
+		      _match=_engine_match,
+
+		      _error=engine_error,
+
 		      configure=engine_configure,
 		      inspect=engine_inspect}
       local idstring = tostring(params):match("0x(.*)") or "id/err"
@@ -287,5 +407,7 @@ engine.create_function =
 -- recordtype package defines a creator function that is named after the record type name
 engine_module.new = engine
 engine_module.is = engine.is
+
+engine_module.rplx = rplx			    -- debugging
 
 return engine_module
