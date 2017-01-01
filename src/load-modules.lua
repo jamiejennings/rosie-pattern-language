@@ -88,6 +88,7 @@ lapi = load_module("lapi");
 api = load_module("api")
 
 process_input_file = load_module("process_input_file")
+process_rpl_file = load_module("process_rpl_file")
 
 argparse = load_module("argparse", "submodules/argparse/src") -- FIXME
 
