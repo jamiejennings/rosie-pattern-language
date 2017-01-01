@@ -67,10 +67,10 @@
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
 if not ROSIE_HOME then error("Error while initializing: variable ROSIE_HOME not set"); end
 
--- When init is loaded from run-rosie, ROSIE_DEV will always be the STRING "true" or "false" 
+-- When init is loaded from run-rosie, ROSIE_DEV will be a boolean (as set by run.lua)
 -- When init is loaded from rosie.lua, ROSIE_DEV will be unset.  In this case, it should be set to
 -- true so that rosie errors do not invoke os.exit().
-ROSIE_DEV = (ROSIE_DEV==nil) or (ROSIE_DEV=="true")
+ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
 
 local function read_version_or_die(home)
    assert(type(home)=="string")

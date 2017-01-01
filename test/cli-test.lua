@@ -10,19 +10,19 @@ util = require "util"
 require "test-functions"
 check = test.check
 
-rosie = ROSIE_HOME .. "/bin/rosie"
-local try = io.open(rosie, "r")
+rosie_cmd = ROSIE_HOME .. "/bin/rosie"
+local try = io.open(rosie_cmd, "r")
 if try then
    try:close()					    -- found it.  will use it.
 else
    local tbl, status, code = util.os_execute_capture("which rosie")
    if code==0 and tbl and tbl[1] and type(tbl[1])=="string" then
-      rosie = tbl[1]:sub(1,-2)			    -- remove lf at end
+      rosie_cmd = tbl[1]:sub(1,-2)			    -- remove lf at end
    else
       error("Cannot find rosie executable")
    end
 end
-print("Found rosie executable: " .. rosie)
+print("Found rosie executable: " .. rosie_cmd)
 
 test.start(test.current_filename())
 
@@ -53,7 +53,7 @@ function run(expression, grep_flag, expectations)
    test.subheading((grep_flag and "Using grep command") or "Using match command")
    local verb = (grep_flag and "Grepping for") or "Matching"
    print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
-   local cmd = rosie .. (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
+   local cmd = rosie_cmd .. (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
    print(cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
@@ -122,7 +122,7 @@ check(ok, [[testing for a shell quoting error in which rpl expressions containin
       were not properly passed to lua in bin/run-rosie]])
 
 print("\nChecking that the command line expression can contain [[...]] per Issue #22")
-cmd = rosie .. " -e 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+' -patterns"
+cmd = rosie_cmd .. " patterns -r 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+'"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(results, "Expression on command line can contain [[.,.]]") -- command succeeded
@@ -131,14 +131,14 @@ check(results[#results]:sub(-9):find("patterns")==1)
 
 print("\nSniff test of the lightweight test facility (MORE TESTS LIKE THIS ARE NEEDED)")
 -- Passing tests
-cmd = rosie .. " test " .. ROSIE_HOME .. "/test/lightweight-test-pass.rpl"
+cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-pass.rpl"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(results)
 check(code==0, "Return code is zero")
 check(results[#results]:find("All tests passed"))
 -- Failing tests
-cmd = rosie .. " test " .. ROSIE_HOME .. "/test/lightweight-test-fail.rpl"
+cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-fail.rpl"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(results)

@@ -12,10 +12,10 @@ heading = test.heading
 subheading = test.subheading
 
 e = false;
+global_rplx = false;
 
 function set_expression(exp)
-   local ok, msg = lapi.configure_engine(e, {expression=exp, encode="json"})
-   if not ok then error("Configuration error: " .. msg); end
+   global_rplx = e:compile(exp)
 end
 
 function check_match(...) error("Called check_match accidentally"); end
@@ -24,8 +24,8 @@ trace = "no trace set"
 
 function check_eval(exp, input, expectation, expected_contents_list)
 --   set_expression(exp)
-   local ok, m, leftover, localtrace = pcall(lapi.eval, e, exp, input)
-   check(ok, "failed call to lapi.eval: " .. tostring(m))
+   local ok, m, leftover, localtrace = pcall(e.eval, e, exp, input)
+   check(ok, "failed call to eval: " .. tostring(m))
    if ok then
       check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " " .. input .. " ", 1)
@@ -55,35 +55,34 @@ test.start(test.current_filename())
 ----------------------------------------------------------------------------------------
 heading("Setting up")
 ----------------------------------------------------------------------------------------
-check(type(lapi)=="table")
-check(type(lapi.new_engine)=="function")
-e, config_ok, msg = lapi.new_engine({name="eval test"})
-check(engine.is(e))
-check(config_ok)
+check(type(rosie)=="table")
+ok, e = pcall(rosie.engine.new, "eval test")
+check(rosie.engine.is(e))
+check(ok)
 
 subheading("Setting up assignments")
-t1, t2 = lapi.load_string(e, 'a = "a"  b = "b"  c = "c"  d = "d"')
+t1, t2 = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
 check(type(t1)=="table")
 if t2 then check(type(t2)=="table"); end
-t = lapi.get_environment(e, "a")
+t = e:lookup("a")
 check(type(t)=="table")
 
-ok, msg = pcall(lapi.load_string, e, 'alias plain_old_alias = "p"')
+ok, msg = pcall(e.load, e, 'alias plain_old_alias = "p"')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_plain_old_alias = plain_old_alias')
+ok, msg = pcall(e.load, e, 'alias alias_to_plain_old_alias = plain_old_alias')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_a = a')
+ok, msg = pcall(e.load, e, 'alias alias_to_a = a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alternate_a = a')
+ok, msg = pcall(e.load, e, 'alternate_a = a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alternate_to_alias_to_a = alias_to_a')
+ok, msg = pcall(e.load, e, 'alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
+ok, msg = pcall(e.load, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
 ----------------------------------------------------------------------------------------
