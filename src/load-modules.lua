@@ -50,7 +50,7 @@ function load_module(name, optional_subdir)
    if (not thing) then
       print("Error while initializing: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME)
       if ROSIE_DEV then
-	 print("Reported error was: " .. tostring(msg));
+	 error(msg, 0);
       else
 	 os.exit(-1)
       end -- if DEV mode
@@ -84,8 +84,8 @@ grep = load_module("grep")
 engine = load_module("engine")
 
 manifest = load_module("manifest")
-lapi = load_module("lapi");
-api = load_module("api")
+--lapi = load_module("lapi");
+--api = load_module("api")
 
 process_input_file = load_module("process_input_file")
 process_rpl_file = load_module("process_rpl_file")
