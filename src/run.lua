@@ -53,6 +53,8 @@ else
    end
 end
 
+local engine=require "engine"			    -- debugging
+
 local argparse = require "argparse"
 local common = require "common"
 local lapi = require "lapi"
@@ -88,6 +90,15 @@ local function set_encoder(name)
    CL_ENGINE:output(encode_fcn)
 end
 
+local function load_string(en, input)
+   local ok, results, messages = pcall(en.load, en, input)
+   if not ok then
+      if ROSIE_DEV then error(messages:concat("\n"));
+      else io.write("Cannot load rpl: \n", messages); os.exit(-1); end
+   end
+   return results, messages
+end
+
 function setup_engine(args)
    -- (1a) Load the manifest
    if args.manifest then
@@ -95,7 +106,7 @@ function setup_engine(args)
 	 VERBOSE = true;
 	 io.stdout:write("Compiling files listed in manifest ", args.manifest, "\n")
       end
-      local success, messages = lapi.load_manifest(CL_ENGINE, args.manifest)
+      local success, messages = rosie.file.load(CL_ENGINE, args.manifest, "manifest")
       if not success then
 	 for _,msg in ipairs(messages) do
 	    if msg then
@@ -112,7 +123,7 @@ function setup_engine(args)
 	 if args.verbose then
 	    io.stdout:write("Compiling additional file ", file, "\n")
 	 end
-	 local success, msg = lapi.load_file(CL_ENGINE, file)
+	 local success, msg = rosie.file.load(CL_ENGINE, file, "rpl")
 	 if not success then
 	    io.stdout:write(msg, "\n")
 	    os.exit(-4)
@@ -126,7 +137,7 @@ function setup_engine(args)
 	 if args.verbose then
 	    io.stdout:write(string.format("Compiling additional rpl code %q\n", stm))
 	 end
-	 local success, msg = lapi.load_string(CL_ENGINE, stm)
+	 local success, msg = load_string(CL_ENGINE, stm)
 	 if not success then
 	    io.stdout:write(msg, "\n")
 	    os.exit(-4)
@@ -135,18 +146,19 @@ function setup_engine(args)
    end
 
    -- (2) Compile the expression
-   -- if args.pattern then
-   --    local success, msg
-   --    if args.grep then
-   -- 	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, args.pattern, "json")
-   --    else
-   -- 	 success, msg = lapi.configure_engine(CL_ENGINE, {expression=args.pattern, encode="json"})
-   --    end
-   --    if not success then
-   -- 	 io.write(msg, "\n")
-   -- 	 os.exit(-1);
-   --    end
-   -- end
+   if args.pattern then
+      local success, msg
+      -- if args.grep then
+      -- 	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, args.pattern, "json")
+      -- else
+         PATTERN, msgs = CL_ENGINE:compile(args.pattern, args.command=="grep" and "search" or "match")
+	 assert(engine.rplx.is(PATTERN))
+      -- end
+      if not PATTERN then
+   	 io.write(msg, "\n")
+   	 os.exit(-1);
+      end
+   end
 end
 
 infilename, outfilename, errfilename = nil, nil, nil
@@ -162,17 +174,16 @@ function process_pattern_against_file(args, infilename)
 	set_encoder(args.encode)
 
 	-- (5) Iterate through the lines in the input file
-	local match_function
-	if args.command=="match" then
-	   match_function = rosie.file.match
+	local cin, cout, cerr
+
+	local flav = args.command=="grep" and "search" or "match"
+	if args.command=="match" or args.command=="grep" then
+	   cin, cout, cerr = rosie.file.match(CL_ENGINE, args.pattern, flav, infilename, outfilename, errfilename, args.wholefile)
 	elseif args.command=="eval" then
-	   match_function = rosie.file.eval
-	elseif args.command=="grep" then
-	   match_function = rosie.file.grep
+	   cin, cout, cerr = rosie.file.eval(CL_ENGINE, args.pattern, flav, infilename, outfilename, errfilename, args.wholefile)
 	else
 	   error("Internal error: unrecognized command: " .. tostring(args.command))
 	end
-	local cin, cout, cerr = match_function(CL_ENGINE, args.pattern, infilename, outfilename, errfilename, args.wholefile)
 	if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
 
 	-- (6) Print summary
@@ -234,8 +245,8 @@ function setup_and_run_tests(args)
 	    test_line = "-- test" identifier testKeyword quoted_string (ignore "," ignore quoted_string)*
          ]==]
 
-      lapi.load_file(CL_ENGINE, "$sys/src/rpl-core.rpl")
-      lapi.load_string(CL_ENGINE, test_patterns)
+      rosie.file.load(CL_ENGINE, "$sys/src/rpl-core.rpl", "rpl")
+      load_string(CL_ENGINE, test_patterns)
       set_encoder(false)
       local failures = 0
       local exp = "test_line"

@@ -19,9 +19,8 @@
 -- + rosie.engine.new(optional_name)
 --   new_engine: function: 0x7fc58cd196a0, 
 --
--- + rosie.file.match(engine, expression, infile, outfile, errfile)
--- + rosie.file.eval(engine, expression, infile, outfile, errfile)
--- rosie.file.grep(engine, expression, infile, outfile, errfile)
+-- + rosie.file.match(engine, rplx, infile, outfile, errfile)
+-- + rosie.file.eval(engine, rplx, infile, outfile, errfile)
 --   eval_file: function: 0x7fc58cd1c8d0, 
 --   match_file: function: 0x7fc58cd1c890}
 --
@@ -31,7 +30,7 @@
 --   load_file: function: 0x7fc58cd1c9c0, 
 --
 --
--- engine:load(string, type)
+-- engine:load(string)
 --   load_string: function: 0x7fc58cd1ca60, 
 --
 -- + engine:lookup(optional_identifier)
@@ -68,10 +67,10 @@
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
 if not ROSIE_HOME then error("Error while initializing: variable ROSIE_HOME not set"); end
 
--- When init is loaded from run-rosie, ROSIE_DEV will always be true or false 
+-- When init is loaded from run-rosie, ROSIE_DEV will always be the STRING "true" or "false" 
 -- When init is loaded from rosie.lua, ROSIE_DEV will be unset.  In this case, it should be set to
 -- true so that rosie errors do not invoke os.exit().
-if ROSIE_DEV==nil then ROSIE_DEV=true; end
+ROSIE_DEV = (ROSIE_DEV==nil) or (ROSIE_DEV=="true")
 
 local function read_version_or_die(home)
    assert(type(home)=="string")
@@ -165,7 +164,8 @@ local encoder_table =
 local file_functions = {
    match = process_input_file.match,
    eval = process_input_file.eval,
-   grep = process_input_file.grep
+   grep = process_input_file.grep,
+   load = process_rpl_file.load_file	    -- TEMP until module system
 }
 
 local rosie = {
