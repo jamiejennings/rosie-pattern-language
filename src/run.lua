@@ -57,7 +57,7 @@ local engine=require "engine"			    -- debugging
 
 local argparse = require "argparse"
 local common = require "common"
-local lapi = require "lapi"
+--local lapi = require "lapi"
 local json = require "cjson"
 local list = require("list")
 --local repl_mod = require("repl")
@@ -106,7 +106,7 @@ function setup_engine(args)
 	 VERBOSE = true;
 	 io.stdout:write("Compiling files listed in manifest ", args.manifest, "\n")
       end
-      local success, messages = rosie.file.load(CL_ENGINE, args.manifest, "manifest")
+      local success, messages = pcall(rosie.file.load, CL_ENGINE, args.manifest, "manifest")
       if not success then
 	 for _,msg in ipairs(messages) do if msg then io.stdout:write(msg, "\n"); end; end
 	 os.exit(-4)
@@ -119,7 +119,7 @@ function setup_engine(args)
 	 if args.verbose then
 	    io.stdout:write("Compiling additional file ", file, "\n")
 	 end
-	 local success, msg = rosie.file.load(CL_ENGINE, file, "rpl")
+	 local success, msg = pcall(rosie.file.load, CL_ENGINE, file, "rpl")
 	 if not success then
 	    io.stdout:write(msg, "\n")
 	    os.exit(-4)
@@ -142,19 +142,9 @@ function setup_engine(args)
    end
 
    -- (2) Compile the expression
-   if args.pattern then
-      local success, msg
-      -- if args.grep then
-      -- 	 success, msg = lapi.set_match_exp_grep_TEMPORARY(CL_ENGINE, args.pattern, "json")
-      -- else
-         PATTERN, msgs = CL_ENGINE:compile(args.pattern, args.command=="grep" and "search" or "match")
-	 assert(engine.rplx.is(PATTERN))
-      -- end
-      if not PATTERN then
-   	 io.write(msg, "\n")
-   	 os.exit(-1);
-      end
-   end
+   -- if args.pattern then
+   --   ...
+   -- end
 end
 
 infilename, outfilename, errfilename = nil, nil, nil
@@ -170,17 +160,11 @@ function process_pattern_against_file(args, infilename)
 	set_encoder(args.encode)
 
 	-- (5) Iterate through the lines in the input file
-	local cin, cout, cerr
-
-	local flav = args.command=="grep" and "search" or "match"
-	if args.command=="match" or args.command=="grep" then
-	   cin, cout, cerr = rosie.file.match(CL_ENGINE, args.pattern, flav, infilename, outfilename, errfilename, args.wholefile)
-	elseif args.command=="eval" then
-	   cin, cout, cerr = rosie.file.eval(CL_ENGINE, args.pattern, flav, infilename, outfilename, errfilename, args.wholefile)
-	else
-	   error("Internal error: unrecognized command: " .. tostring(args.command))
-	end
-	if not cin then io.write(cout, "\n"); os.exit(-1); end -- cout is error message in this case
+	local match_function = (args.command=="eval") and rosie.file.eval or rosie.file.match 
+	local flav = (args.command=="grep") and "search" or "match"
+	local ok, cin, cout, cerr =
+	   pcall(match_function, CL_ENGINE, args.pattern, flav, infilename, outfilename, errfilename, args.wholefile)
+	if not ok then io.write(cin, "\n"); os.exit(-1); end -- cout is error message in this case
 
 	-- (6) Print summary
 	if args.verbose then

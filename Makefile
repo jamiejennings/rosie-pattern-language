@@ -264,7 +264,7 @@ sniff: $(ROSIEBIN)
 .PHONY: test
 test:
 	@echo Running tests in test/all.lua
-	echo "rosie=\"$(ROSIEBIN)\"; dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D
+	echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D
 
 .PHONY: installtest
 installtest:

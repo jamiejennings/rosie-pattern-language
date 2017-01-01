@@ -145,7 +145,7 @@ engine.tostring_function =
 local locale = lpeg.locale()
 
 local function engine_error(e, msg)
-   error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 3)
+   error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 0)
 end
 
 local function no_pattern(e)
@@ -289,7 +289,7 @@ local function engine_compile(en, expression, flavor)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
-   if not pat then engine_error(en, msg); end
+   if not pat then error(msg, 0); end
    return rplx(en, pat)
 end
    
