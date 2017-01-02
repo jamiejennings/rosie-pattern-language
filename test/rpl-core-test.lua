@@ -24,7 +24,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text, 
    expected_leftover = expected_leftover or 0
    addlevel = addlevel or 0
    set_expression(exp)
-   local m, leftover = e:match(exp, input)
+   local m, leftover = global_rplx:match(input)
    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " '" .. input .. "'", 1+addlevel)
    local fmt = "expected leftover matching %s against '%s' was %d but received %d"
