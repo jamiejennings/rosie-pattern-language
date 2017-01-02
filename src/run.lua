@@ -108,10 +108,14 @@ function setup_engine(args)
       end
       local success, messages = pcall(rosie.file.load, CL_ENGINE, args.manifest, "manifest")
       if not success then
-	 for _,msg in ipairs(messages) do if msg then io.stdout:write(msg, "\n"); end; end
+	 io.stdout:write(messages, "\n")
 	 os.exit(-4)
+      else
+	 if args.verbose then
+	    for _, msg in ipairs(messages) do io.stdout:write(msg, "\n"); end
+	 end
       end
-   end
+   end -- load manifest
 
    -- (1b) Load an rpl file
    if args.rpls then

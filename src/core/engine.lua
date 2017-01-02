@@ -96,7 +96,6 @@ local common = require "common"
 local parse = require "parse"
 local compile = require "compile"
 local eval = require "eval"
-local co = require "color-output"
 local grep = require "grep"
 
 local engine = 
@@ -105,10 +104,10 @@ local engine =
       env=false;
       _id=unspecified;
       --
-      encode=false;
-      encode_function=false;
-      expression=false;
-      pattern=false;
+--      encode=false;
+      encode_function=function(...) return ... end;
+--      expression=false;
+--      pattern=false;
       --
       id=false;
       lookup=false;
@@ -127,8 +126,8 @@ local engine =
 
       _error=false;
 
-      configure=false;
-      inspect=false;
+--      configure=false;
+--      inspect=false;
 
   },
    "engine"
@@ -142,19 +141,19 @@ engine.tostring_function =
       return '<engine ' .. name .. '>'
    end
 
-local locale = lpeg.locale()
+-- local locale = lpeg.locale()
 
 local function engine_error(e, msg)
    error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 0)
 end
 
-local function no_pattern(e)
-   engine_error(e, "no pattern configured")
-end
+-- local function no_pattern(e)
+--    engine_error(e, "no pattern configured")
+-- end
 
-local function no_encode(e)
-   engine_error(e, "no encode configured")
-end
+-- local function no_encode(e)
+--    engine_error(e, "no encode configured")
+-- end
 
 ----------------------------------------------------------------------------------------
 
@@ -173,54 +172,54 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 
 ----------------------------------------------------------------------------------------
 
-local encode_table =
-   {json = json.encode,
-    color = co.color_string_from_leaf_nodes,
-    nocolor = co.string_from_leaf_nodes,
-    fulltext = common.match_to_text,
-    [false] = function(...) return ...; end
- }
+-- local encode_table =
+--    {json = json.encode,
+--     color = co.color_string_from_leaf_nodes,
+--     nocolor = co.string_from_leaf_nodes,
+--     fulltext = common.match_to_text,
+--     [false] = function(...) return ...; end
+--  }
 
-local function name_to_encode(name)
-   return encode_table[name]
-end
+-- local function name_to_encode(name)
+--    return encode_table[name]
+-- end
 
-local function encode_to_name(fcn)
-   for k,v in pairs(encode_table) do
-      if v==fcn then return k; end
-   end
-   return "<unknown encode type>"
-end
+-- local function encode_to_name(fcn)
+--    for k,v in pairs(encode_table) do
+--       if v==fcn then return k; end
+--    end
+--    return "<unknown encode type>"
+-- end
 
-----------------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------------------
 
-local function engine_configure(e, configuration)
-   for k,v in pairs(configuration) do
-      if k=="expression" then
-	 local pat, msg = compile.compile_match_expression(v, e.env)
-	 if not pat then return false, msg; end
-	 e.expression = v
-	 e.pattern = pat
-      elseif k=="encode" then
-	 local f = name_to_encode(v)
-	 if type(f)~="function" then
-	    return false, 'invalid value for encode: "' .. tostring(v) .. '"'
-	 else
-	    e.encode = v
-	    e.encode_function = f
-	 end
-      elseif k=="name" then
-	 e._name = tostring(v)
-      else
-	 return false, 'invalid configuration parameter: ' .. tostring(k)
-      end
-   end -- for each configuration key/value
-   return true
-end
+-- local function engine_configure(e, configuration)
+--    for k,v in pairs(configuration) do
+--       if k=="expression" then
+-- 	 local pat, msg = compile.compile_match_expression(v, e.env)
+-- 	 if not pat then return false, msg; end
+-- 	 e.expression = v
+-- 	 e.pattern = pat
+--       elseif k=="encode" then
+-- 	 local f = name_to_encode(v)
+-- 	 if type(f)~="function" then
+-- 	    return false, 'invalid value for encode: "' .. tostring(v) .. '"'
+-- 	 else
+-- 	    e.encode = v
+-- 	    e.encode_function = f
+-- 	 end
+--       elseif k=="name" then
+-- 	 e._name = tostring(v)
+--       else
+-- 	 return false, 'invalid configuration parameter: ' .. tostring(k)
+--       end
+--    end -- for each configuration key/value
+--    return true
+-- end
 
-local function engine_inspect(e)
-   return {name=e._name, expression=e.expression, encode=e.encode, id=e._id}
-end
+-- local function engine_inspect(e)
+--    return {name=e._name, expression=e.expression, encode=e.encode, id=e._id}
+-- end
 
 local function _engine_match(e, pat, input, start)
    --start = start or 1
@@ -232,16 +231,7 @@ local function _engine_match(e, pat, input, start)
    end
 end
 
--- FIXME: Invalidate cache if anything is written to the environment
--- TODO: Bigger cache than just most recent?
--- NOTE: this one-entry cache takes 'make test' from 35s user time to 25s user time
-local cache_key, cache_val
-local function cache(key, val)
-   if not val then return (cache_key==key) and cache_val; end -- lookup
-   cache_key, cache_val = key, val
-   return
-end
-
+-- TODO: Maybe cache expressions?
 -- returns matches, leftover
 local function make_matcher(processing_fcn)
    return function(e, expression, input, start)
@@ -250,12 +240,12 @@ local function make_matcher(processing_fcn)
 	     if rplx.is(expression) then
 		return processing_fcn(e, rplx._pattern, input, start)
 	     elseif type(expression)=="string" then -- expression has not been compiled
-		pat = cache(expression)
-		if not pat then
+		-- pat = cache(expression)
+		-- if not pat then
 		   pat, msg = compile.compile_match_expression(expression, e.env)
 		   if not pat then engine_error(e, msg); end
-		   cache(expression, pat)
-		end
+		--    cache(expression, pat)
+		-- end
 		return processing_fcn(e, pat, input, start)
 	     else
 		engine_error(e, "Expression not a string or rplx: " .. tostring(expression));
@@ -350,7 +340,6 @@ end
 local function get_set_encoder_function(en, f)
    if not f then return en.encode_function; end
    if type(f)~="function" then engine_error(e, "Output encoder not a function: " .. tostring(f)); end
-   en.encode = "function"			    -- TEMP FIXME!
    en.encode_function = f
 end
 
@@ -375,11 +364,11 @@ engine.create_function =
       local params = {_name=name,
 		      env=initial_env,
 		      -- setting expression causes pattern to be set
-		      expression="<uninitialized>",
-		      pattern=false,
+--		      expression="<uninitialized>",
+--		      pattern=false,
 		      -- setting encode causes encode_function to be set
-		      encode=false,
-		      encode_function=name_to_encode(false),
+--		      encode=false,
+--		      encode_function=name_to_encode(false),
 		      -- functions
 		      lookup=get_environment,
 		      clear=clear_environment,
@@ -397,8 +386,9 @@ engine.create_function =
 
 		      _error=engine_error,
 
-		      configure=engine_configure,
-		      inspect=engine_inspect}
+		      -- configure=engine_configure,
+		      -- inspect=engine_inspect
+		   }
       local idstring = tostring(params):match("0x(.*)") or "id/err"
       params._id = idstring
       return _new(params)
