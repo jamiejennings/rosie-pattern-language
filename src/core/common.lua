@@ -2,7 +2,7 @@
 ----
 ---- common.lua        Functions common to many parts of Rosie
 ----
----- © Copyright IBM Corporation 2016.
+---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
