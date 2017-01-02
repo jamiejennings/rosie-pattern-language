@@ -88,7 +88,6 @@
 
 local engine_module = {}
 
-local json = require "cjson"
 local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified;
@@ -103,12 +102,9 @@ local engine =
    {  _name=unspecified;			    -- for reference, debugging
       env=false;
       _id=unspecified;
-      --
---      encode=false;
+
       encode_function=function(...) return ... end;
---      expression=false;
---      pattern=false;
-      --
+
       id=false;
       lookup=false;
       clear=false;
@@ -120,15 +116,9 @@ local engine =
 
       match=false;
       eval=false;
-      grep=false;
 
       _match=false;
-
       _error=false;
-
---      configure=false;
---      inspect=false;
-
   },
    "engine"
 )
@@ -141,19 +131,9 @@ engine.tostring_function =
       return '<engine ' .. name .. '>'
    end
 
--- local locale = lpeg.locale()
-
 local function engine_error(e, msg)
    error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 0)
 end
-
--- local function no_pattern(e)
---    engine_error(e, "no pattern configured")
--- end
-
--- local function no_encode(e)
---    engine_error(e, "no encode configured")
--- end
 
 ----------------------------------------------------------------------------------------
 
@@ -171,55 +151,6 @@ local rplx =
 rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) .. '>'; end
 
 ----------------------------------------------------------------------------------------
-
--- local encode_table =
---    {json = json.encode,
---     color = co.color_string_from_leaf_nodes,
---     nocolor = co.string_from_leaf_nodes,
---     fulltext = common.match_to_text,
---     [false] = function(...) return ...; end
---  }
-
--- local function name_to_encode(name)
---    return encode_table[name]
--- end
-
--- local function encode_to_name(fcn)
---    for k,v in pairs(encode_table) do
---       if v==fcn then return k; end
---    end
---    return "<unknown encode type>"
--- end
-
--- ----------------------------------------------------------------------------------------
-
--- local function engine_configure(e, configuration)
---    for k,v in pairs(configuration) do
---       if k=="expression" then
--- 	 local pat, msg = compile.compile_match_expression(v, e.env)
--- 	 if not pat then return false, msg; end
--- 	 e.expression = v
--- 	 e.pattern = pat
---       elseif k=="encode" then
--- 	 local f = name_to_encode(v)
--- 	 if type(f)~="function" then
--- 	    return false, 'invalid value for encode: "' .. tostring(v) .. '"'
--- 	 else
--- 	    e.encode = v
--- 	    e.encode_function = f
--- 	 end
---       elseif k=="name" then
--- 	 e._name = tostring(v)
---       else
--- 	 return false, 'invalid configuration parameter: ' .. tostring(k)
---       end
---    end -- for each configuration key/value
---    return true
--- end
-
--- local function engine_inspect(e)
---    return {name=e._name, expression=e.expression, encode=e.encode, id=e._id}
--- end
 
 local function _engine_match(e, pat, input, start)
    --start = start or 1
@@ -261,12 +192,6 @@ local engine_eval = make_matcher(function(e, pat, input, start)
 				    return eval.eval(pat, input, start, e.env, false)
 				 end)
 
--- Having a grep function is a convenience.  It doesn't need to be here, but it's parallel in
--- function to match and eval, plus until we implement macros/functions, it saves users the typing
--- needed to do it for themselves.
--- returns matches, leftover
-local engine_grep = make_matcher(grep.pattern_EXP_to_grep_pattern, _engine_match)
-
 local function engine_compile(en, expression, flavor)
    flavor = flavor or "match"
    if type(expression)~="string" then engine_error(en, "Expression not a string: " .. tostring(expression)); end
@@ -283,7 +208,6 @@ local function engine_compile(en, expression, flavor)
    return rplx(en, pat)
 end
    
-
 ----------------------------------------------------------------------------------------
 
 local function load_string(en, input)
@@ -345,7 +269,6 @@ end
 
 rplx.create_function =
    function(_new, engine, pattern)
---      print("New rplx.  engine="..tostring(engine)..", pattern="..tostring(pattern))
       local params = {
 	 _engine=engine,
 	 _pattern=pattern,
@@ -356,20 +279,13 @@ rplx.create_function =
       return _new(params)
    end
 
-
 engine.create_function =
    function(_new, name, initial_env)
       initial_env = initial_env or common.new_env()
       -- assigning a unique instance id should be part of the recordtype module
       local params = {_name=name,
 		      env=initial_env,
-		      -- setting expression causes pattern to be set
---		      expression="<uninitialized>",
---		      pattern=false,
-		      -- setting encode causes encode_function to be set
---		      encode=false,
---		      encode_function=name_to_encode(false),
-		      -- functions
+
 		      lookup=get_environment,
 		      clear=clear_environment,
 		      id=function(en) return en._id; end,
@@ -377,17 +293,12 @@ engine.create_function =
 		      output=get_set_encoder_function,
 
 		      match=engine_match,
-		      grep=engine_grep,
 		      eval=engine_eval,
 		      load=load_string,
 		      compile=engine_compile,
 
 		      _match=_engine_match,
-
 		      _error=engine_error,
-
-		      -- configure=engine_configure,
-		      -- inspect=engine_inspect
 		   }
       local idstring = tostring(params):match("0x(.*)") or "id/err"
       params._id = idstring
