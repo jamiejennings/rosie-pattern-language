@@ -6,7 +6,6 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
---local lapi = require "lapi"
 local engine = require "engine"
 local common = require "common"			    -- MOVE clear_env functionality into engine
 
