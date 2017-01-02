@@ -11,49 +11,11 @@
 --   The Rosie installation (Makefile) will create rosie.lua from src/rosie-package-template.lua
 
 
--- Current lapi functions, sorted by where they will end up:
+-- TODO: Replace these lapi functions
 --
 -- + rosie.info()
---   home: "/Users/jjennings/Work/Dev/public/rosie-p...", 
+--     home: "/Users/jjennings/Work/Dev/public/rosie-p...", 
 --
--- + rosie.engine.new(optional_name)
---   new_engine: function: 0x7fc58cd196a0, 
---
--- + rosie.file.match(engine, rplx, infile, outfile, errfile)
--- + rosie.file.eval(engine, rplx, infile, outfile, errfile)
---   eval_file: function: 0x7fc58cd1c8d0, 
---   match_file: function: 0x7fc58cd1c890}
---
--- rosie.temp.load_manifest
--- rosie.temp.load_file
---   load_manifest: function: 0x7fc58cd1c970, 
---   load_file: function: 0x7fc58cd1c9c0, 
---
---
--- engine:load(string)
---   load_string: function: 0x7fc58cd1ca60, 
---
--- + engine:lookup(optional_identifier)
---   get_environment: function: 0x7fc58cd1a640, 
---
--- + engine:clear(optional_identifier)
---   clear_environment: function: 0x7fc58cd19660, 
---
--- + engine:id()
--- + engine:name()
---   inspect_engine: function: 0x7fc58cd194d0, 
---
--- X engine:match(expression, input)
---   match: function: 0x7fc58cd1c870, 
---
--- X engine:eval(expression, input)
---   eval: function: 0x7fc58cd1c8b0, 
---
--- X engine:grep(expression, input)
---   set_match_exp_grep_TEMPORARY: function: 0x7fc58cd1c8f0, 
---
--- + engine:output(formatter)
---   configure_engine: function: 0x7fc58cd1cab0, 
 
 ----------------------------------------------------------------------------------------
 -- First, set up some key globals
@@ -87,6 +49,18 @@ end
 
 ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
 
+-- The location of the Rosie standard library (of patterns) is ROSIE_ROOT/rpl.
+-- And compiled Rosie packages are stored in ROSIE_ROOT/pkg.
+--
+-- ROSIE_ROOT = ROSIE_HOME by default.  The user can override the default by setting the
+-- environment variable $ROSIE_ROOT to point somewhere else.
+
+ROSIE_ROOT = ROSIE_HOME
+
+local ok, value = pcall(os.getenv, "ROSIE_ROOT")
+if (not ok) then error('Internal error: call to os.getenv(ROSIE_ROOT)" failed'); end
+if value then ROSIE_ROOT = value; end
+
 ----------------------------------------------------------------------------------------
 -- Load the entire rosie world...
 ----------------------------------------------------------------------------------------
@@ -100,42 +74,32 @@ loader()
 -- "native" (Lua lpeg) parser.
 ----------------------------------------------------------------------------------------
 
--- During bootstrapping, we have to compile the rpl using the "core" compiler, and
--- manually configure ROSIE_ENGINE without calling engine_configure.
--- To bootstrap, we have to compile the Rosie rpl using the core parser/compiler
--- Create a matching engine for processing Rosie Pattern Language files
+-- To bootstrap, we have to compile the Rosie rpl using the core parser/compiler,
+-- producing ROSIE_RPLX, which is a parser Rosie Pattern Language files
 
 ROSIE_ENGINE = engine.new("RPL engine")
-compile.compile_core(ROSIE_HOME.."/src/rpl-core.rpl", ROSIE_ENGINE.env)
+local core_rpl_filename = ROSIE_HOME.."/src/rpl-core.rpl"
+compile.compile_core(core_rpl_filename, ROSIE_ENGINE.env)
 local success, result, messages = pcall(ROSIE_ENGINE.compile, ROSIE_ENGINE, 'rpl')
-if not success then error("Error while initializing: could not compile rosie core rpl: " .. tostring(result)); end
+if not success then error("Error while initializing: could not compile "
+			  .. core_rpl_filename .. ":\n" .. tostring(result)); end
 
 ROSIE_RPLX = result
---ROSIE_ENGINE.pattern = success;
---ROSIE_ENGINE.encode = "null/bootstrap";
-ROSIE_ENGINE.encode_function = function(m) return m; end;
 
 -- Install the new parser.
 load_module("rpl-parser")
-compile.set_parser(parse_and_explain);
+compile.set_parser(parse_and_explain);		    -- parse_and_explain uses ROSIE_RPLX
 
--- The location of the Rosie standard library (of patterns) is ROSIE_ROOT/rpl.
--- And compiled Rosie packages are stored in ROSIE_ROOT/pkg.
---
--- ROSIE_ROOT = ROSIE_HOME by default.  The user can override the default by setting the
--- environment variable $ROSIE_ROOT to point somewhere else.
+----------------------------------------------------------------------------------------
+-- INFO for debugging
+----------------------------------------------------------------------------------------
 
-ROSIE_ROOT = ROSIE_HOME
-
-local ok, value = pcall(os.getenv, "ROSIE_ROOT")
-if (not ok) then error('Internal error: call to os.getenv(ROSIE_ROOT)" failed'); end
-if value then ROSIE_ROOT = value; end
-
--- All values are strings.
+-- All values in table must be strings, even if original value was nil or another type.
 ROSIE_INFO = {
    {name="ROSIE_HOME",    value=ROSIE_HOME,                  desc="location of the rosie installation directory"},
    {name="ROSIE_VERSION", value=ROSIE_VERSION,               desc="version of rosie installed"},
    {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),         desc="true if rosie was started in development mode"},
+   {name="ROSIE_ROOT",    value=tostring(ROSIE_ROOT),        desc="root of the standard rpl library"},
    {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "", desc="host on which rosie is running"},
    {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "", desc="type of host on which rosie is running"},
    {name="OSTYPE",        value=os.getenv("OSTYPE") or "",   desc="type of OS on which rosie is running"},
