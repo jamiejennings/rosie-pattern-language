@@ -100,7 +100,7 @@ local grep = require "grep"
 local engine = 
    recordtype.define(
    {  _name=unspecified;			    -- for reference, debugging
-      env=false;
+      _env=false;
       _id=unspecified;
 
       encode_function=function(...) return ... end;
@@ -167,13 +167,14 @@ end
 local function make_matcher(processing_fcn)
    return function(e, expression, input, start)
 	     if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
+	     if start and type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
 	     local pat, msg
 	     if rplx.is(expression) then
 		return processing_fcn(e, rplx._pattern, input, start)
 	     elseif type(expression)=="string" then -- expression has not been compiled
 		-- pat = cache(expression)
 		-- if not pat then
-		   pat, msg = compile.compile_match_expression(expression, e.env)
+		   pat, msg = compile.compile_match_expression(expression, e._env)
 		   if not pat then engine_error(e, msg); end
 		--    cache(expression, pat)
 		-- end
@@ -189,7 +190,9 @@ local engine_match = make_matcher(_engine_match)
 
 -- returns matches, leftover, trace
 local engine_eval = make_matcher(function(e, pat, input, start)
-				    return eval.eval(pat, input, start, e.env, false)
+				    local ok, m, left = pcall(e._match, e, pat, input, start)
+				    local _,_,trace = eval.eval(pat, input, start, e._env, false)
+				    return m, left, trace
 				 end)
 
 local function engine_compile(en, expression, flavor)
@@ -198,9 +201,9 @@ local function engine_compile(en, expression, flavor)
    if type(flavor)~="string" then engine_error(en, "Flavor not a string: " .. tostring(flavor)); end
    local pat, msg
    if flavor=="match" then
-      pat, msg = compile.compile_match_expression(expression, en.env)
+      pat, msg = compile.compile_match_expression(expression, en._env)
    elseif flavor=="search" then
-      pat, msg = grep.pattern_EXP_to_grep_pattern(expression, en.env)
+      pat, msg = grep.pattern_EXP_to_grep_pattern(expression, en._env)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
@@ -211,7 +214,7 @@ end
 ----------------------------------------------------------------------------------------
 
 local function load_string(en, input)
-   local results, messages = compile.compile_source(input, en.env)
+   local results, messages = compile.compile_source(input, en._env)
    if not results then engine_error(e, messages); end -- messages is a string in this case
    return common.compact_messages(messages)	    -- return a list of zero or more strings
 end
@@ -238,10 +241,10 @@ end
 -- (reconstituted from its ast).  If identifier is null, return the entire environment.
 function get_environment(en, identifier)
    if identifier then
-      local val =  en.env[identifier]
+      local val =  en._env[identifier]
       return val and pattern_properties(identifier, val)
    end
-   local flat_env = common.flatten_env(en.env)
+   local flat_env = common.flatten_env(en._env)
    -- Rewrite the flat_env table, replacing the pattern with a table of properties
    for id, pat in pairs(flat_env) do flat_env[id] = pattern_properties(id, pat); end
    return flat_env
@@ -249,14 +252,14 @@ end
 
 local function clear_environment(en, identifier)
    if identifier then
-      if en.env[identifier] then
-	 en.env[identifier] = nil
+      if en._env[identifier] then
+	 en._env[identifier] = nil
 	 return true
       else
 	 return false
       end
    else -- no identifier arg supplied, so wipe the entire env
-      en.env = common.new_env()
+      en._env = common.new_env()
       return true
    end
 end
@@ -284,7 +287,7 @@ engine.create_function =
       initial_env = initial_env or common.new_env()
       -- assigning a unique instance id should be part of the recordtype module
       local params = {_name=name,
-		      env=initial_env,
+		      _env=initial_env,
 
 		      lookup=get_environment,
 		      clear=clear_environment,
