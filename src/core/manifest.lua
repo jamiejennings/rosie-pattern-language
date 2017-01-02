@@ -29,7 +29,7 @@ local manifest_engine = engine.new("manifest")
 local ok, msg = compile.compile_source(mpats, manifest_engine.env)
 if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
 assert(pattern.is(manifest_engine.env.line))
-assert(manifest_engine:configure({expression="line", encode=false}))
+--assert(manifest_engine:configure({expression="line", encode=false}))
 
 local function process_manifest_line(en, line, manifest_path, home)
    -- always return a success code and a TABLE of messages

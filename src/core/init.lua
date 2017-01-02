@@ -43,13 +43,13 @@
 -- + engine:name()
 --   inspect_engine: function: 0x7fc58cd194d0, 
 --
--- engine:match(expression, input)
+-- X engine:match(expression, input)
 --   match: function: 0x7fc58cd1c870, 
 --
--- engine:eval(expression, input)
+-- X engine:eval(expression, input)
 --   eval: function: 0x7fc58cd1c8b0, 
 --
--- engine:grep(expression, input)
+-- X engine:grep(expression, input)
 --   set_match_exp_grep_TEMPORARY: function: 0x7fc58cd1c8f0, 
 --
 -- + engine:output(formatter)
@@ -105,19 +105,18 @@ loader()
 -- To bootstrap, we have to compile the Rosie rpl using the core parser/compiler
 -- Create a matching engine for processing Rosie Pattern Language files
 
-load_module("rpl-parser")
-
 ROSIE_ENGINE = engine.new("RPL engine")
 compile.compile_core(ROSIE_HOME.."/src/rpl-core.rpl", ROSIE_ENGINE.env)
-local success, result = compile.compile_match_expression('rpl', ROSIE_ENGINE.env)
+local success, result, messages = pcall(ROSIE_ENGINE.compile, ROSIE_ENGINE, 'rpl')
 if not success then error("Error while initializing: could not compile rosie core rpl: " .. tostring(result)); end
 
-ROSIE_ENGINE.expression = 'rpl';
-ROSIE_ENGINE.pattern = success;
-ROSIE_ENGINE.encode = "null/bootstrap";
+ROSIE_RPLX = result
+--ROSIE_ENGINE.pattern = success;
+--ROSIE_ENGINE.encode = "null/bootstrap";
 ROSIE_ENGINE.encode_function = function(m) return m; end;
 
 -- Install the new parser.
+load_module("rpl-parser")
 compile.set_parser(parse_and_explain);
 
 -- The location of the Rosie standard library (of patterns) is ROSIE_ROOT/rpl.
