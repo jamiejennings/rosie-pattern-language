@@ -99,9 +99,8 @@ function common.compute_full_path(path, manifest_path)
    return full_path, proper_path, base_name
 end
 
+-- Always return a table, possibly empty
 function common.compact_messages(tbl)
-   if type(tbl)~="table" then return tbl; end
-   -- otherwise, always return a table of zero or more strings
    if (not tbl) or (type(tbl)~="table") then tbl = {tbl}; end
    local only_strings = {}
    for _, msg in ipairs(tbl) do
