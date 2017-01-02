@@ -10,13 +10,6 @@
 --   Usage: rosie = require "rosie"
 --   The Rosie installation (Makefile) will create rosie.lua from src/rosie-package-template.lua
 
-
--- TODO: Replace these lapi functions
---
--- + rosie.info()
---     home: "/Users/jjennings/Work/Dev/public/rosie-p...", 
---
-
 ----------------------------------------------------------------------------------------
 -- First, set up some key globals
 ----------------------------------------------------------------------------------------
@@ -79,7 +72,7 @@ loader()
 
 ROSIE_ENGINE = engine.new("RPL engine")
 local core_rpl_filename = ROSIE_HOME.."/src/rpl-core.rpl"
-compile.compile_core(core_rpl_filename, ROSIE_ENGINE.env)
+compile.compile_core(core_rpl_filename, ROSIE_ENGINE._env)
 local success, result, messages = pcall(ROSIE_ENGINE.compile, ROSIE_ENGINE, 'rpl')
 if not success then error("Error while initializing: could not compile "
 			  .. core_rpl_filename .. ":\n" .. tostring(result)); end
@@ -94,7 +87,11 @@ compile.set_parser(parse_and_explain);		    -- parse_and_explain uses ROSIE_RPLX
 -- INFO for debugging
 ----------------------------------------------------------------------------------------
 
--- All values in table must be strings, even if original value was nil or another type.
+-- N.B. All values in table must be strings, even if original value was nil or another type.
+-- Two ways to use this table:
+-- (1) Iterate over the numeric entries with ipairs to access an organized (well, ordered) list of
+--     important parameters, with their values and descriptions.
+-- (2) Index the table by a parameter key to obtain its value.
 ROSIE_INFO = {
    {name="ROSIE_HOME",    value=ROSIE_HOME,                  desc="location of the rosie installation directory"},
    {name="ROSIE_VERSION", value=ROSIE_VERSION,               desc="version of rosie installed"},
@@ -106,6 +103,7 @@ ROSIE_INFO = {
    {name="CWD",           value=os.getenv("PWD") or "",      desc="current working directory"},
    {name="ROSIE_COMMAND", value=ROSIE_COMMAND or "",         desc="invocation command, if rosie invoked through the CLI"}
 }
+for _,entry in ipairs(ROSIE_INFO) do ROSIE_INFO[entry.name] = entry.value; end
 
 ----------------------------------------------------------------------------------------
 -- Output encoding functions
@@ -138,5 +136,12 @@ local rosie = {
 }
 
 function rosie.info() return ROSIE_INFO; end
+
+-- When rosie is loaded into Lua, such as for development, for using Rosie in Lua, or for
+-- supporting the foreign function API, these internals are exposed through the rosie package table.  
+if ROSIE_DEV then
+   rosie._env = _ENV
+   rosie._module = module
+end
 
 return rosie
