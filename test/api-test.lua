@@ -489,16 +489,16 @@ end
 
 subheading("eval")
 
-check(type(wapi.eval)=="function")
-ok, msg = wapi.eval()
+check(type(wapi.tracematch)=="function")
+ok, msg = wapi.tracematch()
 check(not ok)
 check(msg:find("Input not a string"))
 
-ok, results = wapi.eval(".*//", "foo")
+ok, results = wapi.tracematch(".*//", "foo")
 check(not ok)
 check(results:find("Syntax error at line 1"))
 
-ok, results_js, leftover, trace = wapi.eval(".*", "foo")
+ok, results_js, leftover, trace = wapi.tracematch(".*", "foo")
 check(ok)
 results = json.decode(results_js)
 check(results)
@@ -507,13 +507,13 @@ check(type(trace)=="string")
 check(leftover=="0")
 check(trace:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 
-ok, results, leftover, trace = wapi.eval("[[:digit:]]", "foo")
+ok, results, leftover, trace = wapi.tracematch("[[:digit:]]", "foo")
 check(ok)
 check(not results)
 check(leftover=="1")
 check(trace:find('FAILED to match against input "foo"'))
 
-ok, results_js, leftover, trace = wapi.eval("[[:alpha:]]*", "foo56789")
+ok, results_js, leftover, trace = wapi.tracematch("[[:alpha:]]*", "foo56789")
 check(ok)
 results = json.decode(results_js)
 check(results)
@@ -521,7 +521,7 @@ check(results["*"])
 check(leftover=="5")
 check(trace:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
 
-ok, results_js, leftover, trace = wapi.eval("common.number", "abc.x")
+ok, results_js, leftover, trace = wapi.tracematch("common.number", "abc.x")
 check(ok)
 results = json.decode(results_js)
 check(results)
@@ -530,21 +530,21 @@ check(results["common.number"])
 check(results["common.number"].text=="abc")
 check(trace:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
 
-subheading("eval_file")
-check(type(wapi.file_eval)=="function")
-ok, msg = wapi.file_eval()
+subheading("trace file (was eval_file)")
+check(type(wapi.file_tracematch)=="function")
+ok, msg = wapi.file_tracematch()
 check(not ok)
 check(msg:find("Expression not a string"))
 
-ok, msg = wapi.file_eval("foo")
+ok, msg = wapi.file_tracematch("foo")
 check(not ok)
 check(msg:find("undefined identifier"))
 
-ok, msg = wapi.file_eval(".")
+ok, msg = wapi.file_tracematch(".")
 check(not ok)
 check(msg:find("bad input file name"))
 
-ok, results_js, leftover, trace = wapi.eval(".*", "foo")
+ok, results_js, leftover, trace = wapi.tracematch(".*", "foo")
 check(ok)
 if ok then
    match = json.decode(results_js)
@@ -554,7 +554,7 @@ if ok then
    check(trace:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 end
 
-ok, results_js, leftover, trace = wapi.eval("[[:digit:]]", "foo")
+ok, results_js, leftover, trace = wapi.tracematch("[[:digit:]]", "foo")
 check(ok)
 if ok then
    check(not results_js)
@@ -562,7 +562,7 @@ if ok then
    check(trace:find('FAILED to match against input "foo"')) -- % is esc char
 end
 
-ok, c_in, c_out, c_err = wapi.file_eval(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
+ok, c_in, c_out, c_err = wapi.file_tracematch(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
 check(c_in==4 and c_out==2 and c_err==2, "ensure that output was written for all lines of test-input")
 
@@ -595,19 +595,19 @@ local function check_eval_output_file()
    check(not nextline(), "exactly 4 eval traces in output file")
 end
 
-ok, msg = wapi.file_eval(".", "match", ROSIE_HOME.."/test/test-input")
+ok, msg = wapi.file_tracematch(".", "match", ROSIE_HOME.."/test/test-input")
 check(not ok)
 check(msg:find(": bad output file name"))
 
-ok, msg = wapi.file_eval(".", "abcdef", "thisfiledoesnotexist", "", "")
+ok, msg = wapi.file_tracematch(".", "abcdef", "thisfiledoesnotexist", "", "")
 check(not ok)
 check(msg:find("Unknown flavor"))
 
-ok, msg = wapi.file_eval(".", "match", "thisfiledoesnotexist", "", "")
+ok, msg = wapi.file_tracematch(".", "match", "thisfiledoesnotexist", "", "")
 check(not ok)
 check(msg:find("No such file or directory"), "can't match against nonexistent file")
 
-ok, c_in, c_out, c_err = wapi.file_eval(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
+ok, c_in, c_out, c_err = wapi.file_tracematch(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
 check(c_in==4 and c_out==2 and c_err==2, "ensure that output was written for all lines of test-input")
 

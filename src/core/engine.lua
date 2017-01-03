@@ -115,7 +115,7 @@ local engine =
       compile=false;
 
       match=false;
-      eval=false;
+      tracematch=false;
 
       _match=false;
       _error=false;
@@ -201,7 +201,7 @@ end
 local engine_match = make_matcher(_engine_match)
 
 -- returns matches, leftover, trace
-local engine_eval = make_matcher(function(e, pat, input, start)
+local engine_tracematch = make_matcher(function(e, pat, input, start)
 				    local ok, m, left = pcall(e._match, e, pat, input, start)
 				    local _,_,trace = eval.eval(pat, input, start, e._env, false)
 				    return m, left, trace
@@ -292,7 +292,7 @@ engine.create_function =
 		      output=get_set_encoder_function,
 
 		      match=engine_match,
-		      eval=engine_eval,
+		      tracematch=engine_tracematch,
 		      load=load_string,
 		      compile=engine_compile,
 
