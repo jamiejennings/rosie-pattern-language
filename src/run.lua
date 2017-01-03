@@ -164,7 +164,7 @@ function process_pattern_against_file(args, infilename)
 	set_encoder(args.encode)
 
 	-- (5) Iterate through the lines in the input file
-	local match_function = (args.command=="eval") and rosie.file.eval or rosie.file.match 
+	local match_function = (args.command=="trace") and rosie.file.tracematch or rosie.file.match 
 	local flav = (args.command=="grep") and "search" or "match"
 	local ok, cin, cout, cerr =
 	   pcall(match_function, CL_ENGINE, args.pattern, flav, infilename, outfilename, errfilename, args.wholefile)
@@ -349,15 +349,15 @@ local xrepl = parser:command("repl")
 -- match command
 local xmatch = parser:command("match")
 	:description("Run RPL match")
--- eval command
-local xeval = parser:command("eval")
-	:description("Run RPL evaluator (generates trace of every match)")
+-- trace command
+local xtrace = parser:command("trace")
+	:description("Match while tracing all steps (generates MUCH output)")
 -- grep command
 local xgrep = parser:command("grep")
 	:description("Run RPL match in the style of Unix grep (match anywhere in a line)")
 
-for _, cmd in ipairs{xmatch, xeval, xgrep} do
-   -- match/eval/grep flags (true/false)
+for _, cmd in ipairs{xmatch, xtrace, xgrep} do
+   -- match/trace/grep flags (true/false)
    cmd:flag("-s --wholefile", "Read input file as single string")
        :default(false)
        :action("store_true")
@@ -365,12 +365,12 @@ for _, cmd in ipairs{xmatch, xeval, xgrep} do
       :default(false)
       :action("store_true")
 
-   -- match/eval/grep arguments (required options)
+   -- match/trace/grep arguments (required options)
    cmd:argument("pattern", "RPL pattern")
    cmd:argument("filename", "Input filename")
       :args("*")
       :default("-") -- in case no filenames are passed, default to stdin
-   -- match/eval/grep options (takes an argument)
+   -- match/trace/grep options (takes an argument)
    cmd:option("-o --encode", "Output format")
       :convert(function(a)
 		  -- validation of argument, will fail if not in choices array

@@ -124,7 +124,7 @@ local encoder_table =
 ----------------------------------------------------------------------------------------
 local file_functions = {
    match = process_input_file.match,
-   eval = process_input_file.eval,
+   tracematch = process_input_file.tracematch,
    grep = process_input_file.grep,
    load = process_rpl_file.load_file	    -- TEMP until module system
 }

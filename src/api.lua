@@ -195,8 +195,8 @@ api.compile = api_wrap(compile, "string")
 api.match = api_wrap(default_engine_method_caller("match"), "string", "int")
 api.file_match = api_wrap(call_with_default_engine(rosie.file.match), "int", "int", "int")
 
-api.eval = api_wrap(default_engine_method_caller("eval"), "string", "int", "string")
-api.file_eval = api_wrap(call_with_default_engine(rosie.file.eval), "int", "int", "int")
+api.tracematch = api_wrap(default_engine_method_caller("tracematch"), "string", "int", "string")
+api.file_tracematch = api_wrap(call_with_default_engine(rosie.file.tracematch), "int", "int", "int")
 
   -- -- Inefficient.  The fact that default_engine is not bound when we create the match functions
   -- -- means that later, during every API call to rplx_match, we look up "match" in the engine table
