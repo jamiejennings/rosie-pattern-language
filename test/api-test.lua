@@ -5,10 +5,14 @@
 ---- (c) 2016, Jamie A. Jennings
 ----
 
-test = require "test-functions"
-json = require "cjson"
-common = require "common"
-pattern = common.pattern
+-- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
+assert(ROSIE_HOME, "ROSIE_HOME is not set?")
+assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
+if not test then
+   test = load_module("test-functions", "src")
+end
+
+json = rosie._module.loaded.cjson
 
 check = test.check
 heading = test.heading
@@ -21,14 +25,10 @@ end
 test.start(test.current_filename())
 
 ----------------------------------------------------------------------------------------
-heading("Require api")
+heading("Load the api")
 ----------------------------------------------------------------------------------------
-module.loaded.api = false			    -- force a re-load of the api
-api = load_module "api"
-
+api = load_module("api", "src")
 check(type(api)=="table")
-check(api.ROSIE_VERSION and type(api.ROSIE_VERSION)=="string")
-check(api.ROSIE_HOME and type(api.ROSIE_HOME)=="string")
 
 ---------------------------------------------------------------------------------------------------
 -- Convenience
@@ -49,21 +49,31 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
-ok, js = wapi.info()
+subheading("info")
+check(type(wapi.info)=="function")
+ok, env_js = wapi.info()
 check(ok)
-check(type(js)=="string")
-ok, api_v = pcall(json.decode, js)
-check(ok)
-check(type(api_v)=="table")
-
-check(type(api_v.ROSIE_VERSION)=="string")
-check(type(api_v.ROSIE_HOME)=="string")
-
+check(type(env_js)=="string", "info table is returned as a string")
+ok, info = pcall(json.decode, env_js)
+check(ok, "string returned by api.info is json")
+check(type(info)=="table", "string returned by api.info decodes into a table")
+if type(info)=="table" then
+   -- ensure that some key entries are in the table
+   check(type(info.ROSIE_VERSION)=="string")
+   check(type(info.ROSIE_HOME)=="string")
+   check(type(info.ROSIE_ROOT)=="string")
+   check(type(info.ROSIE_DEV)=="string")
+   check(info.ROSIE_DEV=="true")
+end
 
 ----------------------------------------------------------------------------------------
 heading("Engine")
 ----------------------------------------------------------------------------------------
 subheading("initialize")
+
+ok = wapi.finalize();
+check(ok, "finalizing should succeed whether api is initialized or not")
+
 check(type(wapi.initialize)=="function")
 ok, msg = wapi.initialize()
 check(ok)
@@ -79,88 +89,80 @@ ok, eid = wapi.initialize()
 check(ok)
 check(type(eid)=="string")
 
+-- N.B. The api does not expose engine.name or engine.id because there is only one engine in the
+-- external api.  It is created when a user program/thread calls api.initialize().
 
-subheading("inspect_engine")
-check(type(wapi.inspect_engine)=="function")
-ok, info_js = wapi.inspect_engine()
-check(ok)
-ok, info = pcall(json.decode, info_js)
-check(ok)
-check(type(info)=="table")
-check(info.expression)
-check(info.encode==false)
-check(info.id==eid)
-
-subheading("get_environment")
-check(type(wapi.get_environment)=="function")
-ok, env_js = wapi.get_environment(json.encode(nil)) -- null
+subheading("lookup")
+check(type(wapi.engine_lookup)=="function")
+ok, env_js = wapi.engine_lookup(json.encode(nil)) -- null
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
-env = json.decode(env_js)
+ok, env = pcall(json.decode, env_js)
+check(ok)
 check(type(env)=="table")
 check(env["."].type=="alias", "env contains built-in alias '.'")
 check(env["$"].type=="alias", "env contains built-in alias '$'")
-ok, msg = wapi.get_environment("hello")
+ok, msg = wapi.engine_lookup("hello")
 check(not ok)
-check(msg:find("not json", 1, true))
+check(msg:find("not a json", 1, true))
 
-subheading("get_environment to look at individual bindings")
-check(type(wapi.get_environment)=="function")
-ok, msg = wapi.get_environment()
+subheading("lookup to look at individual bindings")
+check(type(wapi.engine_lookup)=="function")
+ok, msg = wapi.engine_lookup()
 check(not ok)
-check(msg:find("not json", 1, true))
-ok, msg = wapi.get_environment("hello")
+check(msg:find("not a json", 1, true))
+ok, msg = wapi.engine_lookup("hello")
 check(not ok)
-check(msg:find("not json", 1, true))
-ok, def = wapi.get_environment(json.encode("$"))
+check(msg:find("not a json", 1, true))
+ok, def = wapi.engine_lookup(json.encode("$"))
 check(ok, "can get a definition for '$'")
 check(json.decode(def).binding:find("built-in RPL pattern", 1, true))
 
 ----------------------------------------------------------------------------------------
 heading("Load")
 ----------------------------------------------------------------------------------------
-subheading("load_string")
-check(type(wapi.load_string)=="function")
-ok, msg = wapi.load_string()
+subheading("engine.load")
+check(type(wapi.load)=="function")
+ok, msg = wapi.load()
 check(not ok)
 check(msg:find("not a string", 1, true))
-ok, msg = wapi.load_string("foo")
+ok, msg = wapi.load("foo")
 check(not ok)
 check(msg:find("Compile error: reference to undefined identifier: foo"))
-ok, msg = wapi.load_string('foo = "a"')
+ok, msg = wapi.load('foo = "a"')
 check(ok)
-check(not msg)
-ok, msg = wapi.load_string('foo = "a"')
+check(type(msg)=="string" and msg=="{}")
+ok, msg = wapi.load('foo = "a"')
 check(ok)
 check(msg:find("reassignment to identifier"))
-ok, env_js = wapi.get_environment("null")
+ok, env_js = wapi.engine_lookup("null")
 check(ok)
 env = json.decode(env_js)
 check(env["foo"].type=="definition", "env contains newly defined identifier")
 
-ok, def = wapi.get_environment(json.encode("foo"))
+ok, def = wapi.engine_lookup(json.encode("foo"))
 check(ok, "can get a definition for foo that includes a binding")
 check(json.decode(def).binding:find("assignment foo =", 1, true))
 
-ok, msg = wapi.load_string('bar = foo / ( "1" $ )')
+ok, msg = wapi.load('bar = foo / ( "1" $ )')
 check(ok)
-check(not msg)
-ok, env_js = wapi.get_environment("null")
+check(type(msg)=="string" and msg=="{}")
+ok, env_js = wapi.engine_lookup("null")
 check(ok)
 env = json.decode(env_js)
 check(type(env)=="table")
 check(env["bar"])
 check(env["bar"].type=="definition", "env contains newly defined identifier")
-ok, def = wapi.get_environment(json.encode("bar"))
+ok, def = wapi.engine_lookup(json.encode("bar"))
 check(ok)
 def = json.decode(def)
 check(def)
 check(type(def)=="table")
 check(def.binding:find('bar = foo / %('), "checking binding defn which relies on reveal_ast")
-ok, msg = wapi.load_string('x = //')
+ok, msg = wapi.load('x = //')
 check(not ok)
 check(msg:find("Syntax error at line 1"), "Exact message depends on syntax error reporting")
-ok, env_js = wapi.get_environment("null")
+ok, env_js = wapi.engine_lookup("null")
 check(ok)
 env = json.decode(env_js)
 check(not env["x"])
@@ -168,23 +170,23 @@ check(not env["x"])
 for _, exp in ipairs{"[0-9]", "[abcdef123]", "[:alpha:]", 
 		     "[^0-9]", "[^abcdef123]", "[:^alpha:]", 
 		     "[^[a][b]]"} do
-   local ok, msg = wapi.load_string('csx = '..exp)
+   local ok, msg = wapi.load('csx = '..exp)
    check(ok)
    --io.write("\n*****   ", tostring(ok), "  ", tostring(msg), "   *****\n")
-   ok, msg = wapi.get_environment(json.encode("csx"))
-   check(ok, "call to get_environment failed (cs was bound to " .. exp .. ")")
+   ok, msg = wapi.engine_lookup(json.encode("csx"))
+   check(ok, "call to lookup failed (cs was bound to " .. exp .. ")")
    local def = json.decode(msg)
-   if check(def, "Definition returned from get_environment was null") then
+   if check(def, "Definition returned from lookup was null") then
       check(def.binding:find(exp, 1, true), "failed to observe this in binding of cs: " .. exp)
    end
 end
 
 
 
-ok, msg = wapi.load_string('-- comments and \n -- whitespace\t\n\n')
+ok, msg = wapi.load('-- comments and \n -- whitespace\t\n\n')
 -- "an empty list of ast's is the result of parsing comments and whitespace"
 check(ok)
-check(not msg)
+check(type(msg)=="string" and msg=="{}")
 
 g = [[grammar
   S = {"a" B} / {"b" A} / "" 
@@ -192,18 +194,18 @@ g = [[grammar
   B = {"b" S} / {"a" B B}
 end]]
 
-ok, msg = wapi.load_string(g)
+ok, msg = wapi.load(g)
 check(ok)
-check(not msg)
+check(type(msg)=="string" and msg=="{}")
 
-ok, def = wapi.get_environment(json.encode("S"))
+ok, def = wapi.engine_lookup(json.encode("S"))
 check(ok)
 def = json.decode(def)
 check(def.binding:find("S = {(\"a\" B)}", 1, true))
 check(def.binding:find("A = {(\"a\" S)}", 1, true))
 check(def.binding:find("B = {(\"b\" S)}", 1, true))
 
-ok, env_js = wapi.get_environment("null")
+ok, env_js = wapi.engine_lookup("null")
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
 env = json.decode(env_js)
@@ -216,202 +218,181 @@ g2_defn = [[grammar
   alias B = { {"b" S} / {"a" B B} }
 end]]
 
-ok, msg = wapi.load_string(g2_defn)
+ok, msg = wapi.load(g2_defn)
 check(ok)
-check(not msg)
+check(type(msg)=="string" and msg=="{}")
 
-ok, env_js = wapi.get_environment("null")
+ok, env_js = wapi.engine_lookup("null")
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
 env = json.decode(env_js)
 check(env["g2"].type=="alias")
 
 
-subheading("clear_environment")
-check(type(wapi.clear_environment)=="function")
-ok, msg = wapi.clear_environment()
+subheading("clear")
+check(type(wapi.engine_clear)=="function")
+ok, msg = wapi.engine_clear()
 check(not ok)
-ok, msg = wapi.clear_environment("null")	    -- json-encoded arg
+ok, msg = wapi.engine_clear("null")	    -- json-encoded arg
 check(ok)
-check(msg==true)
+check(msg=="true")
 
-ok, env_js = wapi.get_environment("null")
+ok, env_js = wapi.engine_lookup("null")
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
 env = json.decode(env_js)
 check(not (env["S"]))
 check((env["."]))
 
-subheading("load_file")
-check(type(wapi.load_file)=="function")
-ok, msg = wapi.load_file()
+subheading("file_load")
+check(type(wapi.file_load)=="function")
+ok, msg = wapi.file_load()
 check(not ok)
 check(msg:find("not a string"))
-ok, msg = wapi.load_file("hello")
+ok, msg = wapi.file_load("hello", "rpl")
 check(not ok)
 check(msg:find("cannot open file"))
 
-results = {wapi.load_file("$sys/test/ok.rpl")}
-ok = results[1]
+ok, msg = wapi.file_load("$sys/test/ok.rpl")
+check(not ok)
+check(msg:find("file type argument"))
+
+ok, results, fullpath = wapi.file_load("$sys/test/ok.rpl", "rpl")
 check(ok)
-check(type(results[2])=="string")
-check((results[2]):sub(-11)=="test/ok.rpl")
-ok, env = wapi.get_environment("null")
+check(type(results)=="table")
+check(fullpath:sub(-11)=="test/ok.rpl")
+ok, env = wapi.engine_lookup(json.encode(nil))
 check(ok)
 j = json.decode(env)
 env = j
 check(env["num"].type=="definition")
 check(env["S"].type=="alias")
-ok, def = wapi.get_environment(json.encode("W"))
+ok, def = wapi.engine_lookup(json.encode("W"))
 check(ok)
 def = json.decode(def)
 check(def.binding:find("alias W = (!w any)", 1, true), "checking binding defn which relies on reveal_ast")
 
-ok, msg = wapi.clear_environment(json.encode("W"))
+ok, msg = wapi.engine_clear(json.encode("W"))
 check(ok)
-check(msg==true)
-ok, msg = wapi.clear_environment(json.encode("W"))
+check(msg=="true")
+ok, msg = wapi.engine_clear(json.encode("W"))
 check(ok)
-check(msg==false)
-ok, def = wapi.get_environment(json.encode("W"))
+check(msg=="false")
+ok, def = wapi.engine_lookup(json.encode("W"))
 check(ok)
 def = json.decode(def)
 check(def==json.null)
 -- let's ensure that something in the env remains
-ok, def = wapi.get_environment(json.encode("num"))
+ok, def = wapi.engine_lookup(json.encode("num"))
 check(ok)
 def = json.decode(def)
 check(def.binding)
 
-ok, msg = wapi.load_file("$sys/test/undef.rpl")
+ok, msg = wapi.file_load("$sys/test/undef.rpl", "rpl")
 check(not ok)
 check(msg:find("Compile error: reference to undefined identifier: spaces"))
 check(msg:find("At line 10"))
-ok, env_js = wapi.get_environment("null")
+ok, env_js = wapi.engine_lookup("null")
 check(ok)
 env = json.decode(env_js)
 check(not env["badword"], "an identifier that didn't compile should not end up in the environment")
 check(env["undef"], "definitions in a file prior to an error will end up in the environment... (sigh)")
 check(not env["undef2"], "definitions in a file after to an error will NOT end up in the environment")
-ok, msg = wapi.load_file("$sys/test/synerr.rpl")
+ok, msg = wapi.file_load("$sys/test/synerr.rpl", "rpl")
 check(not ok)
 check(msg:find('Syntax error at line 9: // "abc"'), "Exact message depends on syntax error reporting")
 check(msg:find('foo = "foobar" // "abc"'), "relies on reveal_ast")
 
-ok, msg = wapi.load_file("./thisfile/doesnotexist")
+ok, msg = wapi.file_load("./thisfile/doesnotexist", "rpl")
 check(not ok)
 check(msg:find("cannot open file"))
 check(msg:find("./thisfile/doesnotexist"))
 
-ok, msg = wapi.load_file("/etc")
+ok, msg = wapi.file_load("/etc", "rpl")
 check(not ok)
 check(msg:find("cannot read file"))
 check(msg:find("/etc"))
 
-subheading("load_manifest")
-check(type(wapi.load_manifest)=="function")
-ok, msg = wapi.load_manifest()
-check(not ok)
-check(msg:find("not a string"))
-ok, msg = wapi.load_manifest("hello")
-check(not ok)
-check(msg:find("Error opening manifest file"))
-results = {wapi.load_manifest("$sys/test/manifest")}
-ok = results[1]
+subheading("load manifest")
+ok, results, fullpath = wapi.file_load("$sys/test/manifest", "manifest")
 check(ok)
-check(results[2]:sub(-13)=="test/manifest")
-ok, env_js = wapi.get_environment("null")
+check(fullpath:sub(-13)=="test/manifest")
+ok, env_js = wapi.engine_lookup("null")
 check(ok)
 env = json.decode(env_js)
 check(env["manifest_ok"].type=="definition")
 
-ok, msg = wapi.load_manifest("$sys/test/manifest.err")
+ok, msg = wapi.file_load("$sys/test/manifest.err", "manifest")
 check(not ok)
 check(msg[3]:find("Error: cannot open file"))
 
-ok, msg = wapi.load_manifest("$sys/test/manifest.synerr") -- contains a //
+ok, msg = wapi.file_load("$sys/test/manifest.synerr", "manifest") -- contains a //
 check(not ok)
 check(msg[3]:find("Error: cannot read file"))
 
 
 ----------------------------------------------------------------------------------------
-heading("Match")
+--heading("Set output encoder")
+--   Currently, the external API gets json formatted match data only
 ----------------------------------------------------------------------------------------
 
-subheading("configure")
-check(type(wapi.configure_engine)=="function")
-ok, msg = wapi.configure_engine()
+----------------------------------------------------------------------------------------
+heading("Compile expressions and use them")
+----------------------------------------------------------------------------------------
+
+subheading("compile")
+check(type(wapi.compile)=="function")
+ok, msg = wapi.compile()
 check(not ok)
-check(msg:find("configuration argument not a string"))
+check(msg:find("not a string"))
 
-ok, msg = wapi.configure_engine()
-check(not ok)
-check(msg:find("configuration argument not a string"))
+io.write("  ** NEED RPLX TESTS! **  ")
 
-ok, msg = wapi.configure_engine(json.encode({expression="common.dotted_identifier",
-					  encode="json"}))
-check(not ok)
-check(msg:find("reference to undefined identifier: common.dotted_identifier"))
+----------------------------------------------------------------------------------------
+heading("Match, eval using rpl expressions")
+----------------------------------------------------------------------------------------
 
-ok, msg = wapi.load_file("$sys/rpl/common.rpl")
-check(ok)
-ok, msg = wapi.configure_engine(json.encode({expression="common.dotted_identifier",
-					  encode=false}))
-check(ok)
-check(not msg)
-
-ok, msg = wapi.get_environment(json.encode("hex_only")) -- common.rpl
-check(ok)
-def = json.decode(msg)
-check(def.binding:find("hex_only = {[[a-f]] / [[A-F]]}", 1, true))
-
-print(" Need more configuration tests!")
-
-subheading("match")
-check(type(wapi.match)=="function")
 ok, msg = wapi.match()
 check(not ok)
 check(msg:find("not a string"))
 
-ok, msg = wapi.match()
-check(not ok)
-check(msg:find("input argument not a string"))
-
-ok, msg = wapi.load_manifest("$sys/MANIFEST")
+ok, msg = wapi.file_load("$sys/MANIFEST", "manifest")
 check(ok)
 
-results = {wapi.match("x.y.z")}
-ok = results[1]
+ok, results = wapi.match("common.dotted_identifier", "x.y.z")
 check(ok)
-check(type(results[2])=="table")
-check(type(results[3])=="string")
-check(results[3]=="0")
-match = results[2]
---check(match["*"])
---match = retvals["*"].subs[1]
+check(type(results)=="string")
+match = json.decode(results)
+check(type(match)=="table")
+
 check(match["common.dotted_identifier"].text=="x.y.z")
 check(match["common.dotted_identifier"].subs[2]["common.identifier_plus_plus"].text=="y")
 
-ok, msg = wapi.configure_engine(json.encode{expression='common.number', encode=false})
+subheading("match")
+ok, results, left = wapi.match("common.number", "x.y.z")
 check(ok)
+check(results==false)
+check(left=="1")
 
-results = {wapi.match("x.y.z")}
-ok = results[1]
-check(ok, "verifying that the engine exp has been changed by the call to configure")
-check(not results[2])
-check(results[3]=="5")
+subheading("file match")
+check(type(wapi.file_match)=="function")
+ok, msg = wapi.file_match()
+check(not ok)
+check(msg:find("Expression not a string"))
 
-subheading("match_file")
-check(type(wapi.match_file)=="function")
-ok, msg = wapi.match_file()
+ok, msg = wapi.file_match("common.number")
 check(not ok)
 check(msg:find("bad input file name"))
 
-ok, msg = wapi.match_file(ROSIE_HOME.."/test/test-input")
+ok, msg = wapi.file_match("common.number", "foo")
+check(not ok)
+check(msg:find("Unknown flavor"))
+
+ok, msg = wapi.file_match("common.number", "match", ROSIE_HOME.."/test/test-input")
 check(not ok)
 check(msg:find("bad output file name"))
 
-ok, msg = wapi.match_file("thisfiledoesnotexist", "", "")
+ok, msg = wapi.file_match("common.number", "match", "thisfiledoesnotexist", "", "")
 check(not ok, "can't match against nonexistent file")
 check(msg:find("No such file or directory"))
 
@@ -422,13 +403,10 @@ macosx_log1 = [=[
       "[" [[:digit:]]+ "]"
       "(" common.dotted_identifier {"["[[:digit:]]+"]"}? "):" .*
       ]=]
-ok, msg = wapi.configure_engine(json.encode{expression=macosx_log1, encode="json"})
-check(ok)			    
-results = {wapi.match_file(ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")}
-ok = results[1]
+--ok, msg = wapi.configure_engine(json.encode{expression=macosx_log1, encode="json"})
+--check(ok)			    
+ok, c_in, c_out, c_err = wapi.file_match(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
-retvals = json.decode(results[2])
-c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
 check(c_in==4 and c_out==2 and c_err==2, "ensure processing of first lines of test-input")
 
 local function check_output_file()
@@ -448,11 +426,8 @@ end
 
 if ok then check_output_file(); end
 
-results = {wapi.match_file(ROSIE_HOME.."/test/test-input", "/tmp/out", "/tmp/err")}
-ok = results[1]
+ok, c_in, c_out, c_err = wapi.file_match(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "/tmp/err")
 check(ok)
-retvals = json.decode(results[2])
-c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
 check(c_in==4 and c_out==2 and c_err==2, "ensure processing of error lines of test-input")
 
 local function check_error_file()
@@ -476,12 +451,9 @@ end
 
 clear_output_and_error_files()
 io.write("\nTesting output to stdout:\n")
-results = {wapi.match_file(ROSIE_HOME.."/test/test-input", "", "/tmp/err")}
+ok, c_in, c_out, c_err = wapi.file_match(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "", "/tmp/err")
 io.write("\nEnd of output to stdout\n")
-ok = results[1]
 check(ok)
-retvals = json.decode(results[2])
-c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
 check(c_in==4 and c_out==2 and c_err==2, "ensure processing of all lines of test-input")
 
 if ok then
@@ -493,12 +465,9 @@ end
 
 clear_output_and_error_files()
 io.write("\nTesting output to stderr:\n")
-results = {wapi.match_file(ROSIE_HOME.."/test/test-input", "/tmp/out", "")}
+ok, c_in, c_out, c_err = wapi.file_match(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "")
 io.write("\nEnd of output to stderr\n")
-ok = results[1]
 check(ok)
-retvals = json.decode(results[2])
-c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
 check(c_in==4 and c_out==2 and c_err==2, "ensure processing of all lines of test-input")
 
 if ok then
@@ -508,118 +477,94 @@ if ok then
    check_output_file()
 end
 
-print("Starting color output to stdout")
-ok, msg = wapi.configure_engine(json.encode{encode="color"})
-check(ok)
-results = {wapi.match_file(ROSIE_HOME.."/test/test-input", "", "/tmp/err")}
-print("End of color output to stdout")
-ok = results[1]
-check(ok)
-retvals = json.decode(results[2])
-check(retvals[1]==4 and retvals[2]==2 and retvals[3]==2)
+-- print("Starting color output to stdout")
+-- ok, msg = wapi.configure_engine(json.encode{encode="color"})
+-- check(ok)
+-- results = {wapi.file_match(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "", "/tmp/err")}
+-- print("End of color output to stdout")
+-- ok = results[1]
+-- check(ok)
+-- retvals = json.decode(results[2])
+-- check(retvals[1]==4 and retvals[2]==2 and retvals[3]==2)
 
 subheading("eval")
 
 check(type(wapi.eval)=="function")
 ok, msg = wapi.eval()
 check(not ok)
-check(msg=="Argument error: input argument not a string")
+check(msg:find("Input not a string"))
 
-ok, msg = wapi.configure_engine(json.encode{expression=".*//", encode="json"})
+ok, results = wapi.eval(".*//", "foo")
 check(not ok)
-check(msg:find('Syntax error at line 1:'))
+check(results:find("Syntax error at line 1"))
 
-ok = wapi.configure_engine(json.encode{expression=".*", encode="json"})
+ok, results_js, leftover, trace = wapi.eval(".*", "foo")
 check(ok)
-results = {wapi.eval("foo")}
-ok = results[1]
-check(ok)
-retvals = {table.unpack(results, 2)}
-check(retvals[1])
-check(retvals[2]=="0")
-if check(retvals[3]) then
-   check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
-end
+results = json.decode(results_js)
+check(results)
+check(results["*"])
+check(type(trace)=="string")
+check(leftover=="0")
+check(trace:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 
-ok, msg = wapi.configure_engine(json.encode{expression="[[:digit:]]", encode="json"})
+ok, results, leftover, trace = wapi.eval("[[:digit:]]", "foo")
 check(ok)
-results = {wapi.eval("foo")}
-ok = results[1]
-check(ok)
-retvals = {table.unpack(results, 2)}
-check(not retvals[1])
-check(retvals[2]=="3")
-if check(retvals[3]) then
-   check(retvals[3]:find('FAILED to match against input "foo"'))
-end
+check(not results)
+check(leftover=="1")
+check(trace:find('FAILED to match against input "foo"'))
 
-ok, msg = wapi.configure_engine(json.encode{expression="[[:alpha:]]*", encode="json"})
+ok, results_js, leftover, trace = wapi.eval("[[:alpha:]]*", "foo56789")
 check(ok)
-results = {wapi.eval("foo56789")}
-ok = results[1]
-check(ok)
-retvals = {table.unpack(results, 2)}
-check(retvals[1])
-check(retvals[2]=="5")
-if check(retvals[3]) then
-   check(retvals[3]:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
-end
+results = json.decode(results_js)
+check(results)
+check(results["*"])
+check(leftover=="5")
+check(trace:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
 
-ok, msg = wapi.configure_engine(json.encode{expression="common.number", encode="json"})
+ok, results_js, leftover, trace = wapi.eval("common.number", "abc.x")
 check(ok)
-results = {wapi.eval("abc.x")}
-ok = results[1]
-check(ok)
-retvals = {table.unpack(results, 2)}
-check(retvals[1])				    -- match string
-check(retvals[2]=="2")				    -- leftover
---trace = retvals[3]
---check(match["common.number"])
---check(match["common.number"].text=="abc")
-if check(retvals[3]) then
-   check(retvals[3]:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
-end
+results = json.decode(results_js)
+check(results)
+check(leftover=="2")				    -- leftover
+check(results["common.number"])
+check(results["common.number"].text=="abc")
+check(trace:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
 
 subheading("eval_file")
-check(type(wapi.eval_file)=="function")
-ok, msg = wapi.eval_file()
+check(type(wapi.file_eval)=="function")
+ok, msg = wapi.file_eval()
+check(not ok)
+check(msg:find("Expression not a string"))
+
+ok, msg = wapi.file_eval("foo")
+check(not ok)
+check(msg:find("undefined identifier"))
+
+ok, msg = wapi.file_eval(".")
 check(not ok)
 check(msg:find("bad input file name"))
 
-ok, msg = wapi.configure_engine(json.encode{expression=".*", encode="json"})
-check(ok)
-results = {wapi.eval("foo")}
-ok = results[1]
+ok, results_js, leftover, trace = wapi.eval(".*", "foo")
 check(ok)
 if ok then
-   retvals = {table.unpack(results, 2)}
-   match, leftover, msg = retvals[1], retvals[2], retvals[3]
+   match = json.decode(results_js)
    check(match)
+   check(match["*"])
    check(leftover=="0")
-   check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+   check(trace:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 end
 
-ok, msg = wapi.configure_engine(json.encode{expression="[[:digit:]]", encode="json"})
-check(ok)
-results = {wapi.eval("foo")}
-ok = results[1]
+ok, results_js, leftover, trace = wapi.eval("[[:digit:]]", "foo")
 check(ok)
 if ok then
-   retvals = {table.unpack(results, 2)}
-   match, leftover, msg = retvals[1], retvals[2], retvals[3]
-   check(not match)
-   check(leftover=="3")
-   check(msg:find('FAILED to match against input "foo"')) -- % is esc char
+   check(not results_js)
+   check(leftover=="1")
+   check(trace:find('FAILED to match against input "foo"')) -- % is esc char
 end
 
- ok, msg = wapi.configure_engine(json.encode{expression=macosx_log1, encode="json"})
- check(ok)			    
- results = {wapi.eval_file(ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")}
- ok = results[1]
- check(ok, "the macosx log pattern in the test file works on some log lines")
- retvals = json.decode(results[2])
- c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
- check(c_in==4 and c_out==2 and c_err==2, "ensure that output was written for all lines of test-input")
+ok, c_in, c_out, c_err = wapi.file_eval(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
+check(ok, "the macosx log pattern in the test file works on some log lines")
+check(c_in==4 and c_out==2 and c_err==2, "ensure that output was written for all lines of test-input")
 
 local function check_eval_output_file()
    -- check the structure of the output file: 2 traces of matches, 2 traces of failed matches
@@ -650,23 +595,20 @@ local function check_eval_output_file()
    check(not nextline(), "exactly 4 eval traces in output file")
 end
 
-ok, msg = wapi.eval_file(ROSIE_HOME.."/test/test-input")
+ok, msg = wapi.file_eval(".", "match", ROSIE_HOME.."/test/test-input")
 check(not ok)
 check(msg:find(": bad output file name"))
 
-ok, msg = wapi.eval_file("thisfiledoesnotexist", "", "")
+ok, msg = wapi.file_eval(".", "abcdef", "thisfiledoesnotexist", "", "")
+check(not ok)
+check(msg:find("Unknown flavor"))
+
+ok, msg = wapi.file_eval(".", "match", "thisfiledoesnotexist", "", "")
 check(not ok)
 check(msg:find("No such file or directory"), "can't match against nonexistent file")
 
-ok, msg = wapi.configure_engine(json.encode{expression=macosx_log1, encode="json"})
-check(ok)			    
-results = {wapi.eval_file(ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")}
-ok = results[1]
+ok, c_in, c_out, c_err = wapi.file_eval(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")
 check(ok, "the macosx log pattern in the test file works on some log lines")
-if ok then
-   retvals = json.decode(results[2])
-   c_in, c_out, c_err = retvals[1], retvals[2], retvals[3]
-   check(c_in==4 and c_out==2 and c_err==2, "ensure that output was written for all lines of test-input")
-end
+check(c_in==4 and c_out==2 and c_err==2, "ensure that output was written for all lines of test-input")
 
 return test.finish()
