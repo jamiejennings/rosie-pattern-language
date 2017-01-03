@@ -24,10 +24,10 @@ local function open3(e, infilename, outfilename, errfilename)
    return infile, outfile, errfile
 end
 
-local function engine_process_file(e, expression, flavor, eval_flag, infilename, outfilename, errfilename, wholefileflag)
-   if type(eval_flag)~="boolean" then e:_error("bad eval flag"); end
+local function engine_process_file(e, expression, flavor, trace_flag, infilename, outfilename, errfilename, wholefileflag)
+   if type(trace_flag)~="boolean" then e:_error("bad trace flag"); end
    --
-   -- Set up pattern to match.  Always compile it first, even if we are going to call eval later.
+   -- Set up pattern to match.  Always compile it first, even if we are going to call tracematch later.
    -- This is so that we report errors uniformly at this point in the process, instead of after
    -- opening the files.
    --
@@ -51,14 +51,14 @@ local function engine_process_file(e, expression, flavor, eval_flag, infilename,
    local l = nextline(); 
    while l do
       local _
-      if eval_flag then _, _, trace = e:eval(expression, l); end
+      if trace_flag then _, _, trace = e:tracematch(expression, l); end
       m, leftover = r:match(l);
       -- What to do with leftover?  User might want to see it.
       if trace then o_write(outfile, trace, "\n"); end
       if m then
 	 o_write(outfile, m, "\n")
 	 outlines = outlines + 1
-      else --if not eval_flag then
+      else --if not trace_flag then
 	 e_write(errfile, l, "\n")
 	 errlines = errlines + 1
       end
@@ -74,7 +74,7 @@ function process_input_file.match(e, expression, flavor, infilename, outfilename
    return engine_process_file(e, expression, flavor, false, infilename, outfilename, errfilename, wholefileflag)
 end
 
-function process_input_file.eval(e, expression, flavor, infilename, outfilename, errfilename, wholefileflag)
+function process_input_file.tracematch(e, expression, flavor, infilename, outfilename, errfilename, wholefileflag)
    return engine_process_file(e, expression, flavor, true, infilename, outfilename, errfilename, wholefileflag)
 end
 
