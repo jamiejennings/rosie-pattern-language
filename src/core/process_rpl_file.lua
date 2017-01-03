@@ -35,7 +35,7 @@ function p.load_file(en, path, filetype)
       if not result then error(messages, 0); end
       return common.compact_messages(messages), full_path
    else
-      arg_error("load_file: missing or invalid file type argument: " .. tostring(filetype))
+      arg_error("missing or invalid file type argument: " .. tostring(filetype))
    end
 end
 
