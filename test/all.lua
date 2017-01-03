@@ -25,7 +25,7 @@ function do_test(fn)
    table.insert(results, {fn, doer()})
 end		   
       
---do_test(ROSIE_HOME .. "/test/api-test.lua")
+do_test(ROSIE_HOME .. "/test/api-test.lua")
 do_test(ROSIE_HOME .. "/test/rpl-core-test.lua")
 do_test(ROSIE_HOME .. "/test/eval-test.lua")
 do_test(ROSIE_HOME .. "/test/cli-test.lua")
@@ -37,10 +37,3 @@ passed = test.print_grand_total(results)
 if not ROSIE_DEV then
    if passed then os.exit(0) else os.exit(-1); end
 end
-
-
-print([[
-
-NOT RUNNING API TEST!
-
-      ]])
