@@ -70,7 +70,7 @@ linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 windows:
 	@echo Windows installation not yet supported.
 
-submodules: submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile
+submodules = submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile
 
 $(submodules):
 	git submodule init
@@ -79,18 +79,18 @@ $(submodules):
 submodules/lua/include:
 	cd $(LUA_DIR) && ln -sf src include
 
-bin/luac bin/lua: submodules
+bin/luac bin/lua: $(submodules)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p bin
 	cp $(LUA_DIR)/src/lua bin
 	cp $(LUA_DIR)/src/luac bin
 
-lib/lpeg.so: submodules submodules/lua/include
+lib/lpeg.so: $(submodules) submodules/lua/include
 	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua/src
 	mkdir -p lib
 	cp $(LPEG_DIR)/src/lpeg.so lib
 
-lib/cjson.so: submodules submodules/lua/include
+lib/cjson.so: $(submodules) submodules/lua/include
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
