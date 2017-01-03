@@ -67,9 +67,9 @@ local function api_wrap(f, ...)
    return newf
 end
 
-local function arg_error(msg)
-   error("Argument error: " .. msg, 0)
-end
+-- local function arg_error(msg)
+--    error("Argument error: " .. msg, 0)
+-- end
 
 local function default_engine_method_caller(method)
    return function(...)
@@ -102,6 +102,9 @@ api.info = api_wrap(info, "object")
 -- Managing the environment
 ----------------------------------------------------------------------------------------
 
+-- TODO: Stash functions like default_engine:match in local variables so that we can use those
+-- variables within default_engine_method_caller and call_with_default_engine.  Those functions
+-- currently look up strings like "match" in the default_engine table on EVERY CALL.
 local function initialize()
    if api.ENGINE then error("Engine already created", 0); end
    api.ENGINE = rosie.engine.new()
@@ -124,14 +127,14 @@ api.engine_clear = api_wrap(default_engine_method_caller("clear"), "boolean")
 -- Loading manifests, files, strings
 ----------------------------------------------------------------------------------------
 
-local function check_results(ok, messages, full_path)
-   if not ok then error(messages, 0); end
-   if messages and (type(messages)~="table") then
-      error("Internal error: invalid messages returned: " .. tostring(messages), 0)
-   elseif (type(full_path)~="string") then
-      error("Internal error: invalid path returned: " .. tostring(full_path), 0)
-   end
-end
+-- local function check_results(ok, messages, full_path)
+--    if not ok then error(messages, 0); end
+--    if messages and (type(messages)~="table") then
+--       error("Internal error: invalid messages returned: " .. tostring(messages), 0)
+--    elseif (type(full_path)~="string") then
+--       error("Internal error: invalid path returned: " .. tostring(full_path), 0)
+--    end
+-- end
 
 api.file_load = api_wrap(call_with_default_engine(rosie.file.load), "string", "string*")
 api.load = api_wrap(default_engine_method_caller("load"), "string*")
@@ -167,10 +170,44 @@ api.compile = api_wrap(compile, "string")
 -- TODO: ensure argument checking is being done correctly in the C api
 
 api.match = api_wrap(default_engine_method_caller("match"), "string", "int")
-api.match_file = api_wrap(call_with_default_engine(rosie.file.match), "int", "int", "int")
+api.file_match = api_wrap(call_with_default_engine(rosie.file.match), "int", "int", "int")
 
 api.eval = api_wrap(default_engine_method_caller("eval"), "string", "int", "string")
-api.eval_file = api_wrap(call_with_default_engine(rosie.file.eval), "int", "int", "int")
+api.file_eval = api_wrap(call_with_default_engine(rosie.file.eval), "int", "int", "int")
+
+  -- -- Inefficient.  The fact that default_engine is not bound when we create the match functions
+  -- -- means that later, during every API call to rplx_match, we look up "match" in the engine table
+  -- -- in order to call it.
+  -- -- Also, the compiled_expressions table holds rplx objects.  Would be faster to store the peg and
+  -- -- to call an internal low-level match function (of the engine) which takes a peg argument.
+  -- local function make_rplx_matcher(operation)
+  --    return function(rplx_id, input, start)
+  -- 	       local r = compiled_expressions[rplx_id]
+  -- 	       if not r then error("unknown compiled expression: " .. tostring(rplx_id)); end
+  -- 	       return default_engine[operation](default_engine, r, input, start)
+  -- 	    end
+  -- end
+
+  -- local rplx_match = make_rplx_matcher("match")
+  -- local rplx_eval = make_rplx_matcher("eval")
+
+  -- api.rplx_match = api_wrap(rplx_match, "string", "int")
+  -- api.rplx_eval = api_wrap(rplx_eval, "string", "int")
+
+  -- local function make_rplx_file_matcher(file_processing_fcn)
+  --    return function(rplx_id, infile, outfile, errfile, wholefileflag)
+  -- 	       local r = compiled_expressions[rplx_id]
+  -- 	       if not r then error("unknown compiled expression: " .. tostring(rplx_id)); end
+  -- 	       return call_with_default_engine(file_processing_fcn, r, "match",
+  -- 					       infile, outfile, errfile, wholefileflag)
+  -- 	    end
+  -- end
+
+  -- local rplx_file_match = make_rplx_file_matcher(rosie.file.match)
+  -- local rplx_file_eval = make_rplx_file_matcher(rosie.file.eval)
+
+  -- api.rplx_match_file = api_wrap(rplx_file_match, "int", "int", "int")
+  -- api.rplx_eval_file = api_wrap(rplx_file_eval, "int", "int", "int")
 
 ---------------------------------------------------------------------------------------------------
 -- Generate C code for librosie
