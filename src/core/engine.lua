@@ -52,13 +52,13 @@
 --   returns matches, leftover;
 --   never raises an error (unless for internal rosie bug)
 --
--- e:match(expression, input, optional_flavor, optional_start)
+-- e:match(expression, input, optional_start, optional_flavor)
 --   behaves like: r=e:compile(expression, optional_flavor); r:match(input, optional_start)
 --   API only: expression can be an rplx id, in which case that compiled expression is used
 --   returns matches, leftover;
 --   raises error if expression fails to compile
 -- 
--- e:tracematch(expression, input, optional_flavor, optional_start) like match, with tracing (was eval)
+-- e:tracematch(expression, input, optional_start, optional_flavor) like match, with tracing (was eval)
 --   API only: expression can be an rplx id, in which case that compiled expression is used
 --   returns matches, leftover, trace;
 --   raises error if expression fails to compile
@@ -152,49 +152,6 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 
 ----------------------------------------------------------------------------------------
 
-local function _engine_match(e, pat, input, start)
-   --start = start or 1
-   local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
-   if result then
-      return (e.encode_function(result)), (#input - nextpos + 1);
-   else
-      return false, 1;
-   end
-end
-
--- TODO: Maybe cache expressions?
--- returns matches, leftover
-local function make_matcher(processing_fcn)
-   return function(e, expression, input, start)
-	     if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
-	     if start and type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
-	     local pat, msg
-	     if rplx.is(expression) then
-		return processing_fcn(e, rplx._pattern, input, start)
-	     elseif type(expression)=="string" then -- expression has not been compiled
-		-- pat = cache(expression)
-		-- if not pat then
-		   pat, msg = compile.compile_match_expression(expression, e._env)
-		   if not pat then engine_error(e, msg); end
-		--    cache(expression, pat)
-		-- end
-		return processing_fcn(e, pat, input, start)
-	     else
-		engine_error(e, "Expression not a string or rplx: " .. tostring(expression));
-	     end
-	  end  -- matcher function
-end
-
--- returns matches, leftover
-local engine_match = make_matcher(_engine_match)
-
--- returns matches, leftover, trace
-local engine_eval = make_matcher(function(e, pat, input, start)
-				    local ok, m, left = pcall(e._match, e, pat, input, start)
-				    local _,_,trace = eval.eval(pat, input, start, e._env, false)
-				    return m, left, trace
-				 end)
-
 local function engine_compile(en, expression, flavor)
    flavor = flavor or "match"
    if type(expression)~="string" then engine_error(en, "Expression not a string: " .. tostring(expression)); end
@@ -210,7 +167,46 @@ local function engine_compile(en, expression, flavor)
    if not pat then error(msg, 0); end
    return rplx(en, pat)
 end
-   
+
+local function _engine_match(e, pat, input, start)
+   --start = start or 1
+   local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
+   if result then
+      return (e.encode_function(result)), (#input - nextpos + 1);
+   else
+      return false, 1;
+   end
+end
+
+-- TODO: Maybe cache expressions?
+-- returns matches, leftover
+local function make_matcher(processing_fcn)
+   return function(e, expression, input, start, flavor)
+	     if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
+	     if start and type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
+	     if flavor and type(flavor)~="string" then engine_error(e, "Flavor not a string: " .. tostring(flavor)); end
+	     if rplx.is(expression) then
+		return processing_fcn(e, expression._pattern, input, start)
+	     elseif type(expression)=="string" then -- expression has not been compiled
+		-- If we cache, look up expression in the cache here.
+		local r = e:compile(expression, flavor)
+		return processing_fcn(e, r._pattern, input, start)
+	     else
+		engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
+	     end
+	  end  -- matcher function
+end
+
+-- returns matches, leftover
+local engine_match = make_matcher(_engine_match)
+
+-- returns matches, leftover, trace
+local engine_eval = make_matcher(function(e, pat, input, start)
+				    local ok, m, left = pcall(e._match, e, pat, input, start)
+				    local _,_,trace = eval.eval(pat, input, start, e._env, false)
+				    return m, left, trace
+				 end)
+
 ----------------------------------------------------------------------------------------
 
 local function load_string(en, input)

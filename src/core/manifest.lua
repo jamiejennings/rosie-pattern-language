@@ -9,8 +9,7 @@
 
 local util = require "util"
 local common = require "common"
-local pattern = common.pattern
-local compile = require "compile"
+--local pattern = common.pattern
 local engine = require "engine"
 
 local manifest = {}
@@ -24,14 +23,14 @@ local mpats = [==[
    ]==]
 
 local manifest_engine = engine.new("manifest")
-local ok, msg = compile.compile_source(mpats, manifest_engine._env)
-if not ok then error("Internal error: can't compile manifest rpl: " .. msg); end
-assert(pattern.is(manifest_engine._env.line))
+local ok, msg = pcall(manifest_engine.load, manifest_engine, mpats)
+if not ok then error("Internal error: can't load manifest rpl: " .. msg); end
+--assert(pattern.is(manifest_engine._env.line))
 
 local function process_manifest_line(en, line, manifest_path, root)
    -- always return a success code and a TABLE of messages
    local m = manifest_engine:match("line", line)
-   assert(type(m)=="table", "Uncaught error processing manifest file!")
+   assert(type(m)=="table", "Internal error while processing manifest file!")
    local name, pos, text, subs = common.decode_match(m)
    if subs then
       -- the only sub-match of "line" is "path", because "comment" is an alias
@@ -43,10 +42,11 @@ local function process_manifest_line(en, line, manifest_path, root)
       local input, msg = util.readfile(filename)
       if not input then return false, {info, msg}; end
 
-      local results, messages = compile.compile_source(input, en._env)
+      local ok, messages = pcall(en.load, en, input)
+      -- FIXME: Is the test for string below needed?
       if type(messages)=="string" then messages = {messages}; end -- compiler error
       table.insert(messages, 1, info)
-      return (not (not results)), messages
+      return ok, messages
    else
       return true, {}				    -- no file name on this line
    end
