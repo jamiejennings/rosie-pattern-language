@@ -109,36 +109,32 @@ linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sni
 windows:
 	@echo Windows installation not yet supported.
 
-submodules: submodules/argparse/src \
-		submodules/lua/Makefile \
-		submodules/lua-cjson/Makefile \
-		submodules/rosie-lpeg/src/makefile \
-		submodules/lua-readline/Makefile
+submodules = submodules/argparse/src/argparse.lua submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile submodules/lua-readline/Makefile 
 
 $(submodules):
 	git submodule init
 	git submodule update
 
-submodules/lua/include:
+submodules/lua/include: $(submodules)
 	cd $(LUA_DIR) && ln -sf src include
 
-bin/luac bin/lua: submodules
+bin/luac bin/lua: $(submodules)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM)
 	mkdir -p bin
 	cp $(LUA_DIR)/src/lua bin
 	cp $(LUA_DIR)/src/luac bin
 
-lib/lpeg.so: submodules submodules/lua/include
+lib/lpeg.so: $(submodules)
 	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua/src
 	mkdir -p lib
 	cp $(LPEG_DIR)/src/lpeg.so lib
 
-lib/cjson.so: submodules submodules/lua/include
+lib/cjson.so: $(submodules)
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
 
-lib/readline.so: submodules submodules/lua/include
+lib/readline.so: $(submodules) submodules/lua/include
 ifeq ($(PLATFORM),linux)
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) CFLAGS="-fPIC -O2 -I../lua/include"
 else ifeq ($(PLATFORM),macosx)
@@ -149,8 +145,8 @@ endif
 	mkdir -p lib
 	cp $(READLINE_DIR)/readline.so lib
 
-bin/argparse.luac: submodules/argparse/src/argparse.lua
-	bin/luac -o $@ $<
+bin/argparse.luac: submodules/argparse/src/argparse.lua bin/luac
+	bin/luac -o $@ submodules/argparse/src/argparse.lua
 
 bin/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
