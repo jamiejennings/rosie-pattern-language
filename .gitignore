@@ -8,6 +8,9 @@
 **/*~
 *.tar.gz
 
+# At the top level directory, rosie.lua is a file that is GENERATED during install
+rosie.lua
+
 # All the test executables are called 'rtest'
 ffi/samples/**/rtest
 ffi/librosie/librosie_gen.c
