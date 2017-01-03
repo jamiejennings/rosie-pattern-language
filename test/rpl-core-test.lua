@@ -5,7 +5,13 @@
 ---- (c) 2016, Jamie A. Jennings
 ----
 
-test = require "test-functions"
+-- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
+assert(ROSIE_HOME, "ROSIE_HOME is not set?")
+assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
+if not test then
+   test = load_module("test-functions", "src")
+end
+
 list = require("list")
 
 check = test.check

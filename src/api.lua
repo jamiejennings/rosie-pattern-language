@@ -11,7 +11,14 @@
 -- debugging.  Only the functions that end up in the api table (returned by this code) will become
 -- part of the external API.
 
-rosie = require "rosie"
+if ROSIE_DEV then
+   -- This file is being loaded into a Rosie development environment, so rosie is available:
+   assert(type(rosie)=="table", "The rosie package is not loaded?!  rosie=" .. tostring(rosie))
+else
+   -- This file is being loaded into a plain vanilla Lua, and we need to load Rosie.
+   rosie = require "rosie"
+end
+
 json = rosie._module.loaded.cjson
 
 ROSIE_INFO = rosie.info()
@@ -71,10 +78,16 @@ end
 --    error("Argument error: " .. msg, 0)
 -- end
 
+-- TODO: Fix the many inefficiencies here:
 local function default_engine_method_caller(method)
    return function(...)
 	     if not api.ENGINE then error("rosie api not initialized", 0); end
-	     return api.ENGINE[method](api.ENGINE, ...)
+	     local retvals = {api.ENGINE[method](api.ENGINE, ...)}
+	     for i=1,#retvals do
+		local v = retvals[i]
+		if type(v)~="string" and type(v)~="boolean" then retvals[i]= json.encode(v); end
+	     end
+	     return table.unpack(retvals)
 	  end
 end
 
@@ -86,7 +99,7 @@ local function call_with_default_engine(fcn)
 end
 
 ----------------------------------------------------------------------------------------
--- API info, including version information
+-- Rosie info
 ----------------------------------------------------------------------------------------
 
 local function info()
@@ -108,7 +121,7 @@ api.info = api_wrap(info, "object")
 local function initialize()
    if api.ENGINE then error("Engine already created", 0); end
    api.ENGINE = rosie.engine.new()
-   api.ENGINE:output(rosie.encoders.json)	    -- fixed at json for now
+   api.ENGINE:output(rosie.encoders.json)	    -- always json, at least for now
    return api.ENGINE._id			    -- may be useful for client-side logging?
 end
 
@@ -120,8 +133,18 @@ end
 
 api.finalize = api_wrap_only(finalize)
 
-api.engine_lookup = api_wrap(default_engine_method_caller("lookup"), "object")
-api.engine_clear = api_wrap(default_engine_method_caller("clear"), "boolean")
+local function make_env_accessor(method)
+   return function(encoded_identifier)
+	     if not api.ENGINE then error("rosie api not initialized", 0); end
+	     local ok, identifier = pcall(json.decode, encoded_identifier)
+	     if not ok then error("argument not a json-encoded string: " .. tostring(encoded_identifier),0); end
+	     if identifier==json.null then identifier = nil; end
+	     return json.encode(api.ENGINE[method](api.ENGINE, identifier))
+	  end
+end
+
+api.engine_lookup = api_wrap(make_env_accessor("lookup"), "object")
+api.engine_clear = api_wrap(make_env_accessor("clear"), "boolean")
 
 ----------------------------------------------------------------------------------------
 -- Loading manifests, files, strings
