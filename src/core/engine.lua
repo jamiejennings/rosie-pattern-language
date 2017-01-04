@@ -152,33 +152,21 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 --    bash-3.2$ ./run '{{!int .}* int}+' /etc/resolv.conf 
 --    10 0 1 1 
 --    2606 000 1120 8152 2 7 6 4 1 
---
--- Flavors are RPL "macros" hand-coded in Lua, used in Rosie v1.0 as a very limited kind of macro
--- system that we can extend in versions 1.x without losing backwards compatibility (and without
--- introducing a "real" macro facility.
--- N.B. Macros are transformations on ASTs, so they leverage the (rough and in need of
--- refactoring) syntax module.
 
-function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
+-- TODO: RPL macros will be implemented as transformations on ASTs, not transformations of
+-- RPL source (as in pattern_EXP_to_grep_pattern
+
+function compile_expression_to_grep_pattern(pattern_exp, env)
    local env = common.new_env(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
-   local astlist, orig_astlist = rpl_parser(pattern_exp)
-   if not astlist then return orig_astlist; end	    -- orig_astlist is error message
-   assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
-   if not compile.expression_p(astlist[1]) then
-      return nil, "match expression cannot be rpl statement"
-   end
-   local pats, msg = cinternals.compile_astlist(astlist, pattern_exp, env)
-   if not pats then return nil, msg; end
-   assert(type(pats)=="table" and pats[1])
-   local replacement = pats[1].ast
-   -- Next, transform pat.ast
-   local astlist, orig_astlist = parse_and_explain("{{!e .}* e}+")
-   assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
-   local template = astlist[1]
-   local grep_ast = syntax.replace_ref(template, "e", replacement)
-   assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   local pat, msg = cinternals.compile_match_expression({grep_ast}, {grep_ast}, "grep(" .. pattern_exp .. ")", env)
+   local pat, msg = compile.compile_source(pattern_exp, env)
+   if not pat then return nil, msg; end
+   -- Next, we do what we really need to do in order for the grep option to work
+   local pat, msg = compile.compile_source("alias e = " .. pattern_exp, env)
+   if not pat then return nil, msg; end
+   local pat, msg = compile.compile_source("alias grep = {{!e .}* e}+", env) -- should write gensym
+   if not pat then return nil, msg; end
+   local pat, msg = compile.compile_match_expression("grep", env)
    if not pat then return nil, msg; end
    return pat
 end
@@ -191,7 +179,7 @@ local function engine_compile(en, expression, flavor)
    if flavor=="match" then
       pat, msg = compile.compile_match_expression(en._rpl_parser, expression, en._env)
    elseif flavor=="search" then
-      pat, msg = compile_expression_to_grep_pattern(en._rpl_parser, expression, en._env)
+      pat, msg = compile_expression_to_grep_pattern(expression, en._env)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
@@ -247,8 +235,8 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 
 -- load rpl into the engine.  the rpl input has "file scope".
 -- returns a possibly-empty table of messages; throws an error if compilation fails.
-local function load_string(e, input)
-   local results, messages = compile.compile_source(e._rpl_parser, input, e._env)
+local function load_string(en, input)
+   local results, messages = compile.compile_source(input, en._env)
    if not results then engine_error(e, messages); end -- messages is a string in this case
    return common.compact_messages(messages)	    -- return a list of zero or more strings
 end
