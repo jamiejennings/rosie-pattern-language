@@ -8,8 +8,12 @@
 **/*~
 *.tar.gz
 
-# At the top level directory, rosie.lua is a file that is GENERATED during install
+# At the top level directory, rosie.lua is a file that is GENERATED during build/install
 rosie.lua
+
+# The bin and lib directories are created from scratch during the build
+bin
+lib
 
 # All the test executables are called 'rtest'
 ffi/samples/**/rtest
@@ -26,7 +30,3 @@ src/c/librosie/go/src/hello/
 src/c/librosie/go/src/ffi/librosie.c
 src/c/librosie/go/src/ffi/librosie.h
 
-bin
-lpeg-1.0.0
-lua-5.3.2
-lua-cjson-2.1.0
