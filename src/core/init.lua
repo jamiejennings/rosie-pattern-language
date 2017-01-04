@@ -71,7 +71,7 @@ loader()
 -- producing ROSIE_RPLX, which is a parser Rosie Pattern Language files
 
 ROSIE_ENGINE = engine.new("RPL engine")
-local core_rpl_filename = ROSIE_HOME.."/src/rpl-core.rpl"
+local core_rpl_filename = ROSIE_HOME.."/rpl/rpl-core.rpl"
 compile.compile_core(core_rpl_filename, ROSIE_ENGINE._env)
 local success, result, messages = pcall(ROSIE_ENGINE.compile, ROSIE_ENGINE, 'rpl')
 if not success then error("Error while initializing: could not compile "
