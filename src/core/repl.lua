@@ -37,7 +37,7 @@ local repl_patterns = [==[
 
 local repl_engine = rosie.engine.new("repl")
 repl.repl_engine = repl_engine
-rosie.file.load(repl_engine, "$sys/src/rpl-core.rpl", "rpl")
+rosie.file.load(repl_engine, "$sys/rpl/rpl-core.rpl", "rpl")
 repl_engine:load(repl_patterns)
 
 local repl_prompt = "Rosie> "
