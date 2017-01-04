@@ -1,17 +1,18 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- eval.lua        Step by step evaluation of Rosie patterns
+---- eval.lua     Also called "tracematch": step by step evaluation of Rosie patterns
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-
 -- N.B.  The evaluation functions utilize both the compiled lpeg patterns that the 'match'
 -- function uses (when an engine runs) and also the AST that created those compiled lpeg
--- patterns.  The AST is needed in order to step through the evaluation process.  Therefore, these
--- eval functions MUST BE SEMANTICALLY EQUIVALENT to their counterparts in the compiler.  (In
--- other words, the interpreter called 'eval' should have the same semantics as the compiler.)
+-- patterns.  The AST is needed in order to step through the evaluation process.
+-- 
+-- Therefore, these eval functions MUST BE SEMANTICALLY EQUIVALENT to their counterparts in the
+-- compiler.  (In other words, the interpreter called 'eval' should have the same semantics as the
+-- compiler.)  Toward that end, functions internal to the compiler are used liberally here.
 
 local parse = require "parse"
 local compile = require "compile"
@@ -357,6 +358,5 @@ function eval.eval(pat, input, start, env, fail_output_only)
    assert(pattern.is(pat), "Internal error: eval.eval was not passed a compiled pattern: " .. tostring(pat))
    return eval_exp(pat.ast, input, start, false, false, env, indent, fail_output_only, step, "")
 end
-
 
 return eval

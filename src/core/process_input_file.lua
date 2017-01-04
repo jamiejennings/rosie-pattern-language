@@ -8,8 +8,6 @@
 
 local process_input_file = {}
 
-local engine = require "engine"
-
 local function open3(e, infilename, outfilename, errfilename)
    if type(infilename)~="string" then e:_error("bad input file name"); end
    if type(outfilename)~="string" then e:_error("bad output file name"); end
