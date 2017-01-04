@@ -26,7 +26,7 @@ elseif (0xFFFFFFFF > math.maxinteger) then
 end
 
 ----------------------------------------------------------------------------------------
--- Load modules
+-- Custom module loader: each module is loaded into its own environment
 ----------------------------------------------------------------------------------------
 
 module = {loaded = {}}
@@ -60,6 +60,10 @@ function load_module(name, optional_subdir)
    return module.loaded[name]
 end
 
+----------------------------------------------------------------------------------------
+-- Load the modules that make up the entire Rosie world...
+----------------------------------------------------------------------------------------
+
 local json_loader = package.loadlib(ROSIE_HOME .. "/lib/cjson.so", "luaopen_cjson")
 local initial_json = json_loader()
 json = initial_json.new()
@@ -80,19 +84,12 @@ parse = load_module("parse")
 compile = load_module("compile")
 eval = load_module("eval")
 color_output = load_module("color-output")
-grep = load_module("grep")
 engine = load_module("engine")
 
 manifest = load_module("manifest")
---lapi = load_module("lapi");
---api = load_module("api")
 
 process_input_file = load_module("process_input_file")
 process_rpl_file = load_module("process_rpl_file")
 
 argparse = load_module("argparse", "submodules/argparse/src") -- FIXME
-
--- Do this in run.lua if needed
---repl = load_module("repl")
-
 

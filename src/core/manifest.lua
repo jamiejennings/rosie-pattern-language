@@ -9,7 +9,6 @@
 
 local util = require "util"
 local common = require "common"
---local pattern = common.pattern
 local engine = require "engine"
 
 local manifest = {}
@@ -25,7 +24,6 @@ local mpats = [==[
 local manifest_engine = engine.new("manifest")
 local ok, msg = pcall(manifest_engine.load, manifest_engine, mpats)
 if not ok then error("Internal error: can't load manifest rpl: " .. msg); end
---assert(pattern.is(manifest_engine._env.line))
 
 local function process_manifest_line(en, line, manifest_path, root)
    -- always return a success code and a TABLE of messages
