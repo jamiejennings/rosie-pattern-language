@@ -8,6 +8,10 @@
 **/*~
 *.tar.gz
 
+# The bin and lib directories are created from scratch during the build
+bin
+lib
+
 ffi/librosie/liblua/*
 ffi/librosie/liblpeg/*
 ffi/librosie/librosie_gen.c
@@ -25,7 +29,3 @@ src/c/librosie/go/src/hello/
 src/c/librosie/go/src/ffi/librosie.c
 src/c/librosie/go/src/ffi/librosie.h
 
-bin
-lpeg-1.0.0
-lua-5.3.2
-lua-cjson-2.1.0
