@@ -46,6 +46,6 @@ export PWD
 # Lua's "long string" syntax is needed because command line args could contain single and/or double quotes.
 # Since RPL contains expressions delimited by [[ ... ]], we use Lua's [====[ ... ]====] for scriptname.
 # The need to wrap the args will be removed or implemented more robustly before or in Rosie Version 1.0.
-${executable} $i "$ROSIE_HOME/src/run.lua" "$ROSIE_HOME" "$dev" "$@"
+${executable} $i "$ROSIE_HOME/src/cli.lua" "$ROSIE_HOME" "$dev" "$@"
 
 

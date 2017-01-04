@@ -8,7 +8,7 @@
 
 local repl = {}
 
--- N.B. 'rosie' is a global defined by init and loaded by run.lua, which calls the repl
+-- N.B. 'rosie' is a global defined by init and loaded by cli.lua, which calls the repl
 
 local common = require "common"
 local readline = require "readline"

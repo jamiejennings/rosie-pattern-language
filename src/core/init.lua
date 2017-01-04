@@ -18,11 +18,11 @@
 --      - created by the Rosie installation process (Makefile), to include the value
 --        of ROSIE_HOME. 
 --      - When that script is invoked by the user in order to run Rosie,
---        the script passes ROSIE_HOME to run.lua (the CLI), which has called this file (init).
+--        the script passes ROSIE_HOME to cli.lua, which has called this file (init).
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
 if not ROSIE_HOME then error("Error while initializing: variable ROSIE_HOME not set"); end
 
--- When init is loaded from run-rosie, ROSIE_DEV will be a boolean (as set by run.lua)
+-- When init is loaded from run-rosie, ROSIE_DEV will be a boolean (as set by cli.lua)
 -- When init is loaded from rosie.lua, ROSIE_DEV will be unset.  In this case, it should be set to
 -- true so that rosie errors do not invoke os.exit().
 ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
@@ -58,7 +58,7 @@ if value then ROSIE_ROOT = value; end
 -- Load the entire rosie world...
 ----------------------------------------------------------------------------------------
 
-local loader, msg = loadfile(ROSIE_HOME .. "/src/load-modules.lua", "t", _ENV)
+local loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", _ENV)
 if not loader then error("Error while initializing: " .. msg); end
 loader()
 
