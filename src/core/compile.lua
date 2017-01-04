@@ -10,20 +10,11 @@
 local compile = {}				    -- exported top level interface
 local cinternals = {}				    -- exported interface to compiler internals
 
--- forward reference
--- parse_and_explain = function(...)
--- 		       error("Self-hosted parser not loaded")
--- 		    end
-
 local common = require "common"
 local pattern = common.pattern
 local parse = require "parse"			    -- RPL parser and AST functions
 local lpeg = require "lpeg"
 local util = require "util"
-local list = require "list"
-local recordtype = require "recordtype"
-local unspecified = recordtype.unspecified
-local syntax = require "syntax"
 
 local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt, lpeg.B
@@ -536,7 +527,6 @@ end
 
 local parser = parse.core_parse_and_explain	    -- Using this as a dynamic variable
 function compile.set_parser(fcn)
---   print("In compile.set_parser, changing from " .. tostring(parser) .. " to " .. tostring(fcn))
    parser = fcn
 end
 
@@ -549,7 +539,8 @@ function compile.compile_source(source, env)
    local results, messages = cinternals.compile_astlist(astlist, source, env)
    if results then
       assert(type(messages)=="table")
-      list.foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
+      -- list.foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
+      for i, pat in ipairs(results) do pat.original_ast = original_astlist[i]; end
       return results, messages			    -- message may contain compiler warnings
    else
       assert(type(messages)=="string")
@@ -622,7 +613,6 @@ function compile.compile_core(filename, env)
       return true, messages
    end
 end
-
 
 compile.cinternals = cinternals
 return compile

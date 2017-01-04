@@ -10,10 +10,7 @@ local repl = {}
 
 -- N.B. 'rosie' is a global defined by init and loaded by run.lua, which calls the repl
 
---local lapi = require "lapi"
 local common = require "common"
-local json = require "cjson"
-local list = require "list"
 local readline = require "readline"
 list = require "list"
 
@@ -107,7 +104,10 @@ function repl.repl(en)
 		     ok, messages, full_path = pcall(rosie.file.load, en, path, "manifest")
 		  end
 		  if ok then
-		     if messages then list.foreach(print, messages); end
+		     if messages then
+			--list.foreach(print, messages)
+			for _,msg in ipairs(messages) do print(msg); end
+		     end
 		     io.write("Loaded ", full_path, "\n")
 		  else
 		     io.write(messages, "\n")
