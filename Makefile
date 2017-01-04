@@ -27,26 +27,13 @@ BUILD_ROOT = $(shell pwd)
 
 # Install layout
 #
-# Almost everything gets copied to $(ROSIED): (e.g. /usr/local/lib/rosie)
-#   $(ROSIED)/bin          arch-dependent binaries (e.g. lua, 
-#   $(ROSIED)/lib          arch-dependent libraries (e.g. lpeg.so, *.luac)
-#   $(ROSIED)/rpl          standard library (*.rpl)
-#   $(ROSIED)/pkg          standard library compiled (*.rosie)
-#   $(ROSIED)/doc          documentation (html format)
-#   $(ROSIED)/extra        editor highlighting files, other things
-#   $(ROSIED)/rosie.lua    loads rosie into Lua 5.3 as a lua package
-#   $(ROSIED)/CHANGELOG    change log
-#   $(ROSIED)/CONTRIBUTORS project contributors, acknowledgements
-#   $(ROSIED)/LICENSE      license
-#   $(ROSIED)/README       short text readme (e.g. where to open issues)
-#   $(ROSIED)/VERSION      installed version
-#
-# Rosie executable is created by 'make install': $(DESTDIR)/bin/rosie
-#
-# Links into $(ROSIED)
-#   $(ROSIE_ROOT)/rpl  --> $(ROSIED)/rpl
-#   $(ROSIE_ROOT)/pkg  --> $(ROSIED)/pkg
-#   $(ROSIE_DOC)/rosie --> $(ROSIED)/doc
+# Almost everything gets copied to $(ROSIED):
+#   $(ROSIED)/bin      arch-dependent binaries (e.g. lua, 
+#   $(ROSIED)/lib      arch-dependent libraries (e.g. lpeg.so, *.luac)
+#   $(ROSIED)/rpl
+#   $(ROSIED)/pkg
+
+
 
 ROSIED = $(DESTDIR)/lib/rosie
 ROSIE_DOC = $(DESTDIR)/share/doc
@@ -222,8 +209,8 @@ install_metadata:
 .PHONY: install_lua_src
 install_lua_src:
 	mkdir -p "$(ROSIED)"/src
-#	@cp src/cli.lua "$(ROSIED)"/src
-#	@cp src/strict.lua "$(ROSIED)"/src
+	@cp src/cli.lua "$(ROSIED)"/src
+	@cp src/strict.lua "$(ROSIED)"/src
 
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
