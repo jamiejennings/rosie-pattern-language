@@ -29,20 +29,20 @@ BUILD_ROOT = $(shell pwd)
 # Install layout
 #
 # Almost everything gets copied to $(ROSIED): (e.g. /usr/local/lib/rosie)
-#   $(ROSIED)/bin        arch-dependent binaries (e.g. lua, 
-#   $(ROSIED)/lib        arch-dependent libraries (e.g. lpeg.so, *.luac)
-#   $(ROSIED)/rpl        standard library (*.rpl)
-#   $(ROSIED)/pkg        standard library compiled (*.rosie)
-#   $(ROSIED)/doc        documentation (html format)
-#   $(ROSIED)/extra      editor highlighting files, other things
-#   $(ROSIED)/rosie.lua  loads rosie into Lua 5.3 as a lua package
-#   $(ROSIED)/AUTHORS    authors, acknowledgements
-#   $(ROSIED)/CHANGELOG  change log
-#   $(ROSIED)/LICENSE    license
-#   $(ROSIED)/README     short text readme (e.g. where to open issues)
-#   $(ROSIED)/VERSION    installed version
+#   $(ROSIED)/bin          arch-dependent binaries (e.g. lua, 
+#   $(ROSIED)/lib          arch-dependent libraries (e.g. lpeg.so, *.luac)
+#   $(ROSIED)/rpl          standard library (*.rpl)
+#   $(ROSIED)/pkg          standard library compiled (*.rosie)
+#   $(ROSIED)/doc          documentation (html format)
+#   $(ROSIED)/extra        editor highlighting files, other things
+#   $(ROSIED)/rosie.lua    loads rosie into Lua 5.3 as a lua package
+#   $(ROSIED)/CHANGELOG    change log
+#   $(ROSIED)/CONTRIBUTORS project contributors, acknowledgements
+#   $(ROSIED)/LICENSE      license
+#   $(ROSIED)/README       short text readme (e.g. where to open issues)
+#   $(ROSIED)/VERSION      installed version
 #
-# Executable is created by 'make install': $(DESTDIR)/bin/rosie
+# Rosie executable is created by 'make install': $(DESTDIR)/bin/rosie
 #
 # Links into $(ROSIED)
 #   $(ROSIE_ROOT)/rpl  --> $(ROSIED)/rpl
@@ -211,35 +211,37 @@ install_so: lib/lpeg.so lib/cjson.so
 .PHONY: install_metadata
 install_metadata:
 	mkdir -p "$(ROSIED)"
-	cp VERSION MANIFEST "$(ROSIED)"
+	cp CHANGELOG CONTRIBUTORS LICENSE README VERSION MANIFEST "$(ROSIED)"
 
 # Install the needed lua source files
 .PHONY: install_lua_src
 install_lua_src:
 	mkdir -p "$(ROSIED)"/src
-	@cp src/cli.lua "$(ROSIED)"/src
-	@cp src/strict.lua "$(ROSIED)"/src
+#	@cp src/cli.lua "$(ROSIED)"/src
+#	@cp src/strict.lua "$(ROSIED)"/src
 
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
 install_luac_bin:
-	mkdir -p "$(ROSIED)"/bin
-	cp bin/*.luac "$(ROSIED)"/bin
+	mkdir -p "$(ROSIED)"/lib
+	cp lib/*.luac "$(ROSIED)"/lib
 
 # Install the provided RPL patterns
 .PHONY: install_rpl
 install_rpl:
 	mkdir -p "$(ROSIED)"/{src,rpl}
-	cp rpl/*.rpl "$(ROSIED)"/rpl
-	cp src/rpl-core.rpl "$(ROSIED)"/src
+	cp -r rpl "$(ROSIED)"/
+#	cp src/rpl-core.rpl "$(ROSIED)"/src
 
 # Main install rule
 .PHONY: install
 install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
 	 install_lua_src install_luac_bin install_rpl
 	@echo 
-	@echo TO TEST: make installtest
-	@echo TO UNINSTALL: Remove file $(INSTALL_ROSIEBIN) and directory $(ROSIED)
+	@echo TO TEST THE INSTALLATION: make installtest
+	@echo TO UNINSTALL: remove one directory and several files/links, e.g.
+	@echo     rm -rf $(ROSIED)
+	@echo     rm $(INSTALL_ROSIEBIN) $(ROSIE_ROOT)/rpl $(ROSIE_ROOT)/pkg $(ROSIE_DOC)/rosie
 	@echo 
 
 .PHONY: sniff
@@ -251,7 +253,7 @@ sniff: $(ROSIEBIN)
             echo "Rosie Pattern Engine built successfully!"; \
 	    if [ -z "$$BREW" ]; then \
 	      	    echo "    Use 'make install' to install into $(DESTDIR)"; \
-	      	    echo "    Use 'make test' to run the test suite"; \
+	      	    echo "    Use 'make test' to run the test suite here in the build directory"; \
 	      	    echo "    To run rosie from the build directory, use ./bin/rosie"; \
 	            echo "    Try this example, and look for color text output: rosie basic.matchall /etc/resolv.conf"; \
 		    echo "";\
