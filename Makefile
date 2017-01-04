@@ -25,12 +25,15 @@ READLINE = lua-readline
 
 BUILD_ROOT = $(shell pwd)
 
-# Note: Most of the installation is arch-dependent (compiled C and Lua code).
-# The arch-independent files are rpl source and, of course, doc.  These will
-# be installed in:
-#   $(ROSIED)/share/rosie/rpl/maj.min
-#   $(ROSIED)/share/doc/rosie/maj.min
-#   $(ROSIED)/share/man/man1/rosie.1
+# Install layout
+#
+# Almost everything gets copied to $(ROSIED):
+#   $(ROSIED)/bin      arch-dependent binaries (e.g. lua, 
+#   $(ROSIED)/lib      arch-dependent libraries (e.g. lpeg.so, *.luac)
+#   $(ROSIED)/rpl
+#   $(ROSIED)/pkg
+
+
 
 # ROSIED is root of where everything needed to run rosie will be installed
 ROSIED = $(DESTDIR)/lib/rosie
@@ -150,11 +153,13 @@ endif
 	mkdir -p lib
 	cp $(READLINE_DIR)/readline.so lib
 
+lib/argparse.luac: submodules/argparse/src/argparse.lua bin/luac
+	bin/luac -o $@ submodules/argparse/src/argparse.lua
 
-bin/%.luac: src/core/%.lua bin/luac
+lib/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 
-luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua)) bin/argparse.luac
+luaobjects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua)) lib/argparse.luac
 
 .PHONY: compile
 compile: $(luaobjects)
@@ -209,7 +214,7 @@ install_metadata:
 .PHONY: install_lua_src
 install_lua_src:
 	mkdir -p "$(ROSIED)"/src
-	@cp src/run.lua "$(ROSIED)"/src
+	@cp src/cli.lua "$(ROSIED)"/src
 	@cp src/strict.lua "$(ROSIED)"/src
 
 # Install the lua pre-compiled binary files (.luac)
