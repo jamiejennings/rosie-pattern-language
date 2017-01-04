@@ -12,18 +12,14 @@
 -- The two principle use case categories for Rosie may be characterized as Interactive and
 -- Production, where the latter includes big data scenarios in which performance is paramount and
 -- functions like compiling, tracing, and generating human-readable output are not needed.
-
--- Type of use   | In Lua          | In API
--- ------------- | --------------- | --------------
--- Interactive   | 
--- Production    | 
+-- Support for matching using compiled patterns is the focus of "Production" use.
 
 ----------------------------------------------------------------------------------------
 -- Engine
 ----------------------------------------------------------------------------------------
 -- A matching engine is a stateful Lua object instantiated in order to match patterns
 -- against input data.  An engine is the primary abstraction for using Rosie
--- programmatically in Lua.
+-- programmatically in Lua.  (Recall that the REPL, CLI, and API are written in Lua.)
 --
 -- engine.new(optional_name) creates a new engine with only a "base" environment
 --   returns id which is a string;
@@ -71,9 +67,6 @@
 -- e:clear(optional_identifier) erases the definition of optional_identifier or the entire environment
 --   never raises an error (unless for internal rosie bug)
 
--- Engines (now) know nothing about files.  File processing routines are defined in
--- process_input_file.lua and exposed via the rosie module.
-
 -- FUTURE:
 --
 -- e:trace(id1, ... | nil) trace the listed identifiers, or if nil return the identifiers being traced
@@ -95,7 +88,6 @@ local common = require "common"
 local parse = require "parse"
 local compile = require "compile"
 local eval = require "eval"
-local grep = require "grep"
 
 local engine = 
    recordtype.define(
@@ -152,6 +144,31 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 
 ----------------------------------------------------------------------------------------
 
+-- Grep searches a line for all occurrences of a given pattern.  For Rosie to search a line for
+-- all occurrences of pattern p, we want to transform p into:  {{!p .}* p}+
+-- E.g.
+--    bash-3.2$ ./run '{{!int .}* int}+' /etc/resolv.conf 
+--    10 0 1 1 
+--    2606 000 1120 8152 2 7 6 4 1 
+
+-- TODO: RPL macros will be implemented as transformations on ASTs, not transformations of
+-- RPL source (as in pattern_EXP_to_grep_pattern
+
+function compile_expression_to_grep_pattern(pattern_exp, env)
+   local env = common.new_env(env)		    -- new scope, which will be discarded
+   -- First, we compile the exp in order to give an accurate message if it fails
+   local pat, msg = compile.compile_source(pattern_exp, env)
+   if not pat then return nil, msg; end
+   -- Next, we do what we really need to do in order for the grep option to work
+   local pat, msg = compile.compile_source("alias e = " .. pattern_exp, env)
+   if not pat then return nil, msg; end
+   local pat, msg = compile.compile_source("alias grep = {{!e .}* e}+", env) -- should write gensym
+   if not pat then return nil, msg; end
+   local pat, msg = compile.compile_match_expression("grep", env)
+   if not pat then return nil, msg; end
+   return pat
+end
+
 local function engine_compile(en, expression, flavor)
    flavor = flavor or "match"
    if type(expression)~="string" then engine_error(en, "Expression not a string: " .. tostring(expression)); end
@@ -160,7 +177,7 @@ local function engine_compile(en, expression, flavor)
    if flavor=="match" then
       pat, msg = compile.compile_match_expression(expression, en._env)
    elseif flavor=="search" then
-      pat, msg = grep.pattern_EXP_to_grep_pattern(expression, en._env)
+      pat, msg = compile_expression_to_grep_pattern(expression, en._env)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
@@ -169,7 +186,6 @@ local function engine_compile(en, expression, flavor)
 end
 
 local function _engine_match(e, pat, input, start)
-   --start = start or 1
    local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
    if result then
       return (e.encode_function(result)), (#input - nextpos + 1);
@@ -209,6 +225,8 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 
 ----------------------------------------------------------------------------------------
 
+-- load rpl into the engine.  the rpl input has "file scope".
+-- returns a possibly-empty table of messages; throws an error if compilation fails.
 local function load_string(en, input)
    local results, messages = compile.compile_source(input, en._env)
    if not results then engine_error(e, messages); end -- messages is a string in this case
@@ -248,12 +266,8 @@ end
 
 local function clear_environment(en, identifier)
    if identifier then
-      if en._env[identifier] then
-	 en._env[identifier] = nil
-	 return true
-      else
-	 return false
-      end
+      if en._env[identifier] then en._env[identifier] = nil; return true
+      else return false; end
    else -- no identifier arg supplied, so wipe the entire env
       en._env = common.new_env()
       return true
