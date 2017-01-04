@@ -7,7 +7,6 @@
 -- AUTHOR: Jamie A. Jennings
 
 local process_input_file = {}
-local lpeg = require "lpeg"
 
 local function open3(e, infilename, outfilename, errfilename)
    if type(infilename)~="string" then e:_error("bad input file name"); end

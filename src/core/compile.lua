@@ -525,13 +525,21 @@ function cinternals.compile_astlist(astlist, source, env)
    end
 end
 
-function cinternals.compile_source(astlist, original_astlist, source, env)
+local parser = parse.core_parse_and_explain	    -- Using this as a dynamic variable
+function compile.set_parser(fcn)
+   parser = fcn
+end
+
+function compile.compile_source(source, env)
+   local astlist, original_astlist = parser(source)
+   if not astlist then return false, original_astlist; end -- original_astlist is msg
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local results, messages = cinternals.compile_astlist(astlist, source, env)
    if results then
       assert(type(messages)=="table")
+      -- list.foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
       for i, pat in ipairs(results) do pat.original_ast = original_astlist[i]; end
       return results, messages			    -- message may contain compiler warnings
    else
