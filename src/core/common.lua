@@ -6,25 +6,15 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-----------------------------------------------------------------------------------------
--- NOTE: The reason that this set of common functions exists is that Rosie's internal
--- AST now has the same structure as the Rosie output (a match).  So, AST functions
--- are now match functions, and vice versa.
-----------------------------------------------------------------------------------------
-
---local co = require "color-output"
-
 local lpeg = require "lpeg"
 local Cc, Cg, Ct, Cp, C = lpeg.Cc, lpeg.Cg, lpeg.Ct, lpeg.Cp, lpeg.C
-
-local os = require "os"
 local util = require "util"
 local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified
+-- REMOVED os dependency in v1-tranche-2
+--local os = require "os"
 
 local common = {}				    -- interface
-
---assert(ROSIE_HOME, "The variable ROSIE_HOME is not set in common.lua")
 
 ----------------------------------------------------------------------------------------
 -- UTF-8 considerations
@@ -82,12 +72,15 @@ function common.compute_full_path(path, manifest_path, home)
 	    manifest_path = manifest_path:sub(1,-2)
 	 end
 	 full_path = manifest_path .. rest
-      elseif (#sym>2) and (sym:sub(1,1)=="(") and (sym:sub(-1,-1)==")") then
-	 local env_value = os.getenv(sym:sub(2,-2))
-	 if (not env_value) or (env_value=="") then
-	    return false, string.format("Environment variable %q not set", sym:sub(2,-2))
-	 end
-	 full_path = env_value .. rest
+       --
+       -- REMOVED the $(foo) syntax in v1-tranche-2
+       --
+      -- elseif (#sym>2) and (sym:sub(1,1)=="(") and (sym:sub(-1,-1)==")") then
+      -- 	 local env_value = os.getenv(sym:sub(2,-2))
+      -- 	 if (not env_value) or (env_value=="") then
+      -- 	    return false, string.format("Environment variable %q not set", sym:sub(2,-2))
+      -- 	 end
+      -- 	 full_path = env_value .. rest
       else -- sym is not any of the valid things
 	 return false, string.format("Invalid file path syntax: %s", path)
       end

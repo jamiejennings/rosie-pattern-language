@@ -74,10 +74,6 @@ local function api_wrap(f, ...)
    return newf
 end
 
--- local function arg_error(msg)
---    error("Argument error: " .. msg, 0)
--- end
-
 -- TODO: Fix the many inefficiencies here:
 local function default_engine_method_caller(method)
    return function(...)
@@ -198,40 +194,6 @@ api.file_match = api_wrap(call_with_default_engine(rosie.file.match), "int", "in
 api.tracematch = api_wrap(default_engine_method_caller("tracematch"), "string", "int", "string")
 api.file_tracematch = api_wrap(call_with_default_engine(rosie.file.tracematch), "int", "int", "int")
 
-  -- -- Inefficient.  The fact that default_engine is not bound when we create the match functions
-  -- -- means that later, during every API call to rplx_match, we look up "match" in the engine table
-  -- -- in order to call it.
-  -- -- Also, the compiled_expressions table holds rplx objects.  Would be faster to store the peg and
-  -- -- to call an internal low-level match function (of the engine) which takes a peg argument.
-  -- local function make_rplx_matcher(operation)
-  --    return function(rplx_id, input, start)
-  -- 	       local r = compiled_expressions[rplx_id]
-  -- 	       if not r then error("unknown compiled expression: " .. tostring(rplx_id)); end
-  -- 	       return default_engine[operation](default_engine, r, input, start)
-  -- 	    end
-  -- end
-
-  -- local rplx_match = make_rplx_matcher("match")
-  -- local rplx_eval = make_rplx_matcher("eval")
-
-  -- api.rplx_match = api_wrap(rplx_match, "string", "int")
-  -- api.rplx_eval = api_wrap(rplx_eval, "string", "int")
-
-  -- local function make_rplx_file_matcher(file_processing_fcn)
-  --    return function(rplx_id, infile, outfile, errfile, wholefileflag)
-  -- 	       local r = compiled_expressions[rplx_id]
-  -- 	       if not r then error("unknown compiled expression: " .. tostring(rplx_id)); end
-  -- 	       return call_with_default_engine(file_processing_fcn, r, "match",
-  -- 					       infile, outfile, errfile, wholefileflag)
-  -- 	    end
-  -- end
-
-  -- local rplx_file_match = make_rplx_file_matcher(rosie.file.match)
-  -- local rplx_file_eval = make_rplx_file_matcher(rosie.file.eval)
-
-  -- api.rplx_match_file = api_wrap(rplx_file_match, "int", "int", "int")
-  -- api.rplx_eval_file = api_wrap(rplx_file_eval, "int", "int", "int")
-
 ---------------------------------------------------------------------------------------------------
 -- Generate C code for librosie
 ----------------------------------------------------------------------------------------
@@ -245,13 +207,6 @@ local function gen_version(api)
    end
    return str
 end
-
--- function gen_constant(name, spec)
---    -- #define ROSIE_API_name code
---    local const = "ROSIE_API_" .. name
---    assert(type(spec.code)=="number")
---    return "#define " .. const .. " " .. tostring(spec.code)
--- end
 
 local function gen_prototype(name, spec)
    local p = "struct stringArray " .. name .. "("
@@ -277,9 +232,6 @@ end
       
 local function gen_C_HEADER(api)
    local str = gen_top_message()
-   -- str = str .. gen_constant("FIRST_CODE", {code=enumeration_counter}) .. "\n";
-   -- for k,v in pairs(signature) do str = str .. gen_constant(k,v) .. "\n"; end
-   -- str = str .. "\n"
    str = str .. gen_version(api) .. "\n"
    for k,v in pairs(api.SIGNATURE) do str = str .. gen_prototype(k,v) .. ";\n"; end
    str = str .. "\n/* end of generated code */\n"
