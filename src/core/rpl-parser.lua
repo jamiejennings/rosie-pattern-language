@@ -16,14 +16,12 @@ assert(ROSIE_RPLX)				    -- compiled version of 'rpl'
 local function rosie_parse_without_error_check(str, pos, tokens)
    pos = pos or 1
    tokens = tokens or {}
---   print("Calling ROSIE_ENGINE:match on: " .. str)
    local nt, leftover, state = ROSIE_RPLX:match(str, pos)
    if (not nt) then return tokens; end
    local name, pos, text, subs = common.decode_match(nt)
    table.move(subs, 1, #subs, #tokens+1, tokens)    -- strip the 'rpl' off the top
    return rosie_parse_without_error_check(str, #str-leftover+1, tokens)
 end
-
 
 local function rosie_parse(str, pos, tokens)
    local astlist = rosie_parse_without_error_check(str, pos, tokens)
