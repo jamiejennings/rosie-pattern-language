@@ -302,7 +302,7 @@ function run(args)
 end -- function run
 
 ----------------------------------------------------------------------------------------
--- Do stuff
+-- Parser for command line args
 ----------------------------------------------------------------------------------------
 
 -- create Parser
@@ -330,33 +330,31 @@ parser:option("-r --rpl", "Inline RPL statements")
 	:args(1)
 	:count("*") -- allow multiple RPL statements
 	:target("statements") -- set name of variable index (args.statements)
---parser:flag("--asdf", "description")
---parser:option("--lkj", "description"):args(1)
 -- target variable for commands
 parser:command_target("command")
 -- info command
-local xinfo = parser:command("info")
+local cmd_info = parser:command("info")
 	:description("Print rosie installation information")
 -- patterns command
-local xpatterns = parser:command("patterns")
+local cmd_patterns = parser:command("patterns")
 	:description("List installed patterns")
-xpatterns:argument("filter")
+cmd_patterns:argument("filter")
 	:description("Filter pattern names that have substring 'filter'")
 	:args("?")
 -- repl command
-local xrepl = parser:command("repl")
+local cmd_repl = parser:command("repl")
 	:description("Run rosie in interactive mode")
 -- match command
-local xmatch = parser:command("match")
+local cmd_match = parser:command("match")
 	:description("Run RPL match")
 -- trace command
-local xtrace = parser:command("trace")
+local cmd_trace = parser:command("trace")
 	:description("Match while tracing all steps (generates MUCH output)")
 -- grep command
-local xgrep = parser:command("grep")
+local cmd_grep = parser:command("grep")
 	:description("Run RPL match in the style of Unix grep (match anywhere in a line)")
 
-for _, cmd in ipairs{xmatch, xtrace, xgrep} do
+for _, cmd in ipairs{cmd_match, cmd_trace, cmd_grep} do
    -- match/trace/grep flags (true/false)
    cmd:flag("-s --wholefile", "Read input file as single string")
        :default(false)
@@ -368,8 +366,9 @@ for _, cmd in ipairs{xmatch, xtrace, xgrep} do
    -- match/trace/grep arguments (required options)
    cmd:argument("pattern", "RPL pattern")
    cmd:argument("filename", "Input filename")
-      :args("*")
-      :default("-") -- in case no filenames are passed, default to stdin
+      :args("+")
+      :default("-")			      -- in case no filenames are passed, default to stdin
+      :defmode("arg")			      -- needed to make the default work
    -- match/trace/grep options (takes an argument)
    cmd:option("-o --encode", "Output format")
       :convert(function(a)
@@ -387,8 +386,8 @@ for _, cmd in ipairs{xmatch, xtrace, xgrep} do
 end
 
 -- test command
-local xtest = parser:command("test")
-xtest:argument("filename", "RPL filename")
+local cmd_test = parser:command("test")
+cmd_test:argument("filename", "RPL filename")
 
 
 -- in order to catch dev mode for "make test"
