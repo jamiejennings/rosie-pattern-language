@@ -7,6 +7,7 @@
 -- AUTHOR: Jamie A. Jennings
 
 local process_input_file = {}
+local lpeg = require "lpeg"
 
 local function open3(e, infilename, outfilename, errfilename)
    if type(infilename)~="string" then e:_error("bad input file name"); end
@@ -30,10 +31,14 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    -- opening the files.
    --
    local r = e:compile(expression, flavor)
+   -- This optimization almost doubles performance of the loop through the file (below) in typical
+   -- cases, e.g. syslog pattern. 
+   local encoder = e.encode_function		    -- optimization
+   local peg = (r._pattern.peg * lpeg.Cp())	    -- optimization
+   local matcher = peg.match			    -- optimization
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
    local inlines, outlines, errlines = 0, 0, 0;
-   local trace, leftover, m;
    local nextline
    if wholefileflag then
       nextline = function()
@@ -47,14 +52,15 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    end
    local o_write, e_write = outfile.write, errfile.write
    local l = nextline(); 
+   local _, m, leftover, trace
    while l do
-      local _
       if trace_flag then _, _, trace = e:tracematch(expression, l); end
-      m, leftover = r:match(l);
+      m, nextpos = matcher(peg, l);		    -- this is nextpos, NOT leftover
       -- What to do with leftover?  User might want to see it.
+      -- local leftover = (#input - nextpos + 1);
       if trace then o_write(outfile, trace, "\n"); end
       if m then
-	 o_write(outfile, m, "\n")
+	 o_write(outfile, encoder(m), "\n")
 	 outlines = outlines + 1
       else --if not trace_flag then
 	 e_write(errfile, l, "\n")
