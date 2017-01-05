@@ -188,11 +188,6 @@ local function engine_compile(en, expression, flavor)
 end
 
 -- N.B. This code is duplicated (for speed) in process_input_file.lua
--- There's still room for optimizations, e.g.
---   Combine with lpeg.Cp() and store that "final" match-able pattern.
---   Create a closure over the encode function to avoid looking it up in e.
---   Close over lpeg.match to avoid looking it up via the peg.
---   Close over the peg itself to avoid looking it up in pat.
 local function _engine_match(e, pat, input, start)
    local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
    if result then
@@ -226,7 +221,7 @@ local engine_match = make_matcher(_engine_match)
 
 -- returns matches, leftover, trace
 local engine_tracematch = make_matcher(function(e, pat, input, start)
-				    local m, left = _engine_match(e, pat, input, start)
+				    local ok, m, left = pcall(_engine_match, e, pat, input, start)
 				    local _,_,trace = eval.eval(pat, input, start, e._env, false)
 				    return m, left, trace
 				 end)
