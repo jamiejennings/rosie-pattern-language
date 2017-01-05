@@ -7,6 +7,7 @@
 -- AUTHOR: Jamie A. Jennings
 
 local process_input_file = {}
+local lpeg = require "lpeg"
 
 local function open3(e, infilename, outfilename, errfilename)
    if type(infilename)~="string" then e:_error("bad input file name"); end
@@ -30,6 +31,11 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    -- opening the files.
    --
    local r = e:compile(expression, flavor)
+   -- This optimization almost doubles performance of the loop through the file (below) in typical
+   -- cases, e.g. syslog pattern. 
+   local encoder = e.encode_function		    -- optimization
+   local peg = (r._pattern.peg * lpeg.Cp())	    -- optimization
+   local matcher = peg.match			    -- optimization
 
    -- This set of simple optimizations almost doubles performance of the loop through the file
    -- (below) in typical cases, e.g. syslog pattern. 
