@@ -109,7 +109,6 @@ local engine =
       match=false;
       tracematch=false;
 
-      _match=false;
       _error=false;
   },
    "engine"
@@ -185,6 +184,7 @@ local function engine_compile(en, expression, flavor)
    return rplx(en, pat)
 end
 
+-- N.B. This code is duplicated (for speed) in process_input_file.lua
 local function _engine_match(e, pat, input, start)
    local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
    if result then
@@ -218,7 +218,7 @@ local engine_match = make_matcher(_engine_match)
 
 -- returns matches, leftover, trace
 local engine_tracematch = make_matcher(function(e, pat, input, start)
-				    local ok, m, left = pcall(e._match, e, pat, input, start)
+				    local ok, m, left = pcall(_engine_match, e, pat, input, start)
 				    local _,_,trace = eval.eval(pat, input, start, e._env, false)
 				    return m, left, trace
 				 end)
@@ -281,11 +281,11 @@ local function get_set_encoder_function(en, f)
 end
 
 rplx.create_function =
-   function(_new, engine, pattern)
+   function(_new, en, pattern)
       local params = {
-	 _engine=engine,
+	 _engine=en,
 	 _pattern=pattern,
-	 match=function(self, ...) return engine._match(engine, pattern, ...); end,
+	 match=function(self, ...) return _engine_match(en, pattern, ...); end,
       }
       local idstring = tostring(params):match("0x(.*)") or "id/err"
       params._id = idstring
@@ -310,7 +310,6 @@ engine.create_function =
 		      load=load_string,
 		      compile=engine_compile,
 
-		      _match=_engine_match,
 		      _error=engine_error,
 		   }
       local idstring = tostring(params):match("0x(.*)") or "id/err"
