@@ -54,34 +54,45 @@ local ok, value = pcall(os.getenv, "ROSIE_ROOT")
 if (not ok) then error('Internal error: call to os.getenv(ROSIE_ROOT)" failed'); end
 if value then ROSIE_ROOT = value; end
 
-----------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 -- Load the entire rosie world...
-----------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
 local loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", _ENV)
 if not loader then error("Error while initializing: " .. msg); end
 loader()
 
-----------------------------------------------------------------------------------------
--- Bootstrap the rpl parser, which is defined in a subset of rpl that is parsed by a
--- "native" (Lua lpeg) parser.
-----------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+-- Bootstrap the rpl parser, which is defined in a core subset of rpl that is parsed by a "native"
+-- (Lua lpeg) parser.
+---------------------------------------------------------------------------------------------------
 
--- To bootstrap, we have to compile the Rosie rpl using the core parser/compiler,
--- producing ROSIE_RPLX, which is a parser Rosie Pattern Language files
+-- At this point, there is no default rpl parser set for new engines.  We create the ROSIE_ENGINE,
+-- which will parse all incoming rpl, and set it up initially with the "rpl core parser", which is
+-- hand-coded in parse.lua and accepts "rpl 1.0".
+--
+-- We use the rpl 1.0 parser to load the rpl 1.1 parser (which is obviously written in rpl 1.0).
+-- After loading the definition of 1.1, we compile some patterns that will be used later to parse
+-- rpl 1.1.
 
 ROSIE_ENGINE = engine.new("RPL engine")
 local core_rpl_filename = ROSIE_HOME.."/rpl/rpl-core.rpl"
-compile.compile_core(core_rpl_filename, ROSIE_ENGINE._env)
+local core_rpl = util.readfile(core_rpl_filename)
+ROSIE_ENGINE._rpl_version = "1.0"
+ROSIE_ENGINE._rpl_parser = parse.core_parse_and_explain
+ROSIE_ENGINE:load(core_rpl)
 local success, result, messages = pcall(ROSIE_ENGINE.compile, ROSIE_ENGINE, 'rpl')
 if not success then error("Error while initializing: could not compile "
 			  .. core_rpl_filename .. ":\n" .. tostring(result)); end
 
 ROSIE_RPLX = result
 
--- Install the new parser.
+-- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX
 load_module("rpl-parser")
-compile.set_parser(parse_and_explain);		    -- parse_and_explain uses ROSIE_RPLX
+ROSIE_ENGINE._rpl_parser = parse_and_explain
+ROSIE_ENGINE._rpl_version = "1.1"
+-- And make these the defaults for all new engines:
+engine._set_default_rpl_parser(parse_and_explain, "1.1");
 
 ----------------------------------------------------------------------------------------
 -- INFO for debugging
@@ -95,8 +106,9 @@ compile.set_parser(parse_and_explain);		    -- parse_and_explain uses ROSIE_RPLX
 ROSIE_INFO = {
    {name="ROSIE_HOME",    value=ROSIE_HOME,                  desc="location of the rosie installation directory"},
    {name="ROSIE_VERSION", value=ROSIE_VERSION,               desc="version of rosie installed"},
-   {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),         desc="true if rosie was started in development mode"},
+   {name="RPL_VERSION",   value=ROSIE_ENGINE._rpl_version,   desc="version of rpl (language) accepted"},
    {name="ROSIE_ROOT",    value=tostring(ROSIE_ROOT),        desc="root of the standard rpl library"},
+   {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),         desc="true if rosie was started in development mode"},
    {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "", desc="host on which rosie is running"},
    {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "", desc="type of host on which rosie is running"},
    {name="OSTYPE",        value=os.getenv("OSTYPE") or "",   desc="type of OS on which rosie is running"},
