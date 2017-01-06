@@ -77,7 +77,10 @@ loader()
 
 ROSIE_ENGINE = engine.new("RPL engine")
 local core_rpl_filename = ROSIE_HOME.."/rpl/rpl-core.rpl"
-compile.compile_core(core_rpl_filename, ROSIE_ENGINE._env)
+local core_rpl = util.readfile(core_rpl_filename)
+ROSIE_ENGINE._rpl_version = "1.0"
+ROSIE_ENGINE._rpl_parser = parse.core_parse_and_explain
+ROSIE_ENGINE:load(core_rpl)
 local success, result, messages = pcall(ROSIE_ENGINE.compile, ROSIE_ENGINE, 'rpl')
 if not success then error("Error while initializing: could not compile "
 			  .. core_rpl_filename .. ":\n" .. tostring(result)); end
