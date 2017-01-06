@@ -92,6 +92,8 @@ local eval = require "eval"
 local engine = 
    recordtype.define(
    {  _name=unspecified;			    -- for reference, debugging
+      _rpl_parser=false;
+      _rpl_version=false;
       _env=false;
       _id=unspecified;
 
@@ -153,17 +155,17 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 -- TODO: RPL macros will be implemented as transformations on ASTs, not transformations of
 -- RPL source (as in pattern_EXP_to_grep_pattern
 
-function compile_expression_to_grep_pattern(pattern_exp, env)
+function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    local env = common.new_env(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
-   local pat, msg = compile.compile_source(pattern_exp, env)
+   local pat, msg = compile.compile_source(rpl_parser, pattern_exp, env)
    if not pat then return nil, msg; end
    -- Next, we do what we really need to do in order for the grep option to work
-   local pat, msg = compile.compile_source("alias e = " .. pattern_exp, env)
+   local pat, msg = compile.compile_source(rpl_parser, "alias e = " .. pattern_exp, env)
    if not pat then return nil, msg; end
-   local pat, msg = compile.compile_source("alias grep = {{!e .}* e}+", env) -- should write gensym
+   local pat, msg = compile.compile_source(rpl_parser, "alias grep = {{!e .}* e}+", env) -- should write gensym
    if not pat then return nil, msg; end
-   local pat, msg = compile.compile_match_expression("grep", env)
+   local pat, msg = compile.compile_match_expression(rpl_parser, "grep", env)
    if not pat then return nil, msg; end
    return pat
 end
@@ -174,9 +176,9 @@ local function engine_compile(en, expression, flavor)
    if type(flavor)~="string" then engine_error(en, "Flavor not a string: " .. tostring(flavor)); end
    local pat, msg
    if flavor=="match" then
-      pat, msg = compile.compile_match_expression(expression, en._env)
+      pat, msg = compile.compile_match_expression(en._rpl_parser, expression, en._env)
    elseif flavor=="search" then
-      pat, msg = compile_expression_to_grep_pattern(expression, en._env)
+      pat, msg = compile_expression_to_grep_pattern(en._rpl_parser, expression, en._env)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
@@ -185,6 +187,11 @@ local function engine_compile(en, expression, flavor)
 end
 
 -- N.B. This code is duplicated (for speed) in process_input_file.lua
+-- There's still room for optimizations, e.g.
+--   Combine with lpeg.Cp() and store that "final" match-able pattern.
+--   Create a closure over the encode function to avoid looking it up in e.
+--   Close over lpeg.match to avoid looking it up via the peg.
+--   Close over the peg itself to avoid looking it up in pat.
 local function _engine_match(e, pat, input, start)
    local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
    if result then
@@ -218,7 +225,7 @@ local engine_match = make_matcher(_engine_match)
 
 -- returns matches, leftover, trace
 local engine_tracematch = make_matcher(function(e, pat, input, start)
-				    local ok, m, left = pcall(_engine_match, e, pat, input, start)
+				    local m, left = _engine_match(e, pat, input, start)
 				    local _,_,trace = eval.eval(pat, input, start, e._env, false)
 				    return m, left, trace
 				 end)
@@ -227,8 +234,8 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 
 -- load rpl into the engine.  the rpl input has "file scope".
 -- returns a possibly-empty table of messages; throws an error if compilation fails.
-local function load_string(en, input)
-   local results, messages = compile.compile_source(input, en._env)
+local function load_string(e, input)
+   local results, messages = compile.compile_source(e._rpl_parser, input, e._env)
    if not results then engine_error(e, messages); end -- messages is a string in this case
    return common.compact_messages(messages)	    -- return a list of zero or more strings
 end
@@ -292,11 +299,20 @@ rplx.create_function =
       return _new(params)
    end
 
+local default_rpl_parser = parse.core_parse_and_explain;
+local default_rpl_version = "1.0"
+function set_default_rpl_parser(parse_expand_explain, version_string)
+   default_rpl_parser = parse_expand_explain
+   default_rpl_version = version_string
+end
+
 engine.create_function =
    function(_new, name, initial_env)
       initial_env = initial_env or common.new_env()
       -- assigning a unique instance id should be part of the recordtype module
       local params = {_name=name,
+		      _rpl_parser=default_rpl_parser;
+		      _rpl_version=default_rpl_version;
 		      _env=initial_env,
 
 		      lookup=get_environment,
@@ -320,6 +336,7 @@ engine.create_function =
 -- recordtype package defines a creator function that is named after the record type name
 engine_module.new = engine
 engine_module.is = engine.is
+engine_module._set_default_rpl_parser = set_default_rpl_parser
 
 engine_module.rplx = rplx			    -- debugging
 
