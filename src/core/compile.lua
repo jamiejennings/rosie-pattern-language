@@ -12,7 +12,7 @@ local cinternals = {}				    -- exported interface to compiler internals
 
 local common = require "common"
 local pattern = common.pattern
-local parse = require "parse"			    -- RPL parser and AST functions
+local parse = require "parse"			    -- core rpl parser and AST functions
 local lpeg = require "lpeg"
 local util = require "util"
 
@@ -234,7 +234,7 @@ function cinternals.compile_named_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_named_charset")
    local name, pos, text, subs = common.decode_match(a)
    local complement
-   if subs then					    -- subs not present from core parser
+   if subs then					    -- core parser won't produce subs
       complement = (next(subs[1])=="complement")
       if complement then assert(subs[2] and (next(subs[2])=="name")); end
       name, pos, text, subs = common.decode_match((complement and subs[2]) or subs[1])
@@ -525,21 +525,20 @@ function cinternals.compile_astlist(astlist, source, env)
    end
 end
 
-local parser = parse.core_parse_and_explain	    -- Using this as a dynamic variable
-function compile.set_parser(fcn)
-   parser = fcn
-end
-
-function compile.compile_source(source, env)
-   local astlist, original_astlist = parser(source)
-   if not astlist then return false, original_astlist; end -- original_astlist is msg
+-- rpl_parser contract:
+--   parse source to produce original_astlist;
+--   transform original_astlist as needed (e.g. syntax expand); 
+--   return the result (astlist) as the first value, and original_astlist as the second
+--   if any step fails, generate a useful error message (msg) and return false, msg
+function compile.compile_source(rpl_parser, source, env)
+   local astlist, original_astlist = rpl_parser(source)
+   if not astlist then return false, original_astlist; end -- original_astlist is error msg (string)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    local results, messages = cinternals.compile_astlist(astlist, source, env)
    if results then
       assert(type(messages)=="table")
-      -- list.foreach(function(pat, oast) pat.original_ast=oast; end, results, original_astlist)
       for i, pat in ipairs(results) do pat.original_ast = original_astlist[i]; end
       return results, messages			    -- message may contain compiler warnings
    else
@@ -548,9 +547,9 @@ function compile.compile_source(source, env)
    end
 end
 
-function compile.compile_match_expression(source, env)
+function compile.compile_match_expression(rpl_parser, source, env)
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local astlist, original_astlist = parser(source)
+   local astlist, original_astlist = rpl_parser(source)
    if (not astlist) then
       return false, original_astlist		    -- original_astlist is msg
    end
@@ -574,7 +573,7 @@ function compile.compile_match_expression(source, env)
       pat = env[text]
    end
    -- Compile the expression
-   local results, msg = compile.compile_source(source, env)
+   local results, msg = compile.compile_source(rpl_parser, source, env)
    if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
       return false, msg
    end
@@ -592,7 +591,7 @@ function compile.compile_match_expression(source, env)
    return result
 end
 
-function compile.compile_core(filename, env)
+function compile.compile_core(rpl_parser, filename, env)
    local source
    local f = io.open(filename);
    if (not f) then
@@ -602,9 +601,7 @@ function compile.compile_core(filename, env)
       f:close()
    end
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   -- Intentionally ignoring the value of compile.parse, we ensure the use of
-   -- core_parse_and_explain for parsing the Rosie rpl.
-   local astlist, msg = parse.core_parse_and_explain(source)
+   local astlist, msg = rpl_parser(source)
    if not astlist then error("Error parsing core rpl definition: " .. msg); end
    local results, messages = cinternals.compile_astlist(astlist, source, env)
    if not results then
