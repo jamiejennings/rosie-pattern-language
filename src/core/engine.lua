@@ -156,20 +156,46 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 -- TODO: RPL macros will be implemented as transformations on ASTs, not transformations of
 -- RPL source (as in pattern_EXP_to_grep_pattern
 
+--pt, orig = parse_and_explain("{{!e .}* e}+")
+--new = syntax.replace_ref(pt[1], "e", {blargh={pos=1,text="hello, world"}})
 function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    local env = common.new_env(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
-   local pat, msg = compile.compile_source(rpl_parser, pattern_exp, env)
-   if not pat then return nil, msg; end
-   -- Next, we do what we really need to do in order for the grep option to work
-   local pat, msg = compile.compile_source(rpl_parser, "alias e = " .. pattern_exp, env)
-   if not pat then return nil, msg; end
-   local pat, msg = compile.compile_source(rpl_parser, "alias grep = {{!e .}* e}+", env) -- should write gensym
-   if not pat then return nil, msg; end
-   local pat, msg = compile.compile_match_expression(rpl_parser, "grep", env)
-   if not pat then return nil, msg; end
-   return pat
+   local astlist, orig_astlist = rpl_parser(pattern_exp)
+   if not astlist then return orig_astlist; end	    -- orig_astlist is error message
+   assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
+   if not compile.expression_p(astlist[1]) then
+      return nil, "match expression cannot be rpl statement"
+   end
+   local pats, msg = cinternals.compile_astlist(astlist, pattern_exp, env)
+   if not pats then return nil, msg; end
+   assert(type(pats)=="table" and pats[1])
+   local replacement = pats[1].ast
+   -- Next, transform pat.ast
+   local astlist, orig_astlist = parse_and_explain("{{!e .}* e}+")
+   assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
+   local template = astlist[1]
+   local grep_ast = syntax.replace_ref(template, "e", replacement)
+   assert(type(grep_ast)=="table", "syntax.replace_ref failed")
+   local pats, msg = cinternals.compile_astlist({grep_ast}, "grep(" .. pattern_exp .. ")", env)
+   if not pats then return nil, msg; end
+   assert(type(pats)=="table" and pats[1])
+   return pats[1]
 end
+-- function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
+--    local env = common.new_env(env)		    -- new scope, which will be discarded
+--    -- First, we compile the exp in order to give an accurate message if it fails
+--    local pat, msg = compile.compile_source(rpl_parser, pattern_exp, env)
+--    if not pat then return nil, msg; end
+--    -- Next, we do what we really need to do in order for the grep option to work
+--    local pat, msg = compile.compile_source(rpl_parser, "alias e = " .. pattern_exp, env)
+--    if not pat then return nil, msg; end
+--    local pat, msg = compile.compile_source(rpl_parser, "alias grep = {{!e .}* e}+", env) -- should write gensym
+--    if not pat then return nil, msg; end
+--    local pat, msg = compile.compile_match_expression(rpl_parser, "grep", env)
+--    if not pat then return nil, msg; end
+--    return pat
+-- end
 
 local function engine_compile(en, expression, flavor)
    flavor = flavor or "match"
