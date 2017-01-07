@@ -194,7 +194,7 @@ end
 --     actually worked.  In this mode, each pattern is compiled just in time.
 
 function common.walk_ast(a, functions, ...)
-   assert(type(a)=="table", "walk_ast: first argument not an ast "..tostring(a))
+   assert(type(a)=="table", "walk_ast: first argument not an ast: "..tostring(a))
    assert(type(a[1])~="table", "walk_ast first argument not an ast (maybe it's a list of ast's?): "..tostring(a))
    assert(type(functions)=="table")
    local name, pos, text, subs = common.decode_match(a)
