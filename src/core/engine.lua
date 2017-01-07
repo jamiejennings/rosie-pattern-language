@@ -177,10 +177,9 @@ function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    local template = astlist[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   local pats, msg = cinternals.compile_astlist({grep_ast}, "grep(" .. pattern_exp .. ")", env)
-   if not pats then return nil, msg; end
-   assert(type(pats)=="table" and pats[1])
-   return pats[1]
+   local pat, msg = cinternals.compile_match_expression({grep_ast}, {grep_ast}, "grep(" .. pattern_exp .. ")", env)
+   if not pat then return nil, msg; end
+   return pat
 end
 -- function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
 --    local env = common.new_env(env)		    -- new scope, which will be discarded
