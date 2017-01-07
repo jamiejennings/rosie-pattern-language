@@ -94,4 +94,6 @@ grammar
    assignment_ = { identifier ignore "=" expression }
 end
 
-rpl = {ignore {statement / expression / syntax_error}}
+--rpl = {ignore {statement / expression / syntax_error}}
+alias item = {ignore {statement / expression / syntax_error}}
+rpl = item* ignore $
