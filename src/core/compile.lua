@@ -525,14 +525,7 @@ function cinternals.compile_astlist(astlist, source, env)
    end
 end
 
--- rpl_parser contract:
---   parse source to produce original_astlist;
---   transform original_astlist as needed (e.g. syntax expand); 
---   return the result (astlist) as the first value, and original_astlist as the second
---   if any step fails, generate a useful error message (msg) and return false, msg
-function compile.compile_source(rpl_parser, source, env)
-   local astlist, original_astlist = rpl_parser(source)
-   if not astlist then return false, original_astlist; end -- original_astlist is error msg (string)
+function cinternals.compile_source(astlist, original_astlist, source, env)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
@@ -547,12 +540,18 @@ function compile.compile_source(rpl_parser, source, env)
    end
 end
 
-function compile.compile_match_expression(rpl_parser, source, env)
-   assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
+-- rpl_parser contract:
+--   parse source to produce original_astlist;
+--   transform original_astlist as needed (e.g. syntax expand); 
+--   return the result (astlist) as the first value, and original_astlist as the second
+--   if any step fails, generate a useful error message (msg) and return false, msg
+function compile.compile_source(rpl_parser, source, env)
    local astlist, original_astlist = rpl_parser(source)
-   if (not astlist) then
-      return false, original_astlist		    -- original_astlist is msg
-   end
+   if not astlist then return false, original_astlist; end -- original_astlist is error msg (string)
+   return cinternals.compile_source(astlist, original_astlist, source, env)
+end
+
+function cinternals.compile_match_expression(astlist, original_astlist, source, env)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(source)=="string")
@@ -576,7 +575,7 @@ function compile.compile_match_expression(rpl_parser, source, env)
       pat = env[text]
    end
    -- Compile the expression
-   local results, msg = compile.compile_source(rpl_parser, source, env)
+   local results, msg = cinternals.compile_source(astlist, original_astlist, source, env)
    if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
       return false, msg
    end
@@ -592,6 +591,15 @@ function compile.compile_match_expression(rpl_parser, source, env)
       result.peg = common.match_node_wrap(C(result.peg), "*")
    end
    return result
+end
+
+function compile.compile_match_expression(rpl_parser, source, env)
+   assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
+   local astlist, original_astlist = rpl_parser(source)
+   if (not astlist) then
+      return false, original_astlist		    -- original_astlist is msg
+   end
+   return cinternals.compile_match_expression(astlist, original_astlist, source, env)
 end
 
 -- function compile.compile_core(rpl_parser, filename, env)
