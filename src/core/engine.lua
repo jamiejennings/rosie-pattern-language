@@ -152,12 +152,13 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 --    bash-3.2$ ./run '{{!int .}* int}+' /etc/resolv.conf 
 --    10 0 1 1 
 --    2606 000 1120 8152 2 7 6 4 1 
+--
+-- Flavors are RPL "macros" hand-coded in Lua, used in Rosie v1.0 as a very limited kind of macro
+-- system that we can extend in versions 1.x without losing backwards compatibility (and without
+-- introducing a "real" macro facility.
+-- N.B. Macros are transformations on ASTs, so they leverage the (rough and in need of
+-- refactoring) syntax module.
 
--- TODO: RPL macros will be implemented as transformations on ASTs, not transformations of
--- RPL source (as in pattern_EXP_to_grep_pattern
-
---pt, orig = parse_and_explain("{{!e .}* e}+")
---new = syntax.replace_ref(pt[1], "e", {blargh={pos=1,text="hello, world"}})
 function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    local env = common.new_env(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
@@ -181,20 +182,6 @@ function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    if not pat then return nil, msg; end
    return pat
 end
--- function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
---    local env = common.new_env(env)		    -- new scope, which will be discarded
---    -- First, we compile the exp in order to give an accurate message if it fails
---    local pat, msg = compile.compile_source(rpl_parser, pattern_exp, env)
---    if not pat then return nil, msg; end
---    -- Next, we do what we really need to do in order for the grep option to work
---    local pat, msg = compile.compile_source(rpl_parser, "alias e = " .. pattern_exp, env)
---    if not pat then return nil, msg; end
---    local pat, msg = compile.compile_source(rpl_parser, "alias grep = {{!e .}* e}+", env) -- should write gensym
---    if not pat then return nil, msg; end
---    local pat, msg = compile.compile_match_expression(rpl_parser, "grep", env)
---    if not pat then return nil, msg; end
---    return pat
--- end
 
 local function engine_compile(en, expression, flavor)
    flavor = flavor or "match"
