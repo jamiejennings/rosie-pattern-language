@@ -8,6 +8,9 @@
 local common = require "common"			    -- AST functions
 local list = require "list"
 
+local function err(...)
+   error(table.concat({...}, " "))
+end
 
 local syntax = {}
 
@@ -69,7 +72,7 @@ end
 
 function syntax.make_transformer(fcn, target_name, recursive)
    local function target_match(name)
-         -- Either match every node
+      -- Either match every node
       if (target_name==nil) then return true;
 	 -- Or a single node type
       elseif (type(target_name)=="string") then return (name==target_name);
@@ -436,23 +439,35 @@ function syntax.top_level_transform(ast)
    end
 end
 
--- return the ast version of {{!e .}* e}+ given the ast for e as an argument
-function syntax.grepify(ast_e)
-   local plus = syntax.generate("plus")
-   local star = syntax.generate("star")
-   local dot = syntax.generate("ref")		    -- THIS WON"T WORK
-   local not_e = syntax.generate("predicate", syntax.generate("negation"), ast_e)
-   local any_char_not_e = syntax.generate("raw_exp", syntax.generate("sequence", not_e, dot))
-   local discard_until_e = syntax.generate("new_quantified_exp", any_char_not_e, star)
-   local find_e = syntax.generate("raw_exp", syntax.generate("sequence", discard_until_e, ast_e))
-
-   local new = syntax.generate("raw_exp", syntax.generate("new_quantified_exp", find_e, plus))
-   new.new_quantified_exp.text = original_body.text
-   new.new_quantified_exp.pos = original_body.pos
-   return new
-end
-			  
-   
+-- function syntax.replace_ref(ast, identifier, replacement_ast):
+-- walk ast looking for ref nodes; replace each ref node for 'identifier' with replacement_ast
+-- e.g.
+    -- > pt, orig = parse_and_explain("foo")
+    -- > table.print(pt)
+    -- {1: {ref: 
+    -- 	   {text: "foo", 
+    -- 	    pos: 1}}}
+    -- > table.print(syntax.replace_ref(pt[1], "foo", {blargh={pos=1,text="hello, world"}}))
+    -- {blargh: 
+    --    {pos: 1, 
+    -- 	text: "hello, world"}}
+    -- > table.print(syntax.replace_ref(pt[1], "bar", {blargh={pos=1,text="hello, world"}}))
+    -- {ref: 
+    --    {text: "foo", 
+    -- 	pos: 1}}
+    -- > 
+syntax.replace_ref =
+   syntax.make_transformer(function(ast, identifier, replacement_ast)
+			      local ref_type, pos, ref_id = common.decode_match(ast)
+			      assert(ref_type=="ref")
+			      if ref_id==identifier then
+				 return replacement_ast
+			      else
+				 return ast	    -- no change
+			      end
+			   end,
+			   "ref",
+			   true)
 
 return syntax
 

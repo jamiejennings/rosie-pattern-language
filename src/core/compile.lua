@@ -591,25 +591,25 @@ function compile.compile_match_expression(rpl_parser, source, env)
    return result
 end
 
-function compile.compile_core(rpl_parser, filename, env)
-   local source
-   local f = io.open(filename);
-   if (not f) then
-      return false, 'Compiler: cannot open file of core definitions "'..filename..'"\nExiting...\n'
-   else
-      source = f:read("a")
-      f:close()
-   end
-   assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local astlist, msg = rpl_parser(source)
-   if not astlist then error("Error parsing core rpl definition: " .. msg); end
-   local results, messages = cinternals.compile_astlist(astlist, source, env)
-   if not results then
-      error("Error compiling core rpl definition: " .. messages)
-   else
-      return true, messages
-   end
-end
+-- function compile.compile_core(rpl_parser, filename, env)
+--    local source
+--    local f = io.open(filename);
+--    if (not f) then
+--       return false, 'Compiler: cannot open file of core definitions "'..filename..'"\nExiting...\n'
+--    else
+--       source = f:read("a")
+--       f:close()
+--    end
+--    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
+--    local astlist, msg = rpl_parser(source)
+--    if not astlist then error("Error parsing core rpl definition: " .. msg); end
+--    local results, messages = cinternals.compile_astlist(astlist, source, env)
+--    if not results then
+--       error("Error compiling core rpl definition: " .. messages)
+--    else
+--       return true, messages
+--    end
+-- end
 
 compile.cinternals = cinternals
 return compile
