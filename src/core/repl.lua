@@ -25,7 +25,7 @@ local repl_patterns = [==[
       manifest = ".manifest" path?
       args = .*
       match = ".match" args 
-      eval = ".eval" args
+      trace = ".trace" args
       on_off = "on" / "off"
       debug = ".debug" on_off?
       alnum = { [[:alpha:]] / [[:digit:]] }
@@ -34,7 +34,7 @@ local repl_patterns = [==[
       clear = ".clear" (identifier / star)?
       help = ".help"
       badcommand = {"." .+}
-      command = load / manifest / match / eval / debug / patterns / clear / help / badcommand
+      command = load / manifest / match / trace / debug / patterns / clear / help / badcommand
       input = command / statement / identifier
 ]==]
 
@@ -54,8 +54,8 @@ local function print_match(m, left, eval_p)
    else
       local msg = "Repl: No match"
       if not eval_p then
-	 msg = msg .. ((debug and "  (turn debug off to hide the match evaluation trace)")
-		    or "  (turn debug on to show the match evaluation trace)")
+	 msg = msg .. ((debug and "  (turn debug off to hide the trace output)")
+		    or "  (turn debug on to show the trace output)")
       end
       print(msg)
    end
@@ -139,7 +139,7 @@ function repl.repl(en)
 	       else -- missing argument
 		  io.write("Error: supply the identifier to clear, or * for all\n")
 	       end
-	    elseif cname=="match" or cname =="eval" then
+	    elseif cname=="match" or cname =="trace" then
 	       if (not csubs) or (not csubs[1]) then
 		  io.write("Missing expression and input arguments\n")
 	       else
@@ -167,18 +167,20 @@ function repl.repl(en)
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			input_text = common.unescape_string(input_text)
 			local ok, m, left = pcall(en.match, en, exp, input_text)
-			if not ok then io.write(m, "\n"); end -- syntax and compile errors
-			if cname=="match" then
-			   if debug and (not m) then
-			      local match, leftover, trace = en:eval(exp, input_text)
+			if not ok then
+			   io.write(m, "\n") -- syntax and compile errors
+			else
+			   if cname=="match" then
+			      if debug and (not m) then
+				 local match, leftover, trace = en:tracematch(exp, input_text)
+				 io.write(trace, "\n")
+			      end
+			   else
+			      local match, leftover, trace = en:tracematch(exp, input_text)
 			      io.write(trace, "\n")
 			   end
-			else
-			   -- must be eval
-			   local match, leftover, trace = en:eval(exp, input_text)
-			   io.write(trace, "\n")
-			end
-			print_match(m, left, (cname=="eval"))
+			   print_match(m, left, (cname=="trace"))
+			end -- did the pcall to en.match succeed or not
 		     end -- could not parse out the expression and input string from the repl input
 		  end -- if unable to parse argtext into: stuff "," quoted_string
 	       end -- if pat
@@ -212,7 +214,7 @@ local help_text = [[
    .load path                    load RPL file (see note below)
    .manifest path                load manifest file (see note below)
    .match exp quoted_string      match RPL exp against (quoted) input data
-   .eval exp quoted_string       show full evaluation (trace)
+   .trace exp quoted_string      show full trace output of the matching process
    .debug {on|off}               show debug state; with an argument, set it
    .patterns [filter]            list patterns in the environment
    .clear <id>                   clear the pattern definition of <id>, * for all
