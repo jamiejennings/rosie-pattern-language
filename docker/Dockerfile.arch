@@ -1,10 +1,8 @@
-FROM ubuntu
+FROM binhex/arch-base
 
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update
-RUN apt-get install --yes make
-RUN apt-get install --yes gcc
-RUN apt-get install --yes libreadline6-dev
+RUN pacman -S --noconfirm make
+RUN pacman -S --noconfirm gcc
+RUN pacman -S --noconfirm readline
 
 # Option 1: Install git and clone the repository.  Works if the container has internet access.
 #RUN apt-get install --yes git
