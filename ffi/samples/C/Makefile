@@ -39,8 +39,8 @@ SYSCFLAGS=
 SYSLDFLAGS=
 SYSLIBS=
 
-MYCFLAGS= -std=gnu99 -I$(HOME)/tmp/lua-5.3.2/include -I$(HOME)/ffi/librosie
-MYLDFLAGS=
+MYCFLAGS= -std=gnu99 -I$(HOME)/submodules/lua/include -I$(HOME)/ffi/librosie
+MYLDFLAGS= 
 MYLIBS= 
 MYOBJS=
 
@@ -68,7 +68,7 @@ none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
 linux:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX" SYSLIBS="-Wl,-E -ldl -lreadline"
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX" SYSLIBS="-Wl,-E -ldl -lm -lreadline"
 
 macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS= CC=$(CC)
