@@ -66,6 +66,7 @@ linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
 linux: LINUX_CFLAGS=MYCFLAGS=-fPIC
+linux: LINUX_LDFLAGS=MYLDFLAGS=-Wl,--export-dynamic
 linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 
 windows:
@@ -81,7 +82,7 @@ submodules/lua/include:
 	cd $(LUA_DIR) && ln -sf src include
 
 bin/luac bin/lua: $(submodules)
-	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM) $(LINUX_CFLAGS)
+	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM) $(LINUX_CFLAGS) $(LINUX_LDFLAGS)
 	mkdir -p bin
 	cp $(LUA_DIR)/src/lua bin
 	cp $(LUA_DIR)/src/luac bin
