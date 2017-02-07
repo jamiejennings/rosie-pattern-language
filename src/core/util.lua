@@ -322,8 +322,8 @@ function util.extract_source_line_from_pos(source, pos)
    return string.sub(source, start, eol), pos-start, count
 end
       
-function util.split_path(path, optional_separator)
-   local separator = optional_separator or common.dirsep
+function util.split_path(path, separator)
+   -- separator is typically common.dirsep
    if #separator~=1 then
       error(string.format("Separator is not a one character string: %q", separator))
    end
