@@ -45,7 +45,7 @@ var RTLD_NOW = ffi.DynamicLibrary.FLAGS.RTLD_NOW;
 var RTLD_GLOBAL = ffi.DynamicLibrary.FLAGS.RTLD_GLOBAL;
 var mode = RTLD_NOW | RTLD_GLOBAL;
 
-var RosieLib = new DynamicLibrary('librosie.so' || null, mode);
+var RosieLib = new DynamicLibrary(rosie_home + '/ffi/librosie/librosie.so' || null, mode);
 
 var funcs = {
     'rosieL_clear_environment': [ MyCStringArray, ['pointer', MyCStringPtr] ],
