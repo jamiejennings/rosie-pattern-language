@@ -64,6 +64,7 @@ BUILD_LUA_PACKAGE = $(BUILD_ROOT)/rosie.lua
 LUA_DIR = $(SUBMOD)/$(LUA)
 LPEG_DIR = $(SUBMOD)/$(LPEG)
 JSON_DIR = $(SUBMOD)/$(JSON)
+READLINE_DIR = $(SUBMOD)/$(READLINE)
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
@@ -76,7 +77,7 @@ clean:
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
-	-cd $(READLINE_DIR) && rm readline.so && rm src/lua_readline.o
+	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
 
 .PHONY: none
 none:
@@ -105,7 +106,7 @@ readlinetest:
 macosx: PLATFORM=macosx
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
+macosx: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
 
 .PHONY: linux
 linux: PLATFORM=linux
@@ -138,12 +139,12 @@ bin/luac bin/lua: submodules
 	cp $(LUA_DIR)/src/lua bin
 	cp $(LUA_DIR)/src/luac bin
 
-lib/lpeg.so: $(submodules) submodules/lua/include
+lib/lpeg.so: submodules submodules/lua/include
 	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua
 	mkdir -p lib
 	cp $(LPEG_DIR)/src/lpeg.so lib
 
-lib/cjson.so: $(submodules) submodules/lua/include
+lib/cjson.so: submodules submodules/lua/include
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
@@ -158,6 +159,7 @@ ifeq ($(PLATFORM),linux)
 else ifeq ($(PLATFORM),macosx)
 	cd $(READLINE_DIR) && $(MAKE) USE_LIBEDIT=true LUA_INCLUDE_DIR=$(BUILD_ROOT)/submodules/lua/src CC=$(CC)
 else
+	@echo "Platform not linux or macosx.  Cannot build readline.so."
 	false
 endif
 	mkdir -p lib
