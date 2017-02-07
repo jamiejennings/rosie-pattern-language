@@ -298,8 +298,10 @@ end
 --    return "#define " .. const .. " " .. tostring(spec.code)
 -- end
 
+local function prefix(str) return "rosieL_"..str; end
+   
 function gen_prototype(name, spec)
-   local p = "struct stringArray " .. name .. "("
+   local p = "struct stringArray " .. prefix(name) .. "("
    local arglist = "void *L"
    for _,arg in ipairs(spec.args) do
       arglist = arglist .. ", struct string *" .. arg
