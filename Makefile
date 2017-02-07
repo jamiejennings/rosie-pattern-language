@@ -75,7 +75,7 @@ INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
 
 .PHONY: clean
 clean:
-	rm -rf bin/* lib/*
+	rm -rf bin/* lib/* rosie.lua
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
@@ -225,7 +225,7 @@ install_metadata:
 .PHONY: install_lua_src
 install_lua_src:
 	mkdir -p "$(ROSIED)"/src
-#	@cp src/cli.lua "$(ROSIED)"/src
+	@cp src/cli.lua "$(ROSIED)"/src
 #	@cp src/strict.lua "$(ROSIED)"/src
 
 # Install the lua pre-compiled binary files (.luac)
@@ -290,7 +290,7 @@ installtest:
 	-ln -s $(BUILD_ROOT)/src/test-functions.lua $(ROSIED)/src
 	-ln -s $(BUILD_ROOT)/test $(ROSIED)
 	@echo Running tests in test/all.lua
-	echo "rosie=\"$(INSTALL_ROSIEBIN)\"; dofile \"$(ROSIED)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D
+	echo "ROSIE_HOME=\"$(ROSIED)\"; dofile \"$(ROSIED)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D
 	@echo Removing links in $(ROSIED) to testing code in $(BUILD_ROOT)
 	-rm $(ROSIED)/src/test-functions.lua
 	-rm $(ROSIED)/test

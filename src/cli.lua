@@ -40,7 +40,7 @@ table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 rosie = false; -- MUST BE GLOBAL FOR REPL TO USE IT
 
 local msg
-rosie, msg = loadfile(ROSIE_HOME .. "/src/init.lua") -- FIXME
+rosie, msg = loadfile(ROSIE_HOME .. "/src/...") -- FIXME
 if not rosie then
    io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
    rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
@@ -53,14 +53,14 @@ else
    end
 end
 
+assert(type(rosie)=="table", "Return value from loading init.lua was not the rosie module (a table)")
+
 local engine=require "engine"			    -- debugging
 
 local argparse = require "argparse"
 local common = require "common"
---local lapi = require "lapi"
 local json = require "cjson"
 local list = require("list")
---local repl_mod = require("repl")
 
 CL_ENGINE = rosie.engine.new("command line engine")
 if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
