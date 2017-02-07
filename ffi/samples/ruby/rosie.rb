@@ -41,13 +41,13 @@ module Rosie
   attach_function 'rosieL_match_file', [:pointer, CString, CString, CString, CString], CStringArray.val
   attach_function 'rosieL_set_match_exp_grep_TEMPORARY', [:pointer, CString], CStringArray.val
 
-  attach_function 'initialize', [ CString, CStringArray ], :pointer
-  attach_function 'finalize', [ :pointer ], :void
+  attach_function 'rosieL_initialize', [ CString, CStringArray ], :pointer
+  attach_function 'rosieL_finalize', [ :pointer ], :void
 
-  attach_function 'free_string', [ CString.val ], :void
-  attach_function 'free_string_ptr', [ CString ], :void
-  attach_function 'free_stringArray', [ CStringArray.val ], :void
-  attach_function 'free_stringArray_ptr', [ CStringArray ], :void
+  attach_function 'rosieL_free_string', [ CString.val ], :void
+  attach_function 'rosieL_free_string_ptr', [ CString ], :void
+  attach_function 'rosieL_free_stringArray', [ CStringArray.val ], :void
+  attach_function 'rosieL_free_stringArray_ptr', [ CStringArray ], :void
 
   def Rosie.to_CString(str)
     instance = CString.new

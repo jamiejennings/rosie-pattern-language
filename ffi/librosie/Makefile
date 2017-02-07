@@ -77,7 +77,7 @@ librosie.a: librosie.o lua_objs lpeg_objs
 	$(RANLIB) $@
 
 clean:
-	$(RM) librosie.so librosie.o rtest.o rtest librosie_gen.c librosie_gen.h liblua/* liblpeg/*
+	$(RM) librosie.so librosie.o librosie.a rtest.o rtest librosie_gen.c librosie_gen.h liblua/* liblpeg/*
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
