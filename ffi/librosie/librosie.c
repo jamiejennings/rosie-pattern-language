@@ -25,6 +25,9 @@
 
 #include "librosie.h"
 
+//extern int luaopen_lpeg (lua_State *L);
+
+
 #define EXIT_OUT_OF_MEMORY -100
 
 /* ----------------------------------------------------------------------------------------
@@ -187,6 +190,10 @@ void *initialize(struct string *rosie_home, struct stringArray *msgs) {
 */   
   luaL_checkversion(L);
   luaL_openlibs(L);
+
+//  luaL_requiref(L, "lpeg", luaopen_lpeg, 1); /* EXPERIMENT */
+//  lua_pop(L, 1);			     /* luaL_requiref leaves table on the stack */
+
   lua_pushlstring(L, (char *) rosie_home->ptr, rosie_home->len);
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home->ptr);

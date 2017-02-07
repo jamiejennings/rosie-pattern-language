@@ -39,19 +39,19 @@ void free_stringArray_ptr(struct stringArray *r);
 void *initialize(struct string *rosie_home, struct stringArray *msgs);
 void finalize(void *L);
 
-struct stringArray clear_environment(void *L, struct string *optional_identifier);
-struct stringArray match(void *L, struct string *input_text, struct string *optional_start);
-struct stringArray set_match_exp_grep_TEMPORARY(void *L, struct string *pattern_exp);
-struct stringArray get_environment(void *L, struct string *optional_identifier);
-struct stringArray load_manifest(void *L, struct string *manifest_file);
-struct stringArray load_file(void *L, struct string *path);
-struct stringArray configure_engine(void *L, struct string *config_obj);
-struct stringArray load_string(void *L, struct string *input);
-struct stringArray info(void *L);
-struct stringArray inspect_engine(void *L);
-struct stringArray eval(void *L, struct string *input_text, struct string *start);
-struct stringArray eval_file(void *L, struct string *infilename, struct string *outfilename, struct string *errfilename, struct string *wholefileflag);
-struct stringArray match_file(void *L, struct string *infilename, struct string *outfilename, struct string *errfilename, struct string *wholefileflag);
+struct stringArray rosieL_clear_environment(void *L, struct string *optional_identifier);
+struct stringArray rosieL_match(void *L, struct string *input_text, struct string *optional_start);
+struct stringArray rosieL_set_match_exp_grep_TEMPORARY(void *L, struct string *pattern_exp);
+struct stringArray rosieL_get_environment(void *L, struct string *optional_identifier);
+struct stringArray rosieL_load_manifest(void *L, struct string *manifest_file);
+struct stringArray rosieL_load_file(void *L, struct string *path);
+struct stringArray rosieL_configure_engine(void *L, struct string *config_obj);
+struct stringArray rosieL_load_string(void *L, struct string *input);
+struct stringArray rosieL_info(void *L);
+struct stringArray rosieL_inspect_engine(void *L);
+struct stringArray rosieL_eval(void *L, struct string *input_text, struct string *start);
+struct stringArray rosieL_eval_file(void *L, struct string *infilename, struct string *outfilename, struct string *errfilename, struct string *wholefileflag);
+struct stringArray rosieL_match_file(void *L, struct string *infilename, struct string *outfilename, struct string *errfilename, struct string *wholefileflag);
 
 """)
 
@@ -90,13 +90,13 @@ config_raw = "{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"
 config = to_cstr_ptr(config_raw)
 print("config (as cstr pointer): " + from_cstr_ptr(config))
 
-r = Rosie.configure_engine(engine, config)
+r = Rosie.rosieL_configure_engine(engine, config)
 printArray(r, "configure_engine")
 retvals = strings_from_array(r)
 print retvals
 Rosie.free_stringArray(r)
 
-r = Rosie.inspect_engine(engine)
+r = Rosie.rosieL_inspect_engine(engine)
 printArray(r, "inspect_engine")
 retvals = strings_from_array(r)
 Rosie.free_stringArray(r)
@@ -106,7 +106,7 @@ print("Return from inspect_engine is: code = " + retvals[0] + ", tbl=" + str(tbl
 
 print
 
-r = Rosie.load_manifest(engine, to_cstr_ptr("$sys/MANIFEST"))
+r = Rosie.rosieL_load_manifest(engine, to_cstr_ptr("$sys/MANIFEST"))
 print(strings_from_array(r))
 Rosie.free_stringArray(r)
 
@@ -120,23 +120,23 @@ start = to_cstr_ptr("3")        # 1-based indexing, so this starts matching at 3
 
 foo = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999";
 foo_string = to_cstr_ptr(foo);
-r = Rosie.match(engine, foo_string, start); 
+r = Rosie.rosieL_match(engine, foo_string, start); 
 printArray(r, "match");
 Rosie.free_stringArray(r)
         
 foo = "1230000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 foo_string = to_cstr_ptr(foo);
-r = Rosie.match(engine, foo_string, ffi.NULL); # 'None' does not work here
+r = Rosie.rosieL_match(engine, foo_string, ffi.NULL); # 'None' does not work here
 printArray(r, "match");
 Rosie.free_stringArray(r)
 
 config = to_cstr_ptr("{\"expression\": \"(basic.network_patterns)+\"}")
-r = Rosie.configure_engine(engine, config)
+r = Rosie.rosieL_configure_engine(engine, config)
 printArray(r, "configure_engine")
 Rosie.free_stringArray(r)
 
 input_string = to_cstr_ptr("10.0.0.1 www.ibm.com foobar@example.com") 
-r = Rosie.match(engine, input_string, ffi.NULL)  # 'None' does not work here
+r = Rosie.rosieL_match(engine, input_string, ffi.NULL)  # 'None' does not work here
 printArray(r, "match")
 Rosie.free_stringArray(r)
 

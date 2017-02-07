@@ -117,23 +117,23 @@ int main () {
 
      free_stringArray(retvals);
 
-     struct stringArray r = get_environment(engine, NULL);
+     struct stringArray r = rosieL_get_environment(engine, NULL);
      print_results(r, "get_environment");
      free_stringArray(r);
 
      struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
-     r = configure_engine(engine, arg); 
+     r = rosieL_configure_engine(engine, arg); 
      print_results(r, "configure_engine");
      free_stringArray(r);
 
-     r = inspect_engine(engine); 
+     r = rosieL_inspect_engine(engine); 
      print_results(r, "inspect_engine");
      free_stringArray(r);
 
      arg = &CONST_STRING("123");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL); 
+     r = rosieL_match(engine, arg, NULL); 
      print_results(r, "match");
      byte_ptr r_code = r.ptr[0]->ptr;
      byte_ptr r_match = r.ptr[1]->ptr;
@@ -145,25 +145,25 @@ int main () {
 
      arg = &CONST_STRING("123 abcdef");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL); 
+     r = rosieL_match(engine, arg, NULL); 
      print_results(r, "match");
      free_stringArray(r);
 
      arg = &CONST_STRING("hi");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL); 
+     r = rosieL_match(engine, arg, NULL); 
      print_results(r, "match");
      free_stringArray(r);
 
      arg = &CONST_STRING("123xyz");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL); 
+     r = rosieL_match(engine, arg, NULL); 
      report_on_match(r);
      free_stringArray(r);
 
      arg = &CONST_STRING("123999999999999999999999");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL);
+     r = rosieL_match(engine, arg, NULL);
      report_on_match(r);
      free_stringArray(r);
 
