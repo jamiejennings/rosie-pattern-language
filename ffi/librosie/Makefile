@@ -28,7 +28,12 @@ PLATFORMS = linux macosx windows
 
 default: $(PLATFORM)
 
+ifeq ($(PLATFORM), macosx)
+CC= clang
+else
 CC= gcc
+endif
+
 CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) $(COPT)
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)

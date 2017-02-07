@@ -30,7 +30,12 @@ PLATFORMS = linux macosx windows
 
 default: $(PLATFORM)
 
-CC=gcc
+ifeq ($(PLATFORM), macosx)
+CC= clang
+else
+CC= gcc
+endif
+
 CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) $(COPT)
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
@@ -73,7 +78,7 @@ linux:
 macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS= CC=$(CC)
 
-macosx: CC="gcc -std=gnu99"
+macosx: CFLAGS+="-std=gnu99"
 
 gen_C:
 librosie_gen.c:
