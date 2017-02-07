@@ -2,14 +2,14 @@
 // 
 //  rtest.go    Sample driver for librosie in go
 // 
-//  © Copyright IBM Corporation 2016.
+//  © Copyright IBM Corporation 2016, 2017.
 //  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 //  AUTHOR: Jamie A. Jennings
 
 
 package main
 
-// #cgo LDFLAGS: -L${SRCDIR}/libs ${SRCDIR}/libs/liblua.a
+// #cgo LDFLAGS: ${SRCDIR}/librosie.a
 // #include <stdint.h>
 // #include <stdarg.h>
 // #include <stdlib.h>
@@ -57,7 +57,13 @@ func main() {
 	
 	var messages C.struct_stringArray
 	
-	home := gostring_to_structStringptr("/Users/jjennings/Work/Dev/public/rosie-pattern-language")
+	rosie_home := os.Getenv("ROSIE_HOME")
+	if rosie_home=="" {
+		fmt.Printf("\nEnvironment variable ROSIE_HOME is not set.  Must be set to root of rosie directory.\n")
+		os.Exit(-1)
+	}
+
+	home := gostring_to_structStringptr(rosie_home)
 	engine, err := C.initialize(home, &messages)
 	fmt.Printf("done.\n")
 	if engine==nil {
@@ -70,11 +76,11 @@ func main() {
 
 	var a C.struct_stringArray
 	cfg := gostring_to_structStringptr("{\"expression\":\"[:digit:]+\", \"encode\":\"json\"}")
-	a, err = C.configure_engine(engine, cfg)
+	a, err = C.rosieL_configure_engine(engine, cfg)
 	retval := structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Return code from configure_engine: %s\n", retval)
 
-	a, err = C.inspect_engine(engine)
+	a, err = C.rosieL_inspect_engine(engine)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Return code from inspect_engine: %s\n", retval)
 	fmt.Printf("Config from inspect_engine: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
@@ -83,7 +89,7 @@ func main() {
 	var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"
 	foo_string := C.new_string_ptr(C.int(len(foo)), C.CString(foo))
 
-	a, err = C.match(engine, foo_string, nil)
+	a, err = C.rosieL_match(engine, foo_string, nil)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Return code from match: %s\n", retval)
 	fmt.Printf("Data|false from match: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
@@ -96,7 +102,7 @@ func main() {
 	foo = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
 	foo_string = C.new_string_ptr(C.int(len(foo)), C.CString(foo))
 
-	r = C.match(engine, foo_string, nil)
+	r = C.rosieL_match(engine, foo_string, nil)
 	code = structString_to_GoString(*C.string_array_ref(r,0))
 	js_str = structString_to_GoString(*C.string_array_ref(r,1))
 	leftover, err = strconv.Atoi(structString_to_GoString(*C.string_array_ref(r,2)))

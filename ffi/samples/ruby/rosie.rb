@@ -3,10 +3,11 @@
 # 
 #  rosie.rb
 # 
-#  © Copyright IBM Corporation 2016.
+#  © Copyright IBM Corporation 2016, 2017.
 #  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 #  AUTHOR: Jamie A. Jennings
 
+# gem install ffi
 require 'ffi'
 
 module Rosie
@@ -26,19 +27,19 @@ module Rosie
   ffi_lib_flags :now            # required so other shared objects can resolve names
   ffi_lib "./librosie.so"
 
-  attach_function 'clear_environment', [:pointer, CString], CStringArray.val
-  attach_function 'match', [:pointer, CString, CString], CStringArray.val
-  attach_function 'get_environment', [:pointer, CString], CStringArray.val
-  attach_function 'load_manifest', [:pointer, CString], CStringArray.val
-  attach_function 'load_file', [:pointer, CString], CStringArray.val
-  attach_function 'configure_engine', [:pointer, CString], CStringArray.val
-  attach_function 'load_string', [:pointer, CString], CStringArray.val
-  attach_function 'info', [:pointer], CStringArray.val
-  attach_function 'inspect_engine', [:pointer], CStringArray.val
-  attach_function 'eval', [:pointer, CString, CString], CStringArray.val
-  attach_function 'eval_file', [:pointer, CString, CString, CString, CString], CStringArray.val
-  attach_function 'match_file', [:pointer, CString, CString, CString, CString], CStringArray.val
-  attach_function 'set_match_exp_grep_TEMPORARY', [:pointer, CString], CStringArray.val
+  attach_function 'rosieL_clear_environment', [:pointer, CString], CStringArray.val
+  attach_function 'rosieL_match', [:pointer, CString, CString], CStringArray.val
+  attach_function 'rosieL_get_environment', [:pointer, CString], CStringArray.val
+  attach_function 'rosieL_load_manifest', [:pointer, CString], CStringArray.val
+  attach_function 'rosieL_load_file', [:pointer, CString], CStringArray.val
+  attach_function 'rosieL_configure_engine', [:pointer, CString], CStringArray.val
+  attach_function 'rosieL_load_string', [:pointer, CString], CStringArray.val
+  attach_function 'rosieL_info', [:pointer], CStringArray.val
+  attach_function 'rosieL_inspect_engine', [:pointer], CStringArray.val
+  attach_function 'rosieL_eval', [:pointer, CString, CString], CStringArray.val
+  attach_function 'rosieL_eval_file', [:pointer, CString, CString, CString, CString], CStringArray.val
+  attach_function 'rosieL_match_file', [:pointer, CString, CString, CString, CString], CStringArray.val
+  attach_function 'rosieL_set_match_exp_grep_TEMPORARY', [:pointer, CString], CStringArray.val
 
   attach_function 'initialize', [ CString, CStringArray ], :pointer
   attach_function 'finalize', [ :pointer ], :void
