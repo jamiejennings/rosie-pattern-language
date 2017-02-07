@@ -25,6 +25,9 @@
 
 #include "librosie.h"
 
+int luaopen_lpeg (lua_State *L);
+int luaopen_cjson (lua_State *L);
+
 #define EXIT_OUT_OF_MEMORY -100
 
 /* ----------------------------------------------------------------------------------------
@@ -178,6 +181,13 @@ void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringAr
 */   
   luaL_checkversion(L);
   luaL_openlibs(L);
+
+  /* preload these so they will NOT be dynamically loaded later (in bootstrap) */
+    luaL_requiref(L, "lpeg", luaopen_lpeg, 1);
+    lua_pop(L, 1);  /* luaL_requiref leaves lib on the stack */
+    luaL_requiref(L, "cjson", luaopen_cjson, 1);
+    lua_pop(L, 1);  /* luaL_requiref leaves lib on the stack */
+
   lua_pushlstring(L, (char *) rosie_home->ptr, rosie_home->len);
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home->ptr);
