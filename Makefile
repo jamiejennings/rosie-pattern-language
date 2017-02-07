@@ -69,7 +69,9 @@ INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
 
-## ----------------------------------------------------------------------------- ##
+INSTALL_BIN_DIR = $(ROSIED)/bin
+INSTALL_LIB_DIR = $(ROSIED)/lib
+INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
 
 .PHONY: clean
 clean:
@@ -130,7 +132,7 @@ $(submodules):
 	git submodule init
 	git submodule update
 
-submodules/lua/include:
+submodules/lua/include: $(submodules)
 	cd $(LUA_DIR) && ln -sf src include
 
 bin/luac bin/lua: submodules
@@ -144,11 +146,10 @@ lib/lpeg.so: submodules submodules/lua/include
 	mkdir -p lib
 	cp $(LPEG_DIR)/src/lpeg.so lib
 
-lib/cjson.so: submodules submodules/lua/include
+lib/cjson.so: $(submodules)
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	mkdir -p lib
 	cp $(JSON_DIR)/cjson.so lib
-
 
 bin/argparse.luac: submodules/argparse/src/argparse.lua
 	bin/luac -o $@ $<

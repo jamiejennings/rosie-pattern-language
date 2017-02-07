@@ -41,7 +41,7 @@ repl.repl_engine = repl_engine
 rosie.file.load(repl_engine, "$sys/rpl/rpl-core.rpl", "rpl")
 repl_engine:load(repl_patterns)
 
-repl_prompt = "Rosie> "
+local repl_prompt = "Rosie> "
 
 local function print_match(m, left, eval_p)
    if m then 
@@ -186,7 +186,7 @@ function repl.repl(en)
 		  end -- if unable to parse argtext into: stuff "," quoted_string
 	       end -- if pat
 	    elseif cname=="help" then
-	       repl_help();
+	       repl.repl_help();
 	    else
 	       io.write("Repl: Unknown command (Type .help for help.)\n")
 	    end -- switch on command
@@ -229,7 +229,8 @@ local help_text = [[
    EOF (^D) will exit the read/eval/print loop.
 ]]      
 
-function repl_help()
+function repl.repl_help()
    io.write(help_text)
 end
 
+return repl

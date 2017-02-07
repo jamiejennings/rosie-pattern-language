@@ -53,7 +53,7 @@ local utf8_char_peg = b1_lead +
 common.dirsep = package.config:sub(1, (package.config:find("\n"))-1)
 assert(#common.dirsep==1, "directory separator should be a forward or a backward slash")
 
-function common.compute_full_path(path, manifest_path)
+function common.compute_full_path(path, manifest_path, home)
    -- return the full path, the dirname of the path, and the basename of the path
    local full_path
    if (type(path)~="string") or (path=="") then
@@ -63,7 +63,7 @@ function common.compute_full_path(path, manifest_path)
       local sym = path:match("$([^" .. common.dirsep .. "]*)")
       local rest = path:match("$[^" .. common.dirsep .. "]*(.*)")
       if sym=="sys" then
-	 full_path = ROSIE_HOME .. rest
+	 full_path = home .. rest
       elseif sym=="lib" then
 	 if (type(manifest_path)~="string") or (manifest_path=="") then
 	    return false, "Error: cannot reference $lib outside of a manifest file: " .. path
@@ -88,7 +88,7 @@ function common.compute_full_path(path, manifest_path)
       full_path = path
    end
    full_path = (full_path:gsub("\\ ", " "))	    -- unescape any spaces in the name
-   local proper_path, base_name, splits = util.split_path(full_path)
+   local proper_path, base_name, splits = util.split_path(full_path, common.dirsep)
    return full_path, proper_path, base_name
 end
 
