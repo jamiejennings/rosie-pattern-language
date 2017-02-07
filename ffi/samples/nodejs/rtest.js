@@ -7,9 +7,7 @@
 //  AUTHOR: Jamie A. Jennings
 
 // ON OS X:  export CXX=clang++
-// npm install ffi
-// npm install ref-array
-// npm install debug
+// npm install debug ref-array ffi
 
 var rosie_home = process.env.ROSIE_HOME;
 if (!rosie_home | rosie_home=="") {
