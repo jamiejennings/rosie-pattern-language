@@ -56,13 +56,13 @@ var funcs = {
     'rosieL_match_file': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr, MyCStringPtr, MyCStringPtr] ],
     'rosieL_set_match_exp_grep_TEMPORARY': [ MyCStringArray, ['pointer', MyCStringPtr] ],
     
-    'initialize': [ 'pointer', [MyCStringPtr, MyCStringArrayPtr] ],
-    'finalize': [ 'void', ['pointer'] ],
+    'rosieL_initialize': [ 'pointer', [MyCStringPtr, MyCStringArrayPtr] ],
+    'rosieL_finalize': [ 'void', ['pointer'] ],
     
-    'free_string': [ 'void', [ MyCString ] ],
-    'free_string_ptr': [ 'void', [ MyCString ] ],
-    'free_stringArray': [ 'void', [ MyCStringArray ] ],
-    'free_stringArray_ptr': [ 'void', [ MyCStringArray ] ]
+    'rosieL_free_string': [ 'void', [ MyCString ] ],
+    'rosieL_free_string_ptr': [ 'void', [ MyCString ] ],
+    'rosieL_free_stringArray': [ 'void', [ MyCStringArray ] ],
+    'rosieL_free_stringArray_ptr': [ 'void', [ MyCStringArray ] ]
 }
 
 var Rosie = new ffi.Library;
@@ -127,7 +127,7 @@ function print_array(retval) {
 
 messages = new MyCStringArray
 console.log("About to initialize Rosie")
-var engine = Rosie.initialize(new_CString("/Users/jjennings/Dev/public/rosie-pattern-language").ref(), messages.ref())
+var engine = Rosie.rosieL_initialize(new_CString("/Users/jjennings/Dev/public/rosie-pattern-language").ref(), messages.ref())
 console.log("Return value from initialize: ", engine)
 
 var config = new_CString(
@@ -156,13 +156,13 @@ console.log("manifest: len =", manifest.len, "value =", manifest.ptr.toString())
 
 retval = Rosie.rosieL_load_manifest(engine, manifest.ref())
 print_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
 var config = new_CString("{\"expression\" : \"[:digit:]+\", \"encode\" : \"json\"}")
 
 retval = Rosie.rosieL_configure_engine(engine, config.ref())
 print_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
 var foo = new_CString("1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
 var retval = Rosie.rosieL_match(engine, foo.ref(), null)
@@ -171,10 +171,12 @@ print_array(retval)
 code = extract_string_from_array(retval, 0)
 if (code != "true") console.log("Error code returned from match api")
 json_string = extract_string_from_array(retval, 1)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 if (code=="true") console.log("Successful call to match")
 else console.log("Call to match FAILED")
 console.log(json_string)
 obj_to_return_to_caller = JSON.parse(json_string)
+
+Rosie.rosieL_finalize(engine)
 
 console.log("Done.\n")
