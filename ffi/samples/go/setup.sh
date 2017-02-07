@@ -3,8 +3,6 @@ echo "Creating script that sets GOPATH and ROSIE_HOME"
 echo "export GOPATH=`pwd`" >setvars
 
 LIB=`cd ../../librosie && pwd`
-echo "Linking to 'librosie.c' in 'src/rtest'"
-ln -fs $LIB/librosie.c src/rtest/librosie.c
 
 echo "Creating 'include' directory in 'src/rtest' and symlinks to librosie source"
 mkdir -p src/rtest/include

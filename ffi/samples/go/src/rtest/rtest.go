@@ -9,7 +9,7 @@
 
 package main
 
-// #cgo LDFLAGS: ${SRCDIR}/librosie.a
+// #cgo LDFLAGS: ${SRCDIR}/librosie.a -lm -ldl
 // #include <stdint.h>
 // #include <stdarg.h>
 // #include <stdlib.h>
