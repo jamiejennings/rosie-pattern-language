@@ -6,7 +6,7 @@
 //  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 //  AUTHOR: Jamie A. Jennings
 
-//
+// export CXX=clang++
 // npm install ffi
 // npm install ref-array
 //
@@ -42,19 +42,19 @@ var mode = RTLD_NOW | RTLD_GLOBAL;
 var RosieLib = new DynamicLibrary('librosie.so' || null, mode);
 
 var funcs = {
-    'clear_environment': [ MyCStringArray, ['pointer', MyCStringPtr] ],
-    'match': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr] ],
-    'get_environment': [ MyCStringArray, ['pointer', MyCStringPtr] ],
-    'load_manifest': [ MyCStringArray, ['pointer', MyCStringPtr] ],
-    'load_file': [ MyCStringArray, ['pointer', MyCStringPtr] ],
-    'configure_engine': [  MyCStringArray, ['pointer', MyCStringPtr] ],
-    'load_string': [ MyCStringArray, ['pointer', MyCStringPtr] ],
-    'info': [ MyCStringArray, ['pointer'] ],
-    'inspect_engine': [ MyCStringArray, ['pointer'] ],
-    'eval': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr] ],
-    'eval_file': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr, MyCStringPtr, MyCStringPtr] ],
-    'match_file': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr, MyCStringPtr, MyCStringPtr] ],
-    'set_match_exp_grep_TEMPORARY': [ MyCStringArray, ['pointer', MyCStringPtr] ],
+    'rosieL_clear_environment': [ MyCStringArray, ['pointer', MyCStringPtr] ],
+    'rosieL_match': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr] ],
+    'rosieL_get_environment': [ MyCStringArray, ['pointer', MyCStringPtr] ],
+    'rosieL_load_manifest': [ MyCStringArray, ['pointer', MyCStringPtr] ],
+    'rosieL_load_file': [ MyCStringArray, ['pointer', MyCStringPtr] ],
+    'rosieL_configure_engine': [  MyCStringArray, ['pointer', MyCStringPtr] ],
+    'rosieL_load_string': [ MyCStringArray, ['pointer', MyCStringPtr] ],
+    'rosieL_info': [ MyCStringArray, ['pointer'] ],
+    'rosieL_inspect_engine': [ MyCStringArray, ['pointer'] ],
+    'rosieL_eval': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr] ],
+    'rosieL_eval_file': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr, MyCStringPtr, MyCStringPtr] ],
+    'rosieL_match_file': [ MyCStringArray, ['pointer', MyCStringPtr, MyCStringPtr, MyCStringPtr, MyCStringPtr] ],
+    'rosieL_set_match_exp_grep_TEMPORARY': [ MyCStringArray, ['pointer', MyCStringPtr] ],
     
     'initialize': [ 'pointer', [MyCStringPtr, MyCStringArrayPtr] ],
     'finalize': [ 'void', ['pointer'] ],
@@ -140,12 +140,12 @@ var buf = config.ptr.reinterpret(config.len)
 console.log(config.ptr.length, config.len, buf.toString("utf8", 0, config.len))
 
 var retval = ref.alloc(MyCStringArray)
-retval = Rosie.configure_engine(engine, config.ref())
+retval = Rosie.rosieL_configure_engine(engine, config.ref())
 console.log("Return value from configure_engine is: ")
 var code = extract_string_from_array(retval, 0)
 print_array(retval)
 
-retval = Rosie.inspect_engine(engine)
+retval = Rosie.rosieL_inspect_engine(engine)
 console.log("Return value from inspect_engine is: ")
 print_array(retval)
 
@@ -154,18 +154,18 @@ print_array(retval)
 var manifest = new_CString("$sys/MANIFEST")
 console.log("manifest: len =", manifest.len, "value =", manifest.ptr.toString())
 
-retval = Rosie.load_manifest(engine, manifest.ref())
+retval = Rosie.rosieL_load_manifest(engine, manifest.ref())
 print_array(retval)
 Rosie.free_stringArray(retval)
 
 var config = new_CString("{\"expression\" : \"[:digit:]+\", \"encode\" : \"json\"}")
 
-retval = Rosie.configure_engine(engine, config.ref())
+retval = Rosie.rosieL_configure_engine(engine, config.ref())
 print_array(retval)
 Rosie.free_stringArray(retval)
 
 var foo = new_CString("1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
-var retval = Rosie.match(engine, foo.ref(), null)
+var retval = Rosie.rosieL_match(engine, foo.ref(), null)
 print_array(retval)
 
 code = extract_string_from_array(retval, 0)

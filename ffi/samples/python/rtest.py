@@ -11,9 +11,14 @@
 # easy_install --user cffi
 
 from cffi import FFI
-import json
+import json, os, sys
 
 ffi = FFI()
+
+ROSIE_HOME = os.getenv("ROSIE_HOME")
+if not ROSIE_HOME:
+    print "Environment variable ROSIE_HOME not set.  (Must be set to the root of the rosie directory.)"
+    sys.exit(-1)
 
 # The C code below was taken from librosie.h (and librosie_gen.h)
 ffi.cdef("""
@@ -75,10 +80,10 @@ def printArray(a, caller_name):
         print " [", i, "] len =", a.ptr[i].len, " and  ptr =", lst[i]
     return
 
-Rosie = ffi.dlopen("librosie.so")
+Rosie = ffi.dlopen(ROSIE_HOME + "/ffi/librosie/librosie.so")
 
 messages = Rosie.new_stringArray()
-engine = Rosie.initialize(to_cstr_ptr("/Users/jjennings/Work/Dev/public/rosie-pattern-language"), messages)
+engine = Rosie.initialize(to_cstr_ptr(ROSIE_HOME), messages)
 printArray(messages, "initialize")
 Rosie.free_stringArray_ptr(messages)
 
