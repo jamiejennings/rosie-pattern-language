@@ -8,6 +8,8 @@
 **/*~
 *.tar.gz
 
+ffi/librosie/liblua/*
+ffi/librosie/liblpeg/*
 ffi/librosie/librosie_gen.c
 ffi/librosie/librosie_gen.h
 ffi/samples/C/rtest
