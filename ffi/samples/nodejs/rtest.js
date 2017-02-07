@@ -2,14 +2,20 @@
 // 
 //  rtest.js
 // 
-//  © Copyright IBM Corporation 2016.
+//  © Copyright IBM Corporation 2016, 2017.
 //  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 //  AUTHOR: Jamie A. Jennings
 
-// export CXX=clang++
+// ON OS X:  export CXX=clang++
 // npm install ffi
 // npm install ref-array
-//
+// npm install debug
+
+var rosie_home = process.env.ROSIE_HOME;
+if (!rosie_home | rosie_home=="") {
+    console.log("Environment variable ROSIE_HOME not set.  It must point to root of rosie directory.");
+    process.exit(-1);
+}
 
 var debug = require("debug");
 
@@ -127,7 +133,7 @@ function print_array(retval) {
 
 messages = new MyCStringArray
 console.log("About to initialize Rosie")
-var engine = Rosie.rosieL_initialize(new_CString("/Users/jjennings/Dev/public/rosie-pattern-language").ref(), messages.ref())
+var engine = Rosie.rosieL_initialize(new_CString(rosie_home).ref(), messages.ref())
 console.log("Return value from initialize: ", engine)
 
 var config = new_CString(
