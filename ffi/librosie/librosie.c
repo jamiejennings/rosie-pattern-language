@@ -25,6 +25,9 @@
 
 #include "librosie.h"
 
+int luaopen_lpeg (lua_State *L);
+int luaopen_cjson (lua_State *L);
+
 #define EXIT_OUT_OF_MEMORY -100
 
 /* ----------------------------------------------------------------------------------------
@@ -61,8 +64,8 @@
      } while (0)
 
 
-#define new_TRUE_string() (new_string((byte_ptr) "true", 4))
-#define new_FALSE_string() (new_string((byte_ptr) "false", 5))
+#define new_TRUE_string() (rosieL_new_string((byte_ptr) "true", 4))
+#define new_FALSE_string() (rosieL_new_string((byte_ptr) "false", 5))
 
 #define prelude(L, name) \
      do { lua_getfield(L, -1, name); } while (0)
@@ -78,7 +81,7 @@
  */
 
 /* TODO: First try to load bin/bootstrap.luac and then fall back to src/core/bootstrap.lua */
-static int bootstrap (lua_State *L, struct string *rosie_home) {
+static int bootstrap (lua_State *L, struct rosieL_string *rosie_home) {
      const char *bootscript = "/src/core/bootstrap.lua";
      LOG("About to bootstrap\n");
      char *name = malloc(rosie_home->len + strlen(bootscript) + 1);
@@ -108,15 +111,6 @@ static int require_api (lua_State *L) {
       */
      return TRUE;
 }  
-
-#if 0
-static struct stringArray *new_stringArray(uint32_t n, struct string **strings) { 
-     struct stringArray *sa = malloc(sizeof(struct stringArray)); 
-     sa->n = n; 
-     sa->ptr = strings; 
-     return sa; 
-}
-#endif
 
 /* ----------------------------------------------------------------------------------------
  * Debug functions
@@ -156,11 +150,11 @@ static void stackDump (lua_State *L) {
       fflush(NULL);
     }
 
-static void print_stringArray(struct stringArray sa, char *caller_name) {
+static void print_stringArray(struct rosieL_stringArray sa, char *caller_name) {
      printf("Values returned in stringArray from: %s\n", caller_name);
      printf("  Number of strings: %d\n", sa.n);
      for (uint32_t i=0; i<sa.n; i++) {
-	  struct string *cstrptr = sa.ptr[i];
+	  struct rosieL_string *cstrptr = sa.ptr[i];
 	  printf("  [%d] len = %d, ptr = %s\n", i, cstrptr->len, cstrptr->ptr);
      }
      fflush(NULL);
@@ -172,9 +166,9 @@ static void print_stringArray(struct stringArray sa, char *caller_name) {
  */
 
 /* forward ref */
-static struct stringArray call_api(lua_State *L, char *api_name, int nargs);
+static struct rosieL_stringArray call_api(lua_State *L, char *api_name, int nargs);
      
-void *initialize(struct string *rosie_home, struct stringArray *msgs) {
+void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs) {
      lua_State *L = luaL_newstate();
      if (L == NULL) {
 	  print_error_message("error during initialization: not enough memory");
@@ -187,6 +181,13 @@ void *initialize(struct string *rosie_home, struct stringArray *msgs) {
 */   
   luaL_checkversion(L);
   luaL_openlibs(L);
+
+  /* preload these so they will NOT be dynamically loaded later (in bootstrap) */
+    luaL_requiref(L, "lpeg", luaopen_lpeg, 1);
+    lua_pop(L, 1);  /* luaL_requiref leaves lib on the stack */
+    luaL_requiref(L, "cjson", luaopen_cjson, 1);
+    lua_pop(L, 1);  /* luaL_requiref leaves lib on the stack */
+
   lua_pushlstring(L, (char *) rosie_home->ptr, rosie_home->len);
   lua_setglobal(L, "ROSIE_HOME");
   LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home->ptr);
@@ -197,18 +198,18 @@ void *initialize(struct string *rosie_home, struct stringArray *msgs) {
        fflush(stderr);
        if (require_api(L)) { 
 	    lua_getfield(L, -1, "initialize");
-	    struct stringArray retvals = call_api(L, "initialize", 0);
+	    struct rosieL_stringArray retvals = call_api(L, "initialize", 0);
 	    msgs->n = retvals.n;
 	    msgs->ptr = retvals.ptr;
 	    return L;
        }
        else {
-	    struct string **list = malloc(sizeof(struct string *) * 2);
+	    struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
 	    list[0] = new_FALSE_string();
 	    char *str_ptr;
 	    int n = asprintf(&str_ptr, "Internal error: cannot load api (%s)", lua_tostring(L, -1));
 	    if (n < 0) exit(EXIT_OUT_OF_MEMORY);  
-	    list[1] = malloc(sizeof(struct string));
+	    list[1] = malloc(sizeof(struct rosieL_string));
 	    list[1]->ptr = (byte_ptr) str_ptr;
 	    list[1]->len = n;
 	    lua_close(L);
@@ -218,19 +219,19 @@ void *initialize(struct string *rosie_home, struct stringArray *msgs) {
        }
   }
   LOG("Bootstrap failed... building return value array\n");
-  struct string **list = malloc(sizeof(struct string *) * 2);
+  struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
   list[0] = new_FALSE_string();
-  list[1] = malloc(sizeof(struct string));
+  list[1] = malloc(sizeof(struct rosieL_string));
   if (luaL_checkstring(L, -1)) {
        LOG("There is an error message on the Lua stack\n");
        byte_ptr str = (byte_ptr) lua_tolstring(L, -1, (size_t *) &(list[1]->len));
        LOGf("The message has length %d and reads: %s\n", list[1]->len, str);
-       list[1] = new_string(str, list[1]->len);
+       list[1] = rosieL_new_string(str, list[1]->len);
   }
   else {
        const char *msg =  "Unknown error encountered while trying to bootstrap";
        LOGf("%s\n", msg);
-       list[1] = new_string((byte_ptr) msg, strlen(msg));
+       list[1] = rosieL_new_string((byte_ptr) msg, strlen(msg));
   }       
   LOG("About to close the Lua state... ");
   lua_close(L);
@@ -240,14 +241,14 @@ void *initialize(struct string *rosie_home, struct stringArray *msgs) {
   return NULL;
 }
 
-struct stringArray construct_retvals(lua_State *L) {
-     struct stringArray retvals;
+struct rosieL_stringArray construct_retvals(lua_State *L) {
+     struct rosieL_stringArray retvals;
      size_t nretvals = lua_rawlen(L, -1);
-     struct string **list = malloc(sizeof(struct string *) * nretvals);
+     struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * nretvals);
      size_t len;
      for (size_t i=0; i<nretvals; i++) {
 	  int t = lua_rawgeti(L, -1, (lua_Integer) i+1);    /* lua has 1-based indexing */
-	  list[i] = malloc(sizeof(struct string));
+	  list[i] = malloc(sizeof(struct rosieL_string));
 	  char *str;
 	  switch (t) {
 	  case LUA_TSTRING:
@@ -266,7 +267,7 @@ struct stringArray construct_retvals(lua_State *L) {
 	  list[i]->ptr = malloc(sizeof(uint8_t)*(len+1));
 	  memcpy(list[i]->ptr, str, len);
 	  list[i]->ptr[len] = 0; /* so we can use printf for debugging */	  
-	  LOGf("  Encoded as struct string: len=%d ptr=%s\n", (int) list[i]->len, list[i]->ptr);
+	  LOGf("  Encoded as struct rosieL_string: len=%d ptr=%s\n", (int) list[i]->len, list[i]->ptr);
 	  lua_pop(L, 1);
      }
      retvals.n = nretvals;
@@ -275,32 +276,32 @@ struct stringArray construct_retvals(lua_State *L) {
      return retvals;
 }
 
-struct string *new_string(byte_ptr msg, size_t len) {
+struct rosieL_string *rosieL_new_string(byte_ptr msg, size_t len) {
      byte_ptr ptr = malloc(len+1);     /* to return a string, we must make */
      memcpy((char *)ptr, msg, len);    /* sure it is allocated on the heap. */
      ptr[len]=0;		       /* add null terminator. */
-     struct string *retval = malloc(sizeof(struct string));
+     struct rosieL_string *retval = malloc(sizeof(struct rosieL_string));
      retval->len = len;
      retval->ptr = ptr;
      /* printf("In new_string: len=%d, ptr=%s\n", (int) len, (char *)msg); */
      return retval;
 }     
 
-struct stringArray *new_stringArray() {
-     return malloc(sizeof(struct stringArray));
+struct rosieL_stringArray *rosieL_new_stringArray() {
+     return malloc(sizeof(struct rosieL_stringArray));
 }
 
-void free_string_ptr(struct string *ref) {
+void rosieL_free_string_ptr(struct rosieL_string *ref) {
      free(ref->ptr);
      free(ref);
 }
 
-void free_string(struct string s) {
+void rosieL_free_string(struct rosieL_string s) {
      free(s.ptr);
 }
 
-void free_stringArray(struct stringArray r) {
-     struct string **s = r.ptr;
+void rosieL_free_stringArray(struct rosieL_stringArray r) {
+     struct rosieL_string **s = r.ptr;
      for (uint32_t i=0; i<r.n; i++) {
 	  free(s[i]->ptr);
 	  free(s[i]);
@@ -308,53 +309,12 @@ void free_stringArray(struct stringArray r) {
      free(r.ptr);
 }
 
-void free_stringArray_ptr(struct stringArray *ref) {
-     free_stringArray(*ref);
+void rosieL_free_stringArray_ptr(struct rosieL_stringArray *ref) {
+     rosieL_free_stringArray(*ref);
      free(ref);
 }
 
-/* struct stringArray rosie_api(void *L, const char *name, ...) { */
-
-/*      va_list args; */
-/*      struct string *arg; */
-
-/*      /\* number of args AFTER the api name *\/ */
-/*      int nargs = 1;		   /\* get this later from a table *\/ */
-
-/*      va_start(args, name);	   /\* setup variadic arg processing *\/ */
-/*      LOGf("Stack at start of rosie_api (%s):\n", name); */
-/*      LOGstack(L); */
-
-/* //     lua_getglobal(L, "api"); */
-/*      lua_getfield(L, -1 , name);                    /\* -1 is stack top, i.e. api table *\/ */
-/* //     lua_remove(L, -2);	    /\* remove the api table from the stack *\/  */
-/*      for (int i = 1; i <= nargs; i++) { */
-/* 	  arg = va_arg(args, struct string *); /\* get the next arg *\/ */
-/* 	  lua_pushlstring(L, (char *) arg->ptr, arg->len); /\* push it *\/ */
-/*      } */
-/*      va_end(args); */
-
-/*      LOGf("About to call the api function on the stack, and nargs=%d\n", nargs);   */
-/*      LOGstack(L);   */
-/*      /\* API CALL *\/ */
-/*      lua_call(L, nargs, 1);  */
-/*      LOG("Stack immediately after lua_call:\n"); */
-/*      LOGstack(L); */
-     
-/*      if (lua_istable(L, -1) != TRUE) { */
-/* 	  print_error_message(lua_pushfstring(L, "librosie internal error: return value of %s not a table", name)); */
-/* 	  exit(-1); */
-/*      } */
-
-/*      struct stringArray retvals = construct_retvals(L); */
-
-/*      LOGf("Stack at end of call to Rosie api: %s\n", name);  */
-/*      LOGstack(L);  */
-     
-/*      return retvals; */
-/* } */
-
-static struct stringArray call_api(lua_State *L, char *api_name, int nargs) {
+static struct rosieL_stringArray call_api(lua_State *L, char *api_name, int nargs) {
      LOGf("About to call %s and nargs=%d\n", api_name, nargs);  
      LOGstack(L);  
      /* API CALL */
@@ -370,7 +330,7 @@ static struct stringArray call_api(lua_State *L, char *api_name, int nargs) {
 	  exit(-1);
      }
 
-     struct stringArray retvals = construct_retvals(L);
+     struct rosieL_stringArray retvals = construct_retvals(L);
 
      LOGf("Stack at end of call to Rosie api: %s\n", api_name); 
      LOGstack(L); 
@@ -379,24 +339,7 @@ static struct stringArray call_api(lua_State *L, char *api_name, int nargs) {
      return retvals;
 }
      
-/* struct stringArray inspect_engine(void *L) { */
-/*      prelude(L, "inspect_engine"); */
-/*      return call_api(L, "inspect_engine", 0); */
-/* } */
-
-/* struct stringArray configure_engine(void *L, struct string *config) { */
-/*      prelude(L, "configure_engine"); */
-/*      push(L, config); */
-/*      return call_api(L, "configure_engine", 1); */
-/* } */
-
-/* struct stringArray match(void *L, struct string *input) { */
-/*      prelude(L, "match"); */
-/*      push(L, input); */
-/*      return call_api(L, "match", 1); */
-/* } */
-
-void finalize(void *L) {
+void rosieL_finalize(void *L) {
      lua_close(L);
 }
 

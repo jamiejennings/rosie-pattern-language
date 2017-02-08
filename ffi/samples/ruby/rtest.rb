@@ -20,8 +20,10 @@ require 'json'
 #   end
 # end
 
+rosie_home = ENV["ROSIE_HOME"]
+
 messages = Rosie::CStringArray.new
-engine = Rosie.initialize(Rosie.to_CString("/Users/jjennings/Work/Dev/public/rosie-pattern-language"), messages)
+engine = Rosie.rosieL_initialize(Rosie.to_CString(rosie_home), messages)
 Rosie.print_string_array(messages)
 
 config_string = Rosie.to_CString("{\"name\":\"Ruby engine\"}")
@@ -32,35 +34,35 @@ print "config_string struct size: ", Rosie::CString.size, "\n"
 config_js = "{\"expression\" : \"[:digit:]+\", \"encode\" : \"json\"}"
 config_string = Rosie::to_CString(config_js)
 
-retval = Rosie.configure_engine(engine, config_string)
+retval = Rosie.rosieL_configure_engine(engine, config_string)
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
-retval = Rosie.inspect_engine(engine)
+retval = Rosie.rosieL_inspect_engine(engine)
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
 foo = Rosie::to_CString("1239999999")
-retval = Rosie.match(engine, foo, nil)
+retval = Rosie.rosieL_match(engine, foo, nil)
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
-retval = Rosie.match(engine, config_string, nil)
+retval = Rosie.rosieL_match(engine, config_string, nil)
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
 config_string = Rosie::to_CString("This is NOT valid json")
-retval = Rosie.configure_engine(engine, config_string.pointer)
+retval = Rosie.rosieL_configure_engine(engine, config_string.pointer)
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
-retval = Rosie.load_manifest(engine, foo) # should fail
+retval = Rosie.rosieL_load_manifest(engine, foo) # should fail
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
-retval = Rosie.configure_engine(engine, config_string)
+retval = Rosie.rosieL_configure_engine(engine, config_string)
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
 
 
@@ -69,29 +71,29 @@ test = Rosie::to_CString("$sys/MANIFEST")
 print "TEST: len=", test[:len], "\n"
 print "TEST: string=", test[:ptr].read_string, "\n"
 
-retval = Rosie.load_manifest(engine, test)
+retval = Rosie.rosieL_load_manifest(engine, test)
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
 config_js = "{\"expression\" : \"[:digit:]+\", \"encode\" : \"json\"}"
 print "config_js is: ", config_js, "\n"
 
 config_string = Rosie::to_CString(config_js)
-retval = Rosie.configure_engine(engine, config_string)
+retval = Rosie.rosieL_configure_engine(engine, config_string)
 Rosie.print_string_array(retval)
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
 foo = Rosie::to_CString("1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
-retval = Rosie.match engine, foo, nil
+retval = Rosie.rosieL_match engine, foo, nil
 
-retval = Rosie.match engine, foo, nil
+retval = Rosie.rosieL_match engine, foo, nil
 strings = Rosie.from_CStringArray(retval)
 code = strings[0]
 if code != "true" then
   print "Error code returned from match api"
 end
 json_string = strings[1]
-Rosie.free_stringArray(retval)
+Rosie.rosieL_free_stringArray(retval)
 
 if code=="true" then
   print "Successful call to match\n"
@@ -111,5 +113,5 @@ assert(items)
 if (obj.keys.length!=1) then raise "Multiple return values from match!" end
 
 print " done.\n"
-Rosie.finalize(engine)
+Rosie.rosieL_finalize(engine)
 

@@ -42,17 +42,17 @@
 char *true_value = "true";
 char *false_value = "false";
 
-int ok(struct stringArray r) {
-     struct string *code = stringArrayRef(r, 0);
+int ok(struct rosieL_stringArray r) {
+     struct rosieL_string *code = stringArrayRef(r, 0);
      return !(memcmp(code->ptr, true_value, (size_t) code->len));
 }
 
-int matched(struct stringArray r) {
-     struct string *code = stringArrayRef(r, 1);
+int matched(struct rosieL_stringArray r) {
+     struct rosieL_string *code = stringArrayRef(r, 1);
      return (memcmp(code->ptr, false_value, (size_t) code->len));
 }
 	  
-void report_on_match(struct stringArray r) {
+void report_on_match(struct rosieL_stringArray r) {
      if (ok(r)) {
 	  if (matched(r)) {
 	       printf("Match!  Structure returned is: %s\n", stringArrayRef(r,1)->ptr);
@@ -62,16 +62,16 @@ void report_on_match(struct stringArray r) {
 	       printf("No match.\n");
      }
      else {
-	  struct string *err = stringArrayRef(r,1);
+	  struct rosieL_string *err = stringArrayRef(r,1);
 	  printf("Error in call to match: %s\n", err ? (char *) err->ptr : "NO MESSAGE");
      }
 }
      
-void print_results(struct stringArray r, const char *name) {
+void print_results(struct rosieL_stringArray r, const char *name) {
      printf("Results from %s: n=%d\n", name, r.n);
-     struct string **str_ptr_ptr = r.ptr;
+     struct rosieL_string **str_ptr_ptr = r.ptr;
      for (uint32_t i=0; i<r.n; i++) {
-	  struct string *str = str_ptr_ptr[i];
+	  struct rosieL_string *str = str_ptr_ptr[i];
 	  printf(" [%d] len=%d, ptr=%s\n", i, str->len, (str->ptr ? str->ptr : (byte_ptr)""));
      }
 }
@@ -91,8 +91,8 @@ int main () {
 
      printf("ROSIE_HOME is set to: %s\n", ROSIE_HOME);
 
-     struct stringArray retvals;
-     void *engine = initialize(&(CONST_STRING(ROSIE_HOME)), &retvals);
+     struct rosieL_stringArray retvals;
+     void *engine = rosieL_initialize(&(CONST_STRING(ROSIE_HOME)), &retvals);
      if (!engine) {
 	  printf("Initialization error!   Details:\n");
 	  print_results(retvals, "initialize");
@@ -105,35 +105,35 @@ int main () {
      /* retvals = new_engine(engine, initial_config); */
      /* print_results(retvals, "new_engine"); */
 
-     struct string *code = stringArrayRef(retvals,0);
+     struct rosieL_string *code = stringArrayRef(retvals,0);
      printf("code->len is: %d\n", code->len);
      printf("code->ptr is: %s\n", (char *) code->ptr);
 
      if (!ok(retvals)) {
-	  struct string *err = stringArrayRef(retvals,1);
+	  struct rosieL_string *err = stringArrayRef(retvals,1);
 	  printf("Error during initialization: %s\n", err ? (char *) err->ptr : "NO MESSAGE");
 	  exit(-1);
      }
 
-     free_stringArray(retvals);
+     rosieL_free_stringArray(retvals);
 
-     struct stringArray r = get_environment(engine, NULL);
+     struct rosieL_stringArray r = rosieL_get_environment(engine, NULL);
      print_results(r, "get_environment");
-     free_stringArray(r);
+     rosieL_free_stringArray(r);
 
-     struct string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
+     struct rosieL_string *arg = &(CONST_STRING("{\"expression\": \"[:digit:]+\", \"encode\": \"json\"}"));
 
-     r = configure_engine(engine, arg); 
+     r = rosieL_configure_engine(engine, arg); 
      print_results(r, "configure_engine");
-     free_stringArray(r);
+     rosieL_free_stringArray(r);
 
-     r = inspect_engine(engine); 
+     r = rosieL_inspect_engine(engine); 
      print_results(r, "inspect_engine");
-     free_stringArray(r);
+     rosieL_free_stringArray(r);
 
      arg = &CONST_STRING("123");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL); 
+     r = rosieL_match(engine, arg, NULL); 
      print_results(r, "match");
      byte_ptr r_code = r.ptr[0]->ptr;
      byte_ptr r_match = r.ptr[1]->ptr;
@@ -141,33 +141,33 @@ int main () {
      printf("code: %s\n", (char *)r_code);
      printf("match: %s\n", (char *)r_match);
      printf("leftover: %s\n", (char *)r_leftover);
-     free_stringArray(r);
+     rosieL_free_stringArray(r);
 
      arg = &CONST_STRING("123 abcdef");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL); 
+     r = rosieL_match(engine, arg, NULL); 
      print_results(r, "match");
-     free_stringArray(r);
+     rosieL_free_stringArray(r);
 
      arg = &CONST_STRING("hi");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL); 
+     r = rosieL_match(engine, arg, NULL); 
      print_results(r, "match");
-     free_stringArray(r);
+     rosieL_free_stringArray(r);
 
      arg = &CONST_STRING("123xyz");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL); 
+     r = rosieL_match(engine, arg, NULL); 
      report_on_match(r);
-     free_stringArray(r);
+     rosieL_free_stringArray(r);
 
      arg = &CONST_STRING("123999999999999999999999");
      printf("\nCalling match on input string: \"%s\"\n", arg->ptr);
-     r = match(engine, arg, NULL);
+     r = rosieL_match(engine, arg, NULL);
      report_on_match(r);
-     free_stringArray(r);
+     rosieL_free_stringArray(r);
 
-     finalize(engine);
+     rosieL_finalize(engine);
 
      return 0;
 

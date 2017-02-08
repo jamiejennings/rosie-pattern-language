@@ -31,9 +31,9 @@ PLATFORMS = linux macosx windows
 default: $(PLATFORM)
 
 ifeq ($(PLATFORM), macosx)
-CC=clang
+CC= clang
 else
-CC=gcc
+CC= gcc
 endif
 
 CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) $(COPT)
@@ -78,6 +78,7 @@ linux:
 macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS= CC=$(CC)
 
+macosx: CFLAGS+="-std=gnu99"
 
 gen_C:
 librosie_gen.c:

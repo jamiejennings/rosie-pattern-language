@@ -2,20 +2,20 @@
 // 
 //  rtest.go    Sample driver for librosie in go
 // 
-//  © Copyright IBM Corporation 2016.
+//  © Copyright IBM Corporation 2016, 2017.
 //  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 //  AUTHOR: Jamie A. Jennings
 
 
 package main
 
-// #cgo LDFLAGS: -L${SRCDIR}/libs ${SRCDIR}/libs/liblua.a
+// #cgo LDFLAGS: ${SRCDIR}/librosie.a -lm -ldl
 // #include <stdint.h>
 // #include <stdarg.h>
 // #include <stdlib.h>
 // #include "librosie.h"
-// struct string *new_string_ptr(int len, char *buf) {
-//   struct string *cstr_ptr = malloc(sizeof(struct string));
+// struct rosieL_string *new_string_ptr(int len, char *buf) {
+//   struct rosieL_string *cstr_ptr = malloc(sizeof(struct rosieL_string));
 //   cstr_ptr->len = (uint32_t) len;
 //   uint8_t *abuf = (uint8_t *)buf; /*malloc(sizeof(uint8_t)*len);*/
 //   cstr_ptr->ptr = abuf;
@@ -24,7 +24,7 @@ package main
 // char *to_char_ptr(uint8_t *buf) {
 //   return (char *) buf;
 // }
-// struct string *string_array_ref(struct stringArray a, int index) {
+// struct rosieL_string *string_array_ref(struct rosieL_stringArray a, int index) {
 //   if (index > a.n) return NULL;
 //   else return a.ptr[index];
 // }
@@ -36,16 +36,16 @@ import "encoding/json"
 import "os"
 import "strconv"
 
-func structString_to_GoString(cstr C.struct_string) string {
+func structString_to_GoString(cstr C.struct_rosieL_string) string {
 	return C.GoStringN(C.to_char_ptr(cstr.ptr), C.int(cstr.len))
 }
 
-func gostring_to_structStringptr(s string) *C.struct_string {
+func gostring_to_structStringptr(s string) *C.struct_rosieL_string {
 	var cstr_ptr = C.new_string_ptr(C.int(len(s)), C.CString(s))
 	return cstr_ptr
 }
 
-func print_structStringArray(cstr_array C.struct_stringArray) {
+func print_structStringArray(cstr_array C.struct_rosieL_stringArray) {
 	var n = int(cstr_array.n)
 	for i:=0; i<n; i++ {
 		fmt.Printf("[%d] %s\n", i, structString_to_GoString(*C.string_array_ref(cstr_array, C.int(i))));
@@ -55,10 +55,16 @@ func print_structStringArray(cstr_array C.struct_stringArray) {
 func main() {
 	fmt.Printf("Initializing Rosie... ")
 	
-	var messages C.struct_stringArray
+	var messages C.struct_rosieL_stringArray
 	
-	home := gostring_to_structStringptr("/Users/jjennings/Work/Dev/public/rosie-pattern-language")
-	engine, err := C.initialize(home, &messages)
+	rosie_home := os.Getenv("ROSIE_HOME")
+	if rosie_home=="" {
+		fmt.Printf("\nEnvironment variable ROSIE_HOME is not set.  Must be set to root of rosie directory.\n")
+		os.Exit(-1)
+	}
+
+	home := gostring_to_structStringptr(rosie_home)
+	engine, err := C.rosieL_initialize(home, &messages)
 	fmt.Printf("done.\n")
 	if engine==nil {
 		fmt.Printf("Return value from initialize was NULL!")
@@ -68,35 +74,35 @@ func main() {
 		os.Exit(-1)
 	}
 
-	var a C.struct_stringArray
+	var a C.struct_rosieL_stringArray
 	cfg := gostring_to_structStringptr("{\"expression\":\"[:digit:]+\", \"encode\":\"json\"}")
-	a, err = C.configure_engine(engine, cfg)
+	a, err = C.rosieL_configure_engine(engine, cfg)
 	retval := structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Return code from configure_engine: %s\n", retval)
 
-	a, err = C.inspect_engine(engine)
+	a, err = C.rosieL_inspect_engine(engine)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Return code from inspect_engine: %s\n", retval)
 	fmt.Printf("Config from inspect_engine: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
-	C.free_stringArray(a)
+	C.rosieL_free_stringArray(a)
 
 	var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"
 	foo_string := C.new_string_ptr(C.int(len(foo)), C.CString(foo))
 
-	a, err = C.match(engine, foo_string, nil)
+	a, err = C.rosieL_match(engine, foo_string, nil)
 	retval = structString_to_GoString(*C.string_array_ref(a,0))
 	fmt.Printf("Return code from match: %s\n", retval)
 	fmt.Printf("Data|false from match: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
 	fmt.Printf("Leftover chars from match: %s\n", structString_to_GoString(*C.string_array_ref(a,2)))
 
-	var r C.struct_stringArray
+	var r C.struct_rosieL_stringArray
 	var code, js_str string
 	var leftover int
 
 	foo = "1239999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
 	foo_string = C.new_string_ptr(C.int(len(foo)), C.CString(foo))
 
-	r = C.match(engine, foo_string, nil)
+	r = C.rosieL_match(engine, foo_string, nil)
 	code = structString_to_GoString(*C.string_array_ref(r,0))
 	js_str = structString_to_GoString(*C.string_array_ref(r,1))
 	leftover, err = strconv.Atoi(structString_to_GoString(*C.string_array_ref(r,2)))
@@ -121,11 +127,11 @@ func main() {
 			fmt.Printf("No subs from match table.\n")
 		}
 	}
-	C.free_stringArray(r)
+	C.rosieL_free_stringArray(r)
 
 	fmt.Printf(" done.\n");
 
-	C.finalize(engine);
+	C.rosieL_finalize(engine);
 
 
 }
