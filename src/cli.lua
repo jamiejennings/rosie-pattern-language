@@ -37,10 +37,8 @@ table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 
 -- Start the Rosie Pattern Engine
 
-rosie = false; -- MUST BE GLOBAL FOR REPL TO USE IT
-
-local msg
-thunk, msg = loadfile(ROSIE_HOME .. "/lib/init.luac", "b")
+rosie = false;				    -- must be GLOBAL so repl can use it
+local thunk, msg = loadfile(ROSIE_HOME .. "/lib/init.luac", "b")
 if not thunk then
    io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
    rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
@@ -52,11 +50,9 @@ else
       else io.write(msg, "\n"); os.exit(-1); end
    end
 end
-
 assert(type(rosie)=="table", "Return value from init was not the rosie module (a table)")
 
 local engine=require "engine"			    -- for debugging
-
 local argparse = require "argparse"
 local common = require "common"
 local json = require "cjson"
@@ -74,11 +70,8 @@ local function print_rosie_info()
 end
 
 local function greeting()
-	io.write("This is Rosie " .. ROSIE_VERSION .. "\n")
+   io.write("This is Rosie " .. ROSIE_VERSION .. "\n")
 end
-
--- global
-VERBOSE = false;
 
 local function set_encoder(name)
    local encode_fcn = rosie.encoders[name]
@@ -103,7 +96,6 @@ function setup_engine(args)
    -- (1a) Load the manifest
    if args.manifest then
       if args.verbose then
-	 VERBOSE = true;
 	 io.stdout:write("Compiling files listed in manifest ", args.manifest, "\n")
       end
       local success, messages = pcall(rosie.file.load, CL_ENGINE, args.manifest, "manifest")
@@ -390,7 +382,7 @@ local cmd_test = parser:command("test")
 cmd_test:argument("filename", "RPL filename")
 
 
--- in order to catch dev mode for "make test"
+-- Check arg[1] in order to catch dev mode for "make test"
 if (not arg[1]) then
 	print(parser:get_help())
 else
