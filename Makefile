@@ -88,7 +88,7 @@ bin/luac bin/lua: $(submodules)
 	cp $(LUA_DIR)/src/luac bin
 
 lib/lpeg.so: $(submodules) submodules/lua/include
-	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua/src
+	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua
 	mkdir -p lib
 	cp $(LPEG_DIR)/src/lpeg.so lib
 

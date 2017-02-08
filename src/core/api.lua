@@ -298,11 +298,13 @@ end
 --    return "#define " .. const .. " " .. tostring(spec.code)
 -- end
 
+local function prefix(str) return "rosieL_"..str; end
+   
 function gen_prototype(name, spec)
-   local p = "struct stringArray " .. name .. "("
+   local p = "struct rosieL_stringArray " .. prefix(name) .. "("
    local arglist = "void *L"
    for _,arg in ipairs(spec.args) do
-      arglist = arglist .. ", struct string *" .. arg
+      arglist = arglist .. ", struct rosieL_string *" .. arg
    end
    return p .. arglist .. ")"
 end
@@ -338,7 +340,7 @@ function write_C_HEADER(basefilename)
    h:close()
 end
 
--- struct stringArray configure_engine(void *L, struct string *config) {
+-- struct rosieL_stringArray configure_engine(void *L, struct rosieL_string *config) {
 --      prelude(L, "configure_engine");
 --      push(L, config);
 --      return call_api(L, "configure_engine", 1);
