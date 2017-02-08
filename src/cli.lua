@@ -1,12 +1,12 @@
 ---- -*- Mode: Lua; -*-
 ----
----- run.lua
+---- cli.lua
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- This script is run in the lua interpreter by a shell script.  The script supplies the first two
+-- This code is fed to the lua interpreter by a shell script.  The script supplies the first two
 -- args (ROSIE_HOME and ROSIE_DEV) before the user-supplied Rosie CLI args.  ROSIE_HOME is the
 -- full path to a Rosie install directory, and ROSIE_DEV is the string "true" if the CLI was
 -- launched in "development mode", which drops into a Lua repl after loading Rosie:

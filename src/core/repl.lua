@@ -202,7 +202,7 @@ function repl.repl(en)
       end
    end
    readline.add_history(s)
-   repl(en)
+   repl.repl(en)
 end
 
 local help_text = [[
