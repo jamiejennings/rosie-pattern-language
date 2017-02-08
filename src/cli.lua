@@ -236,6 +236,7 @@ function setup_and_run_tests(args)
 	 -- if we get here we have at least one per test_line expression rule
 	 while literals <= #m.test_line.subs do
 	    local teststr = m.test_line.subs[literals].literal.text
+	    teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
 	    if not testfunc(name, teststr) then
 	       print("FAIL: " .. name .. " did not " .. testtype:sub(1,-2) .. " " .. teststr)
 	       failures = failures + 1
