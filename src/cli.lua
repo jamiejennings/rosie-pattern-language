@@ -40,22 +40,22 @@ table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 rosie = false; -- MUST BE GLOBAL FOR REPL TO USE IT
 
 local msg
-rosie, msg = loadfile(ROSIE_HOME .. "/src/...") -- FIXME
-if not rosie then
+thunk, msg = loadfile(ROSIE_HOME .. "/lib/init.luac", "b")
+if not thunk then
    io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
    rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
 else
-   local rosie, msg = pcall(thunk)
+   rosie = thunk()
    if not rosie then
-      io.stderr:write("Rosie CLI warning: error loading compiled Rosie files, will load from source \n")
-      io.stderr:write(msg, "\n")
-      rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
+      msg = arg[0] .. ": corrupt compiled lua file lib/init.luac\n"
+      if ROSIE_DEV then error(msg)
+      else io.write(msg, "\n"); os.exit(-1); end
    end
 end
 
-assert(type(rosie)=="table", "Return value from loading init.lua was not the rosie module (a table)")
+assert(type(rosie)=="table", "Return value from init was not the rosie module (a table)")
 
-local engine=require "engine"			    -- debugging
+local engine=require "engine"			    -- for debugging
 
 local argparse = require "argparse"
 local common = require "common"

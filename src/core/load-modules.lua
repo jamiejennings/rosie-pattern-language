@@ -38,15 +38,26 @@ function require(name)
    return module.loaded[name] or error("Module " .. tostring(name) .. " not loaded")
 end
 
+local function load_module1(name, optional_subdir)
+   -- First try loading compiled version from lib directory
+   local path = ROSIE_HOME .. "/lib/" .. name .. ".luac"
+   local thing, msg = loadfile(path, "b", _ENV)
+   if thing then return thing, msg; end
+   if VERBOSE then io.write("no compiled version, looking for source... "); end
+   -- Otherwise, load from source
+   optional_subdir = optional_subdir or "src/core"
+   local path = ROSIE_HOME .. "/" .. optional_subdir .. "/" .. name .. ".lua"
+   local thing, msg = loadfile(path, "t", _ENV)
+   return thing, msg
+end
+
 function load_module(name, optional_subdir)
    if VERBOSE then io.write("Loading " .. name .. "... "); end
    if module.loaded[name] then
       if VERBOSE then print("already loaded."); end
       return module.loaded[name]
    end
-   optional_subdir = optional_subdir or "src/core"
-   local path = ROSIE_HOME .. "/" .. optional_subdir .. "/" .. name .. ".lua"
-   local thing, msg = loadfile(path, "t", _ENV)
+   local thing, msg = load_module1(name, optional_subdir)
    if (not thing) then
       print("Error while initializing: cannot load Rosie module '" .. name .. "' from " .. ROSIE_HOME)
       if ROSIE_DEV then

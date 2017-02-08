@@ -11,14 +11,30 @@
 --   The Rosie installation (Makefile) will create rosie.lua from src/rosie-package-template.lua
 
 ----------------------------------------------------------------------------------------
+-- Explanation of key globals:
+----------------------------------------------------------------------------------------
+-- 
+-- ROSIE_HOME indicates from where this executing instance of rosie is running.  It will
+--            typically be a system location like /usr/local/lib/rosie, but could also
+--            be any local rosie install directory, like ~/rosie.  Code and other non-RPL
+--            artifacts are found via ROSIE_HOME.
+-- ROSIE_ROOT is the variable that the rosie code uses to find the standard RPL library.
+--            Unless the user supplies a different value (by setting the environment
+--            variable ROSIE_ROOT), the value is the set to ROSIE_HOME.  This is the ONLY
+--            configuration parameter that the user can control via the environment.
+-- ROSIE_DEV  will be true iff rosie is running in "development mode".  Certain errors
+--            that are normally fatal will instead return control to the Lua interpreter
+--            (after being signaled) when in development mode.
+
+----------------------------------------------------------------------------------------
 -- First, set up some key globals
 ----------------------------------------------------------------------------------------
 -- The value of ROSIE_HOME on entry to this file is set by either:
--- (1) The shell script bin/rosie, which was
---      - created by the Rosie installation process (Makefile), to include the value
---        of ROSIE_HOME. 
---      - When that script is invoked by the user in order to run Rosie,
---        the script passes ROSIE_HOME to cli.lua, which has called this file (init).
+--    (1) The shell script bin/rosie, which was
+--         - created by the Rosie installation process (Makefile), to include the value
+--           of ROSIE_HOME. 
+--         - When that script is invoked by the user in order to run Rosie,
+--           the script passes ROSIE_HOME to cli.lua, which has called this file (init).
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
 if not ROSIE_HOME then error("Error while initializing: variable ROSIE_HOME not set"); end
 
