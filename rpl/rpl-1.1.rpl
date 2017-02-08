@@ -13,25 +13,25 @@ alias newline = [\n]
 alias comment = { "--" {!newline .}* {newline / $} }
 alias ignore = { { [[:space:]] / comment }* }
 
-alias id_char = { [[:alnum:]] / [[_]] }
+alias id_char = { [[:alnum:]] / [_] }
 alias id = { [[:alpha:]] id_char* }
 
 localname = id 
-          / [[.]]		 -- a single dot
-	  / [[$]]		 -- a single dollar sign
-	  / [[~]]		 -- a single tilde
+          / [.]		 -- a single dot
+	  / [$]		 -- a single dollar sign
+	  / [~]		 -- a single tilde
 packagename = id
 identifier = { {packagename "."}? localname }
 
-alias dquote = { [[\"]] }
-alias esc =    { [[\\]] }
+alias dquote = { [\"] }
+alias esc =    { [\\] }
 literal = { {!{esc/dquote} .} / {esc .} }* 
 alias quoted_string = { dquote literal dquote }
 
 
-star =     { [[*]] }
-question = { [[?]] }
-plus =     { [[+]] }
+star =     { [*] }
+question = { [?] }
+plus =     { [+] }
 alias end_token = { "end" !id_char }
 alias keyword_list = { "local" / "alias" / "grammar" / "end" }
 keyword = { keyword_list !id_char }
@@ -43,7 +43,7 @@ syntax_error = { rest_of_line }
 
 complement = "^"
 character = { {!esc !"[" !"^" !"]" .} / {esc .} }
-range = { complement? character [[-]] !"]" character } 
+range = { complement? character [-] !"]" character } 
 charlist = { complement? {!"]" character}+ }		    -- cannot be empty
 name = {!":" .}+
 named_charset = { complement? name } 
@@ -64,14 +64,14 @@ alias quantifier = star / question / plus / repetition
 assignment_prefix = identifier ignore "="
 stmnt_prefix = {keyword / assignment_prefix}
 
-alias slash =         { [[/]] }
-alias open =          { [[(]] }
-alias openraw =       { [[{]] }
-alias close =         { [[)]] }
-alias closeraw =      { [[}]] }
+alias slash =         { [/] }
+alias open =          { [(] }
+alias openraw =       { [{] }
+alias close =         { [)] }
+alias closeraw =      { [}] }
 
-negation = { [[!]] }
-lookat = { [[@]] }
+negation = { [!] }
+lookat = { [@] }
 alias predicate_symbol = { negation / lookat }
 	    
 grammar
@@ -97,7 +97,7 @@ grammar
 end
 
 importpath = quoted_string		  -- double quoted, interpreted, pattern name is "literal"
-             / {[[:alnum:]]/[[:punct:]]}+ -- whitespace terminated, uninterpreted
+              / {[[:alnum:]]/[_-//]}+	  -- whitespace terminated, uninterpreted
 
 version_spec = { [0-9]{1,3} "." [0-9]{1,3} }
 import_spec = ignore importpath ("as" (packagename / "."))?
@@ -106,15 +106,38 @@ import_spec = ignore importpath ("as" (packagename / "."))?
 -- Top level patterns
 ----------------------------------------------------------------------------------------
 
--- One rpl stmnt or exp
--- Useful when you want to catch user errors such as supplying an assignment stmnt where an
--- exp is expected.  (See compile.exp_p().)
+-- One rpl stmnt or exp:
+--   Useful when you want to catch user errors such as supplying an assignment stmnt 
+--   where an exp is expected.  E.g. in compile.exp_p()
 rpl = ignore {stmnt / exp / syntax_error}
 
-statement = ignore stmnt
+statement = ignore {stmnt / syntax_error}
 expression = ignore {exp / syntax_error}
 language_decl = ignore "rpl" version_spec
 package_decl = ignore "package" packagename ("," packagename)*
 import_decl = ignore "import" import_spec ("," import_spec)*
 
 rpl_file = language_decl? package_decl import_decl* statement*
+
+-- test package_decl accepts "package foo", "package fooBar", "package f_oo"
+-- test package_decl rejects "package", "package _foo", "package 6foo", "package .foo", "package foo.bar"
+
+-- test import_decl rejects "import"
+
+-- importpath can be QUOTED STRING:
+-- test import_decl rejects "import \"foo/bar\","
+-- test import_decl accepts "import \"foo/bar\""
+-- test import_decl accepts "import \"foo/bar\", \"/usr/local/baz\", \"/usr/bin/time\""
+-- test import_decl accepts "import \"foo/bar\" as foo"
+-- test import_decl accepts "import \"foo/bar\" as foo, \"/usr/local/baz\", \"/usr/bin/time\""
+-- test import_decl accepts "import \"foo/bar\" as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
+
+-- importpath can be PLAIN SYMBOL, uninterpreted:
+-- test import_decl rejects "import foo,"
+-- test import_decl rejects "import foo["
+-- test import_decl accepts "import foo/bar/baz"
+-- test import_decl accepts "import foo/bar", /usr/lo-cal/b_az, \"/usr/bin/time\""
+-- test import_decl accepts "import foo/bar as foo"
+-- test import_decl accepts "import foo/bar as foo, \"/usr/local/baz\", /usr/bin/time"
+-- test import_decl accepts "import -f_o-o as foo, /usr/local/baz as ., /usr/bin/time"
+-- test import_decl accepts "import -f_o-o/bar as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
