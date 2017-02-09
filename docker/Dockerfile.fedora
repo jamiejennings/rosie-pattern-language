@@ -7,8 +7,8 @@ RUN dnf install -y readline-devel
 RUN dnf install -y procps
 
 # Option 1: Install git and clone the repository.  Works if the container has internet access.
-#RUN dnf install git
-#git clone https://github.com/jamiejennings/rosie-pattern-language.git /opt/
+#RUN dnf install -y git
+#RUN git clone https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
 
 # Option 2: Copy the files from the local directory
 ADD . /opt/rosie/
