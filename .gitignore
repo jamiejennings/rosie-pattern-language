@@ -37,3 +37,6 @@ src/c/librosie/go/src/ffi/librosie.h
 # These directories are created and populated by the build
 bin
 lib
+
+# This file is created by the build
+rosie.lua
