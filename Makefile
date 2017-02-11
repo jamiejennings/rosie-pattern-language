@@ -35,10 +35,10 @@ JSON_DIR = $(TMP)/$(JSON)
 
 ## ----------------------------------------------------------------------------- ##
 
-.PHONY: clean none sniff test
+.PHONY: clean none sniff test default macosx linux windows none compile
 
 clean:
-	rm -rf bin/* lib/*
+	rm -rf bin/* lib/* 
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
@@ -72,39 +72,60 @@ linux: bin/lua lib/lpeg.so lib/cjson.so compile sniff
 windows:
 	@echo Windows installation not yet supported.
 
-submodules = submodules/lua/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile
 
-$(submodules):
+# submodule_sentinel indicates that submodules have been initialized.
+# the sentile file is a file copied from a submodule repo, so that:
+# (1) the submodule must have been checked out, and
+# (2) the sentinel will not be newer than the submodule files
+submodule_sentinel=submodules/~~present~~ 
+submodules = submodules/lua/src/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile
+$(submodules): $(submodule_sentinel)
+
+# submodules:
+# 	@echo Missing submodules directory.  Re-initializing.
+# 	git submodule init
+# 	git submodule update --checkout
+
+$(submodule_sentinel): #submodules
 	git submodule init
-	git submodule update
-
-submodules/lua/include:
+	git submodule update --checkout
 	cd $(LUA_DIR) && ln -sf src include
+	cp -p $(LUA_DIR)/README $(submodule_sentinel)
 
-bin/luac bin/lua: $(submodules)
-	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM) $(LINUX_CFLAGS) $(LINUX_LDFLAGS)
+bin/lua: $(LUA_DIR)/src/lua
 	mkdir -p bin
 	cp $(LUA_DIR)/src/lua bin
+
+$(LUA_DIR)/src/lua: $(submodules)
+	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM) $(LINUX_CFLAGS) $(LINUX_LDFLAGS)
+
+bin/luac: bin/lua
 	cp $(LUA_DIR)/src/luac bin
 
-lib/lpeg.so: $(submodules) submodules/lua/include
-	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua
+lpeg_lib=$(LPEG_DIR)/src/lpeg.so
+lib/lpeg.so: $(lpeg_lib)
 	mkdir -p lib
-	cp $(LPEG_DIR)/src/lpeg.so lib
+	cp $(lpeg_lib) lib
 
-lib/cjson.so: $(submodules) submodules/lua/include
-	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
+$(lpeg_lib): $(submodules)
+	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua
+
+json_lib = $(JSON_DIR)/cjson.so
+lib/cjson.so: $(json_lib)
 	mkdir -p lib
-	cp $(JSON_DIR)/cjson.so lib
+	cp $(json_lib) lib
+
+$(json_lib): $(submodules)
+	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 
 bin/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 
 luaobjects := $(patsubst src/core/%.lua,bin/%.luac,$(wildcard src/core/*.lua))
 
-compile: $(luaobjects)
+compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so
 
-$(EXECROSIE):
+$(EXECROSIE): compile
 	@/usr/bin/env echo "Creating $(EXECROSIE)"
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(EXECROSIE)"
 	@/usr/bin/env echo -n "$(HOME)/src/run-rosie $(HOME)" >> "$(EXECROSIE)"
