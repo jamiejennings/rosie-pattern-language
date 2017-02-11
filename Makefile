@@ -73,8 +73,7 @@ INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
 
-.PHONY: clean none sniff test default macosx linux windows none compile
-
+.PHONY: clean
 clean:
 	rm -rf bin/* lib/* rosie.lua
 	-cd $(LUA_DIR) && make clean
@@ -94,7 +93,7 @@ CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
 CJSON_MAKE_ARGS += CJSON_CFLAGS+="-pthread -DMULTIPLE_THREADS"
 CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
 
-# Sigh.  Once we get to Version 1.0 and we support Linux packages (like RPM), we won't need this test.
+# Sigh.  Once we support Linux packages (like RPM), we won't need this test.
 # Note that this test should ALWAYS pass on OS X, since it ships with readline.
 .PHONY: readlinetest
 readlinetest:
@@ -166,7 +165,12 @@ $(json_lib): $(submodules)
 bin/argparse.luac: submodules/argparse/src/argparse.lua
 	bin/luac -o $@ $<
 
-lib/readline.so: submodules submodules/lua/include
+readline_lib = $(READLINE_DIR)/readline.so
+lib/readline.so: $(readline_lib)
+	mkdir -p lib
+	cp $(readline_lib) lib
+
+$(readline_lib): $(submodules)
 ifeq ($(PLATFORM),linux)
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) CFLAGS="-fPIC -O2 -I../lua/include"
 else ifeq ($(PLATFORM),macosx)
@@ -175,10 +179,8 @@ else
 	@echo "Platform not linux or macosx.  Cannot build readline.so."
 	false
 endif
-	mkdir -p lib
-	cp $(READLINE_DIR)/readline.so lib
 
-lib/argparse.luac: submodules/argparse/src/argparse.lua bin/luac
+lib/argparse.luac: $(submodules) bin/luac
 	bin/luac -o $@ submodules/argparse/src/argparse.lua
 
 lib/%.luac: src/core/%.lua bin/luac
@@ -186,24 +188,14 @@ lib/%.luac: src/core/%.lua bin/luac
 
 luaobjects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua)) lib/argparse.luac
 
-compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so
-
-$(EXECROSIE): compile
-	@/usr/bin/env echo "Creating $(EXECROSIE)"
-	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(EXECROSIE)"
-	@/usr/bin/env echo -n "$(HOME)/src/run-rosie $(HOME)" >> "$(EXECROSIE)"
-	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
-	@chmod 755 "$(EXECROSIE)"
-
-.PHONY: compile
-compile: $(luaobjects)
+compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so
 
 # The PHONY declaration below will force the creation of bin/rosie every time.  This is needed
 # only because the user may move the working directory.  When that happens, the user should
 # be able to run 'make' again to reconstruct a new bin/rosie script (which contains a
 # reference to the working directory).
 .PHONY: $(ROSIEBIN)
-$(ROSIEBIN):
+$(ROSIEBIN): compile
 	@/usr/bin/env echo "Creating $(ROSIEBIN)"
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(ROSIEBIN)"
 	@/usr/bin/env echo -n "exec $(BUILD_ROOT)/src/run-rosie $(BUILD_ROOT)" >> "$(ROSIEBIN)"
