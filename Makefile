@@ -61,13 +61,7 @@ INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
 
 BUILD_LUA_PACKAGE = $(BUILD_ROOT)/rosie.lua
 
-LUA_DIR = $(SUBMOD)/$(LUA)
-LPEG_DIR = $(SUBMOD)/$(LPEG)
-JSON_DIR = $(SUBMOD)/$(JSON)
-READLINE_DIR = $(SUBMOD)/$(READLINE)
-INSTALL_BIN_DIR = $(ROSIED)/bin
-INSTALL_LIB_DIR = $(ROSIED)/lib
-INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
+.PHONY: clean none sniff test default macosx linux windows none compile
 
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
@@ -130,7 +124,7 @@ submodule_sentinel=submodules/~~present~~
 submodules = submodules/lua/src/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile
 $(submodules): $(submodule_sentinel)
 
-$(submodule_sentinel): #submodules
+$(submodule_sentinel): 
 	git submodule init
 	git submodule update --checkout
 	cd $(LUA_DIR) && ln -sf src include
@@ -170,18 +164,14 @@ lib/readline.so: $(readline_lib)
 	mkdir -p lib
 	cp $(readline_lib) lib
 
-$(readline_lib): $(submodules)
-ifeq ($(PLATFORM),linux)
-	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) CFLAGS="-fPIC -O2 -I../lua/include"
-else ifeq ($(PLATFORM),macosx)
-	cd $(READLINE_DIR) && $(MAKE) USE_LIBEDIT=true LUA_INCLUDE_DIR=$(BUILD_ROOT)/submodules/lua/src CC=$(CC)
-else
-	@echo "Platform not linux or macosx.  Cannot build readline.so."
-	false
-endif
+compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so
 
-lib/argparse.luac: $(submodules) bin/luac
-	bin/luac -o $@ submodules/argparse/src/argparse.lua
+$(EXECROSIE): compile
+	@/usr/bin/env echo "Creating $(EXECROSIE)"
+	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(EXECROSIE)"
+	@/usr/bin/env echo -n "$(HOME)/src/run-rosie $(HOME)" >> "$(EXECROSIE)"
+	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
+	@chmod 755 "$(EXECROSIE)"
 
 lib/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
