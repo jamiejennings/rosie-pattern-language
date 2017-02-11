@@ -6,12 +6,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- rosie.lua:
---   Usage: rosie = require "rosie"
---   The Rosie installation (Makefile) will create rosie.lua from src/rosie-package-template.lua
-
 ----------------------------------------------------------------------------------------
--- Explanation of key globals:
+-- Explanation of key globals
 ----------------------------------------------------------------------------------------
 -- 
 -- ROSIE_HOME indicates from where this executing instance of rosie is running.  It will
@@ -27,7 +23,7 @@
 --            (after being signaled) when in development mode.
 
 ----------------------------------------------------------------------------------------
--- First, set up some key globals
+-- Define important globals
 ----------------------------------------------------------------------------------------
 -- The value of ROSIE_HOME on entry to this file is set by either:
 --    (1) The shell script bin/rosie, which was
@@ -53,7 +49,7 @@ local function read_version_or_die(home)
    -- otherwise either vfile is nil or v is nil
    local msg = "Error while initializing: "..tostring(home).."/VERSION does not exist or is not readable\n"
    if not ROSIE_DEV then io.stderr:write(msg); os.exit(-3); end
-   error(msg)					    -- should do throw(msg) to end of init
+   error(msg)					    -- should do throw(msg) to end of init?
 end
 
 ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
@@ -71,18 +67,17 @@ if (not ok) then error('Internal error: call to os.getenv(ROSIE_ROOT)" failed');
 if value then ROSIE_ROOT = value; end
 
 ---------------------------------------------------------------------------------------------------
--- Load the entire rosie world...
+-- Load the entire rosie world... (which includes the "core" parser for "rpl 1.0")
 ---------------------------------------------------------------------------------------------------
 
 local loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", _ENV)
-if not loader then error("Error while initializing: " .. msg); end
+if not loader then error("Internal error while loading modules: " .. msg); end
 loader()
 
 ---------------------------------------------------------------------------------------------------
--- Bootstrap the rpl parser, which is defined in a core subset of rpl that is parsed by a "native"
--- (Lua lpeg) parser.
+-- Bootstrap the rpl parser, which is defined using the "core parser" (defined in parse.lua)
 ---------------------------------------------------------------------------------------------------
-
+-- 
 -- At this point, there is no default rpl parser set for new engines.  We create the ROSIE_ENGINE,
 -- which will parse all incoming rpl, and set it up initially with the "rpl core parser", which is
 -- hand-coded in parse.lua and accepts "rpl 1.0".
