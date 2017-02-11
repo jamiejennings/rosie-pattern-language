@@ -330,8 +330,17 @@ engine.create_function =
 
 		      lookup=get_environment,
 		      clear=clear_environment,
-		      id=function(en) return en._id; end,
-		      name=function(en) return name; end,
+		      id=function(en)
+			    if engine.is(en) then return en._id;
+			    else error("Arg to id function is not an engine: " .. tostring(en))
+			    end
+			 end,
+		      name=function(en)
+			      -- checking the unused arg for consistency with other engine functions
+			      if engine.is(en) then return name;
+			      else error("Arg to name function is not an engine: " .. tostring(en))
+			      end
+			   end,
 		      output=get_set_encoder_function,
 
 		      match=engine_match,

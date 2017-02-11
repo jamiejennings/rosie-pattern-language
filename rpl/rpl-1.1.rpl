@@ -1,7 +1,7 @@
 ---- -*- Mode: rpl; -*-                                                                             
 ---- vim:syn=rosie
 ----
----- rpl-1.0.rpl     RPL language version 1.1, written in RPL version 0 ("core")
+---- rpl-1.1.rpl     RPL language version 1.1, written in RPL version 0 ("core")
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -118,6 +118,13 @@ package_decl = ignore "package" packagename ("," packagename)*
 import_decl = ignore "import" import_spec ("," import_spec)*
 
 rpl_file = language_decl? package_decl import_decl* statement*
+
+---------------------------------------------------------------------------------------------------
+-- Tests
+---------------------------------------------------------------------------------------------------
+
+-- test language_decl rejects "rpl", "rpl ", "rpl a", "rpl 1.a", "rpl 1.", "rpl 1.1234"
+-- test language_decl accepts "rpl 0.0", "rpl 1.0", "rpl 52.100", "rpl 999.999"
 
 -- test package_decl accepts "package foo", "package fooBar", "package f_oo"
 -- test package_decl rejects "package", "package _foo", "package 6foo", "package .foo", "package foo.bar"
