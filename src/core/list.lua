@@ -132,7 +132,7 @@ function list.tostring(ls)
    if list.is_null(ls) then return("{}"); end
    local str, elt_str
    for _,elt in ipairs(ls) do
-      elt_str = ((type(elt)=="table" and list.tostring(elt)) or tostring(elt))
+      elt_str = ((type(elt)=="table" and list.is(elt) and list.tostring(elt)) or tostring(elt))
       if str then str = str .. ", " .. elt_str
       else str = "{" .. elt_str; end
    end
