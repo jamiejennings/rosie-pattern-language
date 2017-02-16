@@ -311,7 +311,7 @@ assert(global==800)
 ts = list.tostring
 
 assert(ts({})=="{}")
-assert(ts(new({}))=="{{}}")
+assert(ts(new({})):sub(1,10)=="{table: 0x")
 assert(ts(new(new()))=="{{}}")
 assert(ts(primes)=="{2, 3, 5, 7}")
 assert(ts(cons(true, primes))=="{true, 2, 3, 5, 7}")
