@@ -5,25 +5,25 @@ list = require("list")
 --   validate_structure
 
 -- 5
-new, from_table, is = list.new, list.from_table, list.is
-is_null, len, equal = list.is_null, list.length, list.equal
+new, from, is = list.new, list.from, list.is
+null, len, equal = list.null, list.length, list.equal
 
 a = new()
 assert(type(a)=="table")
 assert(is(a))
-assert(is_null(a))
+assert(null(a))
 assert(equal(a, a))
 assert(equal(a, new()))
 
 b = new()
 assert(is(b))
-assert(is_null(b))
+assert(null(b))
 assert(equal(a,b))
 assert(a ~= b)
 
 c = new(1)
 assert(is(c))
-assert(not is_null(c))
+assert(not null(c))
 assert(a ~= c)
 assert(not equal(a, c))
 assert(equal(c, c))
@@ -32,28 +32,28 @@ assert(#c==1)
 
 d = new("hi", "bye", 42)
 assert(is(d))
-assert(not is_null(d))
+assert(not null(d))
 assert(d ~= c)
 assert(not equal(d, c))
 assert(equal(d, d))
 assert(len(d)==3)
 assert(#d==3)
 
-e = from_table({"hi", "bye", 42})
+e = from({"hi", "bye", 42})
 assert(is(e))
-assert(not is_null(e))
+assert(not null(e))
 assert(d ~= e)
 assert(equal(d, e))
 assert(len(e)==3)
 assert(#e==3)
 
-ok = pcall(from_table, nil)
+ok = pcall(from, nil)
 assert(not ok)
 
-a = from_table({})
+a = from({})
 assert(type(a)=="table")
 assert(is(a))
-assert(is_null(a))
+assert(null(a))
 assert(equal(a, a))
 assert(equal(a, new()))
 
@@ -63,7 +63,7 @@ cons, car, cdr = list.cons, list.car, list.cdr
 
 b = cons("new element", a)
 assert(is(b))
-assert(not is_null(b))
+assert(not null(b))
 assert(b ~= a)
 assert(not equal(b, a))
 assert(len(b)==1)
@@ -71,7 +71,7 @@ assert(#b==1)
 
 c = cons("new element", a)
 assert(is(c))
-assert(not is_null(c))
+assert(not null(c))
 assert(c ~= b)
 assert(equal(c, b))
 assert(len(c)==1)
@@ -83,14 +83,14 @@ assert(car(c)==print)
 assert(len(c)==2)
 
 assert(is(cdr(c)))
-assert(not is_null(cdr(c)))
+assert(not null(cdr(c)))
 assert(len(cdr(c))==1)
 assert(car(cdr(c))=="new element")
 
 a = cdr(cdr(c))
 assert(type(a)=="table")
 assert(is(a))
-assert(is_null(a))
+assert(null(a))
 assert(equal(a, a))
 assert(equal(a, new()))
 
@@ -102,7 +102,7 @@ member, append, reverse, last = list.member, list.append, list.reverse, list.las
 
 primes = new(2, 3, 5, 7)
 assert(is(primes))
-assert(not is_null(primes))
+assert(not null(primes))
 assert(car(primes)==2)
 assert(member(2, primes))
 assert(member(3, primes))
@@ -159,15 +159,22 @@ assert(not member(1, semirp))
 assert(not member({}, semirp))
 assert(not member(print, semirp))
 
-a = reverse({})
-assert(not is(a))
-assert(is_null(a))
+-- error "not a list"
+assert(not (pcall(reverse, {})))
+assert(not is({}))
+assert(not (pcall(null, {})))
+assert(not equal({}, new()))
+assert(not equal({}, {}))
+
+a = reverse(from({}))
+assert(is(a))
+assert(null(a))
 assert(equal(a, a))
 assert(equal(a, new()))
 
 a = reverse(new())
 assert(is(a))
-assert(is_null(a))
+assert(null(a))
 assert(equal(a, a))
 assert(equal(a, new()))
 
@@ -176,7 +183,7 @@ assert(not ok)
 
 assert(last(primes)==7)
 assert(last(reverse(primes))==2)
-assert(last(from_table{"foo"})=="foo")
+assert(last(from{"foo"})=="foo")
 
 
 -- 2
@@ -206,20 +213,20 @@ flatten, reduce, filter = list.flatten, list.reduce, list.filter
 a = flatten(new())
 assert(type(a)=="table")
 assert(is(a))
-assert(is_null(a))
+assert(null(a))
 assert(equal(a, a))
 assert(equal(a, new()))
 
 a = flatten(new(new()))
 assert(type(a)=="table")
 assert(is(a))
-assert(is_null(a))
+assert(null(a))
 assert(equal(a, a))
 assert(equal(a, new()))
 
 numnums = new(primes, new(primes), primes)
 assert(is(numnums))
-assert(not is_null(numnums))
+assert(not null(numnums))
 assert(len(numnums)==3)
 assert(equal(car(numnums), primes))
 assert(equal(car(car(cdr(numnums))), primes))
@@ -227,7 +234,7 @@ assert(equal(last(numnums), primes))
 
 nums = flatten(numnums)
 assert(is(nums))
-assert(not is_null(nums))
+assert(not null(nums))
 assert(len(nums)==(3 * len(primes)))
 assert(not equal(car(nums), primes))
 n = car(nums)
@@ -261,17 +268,17 @@ assert(equal(car(cdr(ll)), primes))
 
 ll = filter(is, primes)
 assert(is(ll))
-assert(is_null(ll))
+assert(null(ll))
 assert(len(ll)==0)
 
 ll = filter(is, {})
 assert(is(ll))
-assert(is_null(ll))
+assert(null(ll))
 assert(len(ll)==0)
 
 ll = filter(function(x) return true; end, {})
 assert(is(ll))
-assert(is_null(ll))
+assert(null(ll))
 assert(len(ll)==0)
 
 
@@ -291,13 +298,13 @@ assert(apply(sum, {99})==99)
 function incr(i) return i+1; end
 pplus = map(incr, primes)
 assert(equal(pplus, new(3, 4, 6, 8)))
-assert(is_null(map(incr, {})))
+assert(null(map(incr, {})))
 
 global = 0
 function for_effect(i) global = global + 100; end
 nothing = map(for_effect, primes)
 assert(is(nothing))
-assert(is_null(nothing))
+assert(null(nothing))
 assert(global==400)
 
 global = 0
@@ -310,7 +317,8 @@ assert(global==800)
 -- 1
 ts = list.tostring
 
-assert(ts({})=="{}")
+assert(not (pcall(ts, {})))			    -- not a list
+assert(ts(from({}))=="{}")
 assert(ts(new({})):sub(1,10)=="{table: 0x")
 assert(ts(new(new()))=="{{}}")
 assert(ts(primes)=="{2, 3, 5, 7}")
