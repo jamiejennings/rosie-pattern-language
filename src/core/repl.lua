@@ -12,7 +12,6 @@ local repl = {}
 
 local common = require "common"
 local readline = require "readline"
-list = require "list"
 
 local repl_patterns = [==[
       rpl_expression = expression

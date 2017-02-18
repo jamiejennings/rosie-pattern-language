@@ -1,33 +1,32 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- list.lua     Some list functions, where lists are Lua tables with consecutive integer keys
+---- list.lua     Some list functions, where lists are based on Lua tables
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- This set of list functions treats Lua tables with consecutive integer keys as if they were
--- lists.  Important limitations include:
+-- A list is a Lua table that has the list_metatable.  List functions operate on consecutive
+-- integer keys of the underlying table, ignoring all other keys.
+--
+-- Important limitations include:
 --   No support for pairs
 --   The cdr implementation conses (sigh).
 --   An eq function on lists isn't possible, because eq(cdr(ls), cdr(ls)) ==> false.
-
--- Some functions are designed to operate on the consecutively numbered entries in any table.
--- I.e. the table does NOT have to be a proper list.  
 
 local list = {}
 
 local list_metatable = {}
 
-function list.from_table(tbl)
-   if type(tbl)=="table" then
-      if list.validate_structure(tbl) then
-	 return setmetatable(tbl, list_metatable)
-      else
-	 error("arg to from_table cannot be coerced to a list (gaps or non-numeric indices present)")
-      end
-   end
-   error("not a table: " .. tostring(tbl))
+-- Make a new list using all of the arguments as elements (ugh! 'new' looks like OO.)
+function list.new(...)
+   return setmetatable({...}, list_metatable)
+end
+
+-- Make a table usable as a list, without modifying any table entries
+function list.from(tbl)
+   if type(tbl)~="table" then error("arg not a table: " .. tostring(tbl)); end
+   return setmetatable(tbl, list_metatable)
 end
 
 function list.is(obj)				    -- in scheme: list?
@@ -35,53 +34,45 @@ function list.is(obj)				    -- in scheme: list?
 end
 
 function list.length(obj)
-   if type(obj)=="table" then return #obj; end
-   error("not a table: " .. tostring(obj))
+   if list.is(obj) then return #obj; end
+   error("arg not a list: " .. tostring(obj))
 end
 
 function list.validate_structure(obj)
-   if (type(obj)~="table") then return false; end
+   if (type(obj)~="table") then return false, "arg not a table"; end
    local len = 0
    -- Only numeric indices in our lists
    for k,v in pairs(obj) do
-      if type(k)~="number" then return false; end
+      if type(k)~="number" then return false, "non-numeric index: " .. tostring(k); end
       len = (k > len) and k or len
    end
    -- No gaps in the numbers
    for i=1,len do
-      if not obj[len] then return false; end	    -- a gap
+      if not obj[i] then return false, "gap in indices at " .. tostring(i); end
    end
    return true
 end
 
-function list.is_null(ls)			    -- in scheme: null?
-   --if list.is(ls) then return (#ls==0); end
-   if type(ls)=="table" then return (#ls==0); end
-   error("not a list: " .. tostring(ls))
+function list.null(ls)
+   if not list.is(ls) then error("arg not a list: " .. tostring(ls)); end
+   return (#ls==0)
 end
 
 function list.cons(elt, ls)
-   --if list.is(ls) then
-   if type(ls)=="table" then
-      return setmetatable({elt, table.unpack(ls)}, list_metatable)
-   end
-   error("not a list: " .. tostring(ls))
+   if not list.is(ls) then error("arg not a list: " .. tostring(ls)); end
+   return setmetatable({elt, table.unpack(ls)}, list_metatable)
 end
 
 function list.car(ls)
-   if list.is_null(ls) then error("empty list"); end
+   if list.null(ls) then error("empty list"); end
    return ls[1]
 end
 
--- this implementation of cdr breaks 'eq':
+-- N.B. This implementation of cdr breaks 'eq':
 -- eq(cdr(l), cdr(l)) ==> false
 function list.cdr(ls)
-   if list.is_null(ls) then error("empty list"); end
+   if list.null(ls) then error("empty list"); end
    return setmetatable({ table.unpack(ls, 2) }, list_metatable)
-end
-
-function list.new(...)				    -- ugh. looks like OO.
-   return setmetatable({...}, list_metatable)
 end
 
 function list.append(l1, ...)
@@ -103,9 +94,9 @@ function list.orf(a, b, ...)
 end
 
 function list.equal(e1, e2)
-   if type(e1)=="table" then			    -- can we treat e1 as a list?
-      if (e1==e2) then return true		    -- same table
-      elseif type(e2)~="table" then return false
+   if list.is(e1) then
+      if (e1==e2) then return true		    -- same table => same list
+      elseif not list.is(e2) then return false
       elseif list.length(e1)~=list.length(e2) then return false
       else return list.reduce(list.andf, true, list.map(list.equal, e1, e2))
       end
@@ -116,7 +107,7 @@ function list.equal(e1, e2)
 end
 
 function list.member(elt, ls)
-   if list.is_null(ls) then return false; end
+   if list.null(ls) then return false; end
    for _, item in ipairs(ls) do
       if list.equal(elt, item) then return true; end
    end
@@ -124,12 +115,12 @@ function list.member(elt, ls)
 end
 
 function list.last(ls)
-   if list.is_null(ls) then error("empty list"); end
+   if list.null(ls) then error("empty list"); end
    return ls[#ls]
 end
 
 function list.tostring(ls)
-   if list.is_null(ls) then return("{}"); end
+   if list.null(ls) then return("{}"); end
    local str, elt_str
    for _,elt in ipairs(ls) do
       elt_str = ((type(elt)=="table" and list.is(elt) and list.tostring(elt)) or tostring(elt))
@@ -165,7 +156,8 @@ function list.map(fn, ls1, ...)
 end
 
 -- limitation: the fn can only return one value.
--- limitation: only the first list's elements are present in the result.
+-- N.B. Only the first list's elements are present in the result.  The other lists provide
+-- additional arguments to fn().
 function list.filter(fn, ls1, ...)
    local results = list.new()
    local out_index = 1
@@ -195,7 +187,7 @@ function list.reduce(fn, init, lst, i)
 end
 
 function list.flatten(ls)
-   if list.is_null(ls) then return ls;
+   if list.null(ls) then return ls;
    elseif list.is(list.car(ls)) then
       return list.append(list.flatten(list.car(ls)), list.flatten(list.cdr(ls)))
    else
@@ -204,7 +196,7 @@ function list.flatten(ls)
 end
 
 function list.reverse(ls)
-   if list.is_null(ls) then return ls;
+   if list.null(ls) then return ls;
    elseif #ls==1 then return ls;
    else return list.append(list.reverse(list.cdr(ls)), new(list.car(ls)))
    end
