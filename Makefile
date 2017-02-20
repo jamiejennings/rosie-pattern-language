@@ -61,7 +61,10 @@ INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
 
 BUILD_LUA_PACKAGE = $(BUILD_ROOT)/rosie.lua
 
-.PHONY: clean none sniff test default macosx linux windows none compile
+LUA_DIR = $(SUBMOD)/$(LUA)
+LPEG_DIR = $(SUBMOD)/$(LPEG)
+JSON_DIR = $(SUBMOD)/$(JSON)
+READLINE_DIR = $(SUBMOD)/$(READLINE)
 
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
@@ -156,7 +159,7 @@ lib/cjson.so: $(json_lib)
 $(json_lib): $(submodules)
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 
-bin/argparse.luac: submodules/argparse/src/argparse.lua
+lib/argparse.luac: submodules/argparse/src/argparse.lua
 	bin/luac -o $@ $<
 
 readline_lib = $(READLINE_DIR)/readline.so
@@ -164,7 +167,10 @@ lib/readline.so: $(readline_lib)
 	mkdir -p lib
 	cp $(readline_lib) lib
 
-compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so
+$(READLINE_DIR)/readline.so:
+	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) 
+
+compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so
 
 $(EXECROSIE): compile
 	@/usr/bin/env echo "Creating $(EXECROSIE)"
