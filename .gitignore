@@ -24,6 +24,7 @@ ffi/librosie/librosie_gen.h
 ffi/samples/C/rtest
 ffi/samples/**/setvars
 ffi/samples/nodejs/node_modules/*
+ffi/samples/python/*.pyc
 
 src/c/repl/rosie
 src/c/librosie/node_modules/*
