@@ -7,7 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
---co = require("color-output")
+co = require("color-output")
 
 -- color_write comes from color_output.lua
 color_write = (co and co.color_write) or function(channel, ignore_color, ...)

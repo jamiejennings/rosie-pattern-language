@@ -221,7 +221,7 @@ function setup_and_run_tests(args)
 	    test_line = "-- test" identifier testKeyword quoted_string (ignore "," ignore quoted_string)*
          ]==]
 
-      rosie.file.load(CL_ENGINE, "$sys/rpl/rpl-core.rpl", "rpl")
+      rosie.file.load(CL_ENGINE, "$sys/rpl/rpl-1.0.rpl", "rpl")
       load_string(CL_ENGINE, test_patterns)
       set_encoder(false)
       local failures = 0

@@ -1,12 +1,14 @@
 ---- -*- Mode: rpl; -*-                                                                             
 ---- vim:syn=rosie
 ----
----- rpl-core.rpl       Rosie Pattern Language definition for Rosie Pattern Language
+---- rpl-1.0.rpl       Rosie Pattern Language definition for Rosie Pattern Language
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+
+-- Requires an engine configured using the parser in parse.lua (and no macro expansion step)
 
 alias newline = {"\n"}				    -- raw mode just to suppress compiler warning 
 
