@@ -23,7 +23,7 @@
 --            (after being signaled) when in development mode.
 
 ----------------------------------------------------------------------------------------
--- Define important globals
+-- Define key globals
 ----------------------------------------------------------------------------------------
 -- The value of ROSIE_HOME on entry to this file is set by either:
 --    (1) The shell script bin/rosie, which was
@@ -32,11 +32,13 @@
 --         - When that script is invoked by the user in order to run Rosie,
 --           the script passes ROSIE_HOME to cli.lua, which has called this file (init).
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
+
 if not ROSIE_HOME then error("Error while initializing: variable ROSIE_HOME not set"); end
 
 -- When init is loaded from run-rosie, ROSIE_DEV will be a boolean (as set by cli.lua)
 -- When init is loaded from rosie.lua, ROSIE_DEV will be unset.  In this case, it should be set to
 -- true so that rosie errors do not invoke os.exit().
+
 ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
 
 local function read_version_or_die(home)
@@ -78,13 +80,13 @@ loader()
 -- Bootstrap the rpl parser, which is defined using "rpl 1.0" (defined in parse.lua)
 ---------------------------------------------------------------------------------------------------
 -- 
--- At this point, there is no default rpl parser set for new engines.  We create the ROSIE_ENGINE,
--- which will parse all incoming rpl, and set it up initially with the "rpl core parser", which is
--- hand-coded in parse.lua and accepts "rpl 1.0".
+-- The engines we create now will use parse.core_parse_and_explain, which defines "rpl 0.0",
+-- i.e. the core language (which has many limitations).
+-- 
+-- An engine that accepts "rpl 0.0" is needed to parse $ROSIE_HOME/rpl/rpl-1.0.rpl, which defines
+-- "rpl 1.0".  This is the version of rpl used for the Rosie v0.99x releases.
 --
 -- We use the rpl 1.0 parser to load the rpl 1.1 parser (which is obviously written in rpl 1.0).
--- After loading the definition of 1.1, we compile some patterns that will be used later to parse
--- rpl 1.1.
 
 local announcements = false
 local function announce(name, engine)
@@ -110,7 +112,6 @@ if not success then error("Error while initializing: could not compile "
 RPL_1_0_ENGINE._rpl_version = "1.0"
 announce("RPL_1_0_ENGINE", RPL_1_0_ENGINE)
 
-
 ROSIE_RPLX = result
 
 -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX
@@ -118,6 +119,7 @@ load_module("rpl-parser")
 local parse_and_explain = make_parse_and_explain(ROSIE_RPLX)
 -- And make these the defaults for all new engines:
 engine._set_default_rpl_parser(parse_and_explain, "1.1");
+
 ROSIE_ENGINE = engine.new("RPL 1.1 engine")
 announce("ROSIE_ENGINE", ROSIE_ENGINE)
 

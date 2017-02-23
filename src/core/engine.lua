@@ -159,7 +159,7 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 -- N.B. Macros are transformations on ASTs, so they leverage the (rough and in need of
 -- refactoring) syntax module.
 
-function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
+local function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    local env = common.new_env(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
    local astlist, orig_astlist = rpl_parser(pattern_exp)
@@ -273,7 +273,7 @@ end
 
 -- Lookup an identifier in the engine's environment, and get a human-readable definition of it
 -- (reconstituted from its ast).  If identifier is null, return the entire environment.
-function get_environment(en, identifier)
+local function get_environment(en, identifier)
    if identifier then
       local val =  en._env[identifier]
       return val and pattern_properties(identifier, val)
@@ -314,7 +314,7 @@ rplx.create_function =
 
 local default_rpl_parser = parse.core_parse_and_explain;
 local default_rpl_version = "0.0"
-function set_default_rpl_parser(parse_expand_explain, version_string)
+local function set_default_rpl_parser(parse_expand_explain, version_string)
    default_rpl_parser = parse_expand_explain
    default_rpl_version = version_string
 end
