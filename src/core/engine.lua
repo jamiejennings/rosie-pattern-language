@@ -173,7 +173,7 @@ function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    assert(type(pats)=="table" and pats[1])
    local replacement = pats[1].ast
    -- Next, transform pat.ast
-   local astlist, orig_astlist = parse_and_explain("{{!e .}* e}+")
+   local astlist, orig_astlist = rpl_parser("{{!e .}* e}+")
    assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
    local template = astlist[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
@@ -313,7 +313,7 @@ rplx.create_function =
    end
 
 local default_rpl_parser = parse.core_parse_and_explain;
-local default_rpl_version = "1.0"
+local default_rpl_version = "0.0"
 function set_default_rpl_parser(parse_expand_explain, version_string)
    default_rpl_parser = parse_expand_explain
    default_rpl_version = version_string

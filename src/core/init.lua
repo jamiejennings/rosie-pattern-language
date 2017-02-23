@@ -75,7 +75,7 @@ if not loader then error("Internal error while loading modules: " .. msg); end
 loader()
 
 ---------------------------------------------------------------------------------------------------
--- Bootstrap the rpl parser, which is defined using the "core parser" (defined in parse.lua)
+-- Bootstrap the rpl parser, which is defined using "rpl 1.0" (defined in parse.lua)
 ---------------------------------------------------------------------------------------------------
 -- 
 -- At this point, there is no default rpl parser set for new engines.  We create the ROSIE_ENGINE,
@@ -86,24 +86,40 @@ loader()
 -- After loading the definition of 1.1, we compile some patterns that will be used later to parse
 -- rpl 1.1.
 
-ROSIE_ENGINE = engine.new("RPL engine")
-local core_rpl_filename = ROSIE_HOME.."/rpl/rpl-core.rpl"
-local core_rpl = util.readfile(core_rpl_filename)
-ROSIE_ENGINE._rpl_version = "1.0"
-ROSIE_ENGINE._rpl_parser = parse.core_parse_and_explain
-ROSIE_ENGINE:load(core_rpl)
-local success, result, messages = pcall(ROSIE_ENGINE.compile, ROSIE_ENGINE, 'rpl')
+local announcements = false
+local function announce(name, engine)
+   if announcements then
+      print(name .. " created: _rpl_version = ".. engine._rpl_version ..
+	                    "; _rpl_parser = " .. tostring(engine._rpl_parser))
+   end
+end
+
+CORE_ENGINE = engine.new("RPL core engine")
+announce("CORE_ENGINE", CORE_ENGINE)
+
+local rpl_1_0_filename = ROSIE_HOME.."/rpl/rpl-1.0.rpl"
+local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
+if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
+RPL_1_0_ENGINE = engine.new("RPL 1.0 engine")
+RPL_1_0_ENGINE._rpl_parser = parse.core_parse_and_explain
+RPL_1_0_ENGINE:load(rpl_1_0)
+local success, result, messages = pcall(RPL_1_0_ENGINE.compile, RPL_1_0_ENGINE, 'rpl')
 if not success then error("Error while initializing: could not compile "
-			  .. core_rpl_filename .. ":\n" .. tostring(result)); end
+			  .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
+
+RPL_1_0_ENGINE._rpl_version = "1.0"
+announce("RPL_1_0_ENGINE", RPL_1_0_ENGINE)
+
 
 ROSIE_RPLX = result
 
 -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX
 load_module("rpl-parser")
-ROSIE_ENGINE._rpl_parser = parse_and_explain
-ROSIE_ENGINE._rpl_version = "1.1"
+local parse_and_explain = make_parse_and_explain(ROSIE_RPLX)
 -- And make these the defaults for all new engines:
 engine._set_default_rpl_parser(parse_and_explain, "1.1");
+ROSIE_ENGINE = engine.new("RPL 1.1 engine")
+announce("ROSIE_ENGINE", ROSIE_ENGINE)
 
 ----------------------------------------------------------------------------------------
 -- INFO for debugging

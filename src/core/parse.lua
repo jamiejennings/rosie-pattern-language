@@ -544,7 +544,7 @@ end
 
 -- For parsing the Rosie core:
 function parse.core_parse_and_explain(source)
-   assert(type(source)=="string", "Compiler: source argument is not a string: "..tostring(source))
+   assert(type(source)=="string", "Core parser: source argument is not a string: "..tostring(source))
    local astlist, errlist = parse.parse(source)
    if #errlist~=0 then
       local msg = "Core parser reports syntax errors:\n"
