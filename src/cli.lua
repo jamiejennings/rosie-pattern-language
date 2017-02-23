@@ -92,7 +92,7 @@ local function load_string(en, input)
    return results, messages
 end
 
-function setup_engine(args)
+local function setup_engine(args)
    -- (1a) Load the manifest
    if args.manifest then
       if args.verbose then
@@ -145,7 +145,7 @@ end
 
 infilename, outfilename, errfilename = nil, nil, nil
 
-function process_pattern_against_file(args, infilename)
+local function process_pattern_against_file(args, infilename)
 	-- (3) Set up the input, output and error parameters
 	if infilename=="-" then infilename = ""; end	    -- stdin
 	outfilename = ""				    -- stdout
@@ -169,7 +169,7 @@ function process_pattern_against_file(args, infilename)
 	end
 end
 
-function setup_and_run_tests(args)
+local function setup_and_run_tests(args)
    -- first, set up the rosie CLI engine and automatically load the file being tested (after
    -- loading all the other stuff per the other command line args and defaults)
    if not args.rpls then
@@ -256,7 +256,7 @@ function setup_and_run_tests(args)
 end
 
 
-function run(args)
+local function run(args)
    if args.command == "info" then
       greeting()
       print_rosie_info()
