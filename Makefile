@@ -77,6 +77,7 @@ clean:
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
 	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
+	rm -f $(submodule_sentinel)
 
 .PHONY: none
 none:
@@ -84,7 +85,7 @@ none:
 
 ## ----------------------------------------------------------------------------- ##
 
-CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../lua 
+CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../$(LUA) 
 CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-fpic
 CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
 CJSON_MAKE_ARGS += CJSON_CFLAGS+="-pthread -DMULTIPLE_THREADS"
@@ -124,7 +125,7 @@ windows:
 # (1) the submodule must have been checked out, and
 # (2) the sentinel will not be newer than the submodule files
 submodule_sentinel=submodules/~~present~~ 
-submodules = submodules/lua/src/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile
+submodules = submodules/lua/src/Makefile submodules/lua-cjson/Makefile submodules/rosie-lpeg/src/makefile submodules/lua-readline/Makefile
 $(submodules): $(submodule_sentinel)
 
 $(submodule_sentinel): 
@@ -149,7 +150,7 @@ lib/lpeg.so: $(lpeg_lib)
 	cp $(lpeg_lib) lib
 
 $(lpeg_lib): $(submodules)
-	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../lua
+	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../$(LUA)
 
 json_lib = $(JSON_DIR)/cjson.so
 lib/cjson.so: $(json_lib)
@@ -168,7 +169,7 @@ lib/readline.so: $(readline_lib)
 	cp $(readline_lib) lib
 
 $(READLINE_DIR)/readline.so:
-	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) 
+	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUA_INCLUDE_DIR=../$(LUA)/include
 
 compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so
 
