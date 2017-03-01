@@ -131,7 +131,14 @@ set_property(
 	TARGET lua-bin luac
 	APPEND_STRING
 	PROPERTY COMPILE_FLAGS " -O2 -Wall -Wextra -DLUA_COMPAT_5_2")
-if(UNIX)
+if(APPLE)
+	set_property(
+		TARGET lua-bin luac
+		APPEND_STRING
+		PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX")
+	# TODO: Add the rest of MacOSX stuff
+	message(FATAL_ERROR "MacOSX is not completely done, stopping")
+elseif(UNIX)
 	set_property(
 		TARGET lua-bin luac
 		APPEND_STRING
@@ -143,14 +150,10 @@ if(UNIX)
 	target_link_libraries(lua-lib dl readline)
 	target_link_libraries(lua-bin dl readline m)
 	target_link_libraries(luac dl readline m)
-elseif(APPLE)
-	set_property(
-		TARGET lua-bin luac
-		APPEND_STRING
-		PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX")
-	# TODO: Add the rest of MacOSX stuff
-else()
+elseif(WIN32)
 	# TODO: Add Windows support
+	message(FATAL_ERROR "Windows not set up yet")
+else()
 	message(FATAL_ERROR "No build for ${CMAKE_SYSTEM_NAME}")
 endif()
 # }}}
@@ -205,6 +208,7 @@ if(WIN32)
 endif()
 
 add_library(cjson SHARED ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
+add_dependencies(cjson lua-lib)
 set_target_properties(cjson
 	PROPERTIES
 	PREFIX "")
@@ -272,9 +276,7 @@ set_property(
 	APPEND_STRING
 	PROPERTY COMPILE_FLAGS " -fPIC -O2 -Wl,--retain-symbols-file=${READLINE_DIR}/readline.map")
 
-if(UNIX)
-	target_link_libraries(lua-readline readline)
-elseif(APPLE)
+if(APPLE)
 	if(USE_LIBEDIT)
 		set_property(
 			TARGET lua-readline
@@ -285,14 +287,18 @@ elseif(APPLE)
 		TARGET lua-readline
 		APPEND_STRING
 		PROPERTY LINK_FLAGS " -bundle -undefined dynamic_lookup -macosx_version_min 10.11")
-else()
+elseif(UNIX)
+	target_link_libraries(lua-readline readline)
+elseif(WIN32)
 	# TODO: Add Windows
+	message(FATAL_ERROR "Windows not set up yet")
+else()
 	message(FATAL_ERROR "No build for ${CMAKE_SYSTEM_NAME}")
 endif()
 # }}}
 
 # {{{ lua-argparse
-message(STATUS "Add lua-argparse submodule")
+message(STATUS "Processing lua-argparse submodule")
 
 # Since we only compile argparse.lua don't worry about add_subdirectory
 # Only check for existing folder
@@ -317,6 +323,8 @@ list(APPEND COMPILED_LUA_FILES argparse.luac)
 # }}} Submodules
 
 # {{{ Generate Rosie core luac files
+message(STATUS "Processing rosie core files")
+
 file(GLOB CORE_LUA ${CMAKE_SOURCE_DIR}/src/core/*)
 
 add_custom_target(core-rosie ALL
@@ -335,6 +343,7 @@ endforeach(lua_file ${CORE_LUA})
 # }}}
 
 # {{{ Install files
+message(STATUS "Processing installation rules")
 
 # generate run-rosie
 file(WRITE ${BUILD_BIN_DIR}/rosie
@@ -361,12 +370,53 @@ install(FILES
 install(FILES
 	${CMAKE_SOURCE_DIR}/src/cli.lua
 	DESTINATION ${ROSIE_INSTALL_BASE_DIR}/src)
-install(FILES
+install(PROGRAMS
 	${CMAKE_SOURCE_DIR}/src/run-rosie
-	DESTINATION ${ROSIE_INSTALL_BASE_DIR}/src
-	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-install(FILES
+	DESTINATION ${ROSIE_INSTALL_BASE_DIR}/src)
+install(PROGRAMS
 	${BUILD_BIN_DIR}/rosie
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 # }}}
+
+# {{{ Packaging
+message(STATUS "Processing packaging information")
+
+set(CPACK_PACKAGE_NAME "rosie")
+set(CPACK_PACKAGE_VERSION "1.0")
+set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/README)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A PEG-based alternative to regular expressions")
+set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_SOURCE_DIR}/LICENSE)
+
+if(NOT CPACK_GENERATOR)
+	if(APPLE)
+		# apple stuff
+	elseif(UNIX)
+		# determine possible generators
+		# Look for RPM
+		find_program(rpmbuild_path "rpmbuild")
+		if(rpmbuild_path)
+			set(CPACK_GENERATOR RPM)
+			set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+			set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/usr/local;/usr/local/bin;/usr/local/lib")
+			if(NOT CPACK_RPM_PACKAGE_RELEASE)
+				set(CPACK_RPM_PACKAGE_RELEASE 1)
+			endif(NOT CPACK_RPM_PACKAGE_RELEASE)
+			set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_RPM_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}")
+		endif(rpmbuild_path)
+		# Look for DEB
+		find_program(dpkg_path "dpkg")
+		if(dpkg_path)
+			set(CPACK_GENERATOR DEB)
+		endif(dpkg_path)
+	else()
+		# no stuff
+	endif()
+endif(NOT CPACK_GENERATOR)
+
+if(CPACK_GENERATOR)
+	message(STATUS "CPack Generator: ${CPACK_GENERATOR}")
+	include(CPack)
+endif(CPACK_GENERATOR)
+
+# }}}
+

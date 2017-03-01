@@ -25,4 +25,5 @@ cmake ${builddir}/CMakeCache.txt:
 clean:
 	$(RM) -rf ${builddir}
 
-
+package: cmake
+	$(MAKE) -C ${builddir} package
