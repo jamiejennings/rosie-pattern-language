@@ -72,8 +72,12 @@ if value then ROSIE_ROOT = value; end
 -- Load the entire rosie world... (which includes the "core" parser for "rpl 1.0")
 ---------------------------------------------------------------------------------------------------
 
-local loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", _ENV)
-if not loader then error("Internal error while loading modules: " .. msg); end
+local loader, msg = loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", _ENV)
+if not loader then
+   -- try loading from source file instead
+   loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", _ENV)
+   if not loader then error("Internal error while loading modules: " .. msg); end
+end
 loader()
 
 ---------------------------------------------------------------------------------------------------

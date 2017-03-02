@@ -6,8 +6,7 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
--- TODO: add support for loading .luac files
--- TODO: Create a .so loader and add error checking
+-- TODO: Create a proper .so loader and add error checking
 
 ----------------------------------------------------------------------------------------
 -- Check for prerequisite conditions before loading any code
