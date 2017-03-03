@@ -312,9 +312,14 @@ rplx.create_function =
       return _new(params)
    end
 
-local default_rpl_parser = parse.core_parse_and_explain;
-local default_rpl_version = "0.0"
+local default_rpl_parser = function(...) error("default_rpl_parser not initialized"); end --parse.core_parse_and_explain;
+local default_rpl_version = "default_rpl_version not set"
 local function set_default_rpl_parser(parse_expand_explain, version_string)
+   if type(parse_expand_explain)~="function" then
+      error("default_rpl_parser not a function: " .. tostring(default_rpl_parser))
+   elseif type(version_string)~="string" then
+      error("default_rpl_version not a string: " .. tostring(version_string))
+   end
    default_rpl_parser = parse_expand_explain
    default_rpl_version = version_string
 end

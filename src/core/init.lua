@@ -91,9 +91,9 @@ loader()
 -- "rpl 1.0".  This is the version of rpl used for the Rosie v0.99x releases.
 --
 
-local announcements = false
+local make_announcements = false
 local function announce(name, engine)
-   if announcements then
+   if make_announcements then
       print(name .. " created: _rpl_version = ".. engine._rpl_version ..
 	                    "; _rpl_parser = " .. tostring(engine._rpl_parser))
    end
@@ -101,7 +101,6 @@ end
 
 -- Create a core engine that accepts rpl 0.0
 CORE_ENGINE = engine.new("RPL core engine")
-CORE_ENGINE._rpl_version = "0.0"
 
 announce("CORE_ENGINE", CORE_ENGINE)
 
