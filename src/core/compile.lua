@@ -558,17 +558,6 @@ end
 --    end
 -- end
 
--- rpl_parser contract:
---   parse source to produce original_astlist;
---   transform original_astlist as needed (e.g. syntax expand); 
---   return the result (astlist) as the first value, and original_astlist as the second
---   if any step fails, generate a useful error message (msg) and return false, msg
-function compile.compile_source(rpl_parser, source, env)
-   local astlist, original_astlist = rpl_parser(source)
-   if not astlist then return false, original_astlist; end -- original_astlist is error msg (string)
-   return cinternals.compile_astlist(astlist, original_astlist, source, env)
-end
-
 function cinternals.compile_match_ast(astlist, original_astlist, source, env)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")

@@ -258,10 +258,25 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 
 -- load rpl into the engine.  the rpl input has "file scope".
 -- returns a possibly-empty table of messages; throws an error if compilation fails.
+-- rpl_parser contract:
+--   parse source to produce original_astlist;
+--   transform original_astlist as needed (e.g. syntax expand); 
+--   return the result (astlist) as the first value, and original_astlist as the second
+--   if any step fails, generate a useful error message (msg) and return false, msg
+
 local function load_string(e, input)
-   local results, messages = compile.compile_source(e._rpl_parser, input, e._env)
-   if not results then engine_error(e, messages); end -- messages is a string in this case
-   return common.compact_messages(messages)	    -- return a list of zero or more strings
+   local astlist, original_astlist = e._rpl_parser(input)
+   if not astlist then
+      engine_error(e, original_astlist)		    -- original_astlist is error msg (string)
+   end
+   local results, messages = cinternals.compile_astlist(astlist, original_astlist, input, e._env)
+   if results then
+      assert(type(messages)=="table")
+      return common.compact_messages(messages)      
+   else
+      assert(type(messages)=="string")
+      engine_error(e, messages)
+   end
 end
 
 ----------------------------------------------------------------------------------------
