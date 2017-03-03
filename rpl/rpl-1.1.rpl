@@ -7,6 +7,9 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+-- We could have written the rpl 1.1 parser in rpl 1.0, but instead it is written in the rpl core,
+-- i.e. rpl 0.0.  By doing this, we can drop rpl 1.0 entirely in the future if we wish.
+
 
 alias newline = [\n]
 
@@ -117,7 +120,7 @@ language_decl = ignore "rpl" version_spec
 package_decl = ignore "package" packagename ("," packagename)*
 import_decl = ignore "import" import_spec ("," import_spec)*
 
-rpl_file = language_decl? package_decl import_decl* statement*
+rpl_file = language_decl? package_decl import_decl* statement* ignore
 
 ---------------------------------------------------------------------------------------------------
 -- Tests

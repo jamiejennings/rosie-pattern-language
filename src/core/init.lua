@@ -90,7 +90,6 @@ loader()
 -- An engine that accepts "rpl 0.0" is needed to parse $ROSIE_HOME/rpl/rpl-1.0.rpl, which defines
 -- "rpl 1.0".  This is the version of rpl used for the Rosie v0.99x releases.
 --
--- We use the rpl 1.0 parser to load the rpl 1.1 parser (which is obviously written in rpl 1.0).
 
 local announcements = false
 local function announce(name, engine)
@@ -100,21 +99,21 @@ local function announce(name, engine)
    end
 end
 
+-- Create a core engine that accepts rpl 0.0
 CORE_ENGINE = engine.new("RPL core engine")
+CORE_ENGINE._rpl_version = "0.0"
+
 announce("CORE_ENGINE", CORE_ENGINE)
 
+-- Into the core engine, load the rpl 1.0 definition, which is written in rpl 0.0
 local rpl_1_0_filename = ROSIE_HOME.."/rpl/rpl-1.0.rpl"
 local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
 if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
-RPL_1_0_ENGINE = engine.new("RPL 1.0 engine")
-RPL_1_0_ENGINE._rpl_parser = parse.core_parse_and_explain
-RPL_1_0_ENGINE:load(rpl_1_0)
-local success, result, messages = pcall(RPL_1_0_ENGINE.compile, RPL_1_0_ENGINE, 'rpl')
+CORE_ENGINE._rpl_parser = parse.core_parse_and_explain
+CORE_ENGINE:load(rpl_1_0)
+local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl')
 if not success then error("Error while initializing: could not compile "
 			  .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-
-RPL_1_0_ENGINE._rpl_version = "1.0"
-announce("RPL_1_0_ENGINE", RPL_1_0_ENGINE)
 
 ROSIE_RPLX = result
 
@@ -122,9 +121,9 @@ ROSIE_RPLX = result
 load_module("rpl-parser")
 local parse_and_explain = make_parse_and_explain(ROSIE_RPLX)
 -- And make these the defaults for all new engines:
-engine._set_default_rpl_parser(parse_and_explain, "1.1");
+engine._set_default_rpl_parser(parse_and_explain, "1.0");
 
-ROSIE_ENGINE = engine.new("RPL 1.1 engine")
+ROSIE_ENGINE = engine.new("RPL 1.0 engine")
 announce("ROSIE_ENGINE", ROSIE_ENGINE)
 
 ----------------------------------------------------------------------------------------
