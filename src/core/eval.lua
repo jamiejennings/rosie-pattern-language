@@ -14,7 +14,6 @@
 -- compiler.  (In other words, the interpreter called 'eval' should have the same semantics as the
 -- compiler.)  Toward that end, functions internal to the compiler are used liberally here.
 
-local parse = require "parse"
 local compile = require "compile"
 local cinternals = compile.cinternals
 local common = require "common"
@@ -78,7 +77,7 @@ end
 local function reveal_ast_indented(a, indent)
    -- grammars are revealed across multiple lines, so we must replace newlines
    -- in the value returned by 'reveal' with newline+indent
-   local s = parse.reveal_ast(a)
+   local s = writer.reveal_ast(a)
    return s:gsub("\n", "\n"..string.rep(" ", indent))
 end
 
@@ -92,7 +91,7 @@ end
 -- and try to match each piece.
 
 local function eval_ref(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
-   msg = msg .. indent_(indent) .. "REFERENCE: " .. parse.reveal_ast(a) .. "\n"
+   msg = msg .. indent_(indent) .. "REFERENCE: " .. writer.reveal_ast(a) .. "\n"
    local pat = cinternals.compile_ref(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    local m, pos = eval.match_peg(pat.peg, input, start) 
@@ -119,7 +118,7 @@ local function eval_ref(a, input, start, gmr, source, env, indent, fail_output_o
 end
 
 local function eval_sequence(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
-   msg = msg .. indent_(indent) .. "SEQUENCE: " .. parse.reveal_ast(a) .. "\n"
+   msg = msg .. indent_(indent) .. "SEQUENCE: " .. writer.reveal_ast(a) .. "\n"
    
    local pat = cinternals.compile_sequence(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start) 
@@ -145,7 +144,7 @@ local function eval_sequence(a, input, start, gmr, source, env, indent, fail_out
 end
 
 local function eval_choice(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
-   msg = msg .. indent_(indent) .. "CHOICE: " .. parse.reveal_ast(a) .. "\n"
+   msg = msg .. indent_(indent) .. "CHOICE: " .. writer.reveal_ast(a) .. "\n"
    
    local pat = cinternals.compile_choice(a, gmr, source, env)
    local m, pos
@@ -186,14 +185,14 @@ local function eval_quantified_exp(a, input, start, gmr, source, env, indent, fa
    msg = msg .. step_(indent, step,
 		      "QUANTIFIED EXP (",
 		      (append_boundary and "tokenized/cooked): ") or "raw): ",
-		      parse.reveal_ast(a),
+		      writer.reveal_ast(a),
 		      "\n")
    local m, pos = eval.match_peg(qpeg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if (not m) or (not fail_output_only) then
       local name, pos, text, subs = common.decode_match(a)
-      local revealed_ast = parse.reveal_ast(subs[1])
+      local revealed_ast = writer.reveal_ast(subs[1])
       msg = msg .. indent_(indent) .. "Explanation (EXPRESSION): " .. revealed_ast
             .. " must match a minimum of " .. min .. ((max and (" and maximum of " .. max)) or "")
 	    .. " time" .. ((((max and (max~=1)) or (not max and (min~=1))) and "s") or "");
@@ -230,7 +229,7 @@ local function eval_quantified_exp(a, input, start, gmr, source, env, indent, fa
 end
 
 local function eval_literal(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
-   msg = msg .. step_(indent, step, "LITERAL: ", parse.reveal_ast(a), "\n")
+   msg = msg .. step_(indent, step, "LITERAL: ", writer.reveal_ast(a), "\n")
    local pat = cinternals.compile_literal(a)
    local name, pos, text, subs = common.decode_match(a)
    local m, pos = eval.match_peg(pat.peg, input, start)
@@ -242,7 +241,7 @@ local function eval_charset(a, input, start, gmr, source, env, indent, fail_outp
    local name, pos, text, subs = common.decode_match(a)
    msg = msg .. step_(indent, step,
 		      "CHARACTER SET: ",
-		      parse.reveal_ast(a),
+		      writer.reveal_ast(a),
 		      (name=="range" and " (a character range)") or (" (a set of " .. #subs .. " characters)"),
 		      "\n")
    local pat = cinternals.compile_charset(a, gmr, source, env)
@@ -255,7 +254,7 @@ local function eval_charlist(a, input, start, gmr, source, env, indent, fail_out
    local name, pos, text, subs = common.decode_match(a)
    msg = msg .. step_(indent, step,
 		      "CHARACTER SET: ",
-		      parse.reveal_ast(a),
+		      writer.reveal_ast(a),
 		      " (a set of " .. #subs .. " characters)\n")
    local pat = cinternals.compile_charlist(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start) 
@@ -267,7 +266,7 @@ local function eval_range(a, input, start, gmr, source, env, indent, fail_output
    local name, pos, text, subs = common.decode_match(a)
    msg = msg .. step_(indent, step,
 		      "CHARACTER SET: ",
-		      parse.reveal_ast(a),
+		      writer.reveal_ast(a),
 		      " (a character range)\n")
    local pat = cinternals.compile_range_charset(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start) 
@@ -276,7 +275,7 @@ local function eval_range(a, input, start, gmr, source, env, indent, fail_output
 end
 
 local function eval_named_charset(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
-   msg = msg .. step_(indent, step, "NAMED CHARSET: ", parse.reveal_ast(a), "\n")
+   msg = msg .. step_(indent, step, "NAMED CHARSET: ", writer.reveal_ast(a), "\n")
    local pat = cinternals.compile_named_charset(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
@@ -284,7 +283,7 @@ local function eval_named_charset(a, input, start, gmr, source, env, indent, fai
 end
 
 local function eval_predicate(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
-   msg = msg .. step_(indent, step, "PREDICATE: ", parse.reveal_ast(a), "\n")
+   msg = msg .. step_(indent, step, "PREDICATE: ", writer.reveal_ast(a), "\n")
    
    local pat = cinternals.compile_predicate(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start)
@@ -293,7 +292,7 @@ local function eval_predicate(a, input, start, gmr, source, env, indent, fail_ou
    if not(m and fail_output_only) then
       -- descend into exp
       local name, pos, text, subs = common.decode_match(a)
-      msg = msg .. indent_(indent) .. "Explanation (EXPRESSION): " .. parse.reveal_ast(a) ..  "\n"
+      msg = msg .. indent_(indent) .. "Explanation (EXPRESSION): " .. writer.reveal_ast(a) ..  "\n"
       local dm, dpos
       dm, dpos, msg = eval_exp(subs[2], input, start, gmr, source, env, indent+delta,
 				 fail_output_only, step, msg)

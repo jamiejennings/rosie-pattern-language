@@ -85,17 +85,18 @@ local readline_loader = package.loadlib(ROSIE_HOME .. "/lib/readline.so", "luaop
 readline = readline_loader()
 module.loaded.readline = readline
 
+-- These MUST have a partial order so that dependencies can be loaded first
 recordtype = load_module("recordtype")
 util = load_module("util")
 common = load_module("common")
 list = load_module("list")
+writer = load_module("writer")
 syntax = load_module("syntax")
 parse = load_module("parse")
 compile = load_module("compile")
 eval = load_module("eval")
 color_output = load_module("color-output")
 engine = load_module("engine")
-
 manifest = load_module("manifest")
 
 process_input_file = load_module("process_input_file")

@@ -12,9 +12,9 @@ local cinternals = {}				    -- exported interface to compiler internals
 
 local common = require "common"
 local pattern = common.pattern
-local parse = require "parse"			    -- core rpl parser and AST functions
 local lpeg = require "lpeg"
 local util = require "util"
+local writer = require "writer"
 
 local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt, lpeg.B
@@ -32,7 +32,7 @@ local function explain_quantified_limitation(a, source, maybe_rule)
    local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
    local msg = "Compile error: pattern with quantifier can match the empty string: " ..
-      rule_explanation .. "\n" .. parse.reveal_ast(a) .. "\n" ..
+      rule_explanation .. "\n" .. writer.reveal_ast(a) .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos) .. "^"
@@ -46,7 +46,7 @@ local function explain_repetition_error(a, source)
    local min = tonumber(rep_args[1]) or 0
    local max = tonumber(rep_args[2])
    local msg = "Compile error: integer quantifiers must be positive, and min <= max \n" ..
-      "Error is in expression: " .. parse.reveal(a) .. "\n" ..
+      "Error is in expression: " .. writer.reveal(a) .. "\n" ..
       string.format("At line %d:\n", lnum) ..
       string.format("%s\n", line) ..
       string.rep(" ", pos-1) .. "^"
@@ -314,7 +314,7 @@ end
 
 function cinternals.compile_syntax_error(a, gmr, source, env)
    assert(a, "did not get ast in compile_syntax_error")
-   error("Compiler called on source code with errors! " .. parse.reveal_exp(a))
+   error("Compiler called on source code with errors! " .. writer.reveal_exp(a))
 end
 
 function cinternals.compile_grammar_rhs(a, gmr, source, env)
@@ -476,7 +476,7 @@ function cinternals.compile_rhs(a, gmr, source, env, iname)
    assert(type(a)=="table", "did not get ast in compile_rhs: " .. tostring(a))
    if not compile.expression_p(a) then
       local msg = string.format('Compile error: expected an expression, but received %q',
-				parse.reveal_ast(a))
+				writer.reveal_ast(a))
       error(msg)
    end
    local pat = cinternals.compile_exp(a, gmr, source, env)
@@ -561,7 +561,7 @@ function cinternals.compile_match_expression(astlist, original_astlist, source, 
    if (#astlist~=1) then
       local msg = "Error: source did not compile to a single pattern: " .. source
       for i, a in ipairs(astlist) do
-	 msg = msg .. "\nPattern " .. i .. ": " .. parse.reveal_ast(a)
+	 msg = msg .. "\nPattern " .. i .. ": " .. writer.reveal_ast(a)
       end
       return false, msg
    elseif not compile.expression_p(astlist[1]) then

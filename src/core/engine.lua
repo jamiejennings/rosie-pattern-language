@@ -85,7 +85,7 @@ local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified;
 local common = require "common"
-local parse = require "parse"
+local writer = require "writer"
 local compile = require "compile"
 local cinternals = compile.cinternals
 local eval = require "eval"
@@ -257,8 +257,8 @@ end
 
 local function reconstitute_pattern_definition(id, p)
    if p then
-      return ( (p.original_ast and parse.reveal_ast(p.original_ast)) or
-	       (p.ast and parse.reveal_ast(p.ast)) or
+      return ( (p.original_ast and writer.reveal_ast(p.original_ast)) or
+	       (p.ast and writer.reveal_ast(p.ast)) or
 	        "// built-in RPL pattern //" )
    end
    engine_error(e, "undefined identifier: " .. id)
