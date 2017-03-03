@@ -327,8 +327,8 @@ common.pattern =
       alias=false;			 -- is this an alias or not
       raw=false;                         -- true if the exp was raw at top level
       ast=false;			 -- ast that generated this pattern, for pattern debugging
-      original_ast=false;
-      
+      original_ast=false;		 -- ast after parser, before syntax expansion
+      extra=false;	                 -- extra info that depends on node type
 --      source=unspecified;		 -- source (rpl filename and line)
 --      uuid=unspecified;
 

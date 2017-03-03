@@ -159,7 +159,8 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 -- N.B. Macros are transformations on ASTs, so they leverage the (rough and in need of
 -- refactoring) syntax module.
 
-local function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
+local function compile_search(en, pattern_exp)
+   local rpl_parser, env = en._rpl_parser, en._env
    local env = common.new_env(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
    local astlist, orig_astlist = rpl_parser(pattern_exp)
@@ -168,7 +169,7 @@ local function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    if not compile.expression_p(astlist[1]) then
       return nil, "match expression cannot be rpl statement"
    end
-   local pats, msg = cinternals.compile_astlist(astlist, pattern_exp, env)
+   local pats, msg = cinternals.compile_astlist(astlist, orig_astlist, pattern_exp, env)
    if not pats then return nil, msg; end
    assert(type(pats)=="table" and pats[1])
    local replacement = pats[1].ast
@@ -178,9 +179,19 @@ local function compile_expression_to_grep_pattern(rpl_parser, pattern_exp, env)
    local template = astlist[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   local pat, msg = cinternals.compile_match_expression({grep_ast}, {grep_ast}, "grep(" .. pattern_exp .. ")", env)
+   local pat, msg = cinternals.compile_match_ast({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
    if not pat then return nil, msg; end
    return pat
+end
+
+local function compile_match(en, source)
+   local rpl_parser, env = en._rpl_parser, en._env
+   assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
+   local astlist, original_astlist = rpl_parser(source)
+   if (not astlist) then
+      return false, original_astlist		    -- original_astlist is msg
+   end
+   return cinternals.compile_match_ast(astlist, original_astlist, source, env)
 end
 
 local function engine_compile(en, expression, flavor)
@@ -189,9 +200,9 @@ local function engine_compile(en, expression, flavor)
    if type(flavor)~="string" then engine_error(en, "Flavor not a string: " .. tostring(flavor)); end
    local pat, msg
    if flavor=="match" then
-      pat, msg = compile.compile_match_expression(en._rpl_parser, expression, en._env)
+      pat, msg = compile_match(en, expression)
    elseif flavor=="search" then
-      pat, msg = compile_expression_to_grep_pattern(en._rpl_parser, expression, en._env)
+      pat, msg = compile_search(en, expression)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end

@@ -187,7 +187,11 @@ end
 function cinternals.compile_new_quantified_exp(a, gmr, source, env)
    assert(a, "did not get ast in compile_cooked_quantified_exp")
    local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, gmr, source, env)
-   return pattern{name=qname, peg=qpeg, ast=a};
+   return pattern{name=qname, peg=qpeg, ast=a, extra={epeg=epeg,
+						      append_boundary=append_boundary,
+						      qname=qname,
+						      min=min,
+						      max=max} }
 end
 
 function cinternals.compile_literal(a, gmr, source, env)
@@ -317,14 +321,14 @@ function cinternals.compile_syntax_error(a, gmr, source, env)
    error("Compiler called on source code with errors! " .. writer.reveal_exp(a))
 end
 
-function cinternals.compile_grammar_rhs(a, gmr, source, env)
-   assert(a, "did not get ast in compile_grammar_rhs")
+function cinternals.compile_grammar_expression(a, gmr, source, env)
+   assert(a, "did not get ast in compile_grammar_expression")
    local name, pos, text, subs = common.decode_match(a)
-   assert(name=="grammar_" or name=="new_grammar")
+   assert(name=="grammar_" or name=="new_grammar" or name=="grammar_expression")
    assert(type(subs[1])=="table")
    local gtable = common.new_env(env)
    local first = subs[1]			    -- first rule in grammar
-   assert(first, "not getting first rule in compile_grammar_rhs")
+   assert(first, "not getting first rule in compile_grammar_expression")
    local fname, fpos, ftext = common.decode_match(first)
    assert(first and (fname=="binding"))
 
@@ -333,7 +337,7 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
    -- first pass: collect rule names as V() refs into a new env
    for i = 1, #subs do			    -- for each rule
       local rule = subs[i]
-      assert(rule, "not getting rule in compile_grammar_rhs")
+      assert(rule, "not getting rule in compile_grammar_expression")
       local rname, rpos, rtext, rsubs = common.decode_match(rule)
       assert(rname=="binding")
       local id_node = rsubs[1]			    -- identifier clause
@@ -350,14 +354,14 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
    local start
    for i = 1, #subs do			    -- for each rule
       rule = subs[i]
-      assert(rule, "not getting rule in compile_grammar_rhs")
+      assert(rule, "not getting rule in compile_grammar_expression")
       local rname, rpos, rtext, rsubs = common.decode_match(rule)
       id_node = rsubs[1]			    -- identifier clause
-      assert(id_node, "not getting id_node in compile_grammar_rhs")
+      assert(id_node, "not getting id_node in compile_grammar_expression")
       local iname, ipos, id, isubs = common.decode_match(id_node)
       if not start then start=id; end		    -- first rule is start rule
       exp_node = rsubs[2]			    -- expression clause
-      assert(exp_node, "not getting exp_node in compile_grammar_rhs")
+      assert(exp_node, "not getting exp_node in compile_grammar_expression")
       pats[id] = cinternals.compile_exp(exp_node, true, source, gtable) -- gmr flag is true 
    end -- for
 
@@ -370,6 +374,7 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
    if success then
       return start, pattern{name="grammar", peg=peg_or_msg, ast=a, alias=gtable[t[1]].alias}
    else -- failed
+      assert(type(peg_or_msg)=="string", "Internal error (compiler) while reporting an error in a grammar")
       local rule = peg_or_msg:match("'%w'$")
       table.print(a)				    -- !@#
       print(peg_or_msg)				    -- !@#
@@ -380,7 +385,7 @@ function cinternals.compile_grammar_rhs(a, gmr, source, env)
 end
 
 function cinternals.compile_grammar(a, gmr, source, env)
-   local name, pat = cinternals.compile_grammar_rhs(a, gmr, source, env)
+   local name, pat = cinternals.compile_grammar_expression(a, gmr, source, env)
    -- if no pattern returned, then errors were already explained
    if pat then
       local msg
@@ -388,7 +393,7 @@ function cinternals.compile_grammar(a, gmr, source, env)
       env[name] = pat
       return pat, msg
    else
-      -- should never get here.  when compile_grammar_rhs fails, it throws.
+      -- should never get here.  when compile_grammar_expression fails, it throws.
       error("Internal error (compiler): compilation of grammar \""..tostring(name).."\" failed")
    end
 end
@@ -433,9 +438,10 @@ cinternals.compile_exp_functions = {"compile_exp";
 				    named_charset=cinternals.compile_named_charset;
 				    range=cinternals.compile_range_charset;
 				    charlist=cinternals.compile_charlist;
-				    charset=cinternals.compile_charset; -- ONLY USED IN CORE
+				    charset=cinternals.compile_charset;        -- ONLY USED IN CORE
 				    new_quantified_exp=cinternals.compile_new_quantified_exp;
 				    syntax_error=cinternals.compile_syntax_error;
+				    grammar_expression=cinternals.compile_grammar_expression;
 				 }
 
 function cinternals.compile_exp(a, gmr, source, env)
@@ -515,30 +521,42 @@ local function compile_astlist(astlist, source, env)
    return results, messages
 end
 
-function cinternals.compile_astlist(astlist, source, env)
- local c = coroutine.create(compile_astlist)
- local no_lua_error, results, messages = coroutine.resume(c, astlist, source, env)
+function cinternals.compile_astlist(astlist, original_astlist, source, env)
+   assert(type(astlist)=="table", "Internal error: compile_ast astlist not a table")
+   assert(type(original_astlist)=="table", "Internal error: compile_ast original_astlist not a table")
+   assert(type(source)=="string", "Internal error: compile_ast source not a string")
+   assert(type(env)=="table", "Internal error: compile_ast env not a table")
+   local c = coroutine.create(compile_astlist)
+   local no_lua_error, results, messages = coroutine.resume(c, astlist, source, env)
    if no_lua_error then
-      return results, messages			    -- messages may contain compiler warnings
+      -- Return results and compilation messages
+      if results then
+	 assert(type(messages)=="table")
+	 for i, pat in ipairs(results) do pat.original_ast = original_astlist[i]; end
+	 return results, messages		    -- message may contain compiler warnings
+      else
+	 assert(type(messages)=="string")
+	 return false, messages			    -- message is a string in this case
+      end
    else
       error("Internal error (compiler): " .. tostring(results))
    end
 end
 
-function cinternals.compile_source(astlist, original_astlist, source, env)
-   assert(type(astlist)=="table")
-   assert(type(original_astlist)=="table")
-   assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local results, messages = cinternals.compile_astlist(astlist, source, env)
-   if results then
-      assert(type(messages)=="table")
-      for i, pat in ipairs(results) do pat.original_ast = original_astlist[i]; end
-      return results, messages			    -- message may contain compiler warnings
-   else
-      assert(type(messages)=="string")
-      return false, messages			    -- message is a string in this case
-   end
-end
+-- function cinternals.compile_source(astlist, original_astlist, source, env)
+--    assert(type(astlist)=="table")
+--    assert(type(original_astlist)=="table")
+--    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
+--    local results, messages = cinternals.compile_astlist(astlist, source, env)
+--    if results then
+--       assert(type(messages)=="table")
+--       for i, pat in ipairs(results) do pat.original_ast = original_astlist[i]; end
+--       return results, messages			    -- message may contain compiler warnings
+--    else
+--       assert(type(messages)=="string")
+--       return false, messages			    -- message is a string in this case
+--    end
+-- end
 
 -- rpl_parser contract:
 --   parse source to produce original_astlist;
@@ -548,10 +566,10 @@ end
 function compile.compile_source(rpl_parser, source, env)
    local astlist, original_astlist = rpl_parser(source)
    if not astlist then return false, original_astlist; end -- original_astlist is error msg (string)
-   return cinternals.compile_source(astlist, original_astlist, source, env)
+   return cinternals.compile_astlist(astlist, original_astlist, source, env)
 end
 
-function cinternals.compile_match_expression(astlist, original_astlist, source, env)
+function cinternals.compile_match_ast(astlist, original_astlist, source, env)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(source)=="string")
@@ -575,7 +593,7 @@ function cinternals.compile_match_expression(astlist, original_astlist, source, 
       pat = env[text]
    end
    -- Compile the expression
-   local results, msg = cinternals.compile_source(astlist, original_astlist, source, env)
+   local results, msg = cinternals.compile_astlist(astlist, original_astlist, source, env)
    if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
       return false, msg
    end
@@ -591,15 +609,6 @@ function cinternals.compile_match_expression(astlist, original_astlist, source, 
       result.peg = common.match_node_wrap(C(result.peg), "*")
    end
    return result
-end
-
-function compile.compile_match_expression(rpl_parser, source, env)
-   assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local astlist, original_astlist = rpl_parser(source)
-   if (not astlist) then
-      return false, original_astlist		    -- original_astlist is msg
-   end
-   return cinternals.compile_match_expression(astlist, original_astlist, source, env)
 end
 
 compile.cinternals = cinternals

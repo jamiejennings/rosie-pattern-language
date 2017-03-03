@@ -16,6 +16,9 @@
 
 local compile = require "compile"
 local cinternals = compile.cinternals
+compile_exp = assert(cinternals.compile_exp)
+compile, cinternals = nil, nil			    -- ensuring we don't use anything else
+
 local common = require "common"
 local pattern = common.pattern
 local lpeg = require "lpeg"
@@ -92,7 +95,7 @@ end
 
 local function eval_ref(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. indent_(indent) .. "REFERENCE: " .. writer.reveal_ast(a) .. "\n"
-   local pat = cinternals.compile_ref(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    local m, pos = eval.match_peg(pat.peg, input, start) 
 
@@ -120,7 +123,7 @@ end
 local function eval_sequence(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. indent_(indent) .. "SEQUENCE: " .. writer.reveal_ast(a) .. "\n"
    
-   local pat = cinternals.compile_sequence(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
@@ -146,7 +149,7 @@ end
 local function eval_choice(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. indent_(indent) .. "CHOICE: " .. writer.reveal_ast(a) .. "\n"
    
-   local pat = cinternals.compile_choice(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
    local m, pos
    m, pos = eval.match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
@@ -181,7 +184,11 @@ local function eval_choice(a, input, start, gmr, source, env, indent, fail_outpu
 end
 
 local function eval_quantified_exp(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
-   local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
+   local qpeg, extra = pat.peg, pat.extra
+   assert(type(pat.extra)=="table", "Internal error in eval of quantified expression: " .. tostring(source))
+   local epeg, append_boundary, qname = extra.epeg, extra.append_boundary, extra.qname
+   local min, max = extra.min, extra.max
    msg = msg .. step_(indent, step,
 		      "QUANTIFIED EXP (",
 		      (append_boundary and "tokenized/cooked): ") or "raw): ",
@@ -230,7 +237,7 @@ end
 
 local function eval_literal(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "LITERAL: ", writer.reveal_ast(a), "\n")
-   local pat = cinternals.compile_literal(a)
+   local pat = compile_exp(a)
    local name, pos, text, subs = common.decode_match(a)
    local m, pos = eval.match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
@@ -244,7 +251,7 @@ local function eval_charset(a, input, start, gmr, source, env, indent, fail_outp
 		      writer.reveal_ast(a),
 		      (name=="range" and " (a character range)") or (" (a set of " .. #subs .. " characters)"),
 		      "\n")
-   local pat = cinternals.compile_charset(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
@@ -256,7 +263,7 @@ local function eval_charlist(a, input, start, gmr, source, env, indent, fail_out
 		      "CHARACTER SET: ",
 		      writer.reveal_ast(a),
 		      " (a set of " .. #subs .. " characters)\n")
-   local pat = cinternals.compile_charlist(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
@@ -268,7 +275,7 @@ local function eval_range(a, input, start, gmr, source, env, indent, fail_output
 		      "CHARACTER SET: ",
 		      writer.reveal_ast(a),
 		      " (a character range)\n")
-   local pat = cinternals.compile_range_charset(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
@@ -276,7 +283,7 @@ end
 
 local function eval_named_charset(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "NAMED CHARSET: ", writer.reveal_ast(a), "\n")
-   local pat = cinternals.compile_named_charset(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
@@ -285,7 +292,7 @@ end
 local function eval_predicate(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "PREDICATE: ", writer.reveal_ast(a), "\n")
    
-   local pat = cinternals.compile_predicate(a, gmr, source, env)
+   local pat = compile_exp(a, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
@@ -303,9 +310,14 @@ end
 
 local function eval_grammar(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "GRAMMAR:\n") .. indent_(indent) .. reveal_ast_indented(a, indent) .. "\n"
-   local name, pat = cinternals.compile_grammar_rhs(a, gmr, source, env)
+   -- need to convert it to a grammar expression because if we compile a grammar STATEMENT, it
+   -- will (re-)bind an identifier
+   local name, pos, text, subs = common.decode_match(a)
+   assert(name=="new_grammar", "Internal error: evaluation function given unexpected kind of grammar AST" .. name)
+   local b = {grammar_expression = a[name]}	    -- TODO: should call syntax function for rewriting 
+   local name, pat = compile_exp(b, gmr, source, env)
    local m, pos = eval.match_peg(pat.peg, input, start)
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+   msg = msg .. report_(m, pos, b, input, start, indent, fail_output_only, step)
    -- How to descend into the definition of a grammar?
    return m, pos, msg
 end

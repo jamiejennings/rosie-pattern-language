@@ -29,7 +29,7 @@ function check_eval(exp, input, expectation, expected_contents_list)
    if ok then
       check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " " .. input .. " ", 1)
-      if expected_contents_list then
+      if type(expected_contents_list)=="table" then
 	 local pos, all_met_flag, msg = 1, true, ""
 	 for _, text in ipairs(expected_contents_list) do
 	    local nextpos = localtrace:find(text, pos, true)	-- plain text matching flag is true
@@ -247,5 +247,30 @@ check_eval('({a/b}{3,5})', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}
 
 check_eval('({a/b}{3,5})', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 				       'FAILED'})
+
+----------------------------------------------------------------------------------------
+heading("Eval grammar")
+----------------------------------------------------------------------------------------
+
+-- balanced strings of a's and b's
+g = [[grammar
+  S = {"a" B} / {"b" A} / "" 
+  A = {"a" S} / {"b" A A}
+  B = {"b" S} / {"a" B B}
+end]]
+
+ok, msg = e:load(g)
+check(ok)
+check(not msg)
+
+check_eval('S', "aabb", true, {'1..GRAMMAR:',
+			       'new_grammar',
+			       'S = CAPTURE as S: {("a" B) / ("b" A) / ""}',
+			       'A = CAPTURE as A: {("a" S) / ("b" A A)}',
+			       'B = CAPTURE as B: {("b" S) / ("a" B B)}',
+			       'end',
+			       'Matched "aabb" (against input "aabb")'} )
+
+
 
 return test.finish()
