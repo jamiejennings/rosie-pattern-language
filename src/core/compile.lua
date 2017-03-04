@@ -398,6 +398,11 @@ function cinternals.compile_grammar(a, gmr, source, env)
    end
 end
 
+local function expression_p(ast)
+   local name, pos, text, subs = common.decode_match(ast)
+   return not (not cinternals.compile_exp_functions[name])
+end
+
 function cinternals.compile_capture(a, gmr, source, env)
    assert(a, "did not get ast in compile_capture")
    local name, pos, text, subs = common.decode_match(a)
@@ -407,7 +412,7 @@ function cinternals.compile_capture(a, gmr, source, env)
    local cap_name, cap_pos, cap_text, cap_subs = common.decode_match(captured_exp)
    local pat
 
-   assert(compile.expression_p(captured_exp),
+   assert(expression_p(captured_exp),
 	  "compile_capture called with an ast that is not an expression: " .. (next(captured_exp)))
 
    local refname, _, reftext, _ = common.decode_match(ref_exp)
@@ -448,11 +453,6 @@ function cinternals.compile_exp(a, gmr, source, env)
    return common.walk_ast(a, cinternals.compile_exp_functions, gmr, source, env)
 end
 
-function compile.expression_p(ast)
-   local name, pos, text, subs = common.decode_match(ast)
-   return not (not cinternals.compile_exp_functions[name])
-end
-
 local boundary_ast = common.create_match("ref", 0, common.boundary_identifier)
 local looking_at_boundary_ast = common.create_match("predicate",
 						    0,
@@ -480,7 +480,7 @@ end
 
 function cinternals.compile_rhs(a, gmr, source, env, iname)
    assert(type(a)=="table", "did not get ast in compile_rhs: " .. tostring(a))
-   if not compile.expression_p(a) then
+   if not expression_p(a) then
       local msg = string.format('Compile error: expected an expression, but received %q',
 				writer.reveal_ast(a))
       error(msg)
@@ -573,7 +573,7 @@ function compile.compile_expression(astlist, original_astlist, source, env)
       return false, msg
    end
    assert(astlist[1] and original_astlist[1], "Internal error: missing astlist/original_astlist in compile_expression")
-   if not compile.expression_p(astlist[1]) then
+   if not expression_p(astlist[1]) then
       local msg = "Error: not an expression: " .. source
       return false, msg
    end
