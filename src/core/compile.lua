@@ -521,11 +521,11 @@ local function compile_astlist(astlist, source, env)
    return results, messages
 end
 
-function cinternals.compile_astlist(astlist, original_astlist, source, env)
-   assert(type(astlist)=="table", "Internal error: compile_ast astlist not a table")
-   assert(type(original_astlist)=="table", "Internal error: compile_ast original_astlist not a table")
-   assert(type(source)=="string", "Internal error: compile_ast source not a string")
-   assert(type(env)=="table", "Internal error: compile_ast env not a table")
+function compile.compile(astlist, original_astlist, source, env)
+   assert(type(astlist)=="table", "Internal error: compile: astlist not a table")
+   assert(type(original_astlist)=="table", "Internal error: compile: original_astlist not a table")
+   assert(type(source)=="string", "Internal error: compile: source not a string")
+   assert(type(env)=="table", "Internal error: compile: env not a table")
    local c = coroutine.create(compile_astlist)
    local no_lua_error, results, messages = coroutine.resume(c, astlist, source, env)
    if no_lua_error then
@@ -558,7 +558,7 @@ end
 --    end
 -- end
 
-function cinternals.compile_match_ast(astlist, original_astlist, source, env)
+function compile.compile_expression(astlist, original_astlist, source, env)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(source)=="string")
@@ -566,13 +566,15 @@ function cinternals.compile_match_ast(astlist, original_astlist, source, env)
    -- After adding support for semi-colons to end statements, can change this restriction to allow
    -- arbitrary statements, followed by an expression, like scheme's 'begin' form.
    if (#astlist~=1) then
-      local msg = "Error: source did not compile to a single pattern: " .. source
+      local msg = "Error: source did not produce a single pattern: " .. source
       for i, a in ipairs(astlist) do
-	 msg = msg .. "\nPattern " .. i .. ": " .. writer.reveal_ast(a)
+   	 msg = msg .. "\nPattern " .. i .. ": " .. writer.reveal_ast(a)
       end
       return false, msg
-   elseif not compile.expression_p(astlist[1]) then
-      local msg = "Error: only expressions can be matched (not statements): " .. source
+   end
+   assert(astlist[1] and original_astlist[1], "Internal error: missing astlist/original_astlist in compile_expression")
+   if not compile.expression_p(astlist[1]) then
+      local msg = "Error: not an expression: " .. source
       return false, msg
    end
    -- Check to see if the expression is a reference
@@ -582,7 +584,7 @@ function cinternals.compile_match_ast(astlist, original_astlist, source, env)
       pat = env[text]
    end
    -- Compile the expression
-   local results, msg = cinternals.compile_astlist(astlist, original_astlist, source, env)
+   local results, msg = compile.compile(astlist, original_astlist, source, env)
    if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
       return false, msg
    end
@@ -597,7 +599,7 @@ function cinternals.compile_match_ast(astlist, original_astlist, source, env)
       -- since that can't be an identifier name.
       result.peg = common.match_node_wrap(C(result.peg), "*")
    end
-   return result
+   return result				    -- N.B. returns a single pattern
 end
 
 compile.cinternals = cinternals

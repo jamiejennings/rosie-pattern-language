@@ -166,21 +166,21 @@ local function compile_search(en, pattern_exp)
    local astlist, orig_astlist = rpl_parser(pattern_exp)
    if not astlist then return orig_astlist; end	    -- orig_astlist is error message
    assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
-   if not compile.expression_p(astlist[1]) then
-      return nil, "match expression cannot be rpl statement"
-   end
-   local pats, msg = cinternals.compile_astlist(astlist, orig_astlist, pattern_exp, env)
-   if not pats then return nil, msg; end
-   assert(type(pats)=="table" and pats[1])
-   local replacement = pats[1].ast
+   -- if not compile.expression_p(astlist[1]) then
+   --    return nil, "match expression cannot be rpl statement"
+   -- end
+   local pat, msg = compile.compile_expression(astlist, orig_astlist, pattern_exp, env)
+   if not pat then return nil, msg; end
+   local replacement = pat.ast
    -- Next, transform pat.ast
    local astlist, orig_astlist = rpl_parser("{{!e .}* e}+")
    assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
    local template = astlist[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   local pat, msg = cinternals.compile_match_ast({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
+   local pat, msg = compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
    if not pat then return nil, msg; end
+   assert(pat.peg)
    return pat
 end
 
@@ -191,7 +191,7 @@ local function compile_match(en, source)
    if (not astlist) then
       return false, original_astlist		    -- original_astlist is msg
    end
-   return cinternals.compile_match_ast(astlist, original_astlist, source, env)
+   return compile.compile_expression(astlist, original_astlist, source, env)
 end
 
 local function engine_compile(en, expression, flavor)
@@ -269,7 +269,7 @@ local function load_string(e, input)
    if not astlist then
       engine_error(e, original_astlist)		    -- original_astlist is error msg (string)
    end
-   local results, messages = cinternals.compile_astlist(astlist, original_astlist, input, e._env)
+   local results, messages = compile.compile(astlist, original_astlist, input, e._env)
    if results then
       assert(type(messages)=="table")
       return common.compact_messages(messages)      

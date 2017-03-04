@@ -117,6 +117,18 @@ run("common.word", true, results_common_word_grep)
 run("common.word basic.network_patterns", nil, results_word_network)
 run("~common.number~", true, results_common_number)
 
+ok, msg = pcall(run, "foo = common.word", nil, nil)
+check(ok)
+check(msg[1]:find("not an expression"))
+
+ok, msg = pcall(run, "foo = common.word", true, nil)
+check(ok)
+check(msg[1]:find("not an expression"))
+
+ok, msg = pcall(run, "/foo/", nil, nil)
+check(ok)
+check(msg[1]:find("syntax error"))
+
 ok, ignore = pcall(run, '"Gold"', nil, nil)
 check(ok, [[testing for a shell quoting error in which rpl expressions containing double quotes
       were not properly passed to lua in bin/run-rosie]])
