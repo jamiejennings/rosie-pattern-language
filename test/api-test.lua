@@ -64,6 +64,7 @@ if type(info)=="table" then
    check(type(info.ROSIE_ROOT)=="string")
    check(type(info.ROSIE_DEV)=="string")
    check(info.ROSIE_DEV=="true")
+   check(info.RPL_VERSION=="1.0")
 end
 
 ----------------------------------------------------------------------------------------

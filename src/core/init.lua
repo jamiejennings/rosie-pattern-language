@@ -138,16 +138,16 @@ announce("ROSIE_ENGINE", ROSIE_ENGINE)
 --     important parameters, with their values and descriptions.
 -- (2) Index the table by a parameter key to obtain its value.
 ROSIE_INFO = {
-   {name="ROSIE_HOME",    value=ROSIE_HOME,                  desc="location of the rosie installation directory"},
-   {name="ROSIE_VERSION", value=ROSIE_VERSION,               desc="version of rosie installed"},
-   {name="RPL_VERSION",   value=ROSIE_ENGINE._rpl_version,   desc="version of rpl (language) accepted"},
-   {name="ROSIE_ROOT",    value=tostring(ROSIE_ROOT),        desc="root of the standard rpl library"},
-   {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),         desc="true if rosie was started in development mode"},
-   {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "", desc="host on which rosie is running"},
-   {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "", desc="type of host on which rosie is running"},
-   {name="OSTYPE",        value=os.getenv("OSTYPE") or "",   desc="type of OS on which rosie is running"},
-   {name="CWD",           value=os.getenv("PWD") or "",      desc="current working directory"},
-   {name="ROSIE_COMMAND", value=ROSIE_COMMAND or "",         desc="invocation command, if rosie invoked through the CLI"}
+   {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
+   {name="ROSIE_VERSION", value=ROSIE_VERSION,                       desc="version of rosie installed"},
+   {name="RPL_VERSION",   value=tostring(ROSIE_ENGINE._rpl_version), desc="version of rpl (language) accepted"},
+   {name="ROSIE_ROOT",    value=tostring(ROSIE_ROOT),                desc="root of the standard rpl library"},
+   {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),                 desc="true if rosie was started in development mode"},
+   {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "",         desc="host on which rosie is running"},
+   {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},
+   {name="OSTYPE",        value=os.getenv("OSTYPE") or "",           desc="type of OS on which rosie is running"},
+   {name="CWD",           value=os.getenv("PWD") or "",              desc="current working directory"},
+   {name="ROSIE_COMMAND", value=ROSIE_COMMAND or "",                 desc="invocation command, if rosie invoked through the CLI"}
 }
 for _,entry in ipairs(ROSIE_INFO) do ROSIE_INFO[entry.name] = entry.value; end
 

@@ -349,7 +349,10 @@ local function set_default_rpl_parser(parse_expand_explain, major, minor)
    end
    local vt = {major=major, minor=minor}
    default_rpl_parser = parse_expand_explain
-   default_rpl_version = setmetatable({}, {__index=vt, __newindex=function(...) error("read-only table") end})
+   default_rpl_version = setmetatable({}, {__index=vt,
+					   __newindex=function(...) error("read-only table") end,
+					   __tostring=function(self) return tostring(vt.major).."."..tostring(vt.minor); end,
+					})
 end
 
 engine.create_function =
