@@ -31,9 +31,10 @@ function p.load_file(en, path, filetype)
       if not full_path then return false, msg; end
       local input, msg = util.readfile(full_path)
       if not input then error(msg, 0); end
-      local result, messages = en:load(input)
-      if not result then error(messages, 0); end
-      return common.compact_messages(messages), full_path
+      local result, msg = en:load(input)
+      if not result then error(msg, 0); end
+      -- normal return from 'en:load()' is a table of warnings (possibly empty)
+      return common.compact_messages(result), full_path
    else
       arg_error("missing or invalid file type argument: " .. tostring(filetype))
    end

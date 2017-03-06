@@ -86,8 +86,8 @@ end
 local function load_string(en, input)
    local ok, results, messages = pcall(en.load, en, input)
    if not ok then
-      if ROSIE_DEV then error(messages:concat("\n"));
-      else io.write("Cannot load rpl: \n", messages); os.exit(-1); end
+      if ROSIE_DEV then error(results)		    -- error(messages:concat("\n"));
+      else io.write("Cannot load rpl: \n", results); os.exit(-1); end
    end
    return results, messages
 end
@@ -100,7 +100,7 @@ local function setup_engine(args)
       end
       local success, messages = pcall(rosie.file.load, CL_ENGINE, args.manifest, "manifest")
       if not success then
-	 io.stdout:write(messages, "\n")
+	 io.stdout:write(table.concat(messages, "\n"), "\n")
 	 os.exit(-4)
       else
 	 if args.verbose then

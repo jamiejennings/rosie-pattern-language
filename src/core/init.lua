@@ -111,16 +111,19 @@ if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. 
 CORE_ENGINE._rpl_parser = parse.core_parse_and_explain
 CORE_ENGINE:load(rpl_1_0)
 local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl')
-if not success then error("Error while initializing: could not compile "
+if not success then error("Error while initializing: could not compile 'rpl' in "
+			  .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
+ROSIE_RPLX = result
+local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse')
+if not success then error("Error while initializing: could not compile 'preparse' in "
 			  .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
 
-ROSIE_RPLX = result
-
--- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX
+ROSIE_PREPARSE = result
+-- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
 load_module("rpl-parser")
-local parse_and_explain = make_parse_and_explain(ROSIE_RPLX)
+local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0)
 -- And make these the defaults for all new engines:
-engine._set_default_rpl_parser(parse_and_explain, "1.0");
+engine._set_default_rpl_parser(parse_and_explain, 1, 0);
 
 ROSIE_ENGINE = engine.new("RPL 1.0 engine")
 announce("ROSIE_ENGINE", ROSIE_ENGINE)

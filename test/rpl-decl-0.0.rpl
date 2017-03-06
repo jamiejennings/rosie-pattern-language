@@ -1,0 +1,11 @@
+-- -*- Mode: rpl; -*- 
+--
+-- 
+--
+-- (c) 2016, Jamie A. Jennings
+--
+
+rpl 0.0
+
+alias any = .
+

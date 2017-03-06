@@ -313,6 +313,34 @@ check(not ok)
 check(msg:find("cannot read file"))
 check(msg:find("/etc"))
 
+ok, msg = wapi.file_load("$sys/test/rpl-decl-2.0.rpl", "rpl")
+check(not ok)
+check(msg:find("requires version 2.0"))
+check(msg:find("at version 1.0"))
+
+ok, msg = wapi.file_load("$sys/test/rpl-decl-1.8.rpl", "rpl")
+check(not ok)
+check(msg:find("requires version 1.8"))
+check(msg:find("at version 1.0"))
+
+ok, msg = wapi.file_load("$sys/test/rpl-decl-1.0.rpl", "rpl")
+check(ok)
+check(#msg==1)
+if msg[1] then check(msg[1]:find("Warning: reassignment")); end
+
+ok, msg = wapi.file_load("$sys/test/rpl-decl-0.5.rpl", "rpl")
+check(ok)
+check(#msg == 2)
+if msg[1] then check(msg[1]:find("Warning: loading rpl at version 0.5 into engine at version 1.0")); end
+if msg[2] then check(msg[2]:find("Warning: reassignment")); end
+
+ok, msg = wapi.file_load("$sys/test/rpl-decl-0.0.rpl", "rpl")
+check(ok)
+check(#msg == 2)
+if msg[1] then check(msg[1]:find("Warning: loading rpl at version 0.0 into engine at version 1.0")); end
+if msg[2] then check(msg[2]:find("Warning: reassignment")); end
+
+
 subheading("load manifest")
 ok, results, fullpath = wapi.file_load("$sys/test/manifest", "manifest")
 check(ok)
@@ -329,7 +357,6 @@ check(msg[3]:find("Error: cannot open file"))
 ok, msg = wapi.file_load("$sys/test/manifest.synerr", "manifest") -- contains a //
 check(not ok)
 check(msg[3]:find("Error: cannot read file"))
-
 
 ----------------------------------------------------------------------------------------
 --heading("Set output encoder")

@@ -8,7 +8,16 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
--- Requires an engine configured using the parser in parse.lua (and no macro expansion step)
+-- Requires an engine configured using the parser in parse.lua (and no macro expansion step).
+-- N.B. This is written in rpl 0.0, the "rpl core" language:
+--    Character set expressions are SINGLE SETS in double brackets [[set]]
+--    Where 'set' is a SINGLE range, a LIST, or a NAMED SET (NOT complemented)
+--    Statements supported: assignment, alias, grammar
+--    Operators supported: sequence (adjacency), choice (/), raw ({}), cooked (())
+--    Predicates supported: negation (!), look-ahead (@)
+--    Repetition supported: star, plus, question, and {n,m}
+--    AND compilation is done in sequence, top to bottom, so bindings must be ordered
+
 
 alias newline = {"\n"}				    -- raw mode just to suppress compiler warning 
 
@@ -28,7 +37,6 @@ alias dquote = { [[\"]] }
 alias esc =    { [[\\]] }
 literal = { {!{esc/dquote} .} / {esc .} }* 
 alias quoted_string = { dquote literal dquote }
-
 
 star =     { [[*]] }
 question = { [[?]] }
@@ -58,7 +66,6 @@ charset_exp = { "[" complement? ignore (one_charset ignore)+ "]" } / one_charset
 low =  [[:digit:]]*				    -- an int or nothing
 high = [[:digit:]]* 
 repetition = { "{" ignore low ignore "," ignore high ignore "}" }
-	          
 
 alias quantifier = star / question / plus / repetition
 
@@ -92,10 +99,13 @@ grammar
    alias statement = { alias_ / grammar_ / assignment_ }
    alias_ = { "alias" ignore identifier ignore "=" expression }
    grammar_ = { "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token }
-   --   assignment_ = { identifier ignore "=" { expression / syntax_error } }
    assignment_ = { identifier ignore "=" expression }
 end
 
---rpl = {ignore {statement / expression / syntax_error}}
+major = [[0-9]]{1,2}
+minor = major
+version_spec = { major "." minor {[[:space:]]/$}}	    -- core lacks ~
+preparse = ignore "rpl" (version_spec / syntax_error)
+
 alias item = {ignore {statement / expression / syntax_error}}
 rpl = item* ignore $

@@ -166,9 +166,6 @@ local function compile_search(en, pattern_exp)
    local astlist, orig_astlist = rpl_parser(pattern_exp)
    if not astlist then return orig_astlist; end	    -- orig_astlist is error message
    assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
-   -- if not compile.expression_p(astlist[1]) then
-   --    return nil, "match expression cannot be rpl statement"
-   -- end
    local pat, msg = compile.compile_expression(astlist, orig_astlist, pattern_exp, env)
    if not pat then return nil, msg; end
    local replacement = pat.ast
@@ -265,17 +262,19 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 --   if any step fails, generate a useful error message (msg) and return false, msg
 
 local function load_string(e, input)
-   local astlist, original_astlist = e._rpl_parser(input)
+   local astlist, original_astlist, warnings = e._rpl_parser(input)
    if not astlist then
       engine_error(e, original_astlist)		    -- original_astlist is error msg (string)
    end
    local results, messages = compile.compile(astlist, original_astlist, input, e._env)
    if results then
       assert(type(messages)=="table")
-      return common.compact_messages(messages)      
+      for i,w in ipairs(warnings) do table.insert(messages, i, w); end
+      return common.compact_messages(messages) 
    else
       assert(type(messages)=="string")
-      engine_error(e, messages)
+      table.insert(warnings, messages)
+      engine_error(e, table.concat(warnings, '\n'))
    end
 end
 
@@ -339,15 +338,18 @@ rplx.create_function =
    end
 
 local default_rpl_parser = function(...) error("default_rpl_parser not initialized"); end --parse.core_parse_and_explain;
-local default_rpl_version = "default_rpl_version not set"
-local function set_default_rpl_parser(parse_expand_explain, version_string)
+local default_rpl_version
+local function set_default_rpl_parser(parse_expand_explain, major, minor)
    if type(parse_expand_explain)~="function" then
       error("default_rpl_parser not a function: " .. tostring(default_rpl_parser))
-   elseif type(version_string)~="string" then
-      error("default_rpl_version not a string: " .. tostring(version_string))
+   elseif type(major)~="number" then
+      error("major version not a number: " .. tostring(major))
+   elseif type(minor)~="number" then
+      error("minor version not a number: " .. tostring(minor))
    end
+   local vt = {major=major, minor=minor}
    default_rpl_parser = parse_expand_explain
-   default_rpl_version = version_string
+   default_rpl_version = setmetatable({}, {__index=vt, __newindex=function(...) error("read-only table") end})
 end
 
 engine.create_function =

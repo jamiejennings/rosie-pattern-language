@@ -146,9 +146,9 @@ end
 function parse.syntax_error_check(ast)
    local function found_one(a) return a; end;
    local function none_found(a) return nil; end;
-   local function check_many_branches(a)
+   local function check_all_branches(a)
       local ans
-      assert(a, "did not get ast in check_many_branches")
+      assert(a, "did not get ast in check_all_branches")
       local name, pos, text, subs = common.decode_match(a)
       if subs then
 	 for i = 1, #subs do
@@ -169,8 +169,8 @@ function parse.syntax_error_check(ast)
       return parse.syntax_error_check(subs[1])
    end
    local functions = {"syntax_error_check";
-		      raw=check_many_branches;
-		      cooked=check_many_branches;
+		      raw=check_all_branches;
+		      cooked=check_all_branches;
 		      choice=check_two_branches;
 		      identifier=none_found;
 		      literal=none_found;
@@ -180,9 +180,9 @@ function parse.syntax_error_check(ast)
 		      negation=none_found;
 		      lookat=none_found;
 		      named_charset=none_found;
-		      charset_exp=check_many_branches;
+		      charset_exp=check_all_branches;
 		      charset=check_one_branch;	    -- USED ONLY IN CORE
-		      charlist=check_many_branches;
+		      charlist=check_all_branches;
 		      range=check_two_branches;
 		      complement=none_found;
 		      quantified_exp=check_two_branches;
@@ -192,8 +192,9 @@ function parse.syntax_error_check(ast)
 		      repetition=none_found;
 		      assignment_=check_two_branches;
 		      alias_=check_two_branches;
-		      grammar_=check_many_branches;
+		      grammar_=check_all_branches;
 		      syntax_error=found_one;
+		      default=check_all_branches;   -- Monday, March 6, 2017
 		   }
    return common.walk_ast(ast, functions)
 end
@@ -241,7 +242,7 @@ function parse.core_parse_and_explain(source)
       --local new_astlist = list.map(syntax.top_level_transform, astlist)
       local new_astlist = {}
       for i=1,#astlist do new_astlist[i] = syntax.top_level_transform(astlist[i]); end
-      return new_astlist, astlist
+      return new_astlist, astlist, {}		    -- last value is table of warnings
    end
 end
 

@@ -100,7 +100,7 @@ engine = load_module("engine")
 
 -- manifest code requires a working engine, so we initialize the engine package here
 assert(parse.core_parse_and_explain, "error while initializing: parser not loaded?")
-engine._set_default_rpl_parser(parse.core_parse_and_explain, "0.0");
+engine._set_default_rpl_parser(parse.core_parse_and_explain, 0, 0);
 manifest = load_module("manifest")
 
 process_input_file = load_module("process_input_file")
