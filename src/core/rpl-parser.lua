@@ -15,18 +15,17 @@ local function rosie_parse_without_error_check(rplx, str, pos, tokens)
    pos = pos or 1
    local results = {}
    local tokens, leftover = rplx:match(str, pos)
-   assert(leftover==0)				    -- parser pattern ends with $
    local name, pos, text, subs = common.decode_match(tokens)
-   return subs or {}
+   return subs or {}, leftover
 end
 
 local function rosie_parse(rplx, str, pos, tokens)
-   local astlist = rosie_parse_without_error_check(rplx, str, pos, tokens)
+   local astlist, leftover = rosie_parse_without_error_check(rplx, str, pos, tokens)
    local errlist = {};
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   return list.map(syntax.top_level_transform, astlist), errlist, astlist
+   return list.map(syntax.top_level_transform, astlist), astlist, errlist, leftover
 end
 
 local function preparse(rplx_preparse, source)
@@ -60,22 +59,24 @@ function make_parse_and_explain(rplx_preparse, rplx_rpl, rpl_maj, rpl_min)
 		   -- Warn in case major version not backwards compatible
 		   rpl_warning = "Warning: loading rpl at version " .. vstr(major, minor) .. " into engine at version " .. vstr(rpl_maj, rpl_min)
 		elseif (rpl_maj < major) or ((rpl_maj == major) and (rpl_min < minor)) then
-		   return false, "Error: loading rpl that requires version " .. vstr(major, minor) .. " but engine is at version " .. vstr(rpl_maj, rpl_min)
+		   return nil,
+		          nil,
+		          {"Error: loading rpl that requires version " .. vstr(major, minor) .. " but engine is at version " .. vstr(rpl_maj, rpl_min)}
 		end
 	     end
-	     local astlist, errlist, original_astlist = rosie_parse(rplx_rpl, source, pos)
+	     local astlist, original_astlist, errlist, leftover = rosie_parse(rplx_rpl, source, pos)
 	     if #errlist~=0 then
-		local msg
-		if rpl_warning then msg = rpl_warning .. "\n"; else msg = ""; end
-		   msg = msg .. "Warning: syntax error reporting is limited at this time\n"
+		local msgs = {}
+		if rpl_warning then table.insert(msgs, rpl_warning); end
+		table.insert(msgs, "Warning: syntax error reporting is limited at this time")
 		for _,e in ipairs(errlist) do
-		   msg = msg .. parse.explain_syntax_error(e, source) .. "\n"
+		   table.insert(msgs, parse.explain_syntax_error(e, source))
 		end
-		return false, msg
+		return nil, nil, msgs, leftover
 	     else -- successful parse
 		local warnings = {}
 		if rpl_warning then table.insert(warnings, rpl_warning); end
-		return astlist, original_astlist, warnings
+		return astlist, original_astlist, warnings, leftover
 	     end
 	  end
 end

@@ -316,8 +316,8 @@ check(msg:find("/etc"))
 
 ok, msg = wapi.file_load("$sys/test/rpl-decl-2.0.rpl", "rpl")
 check(not ok)
-check(msg:find("requires version 2.0"))
-check(msg:find("at version 1.0"))
+check(msg:find("requires version 2.0"), "rpl version mismatch NOT detected: msg = " .. msg)
+check(msg:find("at version 1.0"), "rpl version mismatch NOT detected: msg = " .. msg)
 
 ok, msg = wapi.file_load("$sys/test/rpl-decl-1.8.rpl", "rpl")
 check(not ok)

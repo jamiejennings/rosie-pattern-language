@@ -84,8 +84,8 @@ loader()
 -- Bootstrap the rpl parser, which is defined using "rpl 1.0" (defined in parse.lua)
 ---------------------------------------------------------------------------------------------------
 -- 
--- The engines we create now will use parse.core_parse_and_explain, which defines "rpl 0.0",
--- i.e. the core language (which has many limitations).
+-- The engines we create now will use parse.core_parse, which defines "rpl 0.0", i.e. the core
+-- language (which has many limitations).
 -- 
 -- An engine that accepts "rpl 0.0" is needed to parse $ROSIE_HOME/rpl/rpl-1.0.rpl, which defines
 -- "rpl 1.0".  This is the version of rpl used for the Rosie v0.99x releases.
@@ -100,6 +100,7 @@ local function announce(name, engine)
 end
 
 -- Create a core engine that accepts rpl 0.0
+-- N.B. default rpl parser has been set in load-modules because manifest package needs it
 CORE_ENGINE = engine.new("RPL core engine")
 
 announce("CORE_ENGINE", CORE_ENGINE)
@@ -108,7 +109,7 @@ announce("CORE_ENGINE", CORE_ENGINE)
 local rpl_1_0_filename = ROSIE_HOME.."/rpl/rpl-1.0.rpl"
 local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
 if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
-CORE_ENGINE._rpl_parser = parse.core_parse_and_explain
+--CORE_ENGINE._rpl_parser = parse.core_parse_and_explain
 CORE_ENGINE:load(rpl_1_0)
 local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl')
 if not success then error("Error while initializing: could not compile 'rpl' in "

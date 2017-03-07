@@ -1,6 +1,6 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- parse.lua   parse rosie pattern language
+---- parse.lua   parse rosie pattern language: rpl 0.0
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -9,7 +9,6 @@
 
 local common = require "common"
 local util = require "util"
-local syntax = require "syntax"
 
 local parse = {}
 
@@ -121,22 +120,13 @@ local statement = P{"start";
 
 local any_token = (statement + expression + top_level_syntax_error) * Cp()
 
-function parse.parse_without_error_check(str, pos, tokens)
+function parse_without_error_check(str, pos, tokens)
    pos = pos or 1
    tokens = tokens or {}
    local nt, nextpos = any_token:match(str, pos)
-   if (not nt) then return tokens; end
+   if (not nt) then return tokens, #str-pos+1; end  -- return ASTlist and leftover
    table.insert(tokens, nt)
-   return parse.parse_without_error_check(str, nextpos, tokens)
-end
-
-function parse.parse(str, pos, tokens)
-   local astlist = parse.parse_without_error_check(str, pos, tokens)
-   local errlist = {};
-   for _,a in ipairs(astlist) do
-      if parse.syntax_error_check(a) then table.insert(errlist, a); end
-   end
-   return astlist, errlist
+   return parse_without_error_check(str, nextpos, tokens)
 end
 
 ----------------------------------------------------------------------------------------
@@ -229,20 +219,22 @@ function parse.explain_syntax_error(a, source)
 end
 
 -- For parsing the Rosie core:
-function parse.core_parse_and_explain(source)
+function parse.core_parse(source)
    assert(type(source)=="string", "Core parser: source argument is not a string: "..tostring(source))
-   local astlist, errlist = parse.parse(source)
-   if #errlist~=0 then
-      local msg = "Core parser reports syntax errors:\n"
+   local astlist, leftover = parse_without_error_check(source)
+   assert(type(leftover)=="number")
+   local errlist = {};
+   for _,a in ipairs(astlist) do
+      if parse.syntax_error_check(a) then table.insert(errlist, a); end
+   end
+   if #errlist==0 then
+      return astlist, {}, leftover		    -- 2nd return value is empty table of messages
+   else
+      local msgs = {"Core parser reports syntax errors:"}
       for _,e in ipairs(errlist) do
-	 msg = msg .. "\n" .. parse.explain_syntax_error(e, source)
+	 table.insert(msgs, parse.explain_syntax_error(e, source))
       end
-      return false, msg
-   else -- successful parse
-      --local new_astlist = list.map(syntax.top_level_transform, astlist)
-      local new_astlist = {}
-      for i=1,#astlist do new_astlist[i] = syntax.top_level_transform(astlist[i]); end
-      return new_astlist, astlist, {}		    -- last value is table of warnings
+      return nil, msgs, leftover
    end
 end
 

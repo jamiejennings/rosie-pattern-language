@@ -536,27 +536,12 @@ function compile.compile(astlist, original_astlist, source, env)
 	 return results, messages		    -- message may contain compiler warnings
       else
 	 assert(type(messages)=="string")
-	 return false, messages			    -- message is a string in this case
+	 return false, {messages}		    -- message is a string in this case
       end
    else
       error("Internal error (compiler): " .. tostring(results))
    end
 end
-
--- function cinternals.compile_source(astlist, original_astlist, source, env)
---    assert(type(astlist)=="table")
---    assert(type(original_astlist)=="table")
---    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
---    local results, messages = cinternals.compile_astlist(astlist, source, env)
---    if results then
---       assert(type(messages)=="table")
---       for i, pat in ipairs(results) do pat.original_ast = original_astlist[i]; end
---       return results, messages			    -- message may contain compiler warnings
---    else
---       assert(type(messages)=="string")
---       return false, messages			    -- message is a string in this case
---    end
--- end
 
 function compile.compile_expression(astlist, original_astlist, source, env)
    assert(type(astlist)=="table")
@@ -566,16 +551,16 @@ function compile.compile_expression(astlist, original_astlist, source, env)
    -- After adding support for semi-colons to end statements, can change this restriction to allow
    -- arbitrary statements, followed by an expression, like scheme's 'begin' form.
    if (#astlist~=1) then
-      local msg = "Error: source did not produce a single pattern: " .. source
+      local msgs = {"Error: source did not produce a single pattern: " .. source}
       for i, a in ipairs(astlist) do
-   	 msg = msg .. "\nPattern " .. i .. ": " .. writer.reveal_ast(a)
+   	 table.insert(msgs, "Pattern " .. i .. ": " .. writer.reveal_ast(a))
       end
-      return false, msg
+      return false, msgs
    end
    assert(astlist[1] and original_astlist[1], "Internal error: missing astlist/original_astlist in compile_expression")
    if not expression_p(astlist[1]) then
-      local msg = "Error: not an expression: " .. source
-      return false, msg
+      local msgs = {"Error: not an expression: " .. source}
+      return false, msgs
    end
    -- Check to see if the expression is a reference
    local name, pos, text, subs = common.decode_match(astlist[1])
@@ -584,9 +569,9 @@ function compile.compile_expression(astlist, original_astlist, source, env)
       pat = env[text]
    end
    -- Compile the expression
-   local results, msg = compile.compile(astlist, original_astlist, source, env)
+   local results, msgs = compile.compile(astlist, original_astlist, source, env)
    if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
-      return false, msg
+      return false, msgs
    end
    local result = results[1]
    if pat then result.alias = pat.alias; end
@@ -599,7 +584,7 @@ function compile.compile_expression(astlist, original_astlist, source, env)
       -- since that can't be an identifier name.
       result.peg = common.match_node_wrap(C(result.peg), "*")
    end
-   return result				    -- N.B. returns a single pattern
+   return result, {}				    -- N.B. returns a single pattern and messages
 end
 
 compile.cinternals = cinternals

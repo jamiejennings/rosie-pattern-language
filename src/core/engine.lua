@@ -163,8 +163,9 @@ local function compile_search(en, pattern_exp)
    local rpl_parser, env = en._rpl_parser, en._env
    local env = common.new_env(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
-   local astlist, orig_astlist = rpl_parser(pattern_exp)
-   if not astlist then return orig_astlist; end	    -- orig_astlist is error message
+   -- TODO: do something with leftover?
+   local astlist, orig_astlist, warnings, leftover = rpl_parser(pattern_exp)
+   if not astlist then return warnings; end	    -- warnings contains errors in this case
    assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
    local pat, msg = compile.compile_expression(astlist, orig_astlist, pattern_exp, env)
    if not pat then return nil, msg; end
@@ -178,15 +179,16 @@ local function compile_search(en, pattern_exp)
    local pat, msg = compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
    if not pat then return nil, msg; end
    assert(pat.peg)
-   return pat
+   return pat, {}
 end
 
 local function compile_match(en, source)
    local rpl_parser, env = en._rpl_parser, en._env
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   local astlist, original_astlist = rpl_parser(source)
+   -- TODO: do something with leftover?
+   local astlist, original_astlist, warnings, leftover = rpl_parser(source)
    if (not astlist) then
-      return false, original_astlist		    -- original_astlist is msg
+      return false, warnings			    -- warnings contains errors in this case
    end
    return compile.compile_expression(astlist, original_astlist, source, env)
 end
@@ -195,16 +197,16 @@ local function engine_compile(en, expression, flavor)
    flavor = flavor or "match"
    if type(expression)~="string" then engine_error(en, "Expression not a string: " .. tostring(expression)); end
    if type(flavor)~="string" then engine_error(en, "Flavor not a string: " .. tostring(flavor)); end
-   local pat, msg
+   local pat, msgs
    if flavor=="match" then
-      pat, msg = compile_match(en, expression)
+      pat, msgs = compile_match(en, expression)
    elseif flavor=="search" then
-      pat, msg = compile_search(en, expression)
+      pat, msgs = compile_search(en, expression)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
-   if not pat then error(msg, 0); end
-   return rplx(en, pat)
+   if not pat then error(table.concat(msgs, '\n'), 0); end
+   return rplx(en, pat), msgs
 end
 
 -- N.B. This code is duplicated (for speed) in process_input_file.lua
@@ -258,13 +260,13 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 -- rpl_parser contract:
 --   parse source to produce original_astlist;
 --   transform original_astlist as needed (e.g. syntax expand); 
---   return the result (astlist) as the first value, and original_astlist as the second
---   if any step fails, generate a useful error message (msg) and return false, msg
+--   return the result (astlist), original_astlist, table of messages, leftover count
+--   if any step fails, generate useful error messages and return nil, nil, msgs, leftover
 
 local function load_string(e, input)
-   local astlist, original_astlist, warnings = e._rpl_parser(input)
+   local astlist, original_astlist, warnings, leftover = e._rpl_parser(input)
    if not astlist then
-      engine_error(e, original_astlist)		    -- original_astlist is error msg (string)
+      engine_error(e, table.concat(warnings, '\n')) -- in this case, warnings contains errors
    end
    local results, messages = compile.compile(astlist, original_astlist, input, e._env)
    if results then
@@ -272,8 +274,8 @@ local function load_string(e, input)
       for i,w in ipairs(warnings) do table.insert(messages, i, w); end
       return common.compact_messages(messages) 
    else
-      assert(type(messages)=="string")
-      table.insert(warnings, messages)
+      assert(type(messages)=="table")
+      table.move(messages, 1, #messages, #warnings+1, warnings)
       engine_error(e, table.concat(warnings, '\n'))
    end
 end
@@ -337,7 +339,7 @@ rplx.create_function =
       return _new(params)
    end
 
-local default_rpl_parser = function(...) error("default_rpl_parser not initialized"); end --parse.core_parse_and_explain;
+local default_rpl_parser = function(...) error("default_rpl_parser not initialized"); end
 local default_rpl_version
 local function set_default_rpl_parser(parse_expand_explain, major, minor)
    if type(parse_expand_explain)~="function" then

@@ -1109,7 +1109,7 @@ for _, exp in ipairs{"[]]",
    ok, msg = pcall(e.compile, e, exp)
    check(not ok, "this expression was expected to fail: " .. exp)
    check(msg:find("Syntax error at line 1"), "Did not get syntax error for exp " ..
-      exp .. ".  Message was: " .. msg)
+      exp .. ".  Message was: " .. msg .. '\n')
 end
 ok, msg = pcall(e.compile, e, "[:foobar:]")
 check(not ok)

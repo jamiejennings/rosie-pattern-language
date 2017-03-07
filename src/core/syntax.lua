@@ -469,6 +469,12 @@ syntax.replace_ref =
 			   "ref",
 			   true)
 
+function syntax.transform(astlist)
+   local new_astlist = {}
+   for i=1,#astlist do new_astlist[i] = syntax.top_level_transform(astlist[i]); end
+   return new_astlist, astlist, {}		    -- last value is table of warnings
+end
+
 return syntax
 
 
