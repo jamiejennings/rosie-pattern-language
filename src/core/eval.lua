@@ -25,7 +25,7 @@ local lpeg = require "lpeg"
 
 local eval = {}
 
-function eval.match_peg(peg, input, start)
+function match_peg(peg, input, start)
    local results = { (lpeg.C(peg) * lpeg.Cp()):match(input, start) }
    local matchtext, pos = results[1], results[#results]
    if (not matchtext) then return false, 1; end
@@ -97,7 +97,7 @@ local function eval_ref(a, input, start, gmr, source, env, indent, fail_output_o
    msg = msg .. indent_(indent) .. "REFERENCE: " .. writer.reveal_ast(a) .. "\n"
    local pat = compile_exp(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
-   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
@@ -124,7 +124,7 @@ local function eval_sequence(a, input, start, gmr, source, env, indent, fail_out
    msg = msg .. indent_(indent) .. "SEQUENCE: " .. writer.reveal_ast(a) .. "\n"
    
    local pat = compile_exp(a, gmr, source, env)
-   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then
@@ -151,7 +151,7 @@ local function eval_choice(a, input, start, gmr, source, env, indent, fail_outpu
    
    local pat = compile_exp(a, gmr, source, env)
    local m, pos
-   m, pos = eval.match_peg(pat.peg, input, start)
+   m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then 
@@ -194,7 +194,7 @@ local function eval_quantified_exp(a, input, start, gmr, source, env, indent, fa
 		      (append_boundary and "tokenized/cooked): ") or "raw): ",
 		      writer.reveal_ast(a),
 		      "\n")
-   local m, pos = eval.match_peg(qpeg, input, start) 
+   local m, pos = match_peg(qpeg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if (not m) or (not fail_output_only) then
@@ -208,7 +208,7 @@ local function eval_quantified_exp(a, input, start, gmr, source, env, indent, fa
       local i = start
 --      local indent = indent + delta
       local substep = 1
-      local mm, mpos = eval.match_peg(epeg, input, i)
+      local mm, mpos = match_peg(epeg, input, i)
       -- Look for the first occurrence of pattern
       msg = msg .. indent_(indent) .. step_(0, {substep}, " ") ..
             report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)
@@ -218,14 +218,14 @@ local function eval_quantified_exp(a, input, start, gmr, source, env, indent, fa
 	 substep = substep + 1
 	 -- Look for boundary
 	 if append_boundary then
-	    mm, mpos = eval.match_peg(common.boundary, input, i)
+	    mm, mpos = match_peg(common.boundary, input, i)
 	    msg = msg .. indent_(indent) .. "     Boundary " ..
                report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)
 	    if not mm then break; end -- fail
 	    i = mpos
 	 end
 	 -- Look for next occurrence of pattern
-	 mm, mpos = eval.match_peg(epeg, input, i)
+	 mm, mpos = match_peg(epeg, input, i)
 	 msg = msg .. indent_(indent) .. step_(0, {substep}, " ") ..
             report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)
 	 i = mpos
@@ -239,7 +239,7 @@ local function eval_literal(a, input, start, gmr, source, env, indent, fail_outp
    msg = msg .. step_(indent, step, "LITERAL: ", writer.reveal_ast(a), "\n")
    local pat = compile_exp(a)
    local name, pos, text, subs = common.decode_match(a)
-   local m, pos = eval.match_peg(pat.peg, input, start)
+   local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
@@ -252,7 +252,7 @@ local function eval_charset(a, input, start, gmr, source, env, indent, fail_outp
 		      (name=="range" and " (a character range)") or (" (a set of " .. #subs .. " characters)"),
 		      "\n")
    local pat = compile_exp(a, gmr, source, env)
-   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
@@ -264,7 +264,7 @@ local function eval_charlist(a, input, start, gmr, source, env, indent, fail_out
 		      writer.reveal_ast(a),
 		      " (a set of " .. #subs .. " characters)\n")
    local pat = compile_exp(a, gmr, source, env)
-   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
@@ -276,7 +276,7 @@ local function eval_range(a, input, start, gmr, source, env, indent, fail_output
 		      writer.reveal_ast(a),
 		      " (a character range)\n")
    local pat = compile_exp(a, gmr, source, env)
-   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local m, pos = match_peg(pat.peg, input, start) 
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
@@ -284,7 +284,7 @@ end
 local function eval_named_charset(a, input, start, gmr, source, env, indent, fail_output_only, step, msg)
    msg = msg .. step_(indent, step, "NAMED CHARSET: ", writer.reveal_ast(a), "\n")
    local pat = compile_exp(a, gmr, source, env)
-   local m, pos = eval.match_peg(pat.peg, input, start)
+   local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
    return m, pos, msg
 end
@@ -293,7 +293,7 @@ local function eval_predicate(a, input, start, gmr, source, env, indent, fail_ou
    msg = msg .. step_(indent, step, "PREDICATE: ", writer.reveal_ast(a), "\n")
    
    local pat = compile_exp(a, gmr, source, env)
-   local m, pos = eval.match_peg(pat.peg, input, start)
+   local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
 
    if not(m and fail_output_only) then
@@ -316,7 +316,7 @@ local function eval_grammar(a, input, start, gmr, source, env, indent, fail_outp
    assert(name=="new_grammar", "Internal error: evaluation function given unexpected kind of grammar AST" .. name)
    local b = {grammar_expression = a[name]}	    -- TODO: should call syntax function for rewriting 
    local name, pat = compile_exp(b, gmr, source, env)
-   local m, pos = eval.match_peg(pat.peg, input, start)
+   local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, b, input, start, indent, fail_output_only, step)
    -- How to descend into the definition of a grammar?
    return m, pos, msg

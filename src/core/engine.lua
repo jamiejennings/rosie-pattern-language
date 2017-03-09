@@ -87,7 +87,6 @@ local unspecified = recordtype.unspecified;
 local common = require "common"
 local writer = require "writer"
 local compile = require "compile"
-local cinternals = compile.cinternals
 local eval = require "eval"
 
 local engine = 
