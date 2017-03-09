@@ -93,8 +93,9 @@ end
 ----------------------------------------------------------------------------------------
 
 local function matches_empty(peg)
-   local result = peg:match("")
-   return result
+   --   local result = peg:match("")
+   local ok, msg = pcall(function() return peg^1 end)
+   return (not ok) and msg:find("loop body may accept empty string")
 end
 
 -- Regarding debugging... a quantified exp fails as soon as:

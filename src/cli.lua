@@ -138,14 +138,26 @@ local function setup_engine(args)
    end
 
    -- (2) Compile the expression
-   -- if args.pattern then
-   --   ...
-   -- end
+   if args.pattern then
+      local flavor = (args.command=="grep") and "search" or "match"
+      local ok, msgs
+      ok, compiled_pattern, msgs = pcall(CL_ENGINE.compile, CL_ENGINE, args.pattern, flavor)
+      if not ok then
+	 io.stdout:write(compiled_pattern, "\n")
+	 os.exit(-4)
+      elseif not compiled_pattern then
+	 io.stdout:write(table.concat(msgs, '\n'), '\n')
+	 os.exit(-4)
+      end
+   end
 end
 
 infilename, outfilename, errfilename = nil, nil, nil
 
 local function process_pattern_against_file(args, infilename)
+   assert(compiled_pattern, "Rosie: missing pattern?")
+   assert(engine.rplx.is(compiled_pattern), "Rosie: compiled pattern not rplx?")
+
 	-- (3) Set up the input, output and error parameters
 	if infilename=="-" then infilename = ""; end	    -- stdin
 	outfilename = ""				    -- stdout
@@ -155,11 +167,15 @@ local function process_pattern_against_file(args, infilename)
 	-- (4) Set up what kind of encoding we want done on the output
 	set_encoder(args.encode)
 
+	if (args.verbose) or (#args.filename > 1) then
+	   print("\n" .. infilename .. ":")		    -- print name of file before its output
+	end
+
 	-- (5) Iterate through the lines in the input file
 	local match_function = (args.command=="trace") and rosie.file.tracematch or rosie.file.match 
-	local flav = (args.command=="grep") and "search" or "match"
+
 	local ok, cin, cout, cerr =
-	   pcall(match_function, CL_ENGINE, args.pattern, flav, infilename, outfilename, errfilename, args.wholefile)
+	   pcall(match_function, CL_ENGINE, compiled_pattern, nil, infilename, outfilename, errfilename, args.wholefile)
 	if not ok then io.write(cin, "\n"); os.exit(-1); end -- cout is error message in this case
 
 	-- (6) Print summary
@@ -287,9 +303,6 @@ local function run(args)
    end
 
    for _,fn in ipairs(args.filename) do
-      if (args.verbose) or (#args.filename > 1) then
-	 print("\n" .. fn .. ":")
-      end
       process_pattern_against_file(args, fn)
    end
 end -- function run

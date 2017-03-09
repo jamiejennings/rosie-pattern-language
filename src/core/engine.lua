@@ -164,10 +164,10 @@ local function compile_search(en, pattern_exp)
    -- First, we compile the exp in order to give an accurate message if it fails
    -- TODO: do something with leftover?
    local astlist, orig_astlist, warnings, leftover = rpl_parser(pattern_exp)
-   if not astlist then return warnings; end	    -- warnings contains errors in this case
+   if not astlist then return nil, warnings; end	    -- warnings contains errors in this case
    assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
-   local pat, msg = compile.compile_expression(astlist, orig_astlist, pattern_exp, env)
-   if not pat then return nil, msg; end
+   local pat, msgs = compile.compile_expression(astlist, orig_astlist, pattern_exp, env)
+   if not pat then return nil, msgs; end
    local replacement = pat.ast
    -- Next, transform pat.ast
    local astlist, orig_astlist = rpl_parser("{{!e .}* e}+")
@@ -175,10 +175,11 @@ local function compile_search(en, pattern_exp)
    local template = astlist[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   local pat, msg = compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
-   if not pat then return nil, msg; end
-   assert(pat.peg)
-   return pat, {}
+   return compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
+   -- local pat, msgs = compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
+   -- if not pat then return nil, msgs; end
+   -- assert(pat.peg)
+   -- return pat, msgs
 end
 
 local function compile_match(en, source)
@@ -204,7 +205,7 @@ local function engine_compile(en, expression, flavor)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
-   if not pat then error(table.concat(msgs, '\n'), 0); end
+   if not pat then return en:_error(table.concat(msgs, '\n')); end
    return rplx(en, pat), msgs
 end
 
@@ -234,7 +235,8 @@ local function make_matcher(processing_fcn)
 		return processing_fcn(e, expression._pattern, input, start)
 	     elseif type(expression)=="string" then -- expression has not been compiled
 		-- If we cache, look up expression in the cache here.
-		local r = e:compile(expression, flavor)
+		local r, msgs = e:compile(expression, flavor)
+		if not r then engine_error(e, table.concat(msgs, '\n')); end
 		return processing_fcn(e, r._pattern, input, start)
 	     else
 		engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
