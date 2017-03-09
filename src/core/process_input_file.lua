@@ -43,7 +43,7 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    -- This set of simple optimizations almost doubles performance of the loop through the file
    -- (below) in typical cases, e.g. syslog pattern. 
    local encoder = e.encode_function		    -- optimization
-   local peg = (r._pattern.peg * lpeg.Cp())	    -- optimization
+   local peg = r._pattern.tlpeg			    -- optimization
    local matcher = peg.match			    -- optimization
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);

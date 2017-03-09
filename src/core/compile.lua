@@ -533,7 +533,10 @@ function compile.compile(astlist, original_astlist, source, env)
       -- Return results and compilation messages
       if results then
 	 assert(type(messages)=="table")
-	 for i, pat in ipairs(results) do pat.original_ast = original_astlist[i]; end
+	 for i, pat in ipairs(results) do
+	    pat.original_ast = original_astlist[i];
+	    pat.tlpeg = pat.peg * lpeg.Cp()
+	 end
 	 return results, messages		    -- message may contain compiler warnings
       else
 	 assert(type(messages)=="string")
@@ -585,6 +588,7 @@ function compile.compile_expression(astlist, original_astlist, source, env)
       -- since that can't be an identifier name.
       result.peg = common.match_node_wrap(C(result.peg), "*")
    end
+   result.tlpeg = result.peg * lpeg.Cp()
    return result, {}				    -- N.B. returns a single pattern and messages
 end
 

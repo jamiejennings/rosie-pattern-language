@@ -211,12 +211,12 @@ end
 
 -- N.B. This code is duplicated (for speed) in process_input_file.lua
 -- There's still room for optimizations, e.g.
---   Combine with lpeg.Cp() and store that "final" match-able pattern.
+--   + Combine with lpeg.Cp() and store that "final" match-able pattern.
 --   Create a closure over the encode function to avoid looking it up in e.
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
 local function _engine_match(e, pat, input, start)
-   local result, nextpos = (pat.peg * lpeg.Cp()):match(input, start)
+   local result, nextpos = pat.tlpeg:match(input, start)
    if result then
       return (e.encode_function(result)), (#input - nextpos + 1);
    else
