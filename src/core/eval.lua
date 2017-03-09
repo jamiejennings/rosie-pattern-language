@@ -15,7 +15,7 @@
 -- compiler.)  Toward that end, functions internal to the compiler are used liberally here.
 
 local compile = require "compile"
-local compile_expression = compile.compile_expression
+local compile_expression = compile.compile0.compile_expression
 local function compile_exp(ast, env)
    local astlist = {ast}
    local pat, msgs = compile_expression(astlist, astlist, "<no source>", env)

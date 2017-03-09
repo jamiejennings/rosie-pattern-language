@@ -7,8 +7,6 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
-local compile = {}				    -- exported top level interface
-
 local pattern = common.pattern
 local lpeg = require "lpeg"
 local writer = require "writer"
@@ -16,7 +14,7 @@ local writer = require "writer"
 local c0 = require "c0"
 
 ----------------------------------------------------------------------------------------
--- Top-level interface to compiler
+-- Coroutine body
 ----------------------------------------------------------------------------------------
 
 local function compile_astlist(astlist, source, env)
@@ -30,7 +28,11 @@ local function compile_astlist(astlist, source, env)
    return results, messages
 end
 
-function compile.compile(astlist, original_astlist, source, env)
+----------------------------------------------------------------------------------------
+-- Top-level interface to compilers
+----------------------------------------------------------------------------------------
+
+local function compile0(astlist, original_astlist, source, env)
    assert(type(astlist)=="table", "Internal error: compile: astlist not a table")
    assert(type(original_astlist)=="table", "Internal error: compile: original_astlist not a table")
    assert(type(source)=="string", "Internal error: compile: source not a string")
@@ -55,7 +57,7 @@ function compile.compile(astlist, original_astlist, source, env)
    end
 end
 
-function compile.compile_expression(astlist, original_astlist, source, env)
+local function compile_expression0(astlist, original_astlist, source, env)
    assert(type(astlist)=="table")
    assert(type(original_astlist)=="table")
    assert(type(source)=="string")
@@ -81,7 +83,7 @@ function compile.compile_expression(astlist, original_astlist, source, env)
       pat = env[text]
    end
    -- Compile the expression
-   local results, msgs = compile.compile(astlist, original_astlist, source, env)
+   local results, msgs = compile0(astlist, original_astlist, source, env)
    if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
       return false, msgs
    end
@@ -100,4 +102,5 @@ function compile.compile_expression(astlist, original_astlist, source, env)
    return result, {}				    -- N.B. returns a single pattern and messages
 end
 
-return compile
+return {compile0={compile=compile0, compile_expression=compile_expression0}}
+

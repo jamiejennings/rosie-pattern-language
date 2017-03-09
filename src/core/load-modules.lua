@@ -111,7 +111,7 @@ local function rpl_parser(source)
    end
 end
 
-engine._set_defaults(rpl_parser, compile, 0, 0);
+engine._set_defaults(rpl_parser, compile.compile0, 0, 0);
 manifest = load_module("manifest")
 
 process_input_file = load_module("process_input_file")
