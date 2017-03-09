@@ -86,13 +86,13 @@ local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified;
 local common = require "common"
 local writer = require "writer"
-local compile = require "compile"
 local eval = require "eval"
 
 local engine = 
    recordtype.define(
    {  _name=unspecified;			    -- for reference, debugging
       _rpl_parser=false;
+      _rpl_compiler=false;
       _rpl_version=false;
       _env=false;
       _id=unspecified;
@@ -166,7 +166,7 @@ local function compile_search(en, pattern_exp)
    local astlist, orig_astlist, warnings, leftover = rpl_parser(pattern_exp)
    if not astlist then return nil, warnings; end	    -- warnings contains errors in this case
    assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
-   local pat, msgs = compile.compile_expression(astlist, orig_astlist, pattern_exp, env)
+   local pat, msgs = en._rpl_compiler.compile_expression(astlist, orig_astlist, pattern_exp, env)
    if not pat then return nil, msgs; end
    local replacement = pat.ast
    -- Next, transform pat.ast
@@ -175,7 +175,7 @@ local function compile_search(en, pattern_exp)
    local template = astlist[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   return compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
+   return en._rpl_compiler.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
    -- local pat, msgs = compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
    -- if not pat then return nil, msgs; end
    -- assert(pat.peg)
@@ -190,7 +190,7 @@ local function compile_match(en, source)
    if (not astlist) then
       return false, warnings			    -- warnings contains errors in this case
    end
-   return compile.compile_expression(astlist, original_astlist, source, env)
+   return en._rpl_compiler.compile_expression(astlist, original_astlist, source, env)
 end
 
 local function engine_compile(en, expression, flavor)
@@ -209,7 +209,7 @@ local function engine_compile(en, expression, flavor)
    return rplx(en, pat), msgs
 end
 
--- N.B. This code is duplicated (for speed) in process_input_file.lua
+-- N.B. This code is essentially duplicated (for speed, to avoid a function call) in process_input_file.lua
 -- There's still room for optimizations, e.g.
 --   + Combine with lpeg.Cp() and store that "final" match-able pattern.
 --   Create a closure over the encode function to avoid looking it up in e.
@@ -269,7 +269,7 @@ local function load_string(e, input)
    if not astlist then
       engine_error(e, table.concat(warnings, '\n')) -- in this case, warnings contains errors
    end
-   local results, messages = compile.compile(astlist, original_astlist, input, e._env)
+   local results, messages = e._rpl_compiler.compile(astlist, original_astlist, input, e._env)
    if results then
       assert(type(messages)=="table")
       for i,w in ipairs(warnings) do table.insert(messages, i, w); end
@@ -341,10 +341,17 @@ rplx.create_function =
    end
 
 local default_rpl_parser = function(...) error("default_rpl_parser not initialized"); end
+local default_rpl_compiler = function(...) error("default_rpl_compiler not initialized"); end
 local default_rpl_version
-local function set_default_rpl_parser(parse_expand_explain, major, minor)
+local function set_defaults(parse_expand_explain, compiler, major, minor)
    if type(parse_expand_explain)~="function" then
-      error("default_rpl_parser not a function: " .. tostring(default_rpl_parser))
+      error("default rpl parser not a function: " .. tostring(default_rpl_parser))
+   elseif type(compiler)~="table" then
+      error("default rpl compiler not a table: " .. tostring(compiler))
+   elseif type(compiler.compile_expression)~="function" then
+      error("default compiler is missing compile_expression function: " .. tostring(compiler.compile_expression))
+   elseif type(compiler.compile)~="function" then
+      error("default compiler is missing compile function: " .. tostring(compiler.compile))
    elseif type(major)~="number" then
       error("major version not a number: " .. tostring(major))
    elseif type(minor)~="number" then
@@ -352,6 +359,7 @@ local function set_default_rpl_parser(parse_expand_explain, major, minor)
    end
    local vt = {major=major, minor=minor}
    default_rpl_parser = parse_expand_explain
+   default_rpl_compiler = compiler
    default_rpl_version = setmetatable({}, {__index=vt,
 					   __newindex=function(...) error("read-only table") end,
 					   __tostring=function(self) return tostring(vt.major).."."..tostring(vt.minor); end,
@@ -364,6 +372,7 @@ engine.create_function =
       -- assigning a unique instance id should be part of the recordtype module
       local params = {_name=name,
 		      _rpl_parser=default_rpl_parser;
+		      _rpl_compiler=default_rpl_compiler;
 		      _rpl_version=default_rpl_version;
 		      _env=initial_env,
 
@@ -397,7 +406,7 @@ engine.create_function =
 -- recordtype package defines a creator function that is named after the record type name
 engine_module.new = engine
 engine_module.is = engine.is
-engine_module._set_default_rpl_parser = set_default_rpl_parser
+engine_module._set_defaults = set_defaults
 
 engine_module.rplx = rplx			    -- debugging
 

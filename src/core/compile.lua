@@ -92,8 +92,9 @@ end
 -- Compile
 ----------------------------------------------------------------------------------------
 
+-- Can't just run peg:match("") because a lookahead expression will return nil, even though it
+-- cannot be put into a loop (because it consumes no input).
 local function matches_empty(peg)
-   --   local result = peg:match("")
    local ok, msg = pcall(function() return peg^1 end)
    return (not ok) and msg:find("loop body may accept empty string")
 end
