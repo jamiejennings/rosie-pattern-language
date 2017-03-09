@@ -372,7 +372,7 @@ function cinternals.compile_grammar_expression(a, gmr, source, env)
    t[1] = start					    -- first rule is start rule
    local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
    if success then
-      return start, pattern{name="grammar", peg=peg_or_msg, ast=a, alias=gtable[t[1]].alias}
+      return pattern{name="grammar", peg=peg_or_msg, ast=a, alias=gtable[t[1]].alias}, start
    else -- failed
       assert(type(peg_or_msg)=="string", "Internal error (compiler) while reporting an error in a grammar")
       local rule = peg_or_msg:match("'%w'$")
@@ -385,7 +385,7 @@ function cinternals.compile_grammar_expression(a, gmr, source, env)
 end
 
 function cinternals.compile_grammar(a, gmr, source, env)
-   local name, pat = cinternals.compile_grammar_expression(a, gmr, source, env)
+   local pat, name = cinternals.compile_grammar_expression(a, gmr, source, env)
    -- if no pattern returned, then errors were already explained
    if pat then
       local msg

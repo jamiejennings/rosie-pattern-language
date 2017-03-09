@@ -25,7 +25,7 @@ trace = "no trace set"
 function check_eval(exp, input, expectation, expected_contents_list)
 --   set_expression(exp)
    local ok, m, leftover, localtrace = pcall(e.tracematch, e, exp, input)
-   check(ok, "failed call to eval: " .. tostring(m))
+   check(ok, "failed call to eval: " .. tostring(m) .. "\nexp=" .. exp .. "\ninput=" .. input)
    if ok then
       check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " " .. input .. " ", 1)
