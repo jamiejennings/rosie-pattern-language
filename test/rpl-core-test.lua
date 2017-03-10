@@ -1212,6 +1212,8 @@ test_charsets("[[:alpha:][$][2-4]]", {"F", "G", "H", "a", "2", "4", "$"}, {"5", 
 
 heading("Grammars")
 
+subheading("Correct")
+
 -- Grammar matches balanced numbers of a's and b's
 g1_defn = [[grammar
   g1 = S ~
@@ -1278,6 +1280,41 @@ check(m.use_g2)
 check(m.use_g2.subs)
 check(#m.use_g2.subs==1)
 check(m.use_g2.subs[1].g1)
+
+subheading("With errors")
+
+g_syntax_error = [[grammar
+  g1 = S ~
+  S = { {"a" B} // {"b" A} / "" }
+  alias A = { {"a"} / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
+end]]
+
+ok, msg = pcall(e.load, e, g_syntax_error)
+check(not ok)
+check(msg:find("Syntax error"))
+
+g_left_recursion = [[grammar
+  g1 = S ~
+  S = { {"a" B} / {"b" A} / "" }
+  alias A = { A {"a" } / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
+end]]
+
+ok, msg = pcall(e.load, e, g_left_recursion)
+check(not ok)
+check(msg:find("may be left recursive"))
+
+g_empty_string = [[grammar
+  g1 = S ~
+  S = { {"a" B} / {"b" A} / "" }
+  alias A = { {""}+ / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
+end]]
+
+ok, msg = pcall(e.load, e, g_empty_string)
+check(not ok)
+check(msg:find("can match the empty string"))
 
 
 heading("Invariants")

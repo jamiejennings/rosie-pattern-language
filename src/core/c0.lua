@@ -84,6 +84,21 @@ local function explain_unknown_quantifier(a, source)
    coroutine.yield(false, msg)				    -- throw
 end
 
+local function explain_grammar_error(a, source, message)
+   assert(a, "did not get ast in explain_grammar_error")
+   local name, errpos, text = common.decode_match(a)
+   local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
+   local maybe_rule = message:match("'%w'$")
+   local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
+   local fmt = "Compile error: %s\n" .. writer.reveal_ast(a) --.. "\nAt line %d:\n%s\n" .. string.rep(" ", pos) .. "^"
+   -- Full set of args: expl, lnum, line, pos
+   if message:find("may be left recursive") then
+      local msg = string.format(fmt, message)
+      coroutine.yield(false, msg)		    -- throw
+   else
+      coroutine.yield(false, "unexpected error raised by lpeg: " .. tostring(message))
+   end
+end
 
 ----------------------------------------------------------------------------------------
 -- Compile
@@ -116,7 +131,9 @@ function c0.process_quantified_exp(a, gmr, source, env)
    end
    local e = c0.compile_exp(subs[1], gmr, source, env)
    local epeg = e.peg
-   if (not gmr) and matches_empty(epeg) then
+   -- Why did we skip this test when compiling a grammar?  Hmmm...  (Friday, March 10, 2017)
+   --   if (not gmr) and matches_empty(epeg) then
+   if matches_empty(epeg) then
       explain_quantified_limitation(a, source);
    end
    local q = subs[2]
@@ -374,12 +391,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
       return pattern{name="grammar", peg=peg_or_msg, ast=a, alias=gtable[t[1]].alias}, start
    else -- failed
       assert(type(peg_or_msg)=="string", "Internal error (compiler) while reporting an error in a grammar")
-      local rule = peg_or_msg:match("'%w'$")
-      table.print(a)				    -- !@#
-      print(peg_or_msg)				    -- !@#
-      -- !@# FIXME:
-      -- Explain some error that may not be related to quantifier!  Change the call below: 
-      explain_quantified_limitation(a, source, rule)
+      explain_grammar_error(a, source, peg_or_msg)
    end
 end
 
@@ -393,7 +405,7 @@ function c0.compile_grammar(a, gmr, source, env)
       return pat, msg
    else
       -- should never get here.  when compile_grammar_expression fails, it throws.
-      error("Internal error (compiler): compilation of grammar \""..tostring(name).."\" failed")
+      coroutine.yield(false, "compilation of grammar failed -- no additional information is available")
    end
 end
 
