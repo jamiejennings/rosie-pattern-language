@@ -57,6 +57,8 @@ function syntax.validate(ast)
 	    end -- loop through subs
 	 elseif ((k=="capture") and (name=="binding")) then
 	    if (type(v)~="boolean") then err(name, "value of the capture flag not a boolean"); end
+	 elseif (k=="replaces") then
+	    if (type(v)~="table") then err(name, "value of the 'replaces' field not an AST"); end
 	 else -- unrecognized key
 	    err(name, "unexpected key in ast body: " .. tostring(k));
 	 end -- switch on k
@@ -344,15 +346,20 @@ function syntax.expand_rhs(ast, original_rhs_name)
    ast = syntax.expand_charset_exp(ast)
    local name, body = next(ast)
    if original_rhs_name=="raw" then
-      return syntax.generate("raw_exp", syntax.raw(ast))
+      local new = syntax.generate("raw_exp", syntax.raw(ast))
+      new.raw_exp.replaces = ast
+      return new
    elseif original_rhs_name=="cooked" then
-	 return syntax.cook(ast)
+      local new = syntax.cook(ast)
+      local name = next(new)
+      new[name].replaces = ast
+      return new
    elseif original_rhs_name=="identifier" then
       -- neither cooked nor raw, the rawness of a ref depends on
       -- following the reference
       return syntax.id_to_ref(ast)
-   elseif name=="ref" then
-      return ast(ast)
+--   elseif name=="ref" then
+--      return ast(ast)				    -- ???
    elseif name=="capture" then
       return syntax.generate("capture", body.subs[1], syntax.expand_rhs(body.subs[2]))
    elseif name=="syntax_error" then
@@ -367,7 +374,9 @@ function syntax.expand_rhs(ast, original_rhs_name)
       else
       	 new = syntax.cook(new)
       end
-      return syntax.generate("raw_exp", new)
+      new = syntax.generate("raw_exp", new)
+      new.raw_exp.replaces = ast
+      return new
    else
       error("Error in transform: unrecognized parse result: " .. name)
    end
@@ -388,6 +397,7 @@ syntax.to_binding =
 			      end
 			      local b = syntax.generate("binding", lhs, rhs)
 			      b.binding.capture = (name=="assignment_")
+			      --b.binding.replaces = ast -- N.B. in rpl 0.0, 1.0 the binding ast is discarded
 			      b.binding.text = body.text
 			      b.binding.pos = body.pos
 			      return b
@@ -431,6 +441,7 @@ function syntax.top_level_transform(ast)
       local new = syntax.generate("new_grammar", table.unpack(new_bindings))
       new.new_grammar.text = ast.grammar_.text
       new.new_grammar.pos = ast.grammar_.pos
+      new.new_grammar.replaces = ast
       return new
    elseif (name=="syntax_error") then
       return ast				    -- errors will be culled out later
