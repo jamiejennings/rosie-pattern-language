@@ -135,9 +135,11 @@ if(APPLE)
 	set_property(
 		TARGET lua-bin luac
 		APPEND_STRING
-		PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX")
-	# TODO: Add the rest of MacOSX stuff
-	message(FATAL_ERROR "MacOSX is not completely done, stopping")
+		PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX"
+		PROPERTY LINK_FLAGS " -Wl")
+	target_link_libraries(lua-lib dl readline)
+	target_link_libraries(lua-bin dl readline m)
+	target_link_libraries(luac dl readline m)
 elseif(UNIX)
 	set_property(
 		TARGET lua-bin luac
@@ -207,7 +209,11 @@ if(WIN32)
 	string(CONCAT CJSON_DEFINITIONS "${CJSON_DEFINITIONS}" " -DDISABLE_INVALID_NUMBERS")
 endif()
 
-add_library(cjson SHARED ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
+if(APPLE)
+	add_library(cjson ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
+else()
+	add_library(cjson SHARED ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
+endif()
 add_dependencies(cjson lua-lib)
 set_target_properties(cjson
 	PROPERTIES
@@ -246,7 +252,11 @@ set(LPEG_C_FILES
 
 # TODO: Add DEBUG files and CFLAGS
 
-add_library(lpeg SHARED ${LPEG_C_FILES})
+if(APPLE)
+	add_library(lpeg ${LPEG_C_FILES})
+else()
+	add_library(lpeg SHARED ${LPEG_C_FILES})
+endif()			 
 set_target_properties(lpeg
 	PROPERTIES
 	PREFIX "")
@@ -266,7 +276,11 @@ if(APPLE)
 		ON)
 endif(APPLE)
 
-add_library(lua-readline SHARED ${READLINE_DIR}/src/lua_readline.c)
+if(APPLE)
+	add_library(lua-readline ${READLINE_DIR}/src/lua_readline.c)
+else()
+	add_library(lua-readline SHARED ${READLINE_DIR}/src/lua_readline.c)
+endif()
 set_target_properties(lua-readline
 	PROPERTIES
 	OUTPUT_NAME readline
@@ -325,7 +339,7 @@ list(APPEND COMPILED_LUA_FILES argparse.luac)
 # {{{ Generate Rosie core luac files
 message(STATUS "Processing rosie core files")
 
-file(GLOB CORE_LUA ${CMAKE_SOURCE_DIR}/src/core/*)
+file(GLOB CORE_LUA ${CMAKE_SOURCE_DIR}/src/core/*.lua)
 
 add_custom_target(core-rosie ALL
 	DEPENDS luac)
