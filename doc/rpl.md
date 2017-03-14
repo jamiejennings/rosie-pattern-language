@@ -89,31 +89,45 @@ Matching against "421" now gives:
 
 ### Grammars are an advanced feature you may never need
 
-Grammars can have mutually recursive rules.  PEGs allow you to define grammars for recursive structures like nested lists (e.g. JSON, XML) or things like "strings that have an equal number of a's and b's".  Here is an interactive Rosie session in which a grammar called `same` has been defined to match strings that have equal a's and b's:
+Grammars can have mutually recursive rules.  PEGs allow you to define grammars for recursive structures like nested lists (e.g. JSON, XML) or things like "strings that have an equal number of a's and b's".  Grammars are defined simply by putting a set of assignment/alias statements inside a `grammar`...`end` block, e.g.:
+
+```
+grammar
+  same = S $
+  alias S = { {"a" B} / {"b" A} / "" }
+  alias A = { {"a" S} / {"b" A A} }
+  alias B = { {"b" S} / {"a" B B} }
+end
+``` 
+
+This grammar, above, matches strings that have equal a's and b's in them.  The first line of the grammar defines its name, which in this case is `same`.  The other names, like `S` and `A`, are not globally visible.  They are scoped only to the grammar itself.
+
+Here is an interactive Rosie session in which the grammar above has already been loaded.
 
 ``` 
 Rosie> same
-same = grammar
-  assignment same = S $
-  alias S = ({"a" B} / ({"b" A} / ""))
-  alias A = ({"a" S} / {"b" A A})
-  alias B = ({"b" S} / {"a" B B})
+grammar_
+   assignment same = (S $)
+   alias S = {{("a" B)} / {("b" A)} / ""}
+   alias A = {{("a" S)} / {("b" A A)}}
+   alias B = {{("b" S)} / {("a" B B)}}
 end
-Rosie> .match same, "aabaabbb"
-[same: 
-[pos: 1, 
- text: "aabaabbb"]]
-Rosie> .match same, "aab"
- 1..GRAMMAR:
-	grammar
-	   assignment same = S $
-	   alias S = ({"a" B} / ({"b" A} / ""))
-	   alias A = ({"a" S} / {"b" A A})
-	   alias B = ({"b" S} / {"a" B B})
-	end
-	FAILED to match against input "aab"
-Repl: No match (turn debug off to hide the match trace)
-	Rosie>
+Rosie> .match same "aabaabbb"
+{"same": 
+   {"pos": 1.0, 
+    "text": "aabaabbb"}}
+Rosie> .match same "aab"
+  1..GRAMMAR:
+     new_grammar
+        same = CAPTURE as same: {(S ~ $)}
+        S = {("a" B) / ("b" A) / ""}
+        A = {("a" S) / ("b" A A)}
+        B = {("b" S) / ("a" B B)}
+     end
+     FAILED to match against input "aab"
+
+Repl: No match  (turn debug off to hide the trace output)
+Rosie> 
 ``` 
 
 **IMPORTANT NOTE:** Debugging grammars using the `-debug` command line option is not currently supported.  Even worse, the syntax error reporting for grammars is atrocious.  This is on the TO DO list and will be addressed soon.
@@ -350,9 +364,9 @@ Currently, the Rosie Pattern Engine begins matching with the first character of 
 
 
 ``` 
-Rosie> .match common.number, "   123"
+Rosie> .match common.number "   123"
 Repl: No match (turn debug on to show the match trace)
-Rosie> .match [:space:]* common.number, "   123"
+Rosie> .match [:space:]* common.number "   123"
 [*: 
  [pos: 1, 
   subs: 
