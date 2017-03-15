@@ -15,8 +15,9 @@ local readline = require "readline"
 
 local repl_patterns = [==[
       rpl_expression = expression
-      rpl_exp_placeholder = {!{quoted_string $} .}+
-      parsed_args = rpl_exp_placeholder? quoted_string?
+      comma_or_quoted_string = ","? quoted_string
+      rpl_exp_placeholder = {!{comma_or_quoted_string $} .}+
+      parsed_args = rpl_exp_placeholder? ","? quoted_string?
       path = {![[:space:]] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path?
       manifest = ".manifest" path?
@@ -158,7 +159,11 @@ function repl.repl(en)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
 		     local astlist, original_astlist = parse_and_explain(exp_string)
 		     if not astlist then
-			io.write(original_astlist, "\n") -- error message
+			if original_astlist then
+			   io.write(original_astlist, "\n") -- error message
+			else
+			   io.write("Syntax error\n")
+			end
 		     else
 			-- parsing strips the quotes off when exp is only a literal string, but compiler
 			-- needs them there.  this is inelegant.  sigh
