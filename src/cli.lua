@@ -360,6 +360,12 @@ local cmd_trace = parser:command("trace")
 local cmd_grep = parser:command("grep")
 	:description("Run RPL match in the style of Unix grep (match anywhere in a line)")
 
+local output_choices={"color","nocolor","fulltext","json", "none"}
+local output_choices_string = output_choices[1]
+for i=2,#output_choices do
+   output_choices_string = output_choices_string .. ", " .. output_choices[i]
+end
+
 for _, cmd in ipairs{cmd_match, cmd_trace, cmd_grep} do
    -- match/trace/grep flags (true/false)
    cmd:flag("-s --wholefile", "Read input file as single string")
@@ -376,12 +382,11 @@ for _, cmd in ipairs{cmd_match, cmd_trace, cmd_grep} do
       :default("-")			      -- in case no filenames are passed, default to stdin
       :defmode("arg")			      -- needed to make the default work
    -- match/trace/grep options (takes an argument)
-   cmd:option("-o --encode", "Output format")
+   cmd:option("-o --encode", "Output format, one of " .. output_choices_string)
       :convert(function(a)
 		  -- validation of argument, will fail if not in choices array
-		  local choices={"color","nocolor","fulltext","json"}
-		  for j=1,#choices do
-		     if a == choices[j] then
+		  for j=1,#output_choices do
+		     if a == output_choices[j] then
 			return a
 		     end
 		  end

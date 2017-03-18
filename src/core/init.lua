@@ -163,6 +163,7 @@ local encoder_table =
     color = color_output.color_string_from_leaf_nodes,
     nocolor = color_output.string_from_leaf_nodes,
     fulltext = common.match_to_text,
+    none = function(...) return nil; end,
     [false] = function(...) return ...; end
  }
 

@@ -69,7 +69,8 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
       -- local leftover = (#input - nextpos + 1);
       if trace then o_write(outfile, trace, "\n"); end
       if m then
-	 o_write(outfile, encoder(m), "\n")
+	 local str = encoder(m)
+	 if str then o_write(outfile, str, "\n"); end
 	 outlines = outlines + 1
       else --if not trace_flag then
 	 e_write(errfile, l, "\n")
