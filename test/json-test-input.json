@@ -1,0 +1,45 @@
+{
+    "_id": "58cd46969c38531aca4192db",
+    "index": 0,
+    "guid": "16750d79-f502-4677-bbad-d69c25a7a023",
+    "isActive": false,
+    "balance": "$3,771.67",
+    "picture": "http://placehold.it/32x32",
+    "age": 38,
+    "eyeColor": "brown",
+    "name": "Dolly Mccall",
+    "gender": "female",
+    "company": "ZIPAK",
+    "email": "dollymccall@zipak.com",
+    "phone": "+1 (911) 561-2694",
+    "address": "619 Bartlett Place, Edmund, Washington, 6932",
+    "about": "Sit magna mollit Lorem amet ex dolore labore ullamco sunt labore do exercitation enim nisi. Aliqua in culpa sint incididunt aliqua eu in esse qui laboris do quis tempor dolore. Ad elit aute tempor in in. Officia eu elit tempor pariatur.\r\n",
+    "registered": "2017-02-09T01:05:22 +05:00",
+    "latitude": -48.881938,
+    "longitude": 48.929815,
+    "tags": [
+      "incididunt",
+      "fugiat",
+      "incididunt",
+      "pariatur",
+      "proident",
+      "duis",
+      "ex"
+    ],
+    "friends": [
+      {
+        "id": 0,
+        "name": "Joy Mckinney"
+      },
+      {
+        "id": 1,
+        "name": "Hampton Knapp"
+      },
+      {
+        "id": 2,
+        "name": "Monique Ferrell"
+      }
+    ],
+    "greeting": "Hello, Dolly Mccall! You have 9 unread messages.",
+    "favoriteFruit": "apple"
+}

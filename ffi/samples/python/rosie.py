@@ -90,29 +90,36 @@ rosie_home           # path to ROSIE_HOME directory
 class initialize():
     'put docstring here'
 
-    def __init__(self, rosie_home, librosie_path):
+    rosie_home = None
+    rosie_instance = None
+    
+    # TODO: add an optional rosie_home arg
+    def __init__(self):
+
+        if not self.rosie_home:
+            self.rosie_home = os.getenv("ROSIE_HOME")
+        if not self.rosie_home:
+            raise ValueError("Environment variable ROSIE_HOME not set.  (Must be set to the root of the rosie directory.)")
         # TODO: Catch an exception here, if ffi cannot open the dynamic library
-        self.rosie = ffi.dlopen(librosie_path)
-        self.rosie_home = rosie_home
+        self.rosie_instance = ffi.dlopen(self.rosie_home + "/ffi/librosie/librosie.so")
 
     def engine(self):
         return engine(self)
     
     def get_retvals(self, messages):
-        return self._get_retvals(messages, self.rosie.rosieL_free_stringArray)
+        return self._get_retvals(messages, self.rosie_instance.rosieL_free_stringArray)
     
     def get_retvals_from_ptr(self, messages):
-        return self._get_retvals(messages, self.rosie.rosieL_free_stringArray_ptr)
+        return self._get_retvals(messages, self.rosie_instance.rosieL_free_stringArray_ptr)
 
     def _get_retvals(self, messages, free):
         retvals = strings_from_array(messages)
         assert retvals
-        free(messages) #self.rosie.rosie.rosieL_free_stringArray(messages)
+        free(messages) #self.rosie_instance.rosie.rosieL_free_stringArray(messages)
         code = retvals[0]
         if code != 'true':
             raise # exception indicating that the call failed
         return retvals[1:]
-
 
 # TODO: Support an optional argument for the engine name (helps when debugging)
 class engine ():
@@ -123,10 +130,11 @@ class engine ():
         #     raise #"Exception indicating that rosie was not initialized"
         # if not rosie_home:
         #     raise #"Exception indicating that rosie_home is not set"
+
         self.name = "anonymous"
         self.rosie = rosie_instance
-        messages = self.rosie.rosie.rosieL_new_stringArray()
-        self.engine = self.rosie.rosie.rosieL_initialize(to_cstr_ptr(self.rosie.rosie, self.rosie.rosie_home), messages)
+        messages = self.rosie.rosie_instance.rosieL_new_stringArray()
+        self.engine = self.rosie.rosie_instance.rosieL_initialize(to_cstr_ptr(self.rosie.rosie_instance, self.rosie.rosie_home), messages)
         #printArray(messages, "initialize")
         retvals = self.rosie.get_retvals_from_ptr(messages)
         self.id = retvals[0]
@@ -135,42 +143,47 @@ class engine ():
         return
 
     def configure(self, config_string):
-        config = to_cstr_ptr(self.rosie.rosie, config_string)
-        r = self.rosie.rosie.rosieL_configure_engine(self.engine, config)
+        config = to_cstr_ptr(self.rosie.rosie_instance, config_string)
+        r = self.rosie.rosie_instance.rosieL_configure_engine(self.engine, config)
         #printArray(r, "configure_engine")
         retvals = self.rosie.get_retvals(r)
         return retvals
 
     def inspect(self):
-        r = self.rosie.rosie.rosieL_inspect_engine(self.engine)
+        r = self.rosie.rosie_instance.rosieL_inspect_engine(self.engine)
         #printArray(r, "inspect_engine")
         retvals = self.rosie.get_retvals(r)
         return retvals
 
     def load_manifest(self, path):
-        r = self.rosie.rosie.rosieL_load_manifest(self.engine, to_cstr_ptr(self.rosie.rosie, path))
+        r = self.rosie.rosie_instance.rosieL_load_manifest(self.engine, to_cstr_ptr(self.rosie.rosie_instance, path))
         #printArray(r, "load_manifest")
         retvals = self.rosie.get_retvals(r)
         return retvals
 
+    def load_file(self, path):
+        r = self.rosie.rosie_instance.rosieL_load_file(self.engine, to_cstr_ptr(self.rosie.rosie_instance, path))
+        retvals = self.rosie.get_retvals(r)
+        return retvals
+
     def match(self, input_py_string, start):
-        return self._match_or_eval(input_py_string, start, self.rosie.rosie.rosieL_match)
+        return self._match_or_eval(input_py_string, start, self.rosie.rosie_instance.rosieL_match)
 
     def eval(self, input_py_string, start):
-        return self._match_or_eval(input_py_string, start, self.rosie.rosie.rosieL_eval)
+        return self._match_or_eval(input_py_string, start, self.rosie.rosie_instance.rosieL_eval)
 
     def _match_or_eval(self, input_py_string, start, operation):
         # TODO: use varargs so that the start argument may be omitted
         if start is None: start = 1 # Rosie uses Lua's 1-based indexing
-        input_string = to_cstr_ptr(self.rosie.rosie, input_py_string)
-        start_as_string = to_cstr_ptr(self.rosie.rosie, str(start))
+        input_string = to_cstr_ptr(self.rosie.rosie_instance, input_py_string)
+        start_as_string = to_cstr_ptr(self.rosie.rosie_instance, str(start))
         r = operation(self.engine, input_string, start_as_string); 
         retvals = self.rosie.get_retvals(r)
         return retvals
 
     def __del__(self):
         print "Garbage collecting engine", self.id
-        self.rosie.rosie.rosieL_finalize(self.engine)
+        self.rosie.rosie_instance.rosieL_finalize(self.engine)
 
 
     
