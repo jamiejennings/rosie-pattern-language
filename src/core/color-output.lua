@@ -70,6 +70,8 @@ colormap = {["."] = "black";
 	    ["common.word"] = "yellow";
 	    ["common.int"] = "underline";
 	    ["common.float"] = "underline";
+	    ["common.mantissa"] = "underline";
+	    ["common.exp"] = "underline";
 	    ["common.hex"] = "underline";
 	    ["common.denoted_hex"] = "underline";
 	    ["common.number"] = "underline";

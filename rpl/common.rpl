@@ -20,11 +20,31 @@ alias hex_only = { [a-f] / [A-F] }
 alias hex_digits = { digit / [a-f] / [A-F] }
 --alias common.hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
 common.int = { [+-]? digit+ !hex_only}	     -- at least one digit, and not a hex number
-common.float = { [+-]? digit+ "." digit+ }  -- float with digits on either side of radix
+-- test common.int accepts "34", "+34", "-34"
+-- test common.int rejects "BEEF", "0x20"
+common.frac = { [.] [0-9]+ }
+-- test common.frac accepts ".0", ".01", ".3210009831", ".1"
+-- test common.exp rejects "0.", "1.1", "-.1"
+common.mantissa = { [+-]? digit+ "." digit+ }  -- float with digits on either side of radix
+-- test common.mantissa accepts "1.23", "+1.23", "-1.23"
+-- test common.mantissa rejects "12", "bob", "1."
+common.exp = { [eE] [+-]? [0-9]+ }
+-- test common.exp accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
+-- test common.exp rejects "e0.", "e0a", "e+-10", "Ef"
+common.float = { common.mantissa common.exp? } 
+-- test common.float accepts "6.02e23", "3.00E08", "0.123", "-2.0", "-2.0e1", "0.456e-101"
+-- test common.float rejects "6.02F23", "3.00E--08", "123"
+-- test common.float accepts "-1.32", "6.02E23", "+0.314e1"
+-- test common.float rejects "0x01", "--2", "a", "-1", "+0"
 common.hex = hex_digits+ 		     --  use with care! will match words and decimal numbers
 common.denoted_hex = { "0x" common.hex }
-common.number =  (common.denoted_hex /  common.float / common.int / common.hex)
+-- test common.denoted_hex accepts "0xBEEF", "0x20"
+-- test common.denoted_hex rejects "BEEF", "0x2o"
 
+-- N.B. signed_number matches the JSON spec for numbers
+alias common.signed_number = (common.float / common.int)
+common.number =  (common.denoted_hex /  common.float / common.int / common.hex)
+-- test common.number accepts "0", "01", "-1", "-1.0", "+1", "+0", "+0.0", "-0.3e+1", "+1.1E-1", "0x1a", "face"
 common.word = letter+
 
 -- This definition is essentially what grok uses, which isn't great:
@@ -68,8 +88,14 @@ common.type4_guid = common.type4_guid_nocap
 
 -- Quoted strings, using single or double quote
 --
--- Within a string, the quote character can be escaped using a slash, OR by repeating it twice,
--- e.g. "".
+-- An escaped_string is a json string, in which double quotes must be escaped.
+--
+common.escaped_string = ["] { {[\\].} / [^"\\] }* ["]   -- "
+-- test common.escaped_string accepts "\"\"", "\"foo\"", "\"I said, \\\"Hi\\\"\""
+-- test common.escaped_string rejects "", "\"foo", "\"I said, \"Hi\""
+
+-- Within a dquoted_string, the quote character can be escaped using a slash, OR by repeating it
+-- twice, e.g. "".
 alias common.dquoted_string = "\""  {"\\\"" / {! [\"] .}}* "\""
 
 alias dquote = "\""			      -- "
