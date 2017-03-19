@@ -29,15 +29,16 @@ if r: print r
 def print_match_results(r):
     match = json.loads(r[0]) if r else False
     if match:
-        print "Match succeeded!" 
-        print "Match structure is", match
+        sys.stderr.write("Match succeeded!\n")
+        #print "Match structure is", match
         leftover = json.loads(r[1])
-        print "And there were", leftover, "unmatched characters"
+        sys.stderr.write("There were " + str(leftover) + " unmatched characters\n")
     else:
         print "Match failed."
     print
 
-f = open(Rosie.rosie_home + '/test/json-test-input.json', 'r')
+#f = open(Rosie.rosie_home + '/test/json-test-input.json', 'r')
+f = open(Rosie.rosie_home + '/test/large-generated.json', 'r')
 input = f.read()
 
 r = engine.match(input, 1)
