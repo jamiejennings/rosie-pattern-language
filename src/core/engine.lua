@@ -71,6 +71,7 @@ local encode_table =
     color = color_string_from_leaf_nodes,
     nocolor = string_from_leaf_nodes,
     fulltext = common.match_to_text,
+    none = function(...) return nil; end,
     [false] = function(...) return ...; end
  }
 
@@ -174,7 +175,8 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
       -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
       if trace then o_write(outfile, trace, "\n"); end
       if m then
-	 o_write(outfile, encode(m), "\n")
+	 local str = encode(m)
+	 if str then o_write(outfile, str, "\n"); end
 	 outlines = outlines + 1
       else --if not eval_flag then
 	 e_write(errfile, l, "\n")

@@ -69,7 +69,7 @@ local help_messages =
      ["-repl"] = {"start Rosie in the interactive mode (read-eval-print loop)"},
      ["-patterns"] = {"print list of available patterns"},
      ["-encode"] = {"encode output in <arg> format: color (default), nocolor,",
-		    "fulltext, or json"},
+		    "fulltext, json, or none (none produces no output)"},
      ["-wholefile"] = {"read the whole input file into memory as a single string,",
 		       "instead of line by line"},
      ["-all"] = {"write matches to stdout and non-matching lines to stderr"},
