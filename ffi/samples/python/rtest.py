@@ -19,7 +19,7 @@ if not ROSIE_HOME:
     sys.exit(-1)
 
 
-Rosie = rosie.initialize(ROSIE_HOME, ROSIE_HOME + "/ffi/librosie/librosie.so")
+Rosie = rosie.initialize()
 print "Rosie library successfully loaded"
 
 engine = Rosie.engine()

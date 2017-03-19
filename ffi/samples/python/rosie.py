@@ -118,7 +118,7 @@ class initialize():
         free(messages) #self.rosie_instance.rosie.rosieL_free_stringArray(messages)
         code = retvals[0]
         if code != 'true':
-            raise # exception indicating that the call failed
+            raise ValueError(retvals[1])
         return retvals[1:]
 
 # TODO: Support an optional argument for the engine name (helps when debugging)

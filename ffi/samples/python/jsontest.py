@@ -20,17 +20,23 @@ engine = Rosie.engine()
 r = engine.load_file("$sys/rpl/common.rpl")
 r = engine.load_file("$sys/rpl/json.rpl")
 
-config = json.dumps( {'expression': 'json.discard',
-                      'encode': 'json'} )
+config = json.dumps( {'expression': 'json.json',
+                      'encode': 'fulltext'} )
 
 r = engine.configure(config)
 if r: print r
 
 def print_match_results(r):
-    match = json.loads(r[0]) if r else False
-    if match:
-        sys.stderr.write("Match succeeded!\n")
-        #print "Match structure is", match
+    if r:
+        match_str = r[0]
+        if match_str:
+            match = json.loads(match_str)
+            if match:
+                sys.stderr.write("Match succeeded!\n")
+                sys.stderr.write("Length of json-encoded match string is " +
+                                 "{0:,.1f} Kb".format(int(len(match_str)/102.4)/10.0) +
+                                 "\n")
+                #print "Match structure is", match
         leftover = json.loads(r[1])
         sys.stderr.write("There were " + str(leftover) + " unmatched characters\n")
     else:
