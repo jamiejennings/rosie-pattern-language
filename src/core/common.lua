@@ -28,7 +28,7 @@ local b6_lead = lpeg.R(string.char(0xFC)..string.char(0xFD))
 local c_byte = lpeg.R(string.char(0x80)..string.char(0xBF)) -- continuation byte
 
 -- This is denoted \X in Perl, PCRE and some other regex
-local utf8_char_peg = b1_lead +
+common.utf8_char_peg = b1_lead +
                (b2_lead * c_byte) +
 	       (b3_lead * c_byte * c_byte) +
 	       (b4_lead * c_byte * c_byte * c_byte) +
@@ -337,110 +337,8 @@ common.pattern =
    "pattern"
 )
 
----------------------------------------------------------------------------------------------------
--- Environment functions and initial environment
----------------------------------------------------------------------------------------------------
-
-local b_id, dot_id, eol_id = "~", ".", "$"
-
-common.boundary_identifier = b_id
-common.any_char_identifier = dot_id
-common.end_of_input_identifier = eol_id
-
-----------------------------------------------------------------------------------------
--- Boundary for tokenization... this is going to be customizable, but hard-coded for now
-----------------------------------------------------------------------------------------
-
-local locale = lpeg.locale()
-local boundary = locale.space^1 + #locale.punct
-              + (lpeg.B(locale.punct) * #(-locale.punct))
-	      + (lpeg.B(locale.space) * #(-locale.space))
-	      + lpeg.P(-1)
-	      + (- lpeg.B(1))
-
-common.boundary = boundary
-
--- Base environment, which can be extended with new_env, but not written to directly,
--- because it is shared between match engines:
-
-local pattern = common.pattern
-	   
-local ENV = {[dot_id] = pattern{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
-             [eol_id] = pattern{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
-             [b_id] = pattern{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
-       }
-setmetatable(ENV, {__tostring = function(env)
-				   return "<base environment>"
-				end;
-		   __newindex = function(env, key, value)
-				   error('Compiler: base environment is read-only, '
-					 .. 'cannot assign "' .. key .. '"')
-				end;
-		})
-
-function common.new_env(base_env)
-   local env = {}
-   base_env = base_env or ENV
-   setmetatable(env, {__index = base_env;
-		      __tostring = function(env) return "<environment>"; end;})
-   return env
-end
-
--- return a flat representation of env (recall that environments are nested)
-function common.flatten_env(env, output_table)
-   output_table = output_table or {}
-   for item, value in pairs(env) do
-      -- if already seen, do not overwrite with value from parent env
-      if not output_table[item] then output_table[item] = value; end
-   end
-   local mt = getmetatable(env)
-   if mt and mt.__index then
-      -- there is a parent environment
-      return common.flatten_env(mt.__index, output_table)
-   else
-      return output_table
-   end
-end
-
--- use this print function to see the nested environments
-function common.print_env_internal(env, skip_header, total)
-   -- build a list of patterns that we can sort by name
-   local pattern_list = {}
-   local n = next(env)
-   while n do
-      table.insert(pattern_list, n)
-      n = next(env, n);
-   end
-   table.sort(pattern_list)
-   local patterns_loaded = #pattern_list
-   total = (total or 0) + patterns_loaded
-
-   local fmt = "%-30s %-15s %-8s"
-
-   if not skip_header then
-      print();
-      print(string.format(fmt, "Pattern", "Kind", "Color"))
-      print("------------------------------ --------------- --------")
-   end
-
-   local kind, color;
-   for _,v in ipairs(pattern_list) do 
-      local kind = (v.alias and "alias") or "definition";
-      if (co and co.colormap) then color = co.colormap[v] or ""; else color = ""; end;
-      print(string.format(fmt, v, kind, color))
-   end
-
-   if patterns_loaded==0 then
-      print("<empty>");
-   end
-   local mt = getmetatable(env)
-   if mt and mt.__index then
-      print("\n----------- Parent environment: -----------\n")
-      common.print_env_internal(mt.__index, true, total)
-   else
-      print()
-      print(total .. " patterns loaded")
-   end
-end
+common.boundary_identifier = "~"
+common.any_char_identifier = "."
+common.end_of_input_identifier = "$"
 
 return common

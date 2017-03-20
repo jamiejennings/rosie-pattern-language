@@ -16,8 +16,10 @@ local locale = lpeg.locale()
 local util = require "util"
 local writer = require "writer"
 local common = require "common"
-local boundary = common.boundary
 local pattern = common.pattern
+
+local environment = require "environment"	    -- TEMPORARY
+local boundary = environment.boundary
 
 ----------------------------------------------------------------------------------------
 -- Compile-time error reporting
@@ -342,7 +344,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="grammar_" or name=="new_grammar" or name=="grammar_expression")
    assert(type(subs[1])=="table")
-   local gtable = common.new_env(env)
+   local gtable = environment.new(env)
    local first = subs[1]			    -- first rule in grammar
    assert(first, "not getting first rule in compile_grammar_expression")
    local fname, fpos, ftext = common.decode_match(first)

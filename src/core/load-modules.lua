@@ -89,6 +89,7 @@ module.loaded.readline = readline
 recordtype = load_module("recordtype")
 util = load_module("util")
 common = load_module("common")
+environment = load_module("environment")
 list = load_module("list")
 writer = load_module("writer")
 syntax = load_module("syntax")

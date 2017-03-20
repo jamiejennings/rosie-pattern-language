@@ -85,6 +85,7 @@ local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified;
 local common = require "common"
+local environment = require "environment"
 local writer = require "writer"
 local eval = require "eval"
 
@@ -160,7 +161,7 @@ rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) ..
 
 local function compile_search(en, pattern_exp)
    local rpl_parser, env = en._rpl_parser, en._env
-   local env = common.new_env(env)		    -- new scope, which will be discarded
+   local env = environment.new(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
    -- TODO: do something with leftover?
    local astlist, orig_astlist, warnings, leftover = rpl_parser(pattern_exp)
@@ -306,7 +307,7 @@ local function get_environment(en, identifier)
       local val =  en._env[identifier]
       return val and pattern_properties(identifier, val)
    end
-   local flat_env = common.flatten_env(en._env)
+   local flat_env = environment.flatten(en._env)
    -- Rewrite the flat_env table, replacing the pattern with a table of properties
    for id, pat in pairs(flat_env) do flat_env[id] = pattern_properties(id, pat); end
    return flat_env
@@ -317,7 +318,7 @@ local function clear_environment(en, identifier)
       if en._env[identifier] then en._env[identifier] = nil; return true
       else return false; end
    else -- no identifier arg supplied, so wipe the entire env
-      en._env = common.new_env()
+      en._env = environment.new()
       return true
    end
 end
@@ -368,7 +369,7 @@ end
 
 engine.create_function =
    function(_new, name, initial_env)
-      initial_env = initial_env or common.new_env()
+      initial_env = initial_env or environment.new()
       -- assigning a unique instance id should be part of the recordtype module
       local params = {_name=name,
 		      _rpl_parser=default_rpl_parser;

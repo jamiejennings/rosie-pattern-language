@@ -14,6 +14,9 @@
 -- compiler.  (In other words, the interpreter called 'eval' should have the same semantics as the
 -- compiler.)  Toward that end, functions internal to the compiler are used liberally here.
 
+local environment = require "environment"	    -- TEMPORARY
+local boundary = environment.boundary
+
 local compile = require "compile"
 local compile_expression = compile.compile0.compile_expression
 local function compile_exp(ast, env)
@@ -223,7 +226,7 @@ local function eval_quantified_exp(a, input, start, env, indent, fail_output_onl
 	 substep = substep + 1
 	 -- Look for boundary
 	 if append_boundary then
-	    mm, mpos = match_peg(common.boundary, input, i)
+	    mm, mpos = match_peg(boundary, input, i)
 	    msg = msg .. indent_(indent) .. "     Boundary " ..
                report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)
 	    if not mm then break; end -- fail
