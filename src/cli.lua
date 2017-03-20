@@ -291,7 +291,7 @@ local function run(args)
    if args.command == "patterns" then
       if not args.verbose then greeting(); end
       local env = CL_ENGINE:lookup()
-      common.print_env(env, args.filter)
+      environment.print_env(env, args.filter)
       os.exit()
    end
 

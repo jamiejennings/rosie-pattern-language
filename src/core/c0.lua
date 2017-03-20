@@ -20,6 +20,8 @@ local pattern = common.pattern
 
 local environment = require "environment"	    -- TEMPORARY
 local boundary = environment.boundary
+local lookup = environment.lookup
+local bind = environment.bind
 
 ----------------------------------------------------------------------------------------
 -- Compile-time error reporting
@@ -222,7 +224,7 @@ end
 function c0.compile_ref(a, gmr, source, env)
    assert(a, "did not get ast in compile_ref")
    local reftype, pos, name = common.decode_match(a)
-   local pat = env[name]
+   local pat = lookup(env,name)
    if (not pat) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
    return pattern{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
@@ -402,8 +404,8 @@ function c0.compile_grammar(a, gmr, source, env)
    -- if no pattern returned, then errors were already explained
    if pat then
       local msg
-      if env[name] then msg = "Warning: reassignment to identifier " .. name; end
-      env[name] = pat
+      if lookup(env,name) then msg = "Warning: reassignment to identifier " .. name; end
+      bind(env,name,pat)
       return pat, msg
    else
       -- should never get here.  when compile_grammar_expression fails, it throws.
@@ -495,8 +497,8 @@ function c0.compile_binding(a, gmr, source, env)
    local pat = compile_rhs(rhs, gmr, source, env, iname)
    pat.alias = (not a.binding.capture)
    local msg
-   if env[iname] then msg = "Warning: reassignment to identifier " .. iname; end
-   env[iname] = pat
+   if lookup(env,iname) then msg = "Warning: reassignment to identifier " .. iname; end
+   bind(env,iname,pat)
    return pat, msg
 end
 

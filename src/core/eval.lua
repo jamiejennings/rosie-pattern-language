@@ -15,6 +15,7 @@
 -- compiler.)  Toward that end, functions internal to the compiler are used liberally here.
 
 local environment = require "environment"	    -- TEMPORARY
+local lookup = environment.lookup
 local boundary = environment.boundary
 
 local compile = require "compile"
@@ -115,7 +116,7 @@ local function eval_ref(a, input, start, env, indent, fail_output_only, step, ms
 	 -- built-in identifier with no ast
 	 msg = msg .. indent_(indent) .. "This identifier is a built-in RPL pattern\n"
       else
-	 local pat = env[text]
+	 local pat = lookup(env, text)
 	 assert(pat)
 	 local rhs = pat.ast
 	 if next(rhs)=="capture" then rhs = rhs.capture.subs[2]; end

@@ -11,6 +11,7 @@ local repl = {}
 -- N.B. 'rosie' is a global defined by init and loaded by cli.lua, which calls the repl
 
 local common = require "common"
+local environment = require "environment"
 local readline = require "readline"
 
 local repl_patterns = [==[
@@ -126,7 +127,7 @@ function repl.repl(en)
 	       if csubs then
 	          _,_,filter,_ = common.decode_match(csubs[1])
 	       end
-	       common.print_env(env, filter)
+	       environment.print_env(env, filter)
 	    elseif cname=="clear" then
 	       if csubs and csubs[1] then
 		  local name, pos, id, subs = common.decode_match(csubs[1])

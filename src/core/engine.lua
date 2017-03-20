@@ -86,6 +86,8 @@ local recordtype = require "recordtype"
 local unspecified = recordtype.unspecified;
 local common = require "common"
 local environment = require "environment"
+local lookup = environment.lookup
+local bind = environment.bind
 local writer = require "writer"
 local eval = require "eval"
 
@@ -304,7 +306,7 @@ end
 -- (reconstituted from its ast).  If identifier is null, return the entire environment.
 local function get_environment(en, identifier)
    if identifier then
-      local val =  en._env[identifier]
+      local val = lookup(en._env, identifier)
       return val and pattern_properties(identifier, val)
    end
    local flat_env = environment.flatten(en._env)
@@ -315,7 +317,7 @@ end
 
 local function clear_environment(en, identifier)
    if identifier then
-      if en._env[identifier] then en._env[identifier] = nil; return true
+      if lookup(en._env, identifier) then bind(en._env, identifier, nil); return true
       else return false; end
    else -- no identifier arg supplied, so wipe the entire env
       en._env = environment.new()

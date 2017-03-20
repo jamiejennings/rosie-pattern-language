@@ -7,9 +7,14 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
+local common = require "common"
 local pattern = common.pattern
 local lpeg = require "lpeg"
 local writer = require "writer"
+
+local environment = require "environment"
+local lookup = environment.lookup
+local bind = environment.bind
 
 local c0 = require "c0"
 local c1 = require "c1"
@@ -88,7 +93,7 @@ local function make_compile_expression(expression_p, compile)
 	     local name, pos, text, subs = common.decode_match(astlist[1])
 	     local pat
 	     if (name=="ref") then
-		pat = env[text]
+		pat = lookup(env, text)
 	     end
 	     -- Compile the expression
 	     local results, msgs = compile(astlist, original_astlist, source, env)
