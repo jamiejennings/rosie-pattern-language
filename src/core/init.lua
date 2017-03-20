@@ -122,7 +122,7 @@ if not success then error("Error while initializing: could not compile 'preparse
 ROSIE_PREPARSE = result
 -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
 load_module("rpl-parser")
-local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0)
+local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
 -- And make these the defaults for all new engines:
 engine._set_defaults(parse_and_explain, compile.compile0, 1, 0);
 

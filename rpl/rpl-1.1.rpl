@@ -100,8 +100,9 @@ importpath = quoted_string		  -- double quoted, interpreted, pattern name is "li
 
 major = [0-9]{1,2}
 minor = major
-version_spec = { major "." minor {[:space:]/$}}
-import_spec = ignore importpath ("as" (packagename / "."))?
+version_spec = { major "." minor ignore }
+dot = "."
+import_spec = ignore importpath ("as" (packagename / dot))?
 
 ----------------------------------------------------------------------------------------
 -- Top level patterns
@@ -116,14 +117,17 @@ rpl = rpl1* ignore $
 
 statement = ignore (stmnt / syntax_error)
 expression = ignore (exp / syntax_error)
-language_decl = ignore "rpl" (version_spec / syntax_error)
-package_decl = ignore "package" packagename ("," packagename)*
-import_decl = ignore "import" import_spec ("," import_spec)*
+language_decl = ignore "rpl" version_spec
+package_decl = ignore "package" packagename
+import_decl = ignore "import" import_spec ("," ignore import_spec)*
 
 preparse = language_decl
 
 -- ANY single rpl language element:
-rpl_any1 = statement / import_decl / package_decl / language_decl
+alias rpl_any1 = import_decl / package_decl / language_decl / statement
+
+-- Possibly empty sequence of ANY rpl language elements:
+rpl_any = rpl_any1*
 
 -- RPL file structure:
 rpl_file = language_decl? package_decl import_decl* statement* ignore
@@ -132,8 +136,8 @@ rpl_file = language_decl? package_decl import_decl* statement* ignore
 -- Tests
 ---------------------------------------------------------------------------------------------------
 
--- test language_decl rejects "rpl", "rpl ", "rpl a", "rpl 1.a", "rpl 1.", "rpl 1.123"
--- test language_decl accepts "rpl 0.0", "rpl 1.0", "rpl 52.99", "rpl 99.99"
+-- test language_decl rejects "rpl", "rpl ", "rpl a", "rpl 1.a", "rpl 1.", "rpl 1.123", "rpl 1.\n1"
+-- test language_decl accepts "rpl 0.0", "  rpl 1.0\n", "rpl 52.99", "rpl 99.99", "rpl 1.1 -- Comment\n"
 
 -- test package_decl accepts "package foo", "package fooBar", "package f_oo"
 -- test package_decl rejects "package", "package _foo", "package 6foo", "package .foo", "package foo.bar"

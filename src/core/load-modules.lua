@@ -94,6 +94,7 @@ writer = load_module("writer")
 syntax = load_module("syntax")
 parse = load_module("parse")
 c0 = load_module("c0")
+c1 = load_module("c1")
 compile = load_module("compile")
 eval = load_module("eval")
 color_output = load_module("color-output")
@@ -101,13 +102,13 @@ engine = load_module("engine")
 
 -- manifest code requires a working engine, so we initialize the engine package here
 assert(parse.core_parse, "error while initializing: parse module not loaded?")
-assert(syntax.transform, "error while initializing: syntax module not loaded?")
+assert(syntax.transform0, "error while initializing: syntax module not loaded?")
 local function rpl_parser(source)
    local astlist, msgs, leftover = parse.core_parse(source)
    if not astlist then
       return nil, nil, msgs, leftover
    else
-      return syntax.transform(astlist), astlist, msgs, leftover
+      return syntax.transform0(astlist), astlist, msgs, leftover
    end
 end
 

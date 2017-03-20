@@ -432,7 +432,7 @@ function syntax.expression_p(ast)
 	   (name=="predicate"))
 end
 
-function syntax.top_level_transform(ast)
+function syntax.top_level_transform0(ast)
    local name, body = next(ast)
    if (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
@@ -445,6 +445,34 @@ function syntax.top_level_transform(ast)
       return new
    elseif (name=="syntax_error") then
       return ast				    -- errors will be culled out later
+   else
+      return syntax.expand_rhs(ast, (next(ast)))
+   end
+end
+
+function syntax.top_level_transform1(ast)
+   local name, body = next(ast)
+   if name=="statement" then
+      local name = common.decode_match(body.subs[1])
+      assert(name=="alias_" or name=="assignment_" or name=="grammar_" or name=="local_")
+      -- strip off the 'statement' wrapper
+      return syntax.top_level_transform1(body.subs[1])
+   elseif (name=="assignment_") or (name=="alias_") then
+      return syntax.to_binding(ast)
+   elseif (name=="grammar_") then
+      local new_bindings = list.map(syntax.to_binding, list.from(ast.grammar_.subs))
+      local new = syntax.generate("new_grammar", table.unpack(new_bindings))
+      new.new_grammar.text = ast.grammar_.text
+      new.new_grammar.pos = ast.grammar_.pos
+      new.new_grammar.replaces = ast
+      return new
+   elseif name=="local_" then
+      local new = syntax.top_level_transform1(ast.local_.subs[1])
+      return syntax.generate("local_", new)
+   elseif (name=="syntax_error") then
+      return ast				    -- errors will be culled out later
+   elseif (name=="package_decl") or (name=="language_decl") or (name=="import_decl") then
+      return ast				    -- no transformation needed
    else
       return syntax.expand_rhs(ast, (next(ast)))
    end
@@ -480,12 +508,16 @@ syntax.replace_ref =
 			   "ref",
 			   true)
 
-function syntax.transform(astlist)
-   local new_astlist = {}
-   for i=1,#astlist do new_astlist[i] = syntax.top_level_transform(astlist[i]); end
-   return new_astlist, astlist, {}		    -- last value is table of warnings
+local function make_transformer(top_level_transformer)
+   return function(astlist)
+	     local new_astlist = {}
+	     for i=1,#astlist do new_astlist[i] = top_level_transformer(astlist[i]); end
+	     return new_astlist, astlist, {}		    -- last value is table of warnings
+	  end
 end
 
-return syntax
+syntax.transform0 = make_transformer(syntax.top_level_transform0)
+syntax.transform1 = make_transformer(syntax.top_level_transform1)
 
+return syntax
 

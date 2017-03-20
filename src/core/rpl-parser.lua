@@ -25,7 +25,7 @@ local function rosie_parse(rplx, str, pos, tokens)
    for _,a in ipairs(astlist) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   return list.map(syntax.top_level_transform, astlist), astlist, errlist, leftover
+   return astlist, errlist, leftover
 end
 
 local function preparse(rplx_preparse, source)
@@ -48,7 +48,7 @@ local function vstr(maj, min)
    return tostring(maj) .. "." .. tostring(min)
 end
 
-function make_parse_and_explain(rplx_preparse, rplx_rpl, rpl_maj, rpl_min)
+function make_parse_and_explain(rplx_preparse, rplx_rpl, rpl_maj, rpl_min, syntax_expand)
    return function(source)
 	     assert(type(source)=="string", "Error: source argument is not a string: "..tostring(source))
 	     -- preparse to look for rpl language version declaration
@@ -57,14 +57,25 @@ function make_parse_and_explain(rplx_preparse, rplx_rpl, rpl_maj, rpl_min)
 	     if major then
 		if rpl_maj > major then
 		   -- Warn in case major version not backwards compatible
-		   rpl_warning = "Warning: loading rpl at version " .. vstr(major, minor) .. " into engine at version " .. vstr(rpl_maj, rpl_min)
+		   rpl_warning = "Warning: loading rpl at version " .. 
+		                 vstr(major, minor) .. 
+			         " into engine at version " .. 
+			         vstr(rpl_maj, rpl_min)
 		elseif (rpl_maj < major) or ((rpl_maj == major) and (rpl_min < minor)) then
 		   return nil,
 		          nil,
-		          {"Error: loading rpl that requires version " .. vstr(major, minor) .. " but engine is at version " .. vstr(rpl_maj, rpl_min)}
+		          {"Error: loading rpl that requires version " .. 
+			   vstr(major, minor) .. " but engine is at version " .. 
+			   vstr(rpl_maj, rpl_min)}
 		end
 	     end
-	     local astlist, original_astlist, errlist, leftover = rosie_parse(rplx_rpl, source, pos)
+	     -- if major then
+	     -- 	print("-> Parser noted rpl version declaration " .. vstr(major, minor))
+	     -- else
+	     -- 	print("-> Parser saw no rpl version declaration")
+	     -- end
+	     local original_astlist, errlist, leftover = rosie_parse(rplx_rpl, source, pos)
+	     local astlist = syntax_expand(original_astlist)
 	     if #errlist~=0 then
 		local msgs = {}
 		if rpl_warning then table.insert(msgs, rpl_warning); end
