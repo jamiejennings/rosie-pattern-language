@@ -34,7 +34,9 @@ module.loaded.os = os
 
 -- We intentionally redefine Lua's require, and use it in Rosie source files.
 function require(name)
-   return module.loaded[name] or error("Module " .. tostring(name) .. " not loaded")
+   return module.loaded[name] or
+          package.loaded[name] or		    -- preloaded stuff like debug, table, string
+	  error("Module " .. tostring(name) .. " not loaded")
 end
 
 local function load_module1(name, optional_subdir)

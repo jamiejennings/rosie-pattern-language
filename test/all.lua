@@ -14,21 +14,22 @@
 -- When running rosie as "rosie -D" to get a Lua prompt after rosie is already loaded:
 --   dofile "test/all.lua"
 
-test = load_module("test-functions", "src")
+termcolor = load_module("termcolor", "submodules/lua-modules")
+test = load_module("test", "submodules/lua-modules")
 json = require "cjson"
 
-local results = {}
+-- local results = {}
 
-function do_test(fn)
-   local doer, err = loadfile(fn, "t", _ENV)
-   if not doer then error("Error loading test file: " .. tostring(err)); end
-   table.insert(results, {fn, doer()})
-end		   
+-- function do_test(fn)
+--    local doer, err = loadfile(fn, "t", _ENV)
+--    if not doer then error("Error loading test file: " .. tostring(err)); end
+--    table.insert(results, {fn, doer()})
+-- end		   
       
-do_test(ROSIE_HOME .. "/test/api-test.lua")
-do_test(ROSIE_HOME .. "/test/rpl-core-test.lua")
-do_test(ROSIE_HOME .. "/test/eval-test.lua")
-do_test(ROSIE_HOME .. "/test/cli-test.lua")
+test.dofile(ROSIE_HOME .. "/test/api-test.lua")
+test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
+test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
+test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
 
 passed = test.print_grand_total(results)
 

@@ -5,7 +5,7 @@
 ---- (c) 2016, Jamie A. Jennings
 ----
 
-test = require "test-functions"
+test = require "test"
 
 check = test.check
 heading = test.heading

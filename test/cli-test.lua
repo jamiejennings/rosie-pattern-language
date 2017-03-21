@@ -7,7 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 util = require "util"
-require "test-functions"
+test = require "test"
 check = test.check
 
 rosie_cmd = ROSIE_HOME .. "/bin/rosie"
