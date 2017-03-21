@@ -167,8 +167,8 @@ local function gensym_bind(en, id_component, pat)
    local try
    repeat
       try = "G" .. id_component .. string.format("%04x", math.random(0xFFFF))
-   until not en._env[try]
-   en._env[try] = pat
+   until not lookup(en._env, try)
+   bind(en._env, try, pat)
    pat.alias = false				    -- this is an assignment, not an alias
    return try
 end

@@ -366,7 +366,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
       local exp_node = rsubs[2]
       assert(exp_node)
       local alias_flag = not exp_node.capture
-      gtable[id] = pattern{name=id, peg=V(id), alias=alias_flag}
+      bind(gtable,id,pattern{name=id, peg=V(id), alias=alias_flag})
    end						    -- for
 
    -- second pass: compile right hand sides in gtable environment
@@ -392,7 +392,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
    t[1] = start					    -- first rule is start rule
    local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
    if success then
-      return pattern{name="grammar", peg=peg_or_msg, ast=a, alias=gtable[t[1]].alias}, start
+      return pattern{name="grammar", peg=peg_or_msg, ast=a, alias=lookup(gtable,t[1]).alias}, start
    else -- failed
       assert(type(peg_or_msg)=="string", "Internal error (compiler) while reporting an error in a grammar")
       explain_grammar_error(a, source, peg_or_msg)

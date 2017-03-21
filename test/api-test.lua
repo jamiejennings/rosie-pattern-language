@@ -13,6 +13,8 @@ if not test then
 end
 
 json = rosie._module.loaded.cjson
+environment = rosie._module.loaded.environment
+lookup = environment.lookup
 
 check = test.check
 heading = test.heading
@@ -98,6 +100,7 @@ check(type(wapi.engine_lookup)=="function")
 ok, env_js = wapi.engine_lookup(json.encode(nil)) -- null
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
+print("***", env_js)
 ok, env = pcall(json.decode, env_js)
 check(ok)
 check(type(env)=="table")

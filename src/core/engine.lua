@@ -370,14 +370,13 @@ local function set_defaults(parse_expand_explain, compiler, major, minor)
 end
 
 engine.create_function =
-   function(_new, name, initial_env)
-      initial_env = initial_env or environment.new()
+   function(_new, name)
       -- assigning a unique instance id should be part of the recordtype module
       local params = {_name=name,
 		      _rpl_parser=default_rpl_parser;
 		      _rpl_compiler=default_rpl_compiler;
 		      _rpl_version=default_rpl_version;
-		      _env=initial_env,
+		      _env=environment.new(),
 
 		      lookup=get_environment,
 		      clear=clear_environment,
