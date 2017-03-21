@@ -88,7 +88,7 @@ readline = readline_loader()
 module.loaded.readline = readline
 
 -- These MUST have a partial order so that dependencies can be loaded first
-recordtype = load_module("recordtype")
+recordtype = load_module("recordtype", "submodules/lua-modules")
 util = load_module("util")
 common = load_module("common")
 environment = load_module("environment")
@@ -101,7 +101,8 @@ c1 = load_module("c1")
 compile = load_module("compile")
 eval = load_module("eval")
 color_output = load_module("color-output")
-engine = load_module("engine")
+engine_module = load_module("engine_module")
+engine = engine_module.engine
 
 -- manifest code requires a working engine, so we initialize the engine package here
 assert(parse.core_parse, "error while initializing: parse module not loaded?")
@@ -115,7 +116,7 @@ local function rpl_parser(source)
    end
 end
 
-engine._set_defaults(rpl_parser, compile.compile0, 0, 0);
+engine_module._set_defaults(rpl_parser, compile.compile0, 0, 0);
 manifest = load_module("manifest")
 
 process_input_file = load_module("process_input_file")

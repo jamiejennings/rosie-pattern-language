@@ -52,7 +52,8 @@ else
 end
 assert(type(rosie)=="table", "Return value from init was not the rosie module (a table)")
 
-local engine=require "engine"			    -- for debugging
+local engine_module = require "engine_module"
+local engine = engine_module.engine
 local argparse = require "argparse"
 local common = require "common"
 local json = require "cjson"
@@ -156,7 +157,7 @@ infilename, outfilename, errfilename = nil, nil, nil
 
 local function process_pattern_against_file(args, infilename)
    assert(compiled_pattern, "Rosie: missing pattern?")
-   assert(engine.rplx.is(compiled_pattern), "Rosie: compiled pattern not rplx?")
+   assert(engine_module.rplx.is(compiled_pattern), "Rosie: compiled pattern not rplx?")
 
 	-- (3) Set up the input, output and error parameters
 	if infilename=="-" then infilename = ""; end	    -- stdin

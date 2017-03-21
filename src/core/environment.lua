@@ -43,9 +43,9 @@ local default_pkg = "."
 
 local ENV =
    {[default_pkg] = 
-    {[dot_id] = pattern{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
-     [eol_id] = pattern{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
-     [b_id] = pattern{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
+    {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
+     [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
+     [b_id] = pattern.new{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
   }
 }
 	      

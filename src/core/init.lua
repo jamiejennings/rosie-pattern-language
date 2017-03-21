@@ -124,7 +124,7 @@ ROSIE_PREPARSE = result
 load_module("rpl-parser")
 local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
 -- And make these the defaults for all new engines:
-engine._set_defaults(parse_and_explain, compile.compile0, 1, 0);
+engine_module._set_defaults(parse_and_explain, compile.compile0, 1, 0);
 
 ROSIE_ENGINE = engine.new("RPL 1.0 engine")
 announce("ROSIE_ENGINE", ROSIE_ENGINE)

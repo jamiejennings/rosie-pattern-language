@@ -9,7 +9,8 @@
 
 local util = require "util"
 local common = require "common"
-local engine = require "engine"
+local engine_module = require "engine_module"
+local engine = engine_module.engine
 
 local manifest = {}
 

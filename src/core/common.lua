@@ -10,7 +10,7 @@ local lpeg = require "lpeg"
 local Cc, Cg, Ct, Cp, C = lpeg.Cc, lpeg.Cg, lpeg.Ct, lpeg.Cp, lpeg.C
 local util = require "util"
 local recordtype = require "recordtype"
-local unspecified = recordtype.unspecified
+
 -- REMOVED os dependency in v1-tranche-2
 --local os = require "os"
 
@@ -271,21 +271,18 @@ end
 -- end
 
 common.pattern = 
-   recordtype.define(
-   {  name=unspecified;			 -- for reference, debugging
-      peg=unspecified;			 -- lpeg pattern
-      uncap=false;			 -- peg without the top-level capture
-      tlpeg=false;			 -- top-level peg: tlpeg == peg * lpeg.Cp() 
-      alias=false;			 -- is this an alias or not
-      raw=false;                         -- true if the exp was raw at top level
-      ast=false;			 -- ast that generated this pattern, for pattern debugging
-      original_ast=false;		 -- ast after parser, before syntax expansion
-      extra=false;	                 -- extra info that depends on node type
---      source=unspecified;		 -- source (rpl filename and line)
---      uuid=unspecified;
-
-  },
-   "pattern"
+   recordtype.new("pattern",
+		  { name=recordtype.NIL; -- for reference, debugging
+		    peg=recordtype.NIL;	 -- lpeg pattern
+		    uncap=false;	 -- peg without the top-level capture
+		    tlpeg=false;	 -- top-level peg: tlpeg == peg * lpeg.Cp() 
+		    alias=false;	 -- is this an alias or not
+		    raw=false;		 -- true if the exp was raw at top level
+		    ast=false;		 -- ast that generated this pattern, for pattern debugging
+		    original_ast=false;	 -- ast after parser, before syntax expansion
+		    extra=false;	 -- extra info that depends on node type
+--                  source=unspecified;  -- source (rpl filename and line)
+  }
 )
 
 common.boundary_identifier = "~"

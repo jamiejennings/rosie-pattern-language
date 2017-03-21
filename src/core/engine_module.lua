@@ -83,7 +83,6 @@ local engine_module = {}
 
 local lpeg = require "lpeg"
 local recordtype = require "recordtype"
-local unspecified = recordtype.unspecified;
 local common = require "common"
 local environment = require "environment"
 local lookup = environment.lookup
@@ -91,60 +90,8 @@ local bind = environment.bind
 local writer = require "writer"
 local eval = require "eval"
 
-local engine = 
-   recordtype.define(
-   {  _name=unspecified;			    -- for reference, debugging
-      _rpl_parser=false;
-      _rpl_compiler=false;
-      _rpl_version=false;
-      _env=false;
-      _id=unspecified;
-
-      encode_function=function(...) return ... end;
-
-      id=false;
-      lookup=false;
-      clear=false;
-      name=false;
-      output=false;
-
-      load=false;
-      compile=false;
-
-      match=false;
-      tracematch=false;
-
-      _error=false;
-  },
-   "engine"
-)
-
-engine.tostring_function =
-   function(orig, e)
-      local name = ""
-      if e._name~=unspecified then name = tostring(e._name) .. " / "; end
-      name = name .. e._id
-      return '<engine ' .. name .. '>'
-   end
-
-local function engine_error(e, msg)
-   error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 0)
-end
-
-----------------------------------------------------------------------------------------
-
-local rplx = 
-   recordtype.define(
-   { _pattern=unspecified;
-     _engine=unspecified;
-     _id=unspecified;
-      --
-      match=false;
-  },
-   "rplx"
-)
-
-rplx.tostring_function = function(orig, r) return '<rplx ' .. tostring(r._id) .. '>'; end
+local rplx 					    -- forward reference
+local engine_error		     -- forward reference
 
 ----------------------------------------------------------------------------------------
 
@@ -209,7 +156,7 @@ local function engine_compile(en, expression, flavor)
       engine_error(en, "Unknown flavor: " .. flavor)
    end
    if not pat then return en:_error(table.concat(msgs, '\n')); end
-   return rplx(en, pat), msgs
+   return rplx.new(en, pat), msgs
 end
 
 -- N.B. This code is essentially duplicated (for speed, to avoid a function call) in process_input_file.lua
@@ -331,18 +278,6 @@ local function get_set_encoder_function(en, f)
    en.encode_function = f
 end
 
-rplx.create_function =
-   function(_new, en, pattern)
-      local params = {
-	 _engine=en,
-	 _pattern=pattern,
-	 match=function(self, ...) return _engine_match(en, pattern, ...); end,
-      }
-      local idstring = tostring(params):match("0x(.*)") or "id/err"
-      params._id = idstring
-      return _new(params)
-   end
-
 local default_rpl_parser = function(...) error("default_rpl_parser not initialized"); end
 local default_rpl_compiler = function(...) error("default_rpl_compiler not initialized"); end
 local default_rpl_version
@@ -369,45 +304,95 @@ local function set_defaults(parse_expand_explain, compiler, major, minor)
 					})
 end
 
-engine.create_function =
-   function(_new, name)
-      -- assigning a unique instance id should be part of the recordtype module
-      local params = {_name=name,
-		      _rpl_parser=default_rpl_parser;
-		      _rpl_compiler=default_rpl_compiler;
-		      _rpl_version=default_rpl_version;
-		      _env=environment.new(),
+---------------------------------------------------------------------------------------------------
 
-		      lookup=get_environment,
-		      clear=clear_environment,
-		      id=function(en)
-			    if engine.is(en) then return en._id;
-			    else error("Arg to id function is not an engine: " .. tostring(en))
-			    end
-			 end,
-		      name=function(en)
-			      -- checking the unused arg for consistency with other engine functions
-			      if engine.is(en) then return name;
-			      else error("Arg to name function is not an engine: " .. tostring(en))
-			      end
-			   end,
-		      output=get_set_encoder_function,
+-- local function engine_tostring(e)
+--    local name = ""
+--    if e._name~=recordtype.NIL then name = tostring(e._name) .. " / "; end
+--    name = name .. e._id
+--    return '<engine ' .. name .. '>'
+-- end
 
-		      match=engine_match,
-		      tracematch=engine_tracematch,
-		      load=load_string,
-		      compile=engine_compile,
+local function engine_create(name)
+   local params = {_name=name,
+		   _rpl_parser=default_rpl_parser;
+		   _rpl_compiler=default_rpl_compiler;
+		   _rpl_version=default_rpl_version;
+		   _env=environment.new(),
 
-		      _error=engine_error,
-		   }
-      local idstring = tostring(params):match("0x(.*)") or "id/err"
-      params._id = idstring
-      return _new(params)
-   end
+		   lookup=get_environment,
+		   clear=clear_environment,
+		   id=recordtype.id,
+		   name=function(en)
+			   -- checking the unused arg for consistency with other engine functions
+			   if engine.is(en) then return name;
+			   else error("Arg to name function is not an engine: " .. tostring(en))
+			   end
+			end,
+		   output=get_set_encoder_function,
 
--- recordtype package defines a creator function that is named after the record type name
-engine_module.new = engine
-engine_module.is = engine.is
+		   match=engine_match,
+		   tracematch=engine_tracematch,
+		   load=load_string,
+		   compile=engine_compile,
+
+		   _error=engine_error,
+		}
+   return engine.factory(params)
+end
+
+function engine_error(e, msg)
+   error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 0)
+end
+
+local engine = 
+   recordtype.new("engine",
+		  {  _name=recordtype.NIL;	    -- for reference, debugging
+		     _rpl_parser=false;
+		     _rpl_compiler=false;
+		     _rpl_version=false;
+		     _env=false;
+
+		     encode_function=function(...) return ... end;
+
+		     id=recordtype.id;
+		     lookup=false;
+		     clear=false;
+		     name=false;
+		     output=false;
+
+		     load=false;
+		     compile=false;
+
+		     match=false;
+		     tracematch=false;
+
+		     _error=engine_error;
+		  },
+		  engine_create
+	       )
+
+----------------------------------------------------------------------------------------
+
+local rplx_create = function(en, pattern)			    
+		       return rplx.factory{ _engine=en,
+					    _pattern=pattern,
+					    match=function(self, ...)
+						     return _engine_match(en, pattern, ...)
+						  end }; end
+
+rplx = recordtype.new("rplx",
+		      { _pattern=recordtype.NIL;
+			_engine=recordtype.NIL;
+			--
+			match=false;
+		      },
+		      rplx_create
+		   )
+
+---------------------------------------------------------------------------------------------------
+
+engine_module.engine = engine
 engine_module._set_defaults = set_defaults
 
 engine_module.rplx = rplx			    -- debugging

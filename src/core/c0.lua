@@ -207,7 +207,7 @@ end
 function c0.compile_new_quantified_exp(a, gmr, source, env)
    assert(a, "did not get ast in compile_cooked_quantified_exp")
    local epeg, qpeg, append_boundary, qname, min, max = c0.process_quantified_exp(a, gmr, source, env)
-   return pattern{name=qname, peg=qpeg, ast=a, extra={epeg=epeg,
+   return pattern.new{name=qname, peg=qpeg, ast=a, extra={epeg=epeg,
 						      append_boundary=append_boundary,
 						      qname=qname,
 						      min=min,
@@ -218,7 +218,7 @@ function c0.compile_literal(a, gmr, source, env)
    assert(a, "did not get ast in compile_literal")
    local name, pos, text = common.decode_match(a)
    local str = common.unescape_string(text)
-   return pattern{name=name; peg=P(str); ast=a}
+   return pattern.new{name=name; peg=P(str); ast=a}
 end
 
 function c0.compile_ref(a, gmr, source, env)
@@ -227,7 +227,7 @@ function c0.compile_ref(a, gmr, source, env)
    local pat = lookup(env,name)
    if (not pat) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
-   return pattern{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
+   return pattern.new{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
 end
 
 function c0.compile_predicate(a, gmr, source, env)
@@ -240,7 +240,7 @@ function c0.compile_predicate(a, gmr, source, env)
    elseif pred_name=="lookat" then peg = (# peg)
    else error("Internal compiler error: unknown predicate type: " .. tostring(pred_name))
    end
-   return pattern{name=pred_name, peg=peg, ast=a}
+   return pattern.new{name=pred_name, peg=peg, ast=a}
 end
 
 -- Sequences from the parser are always binary, i.e. with 2 subs.
@@ -251,7 +251,7 @@ function c0.compile_sequence(a, gmr, source, env)
    local peg1, peg2
    peg1 = c0.compile_exp(subs[1], gmr, source, env).peg
    peg2 = c0.compile_exp(subs[2], gmr, source, env).peg
-   return pattern{name=name, peg=peg1 * peg2, ast=a}
+   return pattern.new{name=name, peg=peg1 * peg2, ast=a}
 end
    
 function c0.compile_named_charset(a, gmr, source, env)
@@ -267,7 +267,7 @@ function c0.compile_named_charset(a, gmr, source, env)
    if not pat then
       explain_undefined_charset(a, source)
    end
-   return pattern{name=name, peg=((complement and 1-pat) or pat), ast=a}
+   return pattern.new{name=name, peg=((complement and 1-pat) or pat), ast=a}
 end
 
 function c0.compile_range_charset(a, gmr, source, env)
@@ -285,7 +285,7 @@ function c0.compile_range_charset(a, gmr, source, env)
    local cname1, cpos1, ctext1 = common.decode_match(rsubs[(complement and 2) or 1])
    local cname2, cpos2, ctext2 = common.decode_match(rsubs[(complement and 3) or 2])
    local peg = R(common.unescape_string(ctext1)..common.unescape_string(ctext2))
-   return pattern{name=rname,
+   return pattern.new{name=rname,
 		  peg=(complement and (1-peg)) or peg,
 		  ast=a}
 end
@@ -302,7 +302,7 @@ function c0.compile_charlist(a, gmr, source, env)
       local cname, cpos, ctext = common.decode_match(v)
       exps = exps .. common.unescape_string(ctext)
    end
-   return pattern{name=clname, peg=((complement and (1-S(exps))) or S(exps)), ast=a}
+   return pattern.new{name=clname, peg=((complement and (1-S(exps))) or S(exps)), ast=a}
 end
 
 function c0.compile_charset(a, gmr, source, env)
@@ -324,7 +324,7 @@ function c0.compile_choice(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    local peg1 = c0.compile_exp(subs[1], gmr, source, env).peg
    local peg2 = c0.compile_exp(subs[2], gmr, source, env).peg
-   return pattern{name=name, peg=(peg1+peg2), ast=a}
+   return pattern.new{name=name, peg=(peg1+peg2), ast=a}
 end
 
 function c0.compile_raw_exp(a, gmr, source, env)
@@ -333,7 +333,7 @@ function c0.compile_raw_exp(a, gmr, source, env)
    assert(name=="raw_exp")
    assert(not subs[2])
    local pat = c0.compile_exp(subs[1], gmr, source, env)
-   return pattern{name=name, peg=pat.peg, ast=pat.ast}
+   return pattern.new{name=name, peg=pat.peg, ast=pat.ast}
 end
 
 function c0.compile_syntax_error(a, gmr, source, env)
@@ -366,7 +366,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
       local exp_node = rsubs[2]
       assert(exp_node)
       local alias_flag = not exp_node.capture
-      bind(gtable,id,pattern{name=id, peg=V(id), alias=alias_flag})
+      bind(gtable,id,pattern.new{name=id, peg=V(id), alias=alias_flag})
    end						    -- for
 
    -- second pass: compile right hand sides in gtable environment
@@ -392,7 +392,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
    t[1] = start					    -- first rule is start rule
    local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
    if success then
-      return pattern{name="grammar", peg=peg_or_msg, ast=a, alias=lookup(gtable,t[1]).alias}, start
+      return pattern.new{name="grammar", peg=peg_or_msg, ast=a, alias=lookup(gtable,t[1]).alias}, start
    else -- failed
       assert(type(peg_or_msg)=="string", "Internal error (compiler) while reporting an error in a grammar")
       explain_grammar_error(a, source, peg_or_msg)

@@ -8,7 +8,8 @@
 
 local process_input_file = {}
 local lpeg = require "lpeg"
-local engine = require "engine"
+local engine_module = require "engine_module"
+local engine = engine_module.engine
 
 local function open3(e, infilename, outfilename, errfilename)
    if type(infilename)~="string" then e:_error("bad input file name"); end
@@ -32,13 +33,13 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    -- opening the files.
    --
    local r, msgs
-   if engine.rplx.is(expression) then
+   if engine_module.rplx.is(expression) then
       r = expression
    else
       r, msgs = e:compile(expression, flavor)
       if not r then e:_error(table.concat(msgs, '\n')); end
    end
-   assert(engine.rplx.is(r))
+   assert(engine_module.rplx.is(r))
 
    -- This set of simple optimizations almost doubles performance of the loop through the file
    -- (below) in typical cases, e.g. syslog pattern. 

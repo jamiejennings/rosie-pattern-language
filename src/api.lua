@@ -118,7 +118,7 @@ local function initialize()
    if api.ENGINE then error("Engine already created", 0); end
    api.ENGINE = rosie.engine.new()
    api.ENGINE:output(rosie.encoders.json)	    -- always json, at least for now
-   return api.ENGINE._id			    -- may be useful for client-side logging?
+   return api.ENGINE:id()			    -- may be useful for client-side logging?
 end
 
 api.initialize = api_wrap_only(initialize, "string")
@@ -177,7 +177,7 @@ local function compile(expression, flavor)
    if not api.ENGINE then error("rosie api not initialized", 0); end
    local r = api.ENGINE:compile(expression, flavor)
    -- Put the id into the environment
-   return gensym_bind(api.ENGINE, r._id, r._pattern)
+   return gensym_bind(api.ENGINE, r.id(), r._pattern)
 end
 
 api.compile = api_wrap(compile, "string")

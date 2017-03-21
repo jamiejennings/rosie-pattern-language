@@ -79,7 +79,7 @@ check(ok, "finalizing should succeed whether api is initialized or not")
 
 check(type(wapi.initialize)=="function")
 ok, msg = wapi.initialize()
-check(ok)
+check(ok, msg)
 
 ok, msg = wapi.initialize()
 check(not ok)
@@ -90,7 +90,7 @@ check(ok)
 
 ok, eid = wapi.initialize()
 check(ok)
-check(type(eid)=="string")
+check(type(eid)=="string", "engine id returned is a " .. type(eid))
 
 -- N.B. The api does not expose engine.name or engine.id because there is only one engine in the
 -- external api.  It is created when a user program/thread calls api.initialize().
@@ -375,7 +375,7 @@ subheading("compile")
 check(type(wapi.compile)=="function")
 ok, msg = wapi.compile()
 check(not ok)
-check(msg:find("not a string"))
+check(msg:find("not a string"), "wrong compiler error msg: " .. tostring(msg))
 
 io.write("  ** NEED RPLX TESTS! **  ")
 
