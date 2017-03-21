@@ -13,3 +13,6 @@
 [submodule "submodules/lua-readline"]
 	path = submodules/lua-readline
 	url = https://github.com/jamiejennings/lua-readline.git
+[submodule "submodules/lua-modules"]
+	path = submodules/lua-modules
+	url = https://github.com/jamiejennings/lua-modules
