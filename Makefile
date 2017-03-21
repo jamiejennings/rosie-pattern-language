@@ -22,6 +22,7 @@ LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
 READLINE = lua-readline
+LUAMOD = lua-modules
 
 BUILD_ROOT = $(shell pwd)
 
@@ -65,6 +66,7 @@ LUA_DIR = $(SUBMOD)/$(LUA)
 LPEG_DIR = $(SUBMOD)/$(LPEG)
 JSON_DIR = $(SUBMOD)/$(JSON)
 READLINE_DIR = $(SUBMOD)/$(READLINE)
+LUAMOD_DIR = $(SUBMOD)/$(LUAMOD)
 
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
@@ -180,10 +182,18 @@ $(EXECROSIE): compile
 	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
 	@chmod 755 "$(EXECROSIE)"
 
+lib/list.luac: $(LUAMOD_DIR)/list.lua bin/luac
+	bin/luac -o $@ $<
+
+lib/recordtype.luac: $(LUAMOD_DIR)/recordtype.lua bin/luac
+	bin/luac -o $@ $<
+
 lib/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 
-luaobjects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua)) lib/argparse.luac
+core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
+other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac
+luaobjects := $(core_objects) $(other_objects)
 
 compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so
 

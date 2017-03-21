@@ -278,6 +278,8 @@ local function get_set_encoder_function(en, f)
    en.encode_function = f
 end
 
+---------------------------------------------------------------------------------------------------
+
 local default_rpl_parser = function(...) error("default_rpl_parser not initialized"); end
 local default_rpl_compiler = function(...) error("default_rpl_compiler not initialized"); end
 local default_rpl_version
@@ -305,13 +307,6 @@ local function set_defaults(parse_expand_explain, compiler, major, minor)
 end
 
 ---------------------------------------------------------------------------------------------------
-
--- local function engine_tostring(e)
---    local name = ""
---    if e._name~=recordtype.NIL then name = tostring(e._name) .. " / "; end
---    name = name .. e._id
---    return '<engine ' .. name .. '>'
--- end
 
 local function engine_create(name)
    local params = {_name=name,
@@ -394,7 +389,6 @@ rplx = recordtype.new("rplx",
 
 engine_module.engine = engine
 engine_module._set_defaults = set_defaults
-
-engine_module.rplx = rplx			    -- debugging
+engine_module.rplx = rplx
 
 return engine_module
