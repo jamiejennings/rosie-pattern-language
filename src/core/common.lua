@@ -175,16 +175,17 @@ end
 --     [text: "Hello", 
 --      pos: 1]]
 
--- function common.create_match(name, pos, capture, ...)
---    local t = {};
---    t.pos = pos;
---    t.text=capture;
---    t.subs = {...};
---    if (not t.subs[1]) then t.subs=nil; end
---    return {[name]=t};
--- end
+local function create_match(name, pos, capture, ...)
+   local t = {};
+   t.pos = pos;
+   t.text=capture;
+   t.subs = {...};
+   if (not t.subs[1]) then t.subs=nil; end
+   return {[name]=t};
+end
 
 common.create_match = lpeg.r_create_match
+--common.create_match = create_match
 
 function common.match_node_wrap(peg, name)
    return (Cc(name) * Cp() * peg) / common.create_match

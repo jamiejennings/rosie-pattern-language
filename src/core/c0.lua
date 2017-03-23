@@ -488,7 +488,8 @@ function c0.compile_binding(a, gmr, source, env)
    assert(a, "did not get ast in compile_binding")
    local name, pos, text, subs = common.decode_match(a)
    local lhs, rhs = subs[1], subs[2]
-   assert(next(lhs)=="identifier")
+---   print("***"); table.print(a); print("***")
+   assert(next(lhs)=="identifier", "in c0.compile_binding, got: " .. tostring((next(lhs))))
    assert(type(rhs)=="table")			    -- the right side of the assignment
    assert(not subs[3])
    assert(type(source)=="string")
