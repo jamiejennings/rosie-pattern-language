@@ -47,7 +47,7 @@ local repl_prompt = "Rosie> "
 
 local function print_match(m, left, eval_p)
    if m then 
-      io.write(util.prettify_json(m), "\n")
+      io.write(util.prettify_json(m, true), "\n")
       if (left > 0) then
 	 print(string.format("Warning: %d unmatched characters at end of input", left))
       end
@@ -150,10 +150,10 @@ function repl.repl(en)
 		  assert(ename=="args")
 		  local m, msg = repl_engine:match("parsed_args", argtext)
 		  assert(m.type=="parsed_args")
-		  local msubs = m and m.parsed_args.subs
+		  local msubs = m and m.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
 		     io.write("Expected a match expression follwed by a quoted input string\n")
-		  elseif (not msubs[2]) or (not msubs[2].literal) then
+		  elseif (not msubs[2]) or (not msubs[2].type=="literal") then
 		     io.write("Missing quoted string (after the match expression)\n")
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)

@@ -74,7 +74,7 @@ local function keys_are_numbers(t)
 end
 
 -- my gosh, this has grown ugly over the years!  must rewrite someday.
-function util.table_to_pretty_string(t, max_item_length, js_style)
+function util.table_to_pretty_string(t, max_item_length, js_style, optional_keysort)
    if not t then
       error("Nil table")
       return;
@@ -104,10 +104,19 @@ function util.table_to_pretty_string(t, max_item_length, js_style)
 	 local js_array = js_style and keys_are_numbers(t)
 	 if js_array then output = output .. js_array_open
 	 else output = output .. open; end
-	 local offset
-	 for k,v in pairs(t) do
-	    local pretty_k
-	    if k~=next(t) then output = output .. string.rep(" ", indent); end
+	 local offset, keytable
+	 if optional_keysort then
+	    keytable = {}; for k,_ in pairs(t) do table.insert(keytable, k); end
+	    table.sort(keytable)
+	 end
+	 local itable = (optional_keysort and keytable) or t
+	 for k,v in pairs(itable) do
+	    local index, pretty_k
+	    if optional_keysort then index = k; k = v; v = t[k]; end
+	    local indent_needed
+	    if (optional_keysort and index > 1) or ((not optional_keysort) and k~=next(t)) then
+	       output = output .. string.rep(" ", indent);
+	    end
 	    pretty_k, offset = key(k, (type(v)=="table") and next(v), js_array, key_value_sep, indent)
 	    output = output .. pretty_k
 	    if type(v)=="table" then
@@ -120,7 +129,9 @@ function util.table_to_pretty_string(t, max_item_length, js_style)
 	    else
 	       output = output .. limit(tostring(v),max)
 	    end -- switch on type(v)
-	    if next(t, k) then output = output .. sep .. "\n"; end
+	    if (optional_keysort and next(keytable, index)) or ((not optional_keysort) and next(t, k)) then
+	       output = output .. sep .. "\n";
+	    end
 	 end -- for pairs
 	 if js_array then output = output .. js_array_close
 	 else output = output .. close; end
@@ -138,9 +149,9 @@ end
 -- JSON printing
 ----------------------------------------------------------------------------------------
 
-function util.prettify_json(s)
+function util.prettify_json(s, optional_keysort)
    local t = json.decode(s)
-   return (t==json.null and "null") or util.table_to_pretty_string(t, nil, true)
+   return (t==json.null and "null") or util.table_to_pretty_string(t, nil, true, optional_keysort)
 end
 
 

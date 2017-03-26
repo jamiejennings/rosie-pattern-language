@@ -26,6 +26,8 @@ json = require "cjson"
 --    table.insert(results, {fn, doer()})
 -- end		   
       
+test.dofile(ROSIE_HOME .. "/test/repl-test.lua")
+
 test.dofile(ROSIE_HOME .. "/test/api-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
 test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
