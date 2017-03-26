@@ -184,15 +184,48 @@ local function create_match(name, pos, capture, ...)
    return {[name]=t};
 end
 
-common.create_match = lpeg.r_create_match
---common.create_match = create_match
+local function create_match2(name, pos, ...)
+   local t = {};
+   t.pos = pos;
+   t.subs = {...};
+   assert(#t.subs > 0)
+   if type(t.subs[#t.subs])=="number" then
+      t.text = t.subs[#t.subs]
+      t.subs[#t.subs]= nil
+   elseif type(t.subs[1])=="string" then
+      -- old style
+      t.text = t.subs[1]
+      table.move(t.subs, 2, #t.subs, 1)		    -- shift up
+      t.subs[#t.subs] = nil
+   else
+      error("text field not a string and not a number")
+   end
+   if (not t.subs[1]) then t.subs=nil; end
+   return {[name]=t};
+end
+
+--common.create_match = lpeg.r_create_match
+common.create_match = create_match2
 
 function common.match_node_wrap(peg, name)
-   return (Cc(name) * Cp() * C(peg)) / common.create_match
+   return (Cc(name) * Cp() * peg * Cp()) / common.create_match
+end
+
+local function insert_input_text(m, input)
+   local name, pos, text, subs = common.decode_match(m)
+   assert(type(text)=="number", "expected an end position, got: " .. tostring(text))
+   m[name].text = input:sub(pos, text-1)
+   if subs then
+      for i = 1, #subs do insert_input_text(subs[i], input); end
+   end
+   assert(type(m[name].text)=="string")
+   return m
 end
 
 function common.rmatch(peg, input, start)
-   return peg:match(input, start)
+   local m, nextpos = peg:match(input, start)
+   if m then return insert_input_text(m, input), nextpos; end
+   return nil
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the

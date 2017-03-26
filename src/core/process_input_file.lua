@@ -6,6 +6,9 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
+local common = require "common"
+local rmatch = common.rmatch
+
 local process_input_file = {}
 local lpeg = require "lpeg"
 local engine_module = require "engine_module"
@@ -45,7 +48,9 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    -- (below) in typical cases, e.g. syslog pattern. 
    local encoder = e.encode_function		    -- optimization
    local peg = r._pattern.tlpeg			    -- optimization
-   local matcher = peg.match			    -- optimization
+   local matcher = function(input, start)
+		      return rmatch(peg, input, start)
+		   end                              -- TODO: inline this for performance
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
    local inlines, outlines, errlines = 0, 0, 0;
@@ -65,7 +70,7 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    local _, m, leftover, trace
    while l do
       if trace_flag then _, _, trace = e:tracematch(expression, l); end
-      m, nextpos = matcher(peg, l);		    -- this is nextpos, NOT leftover
+      m, nextpos = matcher(l);		    -- this is nextpos, NOT leftover
       -- What to do with leftover?  User might want to see it.
       -- local leftover = (#input - nextpos + 1);
       if trace then o_write(outfile, trace, "\n"); end

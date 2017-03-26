@@ -42,7 +42,8 @@ function syntax.validate(ast)
       for k,v in pairs(body) do
 	 if type(k)~="string" then err(name, "non-string key in body");
 	 elseif (k=="text") then
-	    if (type(v)~="string") then err(name, "text value not a string"); end
+	    if (type(v)~="string") and (type(v)~="number") then
+	       err(name, "text value not a string or number: " .. type(v)); end
 	 elseif (k=="pos") then
 	    if (type(v)~="number") then err(name, "pos value not a number"); end
 	 elseif (k=="subs") then
