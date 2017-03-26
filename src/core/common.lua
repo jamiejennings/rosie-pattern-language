@@ -187,7 +187,11 @@ end
 common.create_match = lpeg.r_create_match
 
 function common.match_node_wrap(peg, name)
-   return (Cc(name) * Cp() * peg) / common.create_match
+   return (Cc(name) * Cp() * C(peg)) / common.create_match
+end
+
+function common.rmatch(peg, input, start)
+   return peg:match(input, start)
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the

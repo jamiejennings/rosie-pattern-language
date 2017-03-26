@@ -186,8 +186,8 @@ local function transform_quantified_exp(ast)
    local original_body = body
    if name=="raw" 
       or name=="charset" 
-      or name=="named_charset"
-      or name=="literal" 
+      or name=="named_charset" or name=="named_charset0"
+      or name=="literal" or name=="literal0" 
       or name=="ref"
    then
       new_exp = syntax.generate("raw_exp", syntax.raw(new_exp))
@@ -366,9 +366,10 @@ function syntax.expand_rhs(ast, original_rhs_name)
       return ast
    elseif syntax.expression_p(ast) then
       local new = ast
-      if ((name=="raw") or (name=="literal") or
+      if ((name=="raw") or (name=="literal") or (name=="literal0") or
           (name=="charset") or (name=="charset_exp") or
-          (name=="named_charset") or (name=="range") or (name=="charlist") or 
+          (name=="named_charset") or (name=="named_charset0") or
+          (name=="range") or (name=="charlist") or 
           (name=="predicate")) then
       	 new = syntax.raw(new)
       else
@@ -420,9 +421,9 @@ function syntax.expression_p(ast)
 	   (name=="raw") or
 	   (name=="raw_exp") or
 	   (name=="cooked") or
-	   (name=="literal") or
+	   (name=="literal") or (name=="literal0") or
 	   (name=="quantified_exp") or
-	   (name=="named_charset") or
+	   (name=="named_charset") or (name=="named_charset0") or
 	   (name=="range") or
 	   (name=="charlist") or
 	   (name=="charset_exp") or

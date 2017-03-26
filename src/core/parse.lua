@@ -8,6 +8,8 @@
 
 
 local common = require "common"
+local rmatch = common.rmatch
+
 local util = require "util"
 
 local parse = {}
@@ -17,12 +19,8 @@ local P, V, C, S, R, Ct, Cg, Cp = lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.C
 
 local locale = lpeg.locale()
 
-local function special_token(id, lpeg_pattern)
-   return common.match_node_wrap(lpeg_pattern, id)
-end
-
 local function token_capture(id, lpeg_pattern)
-   return common.match_node_wrap(C(lpeg_pattern), id)
+   return common.match_node_wrap(lpeg_pattern, id)
 end
 
 local token = token_capture
@@ -35,28 +33,28 @@ local ignore = (locale.space + (P"--" * ((P(1) - (P"\n"))^0)))^0
 
 local id_char = locale.alnum + S"_"
 local id = locale.alpha * id_char^0
-local identifier = token_capture("identifier", (id * ("." * id)^0 * (- id_char)) + S".$")
-local literal_string = special_token("literal", (P'"' * (C(((1 - S'"\\') + (P'\\' * 1))^0)) * P'"'))
+local identifier = token("identifier", (id * ("." * id)^0 * (- id_char)) + S".$")
+local literal_string = token("literal0", P'"' * (((1 - S'"\\') + (P'\\' * 1))^0) * P'"')
 local top_level_syntax_error = token("syntax_error", Ct(Cg(ignore*(C(1)-locale.space)^1, "top_level")))
 
-local star = token_capture("star", S"*");
-local question = token_capture("question", S"?");
-local plus = token_capture("plus", S"+");
+local star = token("star", S"*");
+local question = token("question", S"?");
+local plus = token("plus", S"+");
 
 ----------------------------------------------------------------------------------------
 -- Charset grammar
 ----------------------------------------------------------------------------------------
-local character = token_capture("character", (P(1) - S"\\]") + (P"\\" * locale.print))   -- OR a numeric syntax???
+local character = token("character", (P(1) - S"\\]") + (P"\\" * locale.print))   -- OR a numeric syntax???
 local character_range = token("range", (character * P"-" * character * #P"]"));
 local character_list = token("charlist", (character^1));
 local character_set = P{"charset";
 		  charset = (V"named" + V"plain" + V"charset_syntax_error");
-		  named = special_token("named_charset", P"[:" * C((locale.print-(S":\\"))^1) * P":]");
+		  named = token("named_charset0", P"[:" * ((locale.print-(S":\\"))^1) * P":]");
 		  plain = token("charset", P"["  * (V"contents"^-1) * P"]");
 		  charset_syntax_error = token("syntax_error", Ct(Cg(Ct(P"[" * C((locale.print-P"]"))^1 * P"]"), "charset")));
 		  contents = ( character_range
 			       + character_list
-			       + token_capture("syntax_error", Ct(Cg(Ct(P(1)-P"]"), "charset_contents")))
+			       + token("syntax_error", Ct(Cg(Ct(P(1)-P"]"), "charset_contents")))
 			 );
 	       }
 ----------------------------------------------------------------------------------------
@@ -74,8 +72,8 @@ local repetition = token("repetition",
 -- Statements and Expressions
 ----------------------------------------------------------------------------------------
 
-local negation = token_capture("negation", P"!")
-local lookat = token_capture("lookat", P"@")
+local negation = token("negation", P"!")
+local lookat = token("lookat", P"@")
 local predicate_symbol = negation + lookat
 
 local quantifier = (star + question + plus + repetition)
@@ -123,7 +121,7 @@ local any_token = (statement + expression + top_level_syntax_error) * Cp()
 function parse_without_error_check(str, pos, tokens)
    pos = pos or 1
    tokens = tokens or {}
-   local nt, nextpos = any_token:match(str, pos)
+   local nt, nextpos = rmatch(any_token, str, pos)
    if (not nt) then return tokens, #str-pos+1; end  -- return ASTlist and leftover
    table.insert(tokens, nt)
    return parse_without_error_check(str, nextpos, tokens)
@@ -163,7 +161,7 @@ function parse.syntax_error_check(ast)
 		      cooked=check_all_branches;
 		      choice=check_two_branches;
 		      identifier=none_found;
-		      literal=none_found;
+		      literal0=none_found;
 		      character=none_found;
 		      sequence=check_two_branches;
 		      predicate=check_two_branches;

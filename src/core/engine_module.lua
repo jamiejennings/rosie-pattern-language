@@ -84,6 +84,7 @@ local engine_module = {}
 local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local common = require "common"
+local rmatch = common.rmatch
 local environment = require "environment"
 local lookup = environment.lookup
 local bind = environment.bind
@@ -166,7 +167,7 @@ end
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
 local function _engine_match(e, pat, input, start)
-   local result, nextpos = pat.tlpeg:match(input, start)
+   local result, nextpos = rmatch(pat.tlpeg, input, start)
    if result then
       return (e.encode_function(result)), (#input - nextpos + 1);
    else

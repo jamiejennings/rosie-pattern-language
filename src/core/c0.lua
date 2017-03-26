@@ -214,6 +214,15 @@ function c0.compile_new_quantified_exp(a, gmr, source, env)
 						      max=max} }
 end
 
+-- rpl 1.0 parser produces literals that have the quotes in them
+function c0.compile_literal0(a, gmr, source, env)
+   assert(a, "did not get ast in compile_literal0")
+   local name, pos, text = common.decode_match(a)
+   assert(text:sub(1,1)=='"' and text:sub(-1,-1)=='"', "literal not in quotes: " .. text)
+   local str = common.unescape_string(text:sub(2,-2))
+   return pattern.new{name=name; peg=P(str); ast=a}
+end
+
 function c0.compile_literal(a, gmr, source, env)
    assert(a, "did not get ast in compile_literal")
    local name, pos, text = common.decode_match(a)
@@ -262,6 +271,10 @@ function c0.compile_named_charset(a, gmr, source, env)
       complement = (next(subs[1])=="complement")
       if complement then assert(subs[2] and (next(subs[2])=="name")); end
       name, pos, text, subs = common.decode_match((complement and subs[2]) or subs[1])
+   end
+   if name=="named_charset0" then
+      assert(text:sub(1,2)=="[:" and text:sub(-2,-1)==":]")
+      text = text:sub(3,-3)
    end
    local pat = locale[text]
    if not pat then
@@ -439,10 +452,10 @@ function c0.compile_capture(a, gmr, source, env)
    if pat.uncap then
       -- In this case, we are capturing a reference that is itself a capture.  So what we want to
       -- do is a re-capture, i.e. ignore the existing capture.
-      pat.peg = common.match_node_wrap(C(pat.uncap), reftext)
+      pat.peg = common.match_node_wrap(pat.uncap, reftext)
    else
       pat.uncap = pat.peg
-      pat.peg = common.match_node_wrap(C(pat.peg), reftext)
+      pat.peg = common.match_node_wrap(pat.peg, reftext)
    end
    return pat
 end
@@ -455,7 +468,9 @@ c0.compile_exp_functions = {"compile_exp";
 				    choice=c0.compile_choice;
 				    sequence=c0.compile_sequence;
 				    literal=c0.compile_literal;
+				    literal0=c0.compile_literal0;
 				    named_charset=c0.compile_named_charset;
+				    named_charset0=c0.compile_named_charset;
 				    range=c0.compile_range_charset;
 				    charlist=c0.compile_charlist;
 				    charset=c0.compile_charset;        -- ONLY USED IN CORE

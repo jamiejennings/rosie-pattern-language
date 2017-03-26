@@ -109,7 +109,7 @@ local function make_compile_expression(expression_p, compile)
 		-- If the user entered an expression other than an identifier, we should treat it
 		-- like it is the RHS of an assignment statement.  Need to give it a name, so we
 		-- label it "*" since that can't be an identifier name.
-		result.peg = common.match_node_wrap(lpeg.C(result.peg), "*")
+		result.peg = common.match_node_wrap(result.peg, "*")
 	     end
 	     result.tlpeg = result.peg * lpeg.Cp()
 	     return result, {}				    -- N.B. returns a single pattern and messages
