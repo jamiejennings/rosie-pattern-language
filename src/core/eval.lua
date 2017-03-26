@@ -119,7 +119,7 @@ local function eval_ref(a, input, start, env, indent, fail_output_only, step, ms
 	 local pat = lookup(env, text)
 	 assert(pat)
 	 local rhs = pat.ast
-	 if next(rhs)=="capture" then rhs = rhs.capture.subs[2]; end
+	 if rhs.type=="capture" then rhs = rhs.subs[2]; end
 	 msg = msg .. indent_(indent) .. "Explanation (definition): " .. reveal_ast_indented(rhs, indent) .. "\n"
 	 local dm, dpos
 	 dm, dpos, msg = eval_exp(rhs, input, start, env, indent+delta,
@@ -323,7 +323,7 @@ local function eval_grammar(a, input, start, env, indent, fail_output_only, step
    -- will (re-)bind an identifier
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="new_grammar", "Internal error: evaluation function given unexpected kind of grammar AST" .. name)
-   local b = {grammar_expression = a[name]}	    -- TODO: should call syntax function for rewriting 
+   local b = {type="grammar_expression", pos=pos, text=text, subs=subs}	    -- TODO: should call syntax function for rewriting 
    local pat = compile_exp(b, env)
    local m, pos = match_peg(pat.peg, input, start)
    msg = msg .. report_(m, pos, b, input, start, indent, fail_output_only, step)
@@ -332,11 +332,11 @@ local function eval_grammar(a, input, start, env, indent, fail_output_only, step
 end
 
 local function eval_raw_exp(a, input, start, env, indent, fail_output_only, step, msg)
-   return eval_exp(a.raw_exp.subs[1], input, start, env, indent, fail_output_only, step, msg)
+   return eval_exp(a.subs[1], input, start, env, indent, fail_output_only, step, msg)
 end
 
 local function eval_capture(a, input, start, env, indent, fail_output_only, step, msg)
-   return eval_exp(a.capture.subs[2], input, start, env, indent, fail_output_only, step, msg)
+   return eval_exp(a.subs[2], input, start, env, indent, fail_output_only, step, msg)
 end
 
 eval_exp = function(ast, input, start, env, indent, fail_output_only, step, msg)

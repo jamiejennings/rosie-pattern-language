@@ -246,13 +246,13 @@ local function setup_and_run_tests(args)
       for _,p in pairs(test_lines) do
 	 local m, left = CL_ENGINE:match(exp, p)
 	 -- FIXME: need to test for failure to match
-	 local name = m.test_line.subs[1].identifier.text
-	 local testtype = m.test_line.subs[2].testKeyword.text
+	 local name = m.subs[1].text
+	 local testtype = m.subs[2].text
 	 local testfunc = test_funcs["test_" .. testtype .. "_exp"]
 	 local literals = 3 -- literals will start at subs offset 3
 	 -- if we get here we have at least one per test_line expression rule
-	 while literals <= #m.test_line.subs do
-	    local teststr = m.test_line.subs[literals].literal.text
+	 while literals <= #m.subs do
+	    local teststr = m.subs[literals].text
 	    teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
 	    if not testfunc(name, teststr) then
 	       print("FAIL: " .. name .. " did not " .. testtype:sub(1,-2) .. " " .. teststr)

@@ -20,21 +20,21 @@ function c1.process_language_decl(ast, gmr, source, env)
 end
 
 function c1.process_import_decl(ast, gmr, source, env)
-   local specs = ast.import_decl.subs
+   local specs = ast.subs
    for _,spec in ipairs(specs) do
-      io.write("*\t", "import ", spec.import_spec.subs[1].importpath.text)
-      local packagenamesub = spec.import_spec.subs[2]
+      io.write("*\t", "import ", spec.subs[1].text)
+      local packagenamesub = spec.subs[2]
       if packagenamesub then
-	 local key = next(packagenamesub)	    -- dot or packagename
-	 io.write(" as ", packagenamesub[key].text)
+	 local key = packagenamesub.type	    -- dot or packagename
+	 io.write(" as ", packagenamesub.text)
       end
       io.write('\n')
    end -- for
 end
 
 function c1.compile_local(ast, gmr, source, env)
-   local name = next(ast.local_.subs[1])
-   print("->", "local " .. name .. ": " .. ast.local_.subs[1][name].text)
+   local name = ast.subs[1].type
+   print("->", "local " .. name .. ": " .. ast.subs[1].text)
 end
 
 function c1.compile_ast(ast, source, env)

@@ -127,13 +127,13 @@ function c0.process_quantified_exp(a, gmr, source, env)
    assert(name=="new_quantified_exp")
    local qpeg, min, max
    local append_boundary = true
-   local expname, expbody = next(subs[1])
-   local raw = (expname=="raw_exp")
+   local exp = subs[1]
+   local raw = (exp.type=="raw_exp")
    if raw then
-      expname, expbody = next(expbody.subs[1])
+      exp = exp.subs[1]
       append_boundary = false
    end
-   local e = c0.compile_exp(subs[1], gmr, source, env)
+   local e = c0.compile_exp(exp, gmr, source, env)
    local epeg = e.peg
    -- Why did we skip this test when compiling a grammar?  Hmmm...  (Friday, March 10, 2017)
    --   if (not gmr) and matches_empty(epeg) then
@@ -244,7 +244,7 @@ function c0.compile_predicate(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    local peg = c0.compile_exp(subs[2], gmr, source, env).peg
    local pred_clause = subs[1]
-   local pred_name = next(pred_clause)
+   local pred_name = pred_clause.type
    if pred_name=="negation" then peg = (- peg)
    elseif pred_name=="lookat" then peg = (# peg)
    else error("Internal compiler error: unknown predicate type: " .. tostring(pred_name))
@@ -268,8 +268,8 @@ function c0.compile_named_charset(a, gmr, source, env)
    local name, pos, text, subs = common.decode_match(a)
    local complement
    if subs then					    -- core parser won't produce subs
-      complement = (next(subs[1])=="complement")
-      if complement then assert(subs[2] and (next(subs[2])=="name")); end
+      complement = (subs[1].type=="complement")
+      if complement then assert(subs[2] and (subs[2].type=="name")); end
       name, pos, text, subs = common.decode_match((complement and subs[2]) or subs[1])
    end
    if name=="named_charset0" then
@@ -287,13 +287,13 @@ function c0.compile_range_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_range_charset")
    local rname, rpos, rtext, rsubs = common.decode_match(a)
    assert(rsubs and rsubs[1])
-   local complement = (next(rsubs[1])=="complement")
+   local complement = (rsubs[1].type=="complement")
    if complement then
-      assert(rsubs[2] and (next(rsubs[2])=="character"))
-      assert(rsubs[3] and (next(rsubs[3])=="character"))
+      assert(rsubs[2] and (rsubs[2].type=="character"))
+      assert(rsubs[3] and (rsubs[3].type=="character"))
    else
-      assert(next(rsubs[1])=="character")
-      assert(rsubs[2] and (next(rsubs[2])=="character"))
+      assert(rsubs[1].type=="character")
+      assert(rsubs[2] and (rsubs[2].type=="character"))
    end
    local cname1, cpos1, ctext1 = common.decode_match(rsubs[(complement and 2) or 1])
    local cname2, cpos2, ctext2 = common.decode_match(rsubs[(complement and 3) or 2])
@@ -308,10 +308,10 @@ function c0.compile_charlist(a, gmr, source, env)
    local clname, clpos, cltext, clsubs = common.decode_match(a)
    local exps = "";
    assert((type(clsubs)=="table") and clsubs[1], "no sub-matches in charlist!")
-   local complement = (next(clsubs[1])=="complement")
+   local complement = (clsubs[1].type=="complement")
    for i = (complement and 2) or 1, #clsubs do
       local v = clsubs[i]
-      assert(next(v)=="character", "did not get character sub in compile_charlist")
+      assert(v.type=="character", "did not get character sub in compile_charlist")
       local cname, cpos, ctext = common.decode_match(v)
       exps = exps .. common.unescape_string(ctext)
    end
@@ -321,12 +321,12 @@ end
 function c0.compile_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_charset")
    local name, pos, text, subs = common.decode_match(a)
-   if next(subs[1])=="range" then
+   if subs[1].type=="range" then
       return c0.compile_range_charset(subs[1], gmr, source, env)
-   elseif next(subs[1])=="charlist" then
+   elseif subs[1].type=="charlist" then
       return c0.compile_charlist(subs[1], gmr, source, env)
    else
-      error("Internal error (compiler): Unknown charset type: "..next(subs[1]))
+      error("Internal error (compiler): Unknown charset type: " .. subs[1].type)
    end
 end
 
@@ -363,7 +363,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
    local first = subs[1]			    -- first rule in grammar
    assert(first, "not getting first rule in compile_grammar_expression")
    local fname, fpos, ftext = common.decode_match(first)
-   assert(first and (fname=="binding"))
+   assert(fname=="binding")
 
    local rule, id_node, id, exp_node
    
@@ -374,11 +374,11 @@ function c0.compile_grammar_expression(a, gmr, source, env)
       local rname, rpos, rtext, rsubs = common.decode_match(rule)
       assert(rname=="binding")
       local id_node = rsubs[1]			    -- identifier clause
-      assert(id_node and next(id_node)=="identifier")
+      assert(id_node and id_node.type=="identifier")
       local iname, ipos, id = common.decode_match(id_node)
       local exp_node = rsubs[2]
       assert(exp_node)
-      local alias_flag = not exp_node.capture
+      local alias_flag = not rule.capture
       bind(gtable,id,pattern.new{name=id, peg=V(id), alias=alias_flag})
    end						    -- for
 
@@ -398,8 +398,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
       pats[id] = c0.compile_exp(exp_node, true, source, gtable) -- gmr flag is true 
    end -- for
 
-   -- third pass: create the table that will create the LPEG grammar by stripping off the Rosie
-   -- pattern records, and wrapping as needed with lpeg.C
+   -- third pass: create the table that will create the LPEG grammar 
    local t = {}
    for id, pat in pairs(pats) do t[id] = pat.peg; end
    t[1] = start					    -- first rule is start rule
@@ -441,7 +440,7 @@ function c0.compile_capture(a, gmr, source, env)
    local pat
 
    assert(c0.expression_p(captured_exp),
-	  "compile_capture called with an ast that is not an expression: " .. (next(captured_exp)))
+	  "compile_capture called with an ast that is not an expression: " .. captured_exp.type)
 
    local refname, _, reftext, _ = common.decode_match(ref_exp)
    assert(refname=="ref")
@@ -491,9 +490,9 @@ local function compile_rhs(a, gmr, source, env, iname)
       error(msg)
    end
    local pat = c0.compile_exp(a, gmr, source, env)
-   local rhs_name, rhs_body = next(a)
+   local rhs_name = a.type
    pat.raw = ((rhs_name=="raw_exp") or
-	      ((rhs_name=="capture") and (next(rhs_body.subs[2])=="ref") and pat.raw) or
+	      ((rhs_name=="capture") and (a.subs[2].type=="ref") and pat.raw) or
 	      ((rhs_name=="ref") and pat.raw))
    pat.ast = a;
    return pat
@@ -503,15 +502,14 @@ function c0.compile_binding(a, gmr, source, env)
    assert(a, "did not get ast in compile_binding")
    local name, pos, text, subs = common.decode_match(a)
    local lhs, rhs = subs[1], subs[2]
----   print("***"); table.print(a); print("***")
-   assert(next(lhs)=="identifier", "in c0.compile_binding, got: " .. tostring((next(lhs))))
+   assert(lhs.type=="identifier", "in c0.compile_binding, got: " .. tostring(lhs.type))
    assert(type(rhs)=="table")			    -- the right side of the assignment
    assert(not subs[3])
    assert(type(source)=="string")
-   assert(a.binding and (type(a.binding.capture)=="boolean"))
+   assert(a and (type(a.capture)=="boolean"))
    local _, ipos, iname = common.decode_match(lhs)
    local pat = compile_rhs(rhs, gmr, source, env, iname)
-   pat.alias = (not a.binding.capture)
+   pat.alias = (not a.capture)
    local msg
    if lookup(env,iname) then msg = "Warning: reassignment to identifier " .. iname; end
    bind(env,iname,pat)

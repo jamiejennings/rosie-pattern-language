@@ -149,7 +149,7 @@ function repl.repl(en)
 		  local ename, epos, argtext = common.decode_match(csubs[1])
 		  assert(ename=="args")
 		  local m, msg = repl_engine:match("parsed_args", argtext)
-		  assert(next(m)=="parsed_args")
+		  assert(m.type=="parsed_args")
 		  local msubs = m and m.parsed_args.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
 		     io.write("Expected a match expression follwed by a quoted input string\n")

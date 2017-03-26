@@ -176,12 +176,9 @@ end
 --      pos: 1]]
 
 local function create_match(name, pos, capture, ...)
-   local t = {};
-   t.pos = pos;
-   t.text=capture;
-   t.subs = {...};
-   if (not t.subs[1]) then t.subs=nil; end
-   return {[name]=t};
+   local subs = {...};
+   if (not subs[1]) then subs=nil; end
+   return {type = name, pos = pos, text = capture, subs = subs};
 end
 
 --common.create_match = lpeg.r_create_match
@@ -215,7 +212,8 @@ local function create_match_indices(name, pos_start, ...)
    local lastsub = subs[nsubs]; assert(type(lastsub)=="number")
    if (nsubs==1) then subs=nil;
    else subs[nsubs]= nil; end
-   return {[name] = {pos = pos_start, text = lastsub, subs = subs}};
+--   return {[name] = {pos = pos_start, text = lastsub, subs = subs}};
+   return {type = name, pos = pos_start, text = lastsub, subs = subs};
 end
 
 function common.match_node_wrap(peg, name)
@@ -225,11 +223,11 @@ end
 local function insert_input_text(m, input)
    local name, pos, text, subs = common.decode_match(m)
    assert(type(text)=="number", "expected an end position, got: " .. tostring(text))
-   m[name].text = input:sub(pos, text-1)
+   m.text = input:sub(pos, text-1)
    if subs then
       for i = 1, #subs do insert_input_text(subs[i], input); end
    end
-   assert(type(m[name].text)=="string")
+   assert(type(m.text)=="string")
    return m
 end
 
@@ -243,17 +241,15 @@ end
 -- subs and the index of first sub.  (because there used to be other things in the sub table)
 
 function common.decode_match(t)
-   local name, rest = next(t)
-   return name, rest.pos, rest.text, rest.subs
+   return t.type, t.pos, t.text, t.subs
 end
 
 function common.subs(match)
-   return (match[(next(match))].subs) or {}
+   return match.subs or {}
 end
 
 function common.match_to_text(t)
-   local name, rest = next(t)
-   return rest.text
+   return t.text
 end
 
 -- verify that a match has the correct structure

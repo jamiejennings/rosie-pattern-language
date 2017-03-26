@@ -34,7 +34,7 @@ local function reveal_assignment(a)
    assert(a, "did not get ast in reveal_assignment")
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="assignment_")
-   assert(next(subs[1])=="identifier")
+   assert(subs[1].type=="identifier")
    assert(type(subs[2])=="table")	    -- the right side of the assignment
    assert(not subs[3])
    local fmt = "assignment %s = %s"
@@ -64,7 +64,7 @@ local function reveal_alias(a)
    assert(a, "did not get ast in reveal_alias")
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="alias_")
-   assert(next(subs[1])=="identifier")
+   assert(subs[1].type=="identifier")
    local fmt = "alias %s = %s"
    local id, e = subs[1], subs[2]
    return string.format(fmt,
@@ -76,7 +76,7 @@ local function reveal_binding(a)
    assert(a, "did not get ast in reveal_binding")
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="binding")
-   assert(next(subs[1])=="identifier")
+   assert(subs[1].type=="identifier")
    local fmt = "%s = %s"
    local id, e = subs[1], subs[2]
    return string.format(fmt,
@@ -90,9 +90,9 @@ local function reveal_sequence(a)
       local name, pos, text, subs = common.decode_match(a)
       local e1, e2 = subs[1], subs[2]
       local str1, str2
-      if next(e1)=="sequence" then str1 = rs(e1)
+      if e1.type=="sequence" then str1 = rs(e1)
       else str1 = writer.reveal_exp(e1); end
-      if next(e2)=="sequence" then str2 = rs(e2)
+      if e2.type=="sequence" then str2 = rs(e2)
       else str2 = writer.reveal_exp(e2); end
       return str1 .. " " .. str2
    end
@@ -108,9 +108,9 @@ end
 local function reveal_predicate(a)
    assert(a, "did not get ast in reveal_predicate")
    local name, pos, text, subs = common.decode_match(a)
-   local pred_type, pred_type_body = next(subs[1])
+   local pred_type = subs[1].type
    local exp = subs[2]
-   return pred_type_body.text .. writer.reveal_exp(subs[2])
+   return subs[1].text .. writer.reveal_exp(subs[2])
 end
 
 local function reveal_repetition(a)
@@ -131,7 +131,7 @@ local function reveal_quantified_exp(a)
    local qname, qpos, printable_q = common.decode_match(q)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
    local open, close = "(", ")"
-   if next(e)=="raw_exp" then
+   if e.type=="raw_exp" then
       return writer.reveal_exp(e) .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
    else
       return open .. writer.reveal_exp(e) .. close .. (((qname=="repetition") and reveal_repetition(q)) or printable_q)
@@ -162,7 +162,7 @@ local function reveal_range(a)
    local name, pos, text, subs = common.decode_match(a)
    assert(name=="range")
    assert(subs and subs[1])
-   local complement = (next(subs[1])=="complement")
+   local complement = (subs[1].type=="complement")
    local offset = 0
    if complement then
       assert(subs[2] and subs[3])
@@ -179,12 +179,12 @@ end
 local function reveal_charset(a)
    assert(a, "did not get ast in reveal_charset")
    local name, pos, text, subs = common.decode_match(a)
-   if next(subs[1])=="range" then
+   if subs[1].type=="range" then
       return reveal_range(subs[1])
-   elseif next(subs[1])=="charlist" then
+   elseif subs[1].type=="charlist" then
       return reveal_charlist(subs[1])
    else
-      error("Reveal error: Unknown charset type: ".. next(subs[1]))
+      error("Reveal error: Unknown charset type: ".. subs[1].type)
    end
 end
 
@@ -192,7 +192,7 @@ local function reveal_charset_exp(a)
    assert(a, "did not get ast in reveal_charset_exp")
    local name, pos, text, subs = common.decode_match(a)
    assert(subs and subs[1])
-   local complement = (next(subs[1])=="complement")
+   local complement = (subs[1].type=="complement")
    local offset = 0
    if complement then
       assert(subs[2])
@@ -201,7 +201,7 @@ local function reveal_charset_exp(a)
    local retval = ""
    for i=1+offset,#subs do
       local sub = subs[i]
-      local name = next(sub)
+      local name = sub.type
       if name=="range" then retval = retval .. reveal_range(sub)
       elseif name=="charlist" then retval = retval .. reveal_charlist(sub)
       elseif name=="named_charset" then retval = retval .. reveal_named_charset(sub)
@@ -213,9 +213,9 @@ end
 
 -- return a list of choices
 local function flatten_choice(ast)
-   local name, body = next(ast)
+   local name = ast.type
    if name=="choice" then
-      return list.apply(list.append, list.map(syntax.flatten_choice, list.from(body.subs)))
+      return list.apply(list.append, list.map(syntax.flatten_choice, list.from(ast.subs)))
    else
       return {ast}
    end
@@ -273,9 +273,9 @@ function writer.reveal_syntax_error(a)
    if text=="top_level" then
       return "SYNTAX ERROR (TOP LEVEL): " .. tostring(subs[1])
    elseif text=="exp_stmt" then
-      if next(subs[2])=="assignment_" then
+      if subs[2].type=="assignment_" then
 	 return "SYNTAX ERROR: ASSIGNMENT TO " .. writer.reveal_ast(subs[3])
-      elseif next(subs[2])=="alias_" then
+      elseif subs[2].type=="alias_" then
 	 return "SYNTAX ERROR: ALIAS " .. writer.reveal_ast(subs[3])
       else
 	 return "SYNTAX ERROR: (UNKNOWN STATEMENT TYPE) " .. writer.reveal_ast(subs[3])
@@ -316,7 +316,7 @@ end
 
 function writer.reveal_ast(ast)
    assert(type(ast)=="table", "Reveal: first argument not an ast: "..tostring(ast))
-   assert(type(next(ast))=="string", "Reveal: first argument not an ast: "..tostring(ast))
+   assert(type(ast.type)=="string", "Reveal: first argument not an ast: "..tostring(ast))
    local functions = {"reveal_ast";
 		      binding=reveal_binding;
 		      assignment_=reveal_assignment;

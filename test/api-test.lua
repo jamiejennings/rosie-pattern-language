@@ -100,7 +100,6 @@ check(type(wapi.engine_lookup)=="function")
 ok, env_js = wapi.engine_lookup(json.encode(nil)) -- null
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
-print("***", env_js)
 ok, env = pcall(json.decode, env_js)
 check(ok)
 check(type(env)=="table")
@@ -213,7 +212,7 @@ ok, env_js = wapi.engine_lookup("null")
 check(ok)
 check(type(env_js)=="string", "environment is returned as a JSON string")
 env = json.decode(env_js)
-check(env["S"].type=="definition")
+check(env["S"].type=="definition", "type of grammar is reported by lookup() as a definition")
 
 g2_defn = [[grammar
   alias g2 = S ~
@@ -396,8 +395,9 @@ check(type(results)=="string")
 match = json.decode(results)
 check(type(match)=="table")
 
-check(match["common.dotted_identifier"].text=="x.y.z")
-check(match["common.dotted_identifier"].subs[2]["common.identifier_plus_plus"].text=="y")
+check(match.type=="common.dotted_identifier")
+check(match.text=="x.y.z")
+check(match.subs[2].text=="y")
 
 subheading("match")
 ok, results, left = wapi.match("common.number", "x.y.z")
@@ -446,10 +446,10 @@ local function check_output_file()
    for i=1, c_out do
       local l = nextline()
       local j = json.decode(l)
-      check(j["*"], "the json match in the output file is tagged with a star")
-      check(j["*"].text:find("apple"), "the match in the output file is probably ok")
+      check(j.type=="*", "the json match in the output file is tagged with a star")
+      check(j.text:find("apple"), "the match in the output file is probably ok")
       local c=0
-      for k,v in pairs(j["*"].subs) do c=c+1; end
+      for k,v in pairs(j.subs) do c=c+1; end
       check(c==5, "the match in the output file has 5 submatches as expected")
    end   
    check(not nextline(), "only two lines of json in output file")
@@ -533,7 +533,7 @@ ok, results_js, leftover, trace = wapi.tracematch(".*", "foo")
 check(ok)
 results = json.decode(results_js)
 check(results)
-check(results["*"])
+check(results.type=="*")
 check(type(trace)=="string")
 check(leftover=="0")
 check(trace:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
@@ -548,7 +548,7 @@ ok, results_js, leftover, trace = wapi.tracematch("[[:alpha:]]*", "foo56789")
 check(ok)
 results = json.decode(results_js)
 check(results)
-check(results["*"])
+check(results.type=="*")
 check(leftover=="5")
 check(trace:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
 
@@ -557,8 +557,8 @@ check(ok)
 results = json.decode(results_js)
 check(results)
 check(leftover=="2")				    -- leftover
-check(results["common.number"])
-check(results["common.number"].text=="abc")
+check(results.type=="common.number")
+check(results.text=="abc")
 check(trace:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
 
 subheading("trace file (was eval_file)")
@@ -580,7 +580,7 @@ check(ok)
 if ok then
    match = json.decode(results_js)
    check(match)
-   check(match["*"])
+   check(match.type=="*")
    check(leftover=="0")
    check(trace:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
 end

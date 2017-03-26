@@ -38,8 +38,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text, 
       check(leftover==expected_leftover,
 	    string.format(fmt, exp, input, expected_leftover, leftover), 1+addlevel)
       if expected_text and m then
-	 local name, match = next(m)
-	 local text = match.text
+	 local name, pos, text, subs = common.decode_match(m)
 	 local fmt = "expected text matching %s against '%s' was '%s' but received '%s'"
 	 check(expected_text==text,
 	       string.format(fmt, exp, input, expected_text, text), 1+addlevel)
@@ -70,20 +69,20 @@ match, leftover = e:match('a', "a")
 check(type(match)=="table")
 check(type(leftover)=="number")
 check(leftover==0)
-check(next(match)=="a", "the match of an identifier is named for the identifier")
+check(match.type=="a", "the match of an identifier is named for the identifier")
 
 set_expression('(a)')
 match, leftover = e:match('(a)', "a")
-check(next(match)=="a", "the match of an expression is usually anonymous, but cooking an identifier is redundant")
-subs = match["a"].subs
+check(match.type=="a", "the match of an expression is usually anonymous, but cooking an identifier is redundant")
+subs = match.subs
 check(not subs)
 
 set_expression('{a}')
 match, leftover = e:match('{a}', "a")
-check(next(match)=="*", "the match of an expression is anonymous")
-subs = match["*"].subs
+check(match.type=="*", "the match of an expression is anonymous")
+subs = match.subs
 check(subs)
-submatchname = next(subs[1])
+submatchname = subs[1].type
 check(submatchname=="a", "the only sub of this expression is the identifier in the raw group")
 
 ok, msg = pcall(e.load, e, 'alias plain_old_alias = "p"')
@@ -118,51 +117,51 @@ subheading("Testing re-assignments")
 
 check_match('plain_old_alias', "x", false, 1)
 result = check_match('plain_old_alias', "p", true)
-check(next(result)=="*", "the match of an alias is anonymous")
-check(not result["*"].subs, "no subs")
+check(result.type=="*", "the match of an alias is anonymous")
+check(not result.subs, "no subs")
 
 check_match('alias_to_plain_old_alias', "x", false, 1)
 result = check_match('alias_to_plain_old_alias', "p", true)
-check(next(result)=="*", "the match of an alias is anonymous")
-check(not result["*"].subs, "no subs")
+check(result.type=="*", "the match of an alias is anonymous")
+check(not result.subs, "no subs")
 
 match = check_match('alias_to_a', "a", true)
-check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match["*"].subs
+check(match.type=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match.subs
 check(subs and #subs==1)
-check(next(subs[1])=="a")
+check(subs[1].type=="a")
 
 match = check_match('alternate_a', "a", true)
-check(next(match)=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
-subs = match["alternate_a"].subs
+check(match.type=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
+subs = match.subs
 check(not subs)
 
 match = check_match('alternate_to_alias_to_a', "a", true)
-check(next(match)=="alternate_to_alias_to_a", 'rhs of an assignment can contain an alias, and it will be captured')
-subs = match["alternate_to_alias_to_a"].subs
+check(match.type=="alternate_to_alias_to_a", 'rhs of an assignment can contain an alias, and it will be captured')
+subs = match.subs
 check(not subs)
 
 match = check_match('alias_to_alternate_to_alias_to_a', "a", true)
-check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match["*"].subs
+check(match.type=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match.subs
 check(subs and #subs==1)
-check(next(subs[1])=="a")
+check(subs[1].type=="a")
 
 match = check_match('uses_a', "a a", true)
-check(next(match)=="uses_a", 'the match is labeled with the identifier name to which it is bound')
-subs = match["uses_a"].subs
+check(match.type=="uses_a", 'the match is labeled with the identifier name to which it is bound')
+subs = match.subs
 check(subs and #subs==2)
-check(next(subs[1])=="a")
-check(next(subs[2])=="a")
+check(subs[1].type=="a")
+check(subs[2].type=="a")
 
 match = check_match('alias_to_uses_a', "a a", true)
-check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match["*"].subs
-check(subs and #subs==1 and (next(subs[1]))=="uses_a")
-subs = match["*"].subs[1].uses_a.subs
+check(match.type=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match.subs
+check(subs and #subs==1 and (subs[1].type=="uses_a"))
+subs = match.subs[1].subs
 check(subs and #subs==2)
-check(subs[1] and (next(subs[1])=="a"))
-check(subs[2] and (next(subs[2])=="a"))
+check(subs[1] and (subs[1].type=="a"))
+check(subs[2] and (subs[2].type=="a"))
 
 ----------------------------------------------------------------------------------------
 heading("Literals")
@@ -171,7 +170,7 @@ subheading("Built-ins")
 
 set_expression('.')
 match, leftover = e:match('.', "a")
-check(next(match)=="*", "the match of an alias is anonymous")
+check(match.type=="*", "the match of an alias is anonymous")
 
 check_match(".", "a", true)
 check_match(".", "abcd", true, 3, "a")
@@ -1237,12 +1236,12 @@ check_match('g1$', "aabb", true)
 
 set_expression('g1')
 match, leftover = e:match('g1', "baab!")
-check(next(match)=='g1', "the match of a grammar is named for the identifier bound to the grammar")
+check(match.type=='g1', "the match of a grammar is named for the identifier bound to the grammar")
 check(leftover==1, "one char left over for this match")
 function collect_names(ast)
-   local name = next(ast)
-   if ast[name].subs then
-      return list.cons(name, list.flatten(list.map(collect_names, ast[name].subs)))
+   local name = ast.type
+   if ast.subs then
+      return list.cons(name, list.flatten(list.map(collect_names, ast.subs)))
    else
       return list.new(name)
    end
@@ -1276,10 +1275,10 @@ ok, ast, warnings = pcall(e.load, e, 'use_g2 = g1 g2')
 check(ok, "Failed to define use_g2")
 m, leftover = check_match('use_g2', "ab baab", true, 0, "ab baab")
 check(m)
-check(m.use_g2)
-check(m.use_g2.subs)
-check(#m.use_g2.subs==1)
-check(m.use_g2.subs[1].g1)
+check(m.type=="use_g2")
+check(m.subs)
+check(#m.subs==1)
+check(m.subs[1].type=="g1")
 
 subheading("With errors")
 
@@ -1353,29 +1352,29 @@ subheading("Raw and cooked versions of the same definition")
 check((rosie.file.load(e, "$sys/MANIFEST", "manifest")))
 
 m = check_match("common.int", "42", true)
-check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
+check(m.type=="common.int" and (not m.subs))
 m = check_match("{common.int}", "42", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check(m.subs[1] and m.subs[1].type=="common.int" and (not m.subs[1].subs))
 m = check_match("(common.int)", "42", true)
-check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
+check(m.type=="common.int" and (not m.subs))
 --check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 
 m = check_match("common.int", "42x", true, 1, "42")
-check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
+check(m.type=="common.int" and (not m.subs))
 m = check_match("{common.int}", "42x", true, 1, "42")
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check((m.subs[1]) and m.subs[1].type=="common.int" and (not m.subs[1].subs))
 m = check_match("(common.int)", "42x", true, 1)
 m = check_match("(common.int ~)", "42x", false)
 
 m = check_match("common.int common.word", "42x", false)
 m = check_match("{common.int common.word}", "42x", true, 0, "42x")
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
+check((m.subs[1]) and m.subs[1].type=="common.int" and
+      (m.subs[2]) and m.subs[2].type=="common.word")
 m = check_match("(common.int common.word)", "42x", false)
 
 m = check_match("common.int common.word", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
+check((m.subs[1]) and m.subs[1].type=="common.int" and
+      (m.subs[2]) and m.subs[2].type=="common.word")
 m = check_match("{common.int common.word}", "42 x", false)
 m = check_match("(common.int common.word)", "42 x", true)
 
@@ -1383,72 +1382,72 @@ check((e:load("int = common.int word = common.word")))
        
 m = check_match("int", "42", true)
 --check((not m["*"]) and m["int"] and (#m["int"].subs==1))
-check((not m["*"]) and m["int"] and (not m["int"].subs))
+check(m.type=="int" and (not m.subs))
 m = check_match("{int}", "42", true)
 --check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (#m["*"].subs[1]["int"].subs==1))
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (not m["*"].subs[1]["int"].subs))
+check((m.subs[1]) and m.subs[1].type=="int" and (not m.subs[1].subs))
 m = check_match("(int)", "42", true)
 --check((not m["*"]) and m["int"] and (#m["int"].subs==1))
-check((not m["*"]) and m["int"] and (not m["int"].subs))
+check(m.type=="int" and (not m.subs))
 
 m = check_match("int", "42x", true, 1, "42")
 --check((not m["*"]) and m["int"] and (#m["int"].subs==1))
-check((not m["*"]) and m["int"] and (not m["int"].subs))
+check(m.type=="int" and (not m.subs))
 m = check_match("{int}", "42x", true, 1, "42")
 --check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (#m["*"].subs[1]["int"].subs==1))
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (not m["*"].subs[1]["int"].subs))
+check((m.subs[1]) and m.subs[1].type=="int" and (not m.subs[1].subs))
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 
 m = check_match("int word", "42x", false)
 m = check_match("{int word}", "42x", true, 0, "42x")
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["word"])
+check((m.subs[1]) and m.subs[1].type=="int" and
+      (m.subs[2]) and m.subs[2].type=="word")
 m = check_match("(int word)", "42x", false)
 
 m = check_match("int word", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["word"])
+check((m.subs[1]) and m.subs[1].type=="int" and
+      (m.subs[2]) and m.subs[2].type=="word")
 m = check_match("{int word}", "42 x", false)
 m = check_match("(int word)", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["word"])
+check((m.subs[1]) and m.subs[1].type=="int" and
+      (m.subs[2]) and m.subs[2].type=="word")
 
 check((e:load("alias int = common.int alias word = common.word")))
        
 m = check_match("int", "42", true)
-check(m["*"] and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check(m.type=="*" and m.subs[1].type=="common.int" and (not m.subs[1].subs))
 m = check_match("{int}", "42", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check((m.subs[1]) and m.subs[1].type=="common.int" and (not m.subs[1].subs))
 m = check_match("(int)", "42", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check((m.subs[1]) and m.subs[1].type=="common.int" and (not m.subs[1].subs))
 
 m = check_match("int", "42x", true, 1, "42")
-check(m["*"] and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check(m.type=="*" and m.subs[1].type=="common.int" and (not m.subs[1].subs))
 m = check_match("{int}", "42x", true, 1, "42")
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check((m.subs[1]) and m.subs[1].type=="common.int" and (not m.subs[1].subs))
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 
 m = check_match("int word", "42x", false)
 m = check_match("{int word}", "42x", true, 0, "42x")
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
+check((m.subs[1]) and m.subs[1].type=="common.int" and
+      (m.subs[2]) and m.subs[2].type=="common.word")
 m = check_match("(int word)", "42x", false)
 
 m = check_match("int word", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
+check((m.subs[1]) and m.subs[1].type=="common.int" and
+      (m.subs[2]) and m.subs[2].type=="common.word")
 m = check_match("{int word}", "42 x", false)
 m = check_match("(int word)", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
+check((m.subs[1]) and m.subs[1].type=="common.int" and
+      (m.subs[2]) and m.subs[2].type=="common.word")
 
 subheading("Bindings (equivalence of reference and referent)")
 
 check((e:load("foo = a / b / c")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m["foo"]); check(#m["foo"].subs==1); check(m["foo"].subs[1]["a"]); 
+check(m.type=="foo"); check(#m.subs==1); check(m.subs[1].type=="a"); 
 
 function test_foo()
    check_match("foo", "a!", true, 1, "a");     check_match("(a / b / c)", "a!", true, 1, "a")
@@ -1464,17 +1463,17 @@ test_foo()
 
 check((e:load("foo = (a / b / c)")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m["foo"]); check(#m["foo"].subs==1); check(m["foo"].subs[1]["a"]); 
+check(m.type=="foo"); check(#m.subs==1); check(m.subs[1].type=="a"); 
 test_foo()
 
 check((e:load("alias foo = a / b / c")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m["*"]); check(#m["*"].subs==1); check(m["*"].subs[1]["a"]); 
+check(m.type=="*"); check(#m.subs==1); check(m.subs[1].type=="a"); 
 test_foo()
 
 check((e:load("alias foo = (a / b / c)")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m["*"]); check(#m["*"].subs==1); check(m["*"].subs[1]["a"]); 
+check(m.type=="*"); check(#m.subs==1); check(m.subs[1].type=="a"); 
 test_foo()
 
 subheading("Sequences")
