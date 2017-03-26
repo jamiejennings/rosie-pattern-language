@@ -184,31 +184,42 @@ local function create_match(name, pos, capture, ...)
    return {[name]=t};
 end
 
-local function create_match2(name, pos, ...)
-   local t = {};
-   t.pos = pos;
-   t.subs = {...};
-   assert(#t.subs > 0)
-   if type(t.subs[#t.subs])=="number" then
-      t.text = t.subs[#t.subs]
-      t.subs[#t.subs]= nil
-   elseif type(t.subs[1])=="string" then
-      -- old style
-      t.text = t.subs[1]
-      table.move(t.subs, 2, #t.subs, 1)		    -- shift up
-      t.subs[#t.subs] = nil
-   else
-      error("text field not a string and not a number")
-   end
-   if (not t.subs[1]) then t.subs=nil; end
-   return {[name]=t};
+--common.create_match = lpeg.r_create_match
+common.create_match = create_match
+
+-- local function create_match_indices(name, pos, ...)
+--    local t = {};
+--    t.pos = pos;
+--    t.subs = {...};
+--    assert(#t.subs > 0)
+--    if type(t.subs[#t.subs])=="number" then
+--       t.text = t.subs[#t.subs]
+-- --      print("** NEW #subs = " .. tostring(#t.subs) .. ", text = " .. t.text)
+--       t.subs[#t.subs]= nil
+--    elseif type(t.subs[1])=="string" then
+--       -- old style
+--       t.text = t.subs[1]
+--       print("** Old style #subs = " .. tostring(#t.subs) .. ", text = " .. t.text)
+--       table.move(t.subs, 2, #t.subs, 1)		    -- shift up
+--       t.subs[#t.subs] = nil
+--    else
+--       error("text field not a string and not a number")
+--    end
+--    if (not t.subs[1]) then t.subs=nil; end
+--    return {[name]=t};
+-- end
+
+local function create_match_indices(name, pos_start, ...)
+   local subs = {...}
+   local nsubs = #subs; assert(nsubs > 0)
+   local lastsub = subs[nsubs]; assert(type(lastsub)=="number")
+   if (nsubs==1) then subs=nil;
+   else subs[nsubs]= nil; end
+   return {[name] = {pos = pos_start, text = lastsub, subs = subs}};
 end
 
---common.create_match = lpeg.r_create_match
-common.create_match = create_match2
-
 function common.match_node_wrap(peg, name)
-   return (Cc(name) * Cp() * peg * Cp()) / common.create_match
+   return (Cc(name) * Cp() * peg * Cp()) / create_match_indices
 end
 
 local function insert_input_text(m, input)
