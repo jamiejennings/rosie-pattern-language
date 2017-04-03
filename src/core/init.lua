@@ -33,14 +33,6 @@
 --           the script passes ROSIE_HOME to cli.lua, which has called this file (init).
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
 
-if not ROSIE_HOME then error("Error while initializing: variable ROSIE_HOME not set"); end
-
--- When init is loaded from run-rosie, ROSIE_DEV will be a boolean (as set by cli.lua)
--- When init is loaded from rosie.lua, ROSIE_DEV will be unset.  In this case, it should be set to
--- true so that rosie errors do not invoke os.exit().
-
-ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
-
 local function read_version_or_die(home)
    assert(type(home)=="string")
    local vfile = io.open(home.."/VERSION")
@@ -54,31 +46,37 @@ local function read_version_or_die(home)
    error(msg)					    -- should do throw(msg) to end of init?
 end
 
-ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
-
--- The location of the Rosie standard library (of patterns) is ROSIE_ROOT/rpl.
--- And compiled Rosie packages are stored in ROSIE_ROOT/pkg.
---
--- ROSIE_ROOT = ROSIE_HOME by default.  The user can override the default by setting the
--- environment variable $ROSIE_ROOT to point somewhere else.
-
-ROSIE_ROOT = ROSIE_HOME
-
-local ok, value = pcall(os.getenv, "ROSIE_ROOT")
-if (not ok) then error('Internal error: call to os.getenv(ROSIE_ROOT)" failed'); end
-if value then ROSIE_ROOT = value; end
+function setup_globals()
+   if not ROSIE_HOME then error("Error while initializing: variable ROSIE_HOME not set"); end
+   -- When init is loaded from run-rosie, ROSIE_DEV will be a boolean (as set by cli.lua)
+   -- When init is loaded from rosie.lua, ROSIE_DEV will be unset.  In this case, it should be set to
+   -- true so that rosie errors do not invoke os.exit().
+   ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
+   ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
+   -- The location of the Rosie standard library (of patterns) is ROSIE_ROOT/rpl.
+   -- And compiled Rosie packages are stored in ROSIE_ROOT/pkg.
+   --
+   -- ROSIE_ROOT = ROSIE_HOME by default.  The user can override the default by setting the
+   -- environment variable $ROSIE_ROOT to point somewhere else.
+   ROSIE_ROOT = ROSIE_HOME
+   local ok, value = pcall(os.getenv, "ROSIE_ROOT")
+   if (not ok) then error('Internal error: call to os.getenv(ROSIE_ROOT)" failed'); end
+   if value then ROSIE_ROOT = value; end
+end
 
 ---------------------------------------------------------------------------------------------------
 -- Load the entire rosie world... (which includes the "core" parser for "rpl 1.0")
 ---------------------------------------------------------------------------------------------------
 
-local loader, msg = loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", _ENV)
-if not loader then
-   -- try loading from source file instead
-   loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", _ENV)
-   if not loader then error("Internal error while loading modules: " .. msg); end
+function load_all()
+   local loader, msg = loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", _ENV)
+   if not loader then
+      -- try loading from source file instead
+      loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", _ENV)
+      if not loader then error("Internal error while loading modules: " .. msg); end
+      loader()
+   end
 end
-loader()
 
 ---------------------------------------------------------------------------------------------------
 -- Bootstrap the rpl parser, which is defined using "rpl 1.0" (defined in parse.lua)
@@ -91,43 +89,43 @@ loader()
 -- "rpl 1.0".  This is the version of rpl used for the Rosie v0.99x releases.
 --
 
-local make_announcements = false
 local function announce(name, engine)
-   if make_announcements then
-      print(name .. " created: _rpl_version = ".. engine._rpl_version ..
+   if ROSIE_DEV then
+      print(name .. " created: _rpl_version = ".. tostring(engine._rpl_version) ..
 	                    "; _rpl_parser = " .. tostring(engine._rpl_parser))
    end
 end
 
--- Create a core engine that accepts rpl 0.0
--- N.B. default rpl parser has been set in load-modules because manifest package needs it
-CORE_ENGINE = engine.new("RPL core engine")
+function create_core_engine()
+   -- Create a core engine that accepts rpl 0.0
+   -- N.B. default rpl parser has been set in load-modules because manifest package needs it
+   CORE_ENGINE = engine.new("RPL core engine")
+   announce("CORE_ENGINE", CORE_ENGINE)
+   -- Into the core engine, load the rpl 1.0 definition, which is written in rpl 0.0
+   local rpl_1_0_filename = ROSIE_HOME.."/rpl/rpl-1.0.rpl"
+   local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
+   if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
+   CORE_ENGINE:load(rpl_1_0)
+   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl')
+   if not success then error("Error while initializing: could not compile 'rpl' in "
+			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
+   ROSIE_RPLX = result
+   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse')
+   if not success then error("Error while initializing: could not compile 'preparse' in "
+			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
+   ROSIE_PREPARSE = result
+end
 
-announce("CORE_ENGINE", CORE_ENGINE)
+function create_rosie_engine()
+   -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
+   load_module("rpl-parser")
+   local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
+   -- And make these the defaults for all new engines:
+   engine_module._set_defaults(parse_and_explain, compile.compile0, 1, 0);
 
--- Into the core engine, load the rpl 1.0 definition, which is written in rpl 0.0
-local rpl_1_0_filename = ROSIE_HOME.."/rpl/rpl-1.0.rpl"
-local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
-if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
---CORE_ENGINE._rpl_parser = parse.core_parse_and_explain
-CORE_ENGINE:load(rpl_1_0)
-local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl')
-if not success then error("Error while initializing: could not compile 'rpl' in "
-			  .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-ROSIE_RPLX = result
-local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse')
-if not success then error("Error while initializing: could not compile 'preparse' in "
-			  .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-
-ROSIE_PREPARSE = result
--- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
-load_module("rpl-parser")
-local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
--- And make these the defaults for all new engines:
-engine_module._set_defaults(parse_and_explain, compile.compile0, 1, 0);
-
-ROSIE_ENGINE = engine.new("RPL 1.0 engine")
-announce("ROSIE_ENGINE", ROSIE_ENGINE)
+   ROSIE_ENGINE = engine.new("RPL 1.0 engine")
+   announce("ROSIE_ENGINE", ROSIE_ENGINE)
+end
 
 ----------------------------------------------------------------------------------------
 -- INFO for debugging
@@ -138,19 +136,24 @@ announce("ROSIE_ENGINE", ROSIE_ENGINE)
 -- (1) Iterate over the numeric entries with ipairs to access an organized (well, ordered) list of
 --     important parameters, with their values and descriptions.
 -- (2) Index the table by a parameter key to obtain its value.
-ROSIE_INFO = {
-   {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
-   {name="ROSIE_VERSION", value=ROSIE_VERSION,                       desc="version of rosie installed"},
-   {name="RPL_VERSION",   value=tostring(ROSIE_ENGINE._rpl_version), desc="version of rpl (language) accepted"},
-   {name="ROSIE_ROOT",    value=tostring(ROSIE_ROOT),                desc="root of the standard rpl library"},
-   {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),                 desc="true if rosie was started in development mode"},
-   {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "",         desc="host on which rosie is running"},
-   {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},
-   {name="OSTYPE",        value=os.getenv("OSTYPE") or "",           desc="type of OS on which rosie is running"},
-   {name="CWD",           value=os.getenv("PWD") or "",              desc="current working directory"},
-   {name="ROSIE_COMMAND", value=ROSIE_COMMAND or "",                 desc="invocation command, if rosie invoked through the CLI"}
-}
-for _,entry in ipairs(ROSIE_INFO) do ROSIE_INFO[entry.name] = entry.value; end
+
+ROSIE_INFO = {}
+
+function populate_info()
+   ROSIE_INFO = {
+      {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
+      {name="ROSIE_VERSION", value=ROSIE_VERSION,                       desc="version of rosie installed"},
+      {name="RPL_VERSION",   value=tostring(ROSIE_ENGINE._rpl_version), desc="version of rpl (language) accepted"},
+      {name="ROSIE_ROOT",    value=tostring(ROSIE_ROOT),                desc="root of the standard rpl library"},
+      {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),                 desc="true if rosie was started in development mode"},
+      {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "",         desc="host on which rosie is running"},
+      {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},
+      {name="OSTYPE",        value=os.getenv("OSTYPE") or "",           desc="type of OS on which rosie is running"},
+      {name="CWD",           value=os.getenv("PWD") or "",              desc="current working directory"},
+      {name="ROSIE_COMMAND", value=ROSIE_COMMAND or "",                 desc="invocation command, if rosie invoked through the CLI"}
+   }
+   for _,entry in ipairs(ROSIE_INFO) do ROSIE_INFO[entry.name] = entry.value; end
+end
 
 ----------------------------------------------------------------------------------------
 -- Output encoding functions
@@ -158,38 +161,69 @@ for _,entry in ipairs(ROSIE_INFO) do ROSIE_INFO[entry.name] = entry.value; end
 -- Lua applications (including the Rosie CLI & REPL) can use this table to install known
 -- output encoders by name.
 
-local encoder_table =
-   {json = json.encode,
-    color = color_output.color_string_from_leaf_nodes,
-    nocolor = color_output.string_from_leaf_nodes,
-    fulltext = common.match_to_text,
-    none = function(...) return nil; end,
-    [false] = function(...) return ...; end
- }
+function create_encoder_table()
+   return {
+      json = json.encode,
+      color = color_output.color_string_from_leaf_nodes,
+      nocolor = color_output.string_from_leaf_nodes,
+      fulltext = common.match_to_text,
+      none = function(...) return nil; end,
+      [false] = function(...) return ...; end
+   }
+end
 
 ----------------------------------------------------------------------------------------
 -- Build the rosie module as seen by the Lua client
 ----------------------------------------------------------------------------------------
-local file_functions = {
-   match = process_input_file.match,
-   tracematch = process_input_file.tracematch,
-   grep = process_input_file.grep,
-   load = process_rpl_file.load_file	    -- TEMP until module system
-}
-
-local rosie = {
-   engine = engine,
-   file = file_functions,
-   encoders = encoder_table
-}
-
-function rosie.info() return ROSIE_INFO; end
-
--- When rosie is loaded into Lua, such as for development, for using Rosie in Lua, or for
--- supporting the foreign function API, these internals are exposed through the rosie package table.  
-if ROSIE_DEV then
-   rosie._env = _ENV
-   rosie._module = module
+function create_file_functions()
+   return {
+      match = process_input_file.match,
+      tracematch = process_input_file.tracematch,
+      grep = process_input_file.grep,
+      load = process_rpl_file.load_file	    -- TEMP until module system
+   }
 end
 
-return rosie
+local co = require "coroutine"
+local function catch(f, ...)
+   local c = co.create(f)
+   local results = { co.resume(c, ...) }
+   if results[1] then
+      -- no errors
+      return table.unpack(results, 2)
+   end
+   -- error occurred
+   error(table.unpack(results, 2))
+end
+local throw = co.yield
+
+-- catch/throw is overkill here, where a simple 'return' would do
+
+function main()
+   local rosie = {}
+   -- When rosie is loaded into Lua, such as for development, for using Rosie in Lua, or for
+   -- supporting the foreign function API, these internals are exposed through the rosie package table.  
+   if ROSIE_DEV then rosie._env = _ENV; end
+   local function try ()
+      if not pcall(setup_globals) then throw(); end
+      if not pcall(load_all) then throw(); end
+      if ROSIE_DEV then rosie._module = module; end
+      if not pcall(create_core_engine) then throw(); end
+      if not pcall(create_rosie_engine) then throw(); end
+      if not pcall(populate_info) then throw(); end
+      rosie.engine = engine
+      local ok, f = pcall(create_file_functions)
+      if not ok then throw();
+      else rosie.file = f; end
+      local ok, e = pcall(create_encoder_table)
+      if not ok then throw();
+      else rosie.encoders = e; end
+      rosie.info = function(...) return ROSIE_INFO; end
+   end
+   catch(try)
+   return rosie
+end
+
+
+return main()
+

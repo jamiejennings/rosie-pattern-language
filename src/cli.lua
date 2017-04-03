@@ -52,15 +52,23 @@ else
 end
 assert(type(rosie)=="table", "Return value from init was not the rosie module (a table)")
 
-local engine_module = require "engine_module"
-local engine = engine_module.engine
-local argparse = require "argparse"
-local common = require "common"
-local json = require "cjson"
-local list = require("list")
+function open_modules()
+   engine_module = require "engine_module"
+   engine = engine_module.engine
+   argparse = require "argparse"
+   common = require "common"
+   json = require "cjson"
+   list = require("list")
+end
 
-CL_ENGINE = rosie.engine.new("command line engine")
-if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
+pcall(open_modules)
+
+function create_cl_engine()
+   CL_ENGINE = rosie.engine.new("command line engine")
+   if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
+end
+
+pcall(create_cl_engine)
 
 local function print_rosie_info()
    local function printf(fmt, ...)
@@ -313,77 +321,78 @@ end -- function run
 ----------------------------------------------------------------------------------------
 
 -- create Parser
-local parser = argparse("rosie", "Rosie Pattern Language " .. ROSIE_VERSION)
-	:epilog("Additional information.")
--- global flags/options can go here
--- -h,--help is generated automatically
--- usage message is generated automatically
-parser:flag("--version", "Print rosie version")
-	:action(function(args,_,exceptions)
-		greeting()
-		os.exit()
-	end)
-parser:flag("-v --verbose", "Output additional messages")
-	:default(false)
-	:action("store_true")
-parser:option("-m --manifest", "Load a manifest file (single dash '-' for none)")
-	:default("$sys/MANIFEST")
-	:args(1)
-parser:option("-f --file", "Load an RPL file")
-	:args(1)
-	:count("*") -- allow multiple loads of a file
-	:target("rpls") -- set name of variable index (args.rpls)
-parser:option("-r --rpl", "Inline RPL statements")
-	:args(1)
-	:count("*") -- allow multiple RPL statements
-	:target("statements") -- set name of variable index (args.statements)
--- target variable for commands
-parser:command_target("command")
--- info command
-local cmd_info = parser:command("info")
-	:description("Print rosie installation information")
--- patterns command
-local cmd_patterns = parser:command("patterns")
-	:description("List installed patterns")
-cmd_patterns:argument("filter")
-	:description("Filter pattern names that have substring 'filter'")
-	:args("?")
--- repl command
-local cmd_repl = parser:command("repl")
-	:description("Run rosie in interactive mode")
--- match command
-local cmd_match = parser:command("match")
-	:description("Run RPL match")
--- trace command
-local cmd_trace = parser:command("trace")
-	:description("Match while tracing all steps (generates MUCH output)")
--- grep command
-local cmd_grep = parser:command("grep")
-	:description("Run RPL match in the style of Unix grep (match anywhere in a line)")
+function create_arg_parser()
+   parser = argparse("rosie", "Rosie Pattern Language " .. ROSIE_VERSION)
+   :epilog("Additional information.")
+   -- global flags/options can go here
+   -- -h,--help is generated automatically
+   -- usage message is generated automatically
+   parser:flag("--version", "Print rosie version")
+   :action(function(args,_,exceptions)
+	      greeting()
+	      os.exit()
+	   end)
+   parser:flag("-v --verbose", "Output additional messages")
+   :default(false)
+   :action("store_true")
+   parser:option("-m --manifest", "Load a manifest file (single dash '-' for none)")
+   :default("$sys/MANIFEST")
+   :args(1)
+   parser:option("-f --file", "Load an RPL file")
+   :args(1)
+   :count("*") -- allow multiple loads of a file
+   :target("rpls") -- set name of variable index (args.rpls)
+   parser:option("-r --rpl", "Inline RPL statements")
+   :args(1)
+   :count("*") -- allow multiple RPL statements
+   :target("statements") -- set name of variable index (args.statements)
+   -- target variable for commands
+   parser:command_target("command")
+   -- info command
+   local cmd_info = parser:command("info")
+   :description("Print rosie installation information")
+   -- patterns command
+   local cmd_patterns = parser:command("patterns")
+   :description("List installed patterns")
+   cmd_patterns:argument("filter")
+   :description("Filter pattern names that have substring 'filter'")
+   :args("?")
+   -- repl command
+   local cmd_repl = parser:command("repl")
+   :description("Run rosie in interactive mode")
+   -- match command
+   local cmd_match = parser:command("match")
+   :description("Run RPL match")
+   -- trace command
+   local cmd_trace = parser:command("trace")
+   :description("Match while tracing all steps (generates MUCH output)")
+   -- grep command
+   local cmd_grep = parser:command("grep")
+   :description("Run RPL match in the style of Unix grep (match anywhere in a line)")
 
-local output_choices={"color","nocolor","fulltext","json", "none"}
-local output_choices_string = output_choices[1]
-for i=2,#output_choices do
-   output_choices_string = output_choices_string .. ", " .. output_choices[i]
-end
+   local output_choices={"color","nocolor","fulltext","json", "none"}
+   local output_choices_string = output_choices[1]
+   for i=2,#output_choices do
+      output_choices_string = output_choices_string .. ", " .. output_choices[i]
+   end
 
-for _, cmd in ipairs{cmd_match, cmd_trace, cmd_grep} do
-   -- match/trace/grep flags (true/false)
-   cmd:flag("-s --wholefile", "Read input file as single string")
-       :default(false)
-       :action("store_true")
-   cmd:flag("-a --all", "Output non-matching lines to stderr")
+   for _, cmd in ipairs{cmd_match, cmd_trace, cmd_grep} do
+      -- match/trace/grep flags (true/false)
+      cmd:flag("-s --wholefile", "Read input file as single string")
+      :default(false)
+      :action("store_true")
+      cmd:flag("-a --all", "Output non-matching lines to stderr")
       :default(false)
       :action("store_true")
 
-   -- match/trace/grep arguments (required options)
-   cmd:argument("pattern", "RPL pattern")
-   cmd:argument("filename", "Input filename")
+      -- match/trace/grep arguments (required options)
+      cmd:argument("pattern", "RPL pattern")
+      cmd:argument("filename", "Input filename")
       :args("+")
       :default("-")			      -- in case no filenames are passed, default to stdin
       :defmode("arg")			      -- needed to make the default work
-   -- match/trace/grep options (takes an argument)
-   cmd:option("-o --encode", "Output format, one of " .. output_choices_string)
+      -- match/trace/grep options (takes an argument)
+      cmd:option("-o --encode", "Output format, one of " .. output_choices_string)
       :convert(function(a)
 		  -- validation of argument, will fail if not in choices array
 		  for j=1,#output_choices do
@@ -395,18 +404,21 @@ for _, cmd in ipairs{cmd_match, cmd_trace, cmd_grep} do
 	       end)
       :default("color")
       :args(1) -- consume argument after option
+   end
+
+   -- test command
+   local cmd_test = parser:command("test")
+   cmd_test:argument("filename", "RPL filename")
+   
 end
 
--- test command
-local cmd_test = parser:command("test")
-cmd_test:argument("filename", "RPL filename")
-
+pcall(create_arg_parser)
 
 -- Check arg[1] in order to catch dev mode for "make test"
 if (not arg[1]) then
-	print(parser:get_help())
+   if parser then print(parser:get_help()); end	    -- if initialization failed, we won't have a parser
 else
-	-- parse command-line
-	local args = parser:parse()
-	run(args)
+   -- parse command-line
+   local args = parser:parse()
+   run(args)
 end
