@@ -178,7 +178,7 @@ end
 local function create_match(name, pos, capture, ...)
    local subs = {...};
    if (not subs[1]) then subs=nil; end
-   return {type = name, pos = pos, text = capture, subs = subs};
+   return {type = name, s = pos, text = capture, subs = subs};
 end
 
 --common.create_match = lpeg.r_create_match
@@ -212,8 +212,8 @@ local function create_match_indices(name, pos_start, ...)
    local lastsub = subs[nsubs]; assert(type(lastsub)=="number")
    if (nsubs==1) then subs=nil;
    else subs[nsubs]= nil; end
---   return {[name] = {pos = pos_start, text = lastsub, subs = subs}};
-   return {type = name, pos = pos_start, text = lastsub, subs = subs};
+--   return {[name] = {s = pos_start, text = lastsub, subs = subs}};
+   return {type = name, s = pos_start, text = lastsub, subs = subs};
 end
 
 function common.match_node_wrap(peg, name)
@@ -241,7 +241,7 @@ end
 -- subs and the index of first sub.  (because there used to be other things in the sub table)
 
 function common.decode_match(t)
-   return t.type, t.pos, t.text, t.subs
+   return t.type, t.s, t.text, t.subs
 end
 
 function common.subs(match)

@@ -39,8 +39,8 @@ function syntax.validate(ast)
       elseif (k=="text") then
 	 if (type(v)~="string") and (type(v)~="number") then
 	    err(name, "text value not a string or number: " .. type(v)); end
-      elseif (k=="pos") then
-	 if (type(v)~="number") then err(name, "pos value not a number"); end
+      elseif (k=="s" or k=="e") then
+	 if (type(v)~="number") then err(name, "position value (s or e) not a number"); end
       elseif (k=="subs") then
 	 for i,s in pairs(v) do
 	    if type(i)~="number" then
@@ -86,13 +86,13 @@ function syntax.make_transformer(fcn, target_name, recursive)
       local new
       if ast.subs then
 	 new = common.create_match(name,
-				   ast.pos,
+				   ast.s,
 				   ast.text,
 				   table.unpack((recursive and list.map(mapped_transform, list.from(ast.subs)))
 					     or ast.subs))
       else
 	 new = common.create_match(name,
-				   ast.pos,
+				   ast.s,
 				   ast.text)
       end
       if target_match(name) then
@@ -167,7 +167,7 @@ syntax.append_boundary_to_rhs =
 			      local rhs = ast.subs[2]
 			      local b = syntax.generate("binding", lhs, syntax.append_boundary(rhs))
 			      b.binding.text = ast.text
-			      b.binding.pos = ast.pos
+			      b.binding.s = ast.s
 			      return b
 			   end,
 			   "binding",
@@ -192,13 +192,13 @@ local function transform_quantified_exp(ast)
    end
    local new = syntax.generate("new_quantified_exp", new_exp, ast.subs[2])
    new.text = ast.text
-   new.pos = ast.pos
+   new.s = ast.s
    return new
 end
 
 syntax.id_to_ref =
    syntax.make_transformer(function(ast)
-			      return common.create_match("ref", ast.pos, ast.text)
+			      return common.create_match("ref", ast.s, ast.text)
 			   end,
 			   "identifier",
 			   true)		    -- RECURSIVE
@@ -223,7 +223,7 @@ syntax.raw =
 				    new = syntax.generate(name)
 				 end
 				 new.text = ast.text
-				 new.pos = ast.pos
+				 new.s = ast.s
 				 return new
 			      end
 			   end,
@@ -273,7 +273,7 @@ syntax.cook =
 				    new = syntax.generate(name)
 				 end
 				  new.text = ast.text
-				  new.pos = ast.pos
+				  new.s = ast.s
 				  return new
 			       end
 			    end,
@@ -287,7 +287,7 @@ syntax.cook_rhs =
 			      local new_rhs = syntax.cook(rhs)
 			      local b = syntax.generate("binding", lhs, new_rhs)
 			      b.text = ast.text
-			      b.pos = ast.pos
+			      b.s = ast.s
 			      return b
 			   end,
 			   "binding",
@@ -387,7 +387,7 @@ syntax.to_binding =
 			      b.capture = (name=="assignment_")
 			      --b.binding.replaces = ast -- N.B. in rpl 0.0, 1.0 the binding ast is discarded
 			      b.text = ast.text
-			      b.pos = ast.pos
+			      b.s = ast.s
 			      return b
 			   end,
 			    {"assignment_", "alias_"},
@@ -428,7 +428,7 @@ function syntax.top_level_transform0(ast)
       local new_bindings = list.map(syntax.to_binding, list.from(ast.subs))
       local new = syntax.generate("new_grammar", table.unpack(new_bindings))
       new.text = ast.text
-      new.pos = ast.pos
+      new.s = ast.s
       new.replaces = ast
       return new
    elseif (name=="syntax_error") then
@@ -451,7 +451,7 @@ function syntax.top_level_transform1(ast)
       local new_bindings = list.map(syntax.to_binding, list.from(ast.subs))
       local new = syntax.generate("new_grammar", table.unpack(new_bindings))
       new.text = ast.text
-      new.pos = ast.pos
+      new.s = ast.s
       new.replaces = ast
       return new
    elseif name=="local_" then
