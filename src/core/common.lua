@@ -7,7 +7,6 @@
 ---- AUTHOR: Jamie A. Jennings
 
 local lpeg = require "lpeg"
-local Cc, Cg, Ct, Cp, C = lpeg.Cc, lpeg.Cg, lpeg.Ct, lpeg.Cp, lpeg.C
 local util = require "util"
 local recordtype = require "recordtype"
 
@@ -206,24 +205,24 @@ common.create_match = create_match
 --    return {[name]=t};
 -- end
 
-local function create_match_indices(name, pos_start, ...)
-   local subs = {...}
-   local nsubs = #subs; assert(nsubs > 0)
-   local lastsub = subs[nsubs]; assert(type(lastsub)=="number")
-   if (nsubs==1) then subs=nil;
-   else subs[nsubs]= nil; end
---   return {[name] = {s = pos_start, text = lastsub, subs = subs}};
-   return {type = name, s = pos_start, text = lastsub, subs = subs};
-end
+-- local function create_match_indices(name, pos_start, ...)
+--    local subs = {...}
+--    local nsubs = #subs; assert(nsubs > 0)
+--    local lastsub = subs[nsubs]; assert(type(lastsub)=="number")
+--    if (nsubs==1) then subs=nil;
+--    else subs[nsubs]= nil; end
+-- --   return {[name] = {s = pos_start, text = lastsub, subs = subs}};
+--    return {type = name, s = pos_start, text = lastsub, subs = subs};
+-- end
 
-function common.match_node_wrap(peg, name)
-   return (Cc(name) * Cp() * peg * Cp()) / create_match_indices
-end
+assert(lpeg.rcap, "lpeg.rcap not defined: wrong version of lpeg???")
+common.match_node_wrap = lpeg.rcap
 
+-- This could be done in C
 local function insert_input_text(m, input)
-   local name, pos, text, subs = common.decode_match(m)
-   assert(type(text)=="number", "expected an end position, got: " .. tostring(text))
-   m.text = input:sub(pos, text-1)
+   local name, s, text, subs, e = common.decode_match(m)
+   assert(type(e)=="number", "expected an end position, got: " .. tostring(text))
+   m.text = input:sub(s, e-1)
    if subs then
       for i = 1, #subs do insert_input_text(subs[i], input); end
    end
@@ -231,17 +230,24 @@ local function insert_input_text(m, input)
    return m
 end
 
-function common.rmatch(peg, input, start)
-   local m, nextpos = peg:match(input, start)
-   if m then return insert_input_text(m, input), nextpos; end
-   return nil
+function common.rmatch(peg, input, start, encode)
+   local Cencoder = encode or 0			    -- default is compact byte encoding
+   if encode==-1 then Cencoder = 0; end		    -- -1 ==> no output
+   local m, nextpos, t1, t2 = peg:rmatch(input, start, Cencoder)
+   if not m then return nil, nil, t1, t2; end
+   if not encode then return insert_input_text(lpeg.decode(m), input), nextpos, t1, t2
+   elseif encode==-1 then return nil, nextpos, t1, t2
+   elseif encode==0 then return lpeg.getdata(m), nextpos, t1, t2
+   elseif encode==1 then return lpeg.getdata(m), nextpos, t1, t2
+   else error("Internal error: invalid built-in encoder index in rmatch: " .. tostring(encode));
+   end
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the
 -- subs and the index of first sub.  (because there used to be other things in the sub table)
 
 function common.decode_match(t)
-   return t.type, t.s, t.text, t.subs
+   return t.type, t.s, t.text, t.subs, t.e
 end
 
 function common.subs(match)

@@ -47,9 +47,11 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    -- This set of simple optimizations almost doubles performance of the loop through the file
    -- (below) in typical cases, e.g. syslog pattern. 
    local encoder = e.encode_function		    -- optimization
+   local built_in_encoder = type(encoder)=="number" and encoder
+   if built_in_encoder then encoder = false; end
    local peg = r._pattern.tlpeg			    -- optimization
    local matcher = function(input, start)
-		      return rmatch(peg, input, start)
+		      return rmatch(peg, input, start, built_in_encoder)
 		   end                              -- TODO: inline this for performance
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
@@ -75,7 +77,7 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
       -- local leftover = (#input - nextpos + 1);
       if trace then o_write(outfile, trace, "\n"); end
       if m then
-	 local str = encoder(m)
+	 local str = encoder and encoder(m) or m
 	 if str then o_write(outfile, str, "\n"); end
 	 outlines = outlines + 1
       else --if not trace_flag then

@@ -15,7 +15,8 @@ local util = require "util"
 local parse = {}
 
 local lpeg = require "lpeg"
-local P, V, C, S, R, Ct, Cg, Cp = lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp
+local P, V, C, S, R = lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R
+local rC = lpeg.rcap
 
 local locale = lpeg.locale()
 
@@ -35,7 +36,7 @@ local id_char = locale.alnum + S"_"
 local id = locale.alpha * id_char^0
 local identifier = token("identifier", (id * ("." * id)^0 * (- id_char)) + S".$")
 local literal_string = token("literal0", P'"' * (((1 - S'"\\') + (P'\\' * 1))^0) * P'"')
-local top_level_syntax_error = token("syntax_error", Ct(Cg(ignore*(C(1)-locale.space)^1, "top_level")))
+local top_level_syntax_error = token("syntax_error", rC(ignore*(C(1)-locale.space)^1, "top_level"))
 
 local star = token("star", S"*");
 local question = token("question", S"?");
@@ -51,10 +52,10 @@ local character_set = P{"charset";
 		  charset = (V"named" + V"plain" + V"charset_syntax_error");
 		  named = token("named_charset0", P"[:" * ((locale.print-(S":\\"))^1) * P":]");
 		  plain = token("charset", P"["  * (V"contents"^-1) * P"]");
-		  charset_syntax_error = token("syntax_error", Ct(Cg(Ct(P"[" * C((locale.print-P"]"))^1 * P"]"), "charset")));
+		  charset_syntax_error = token("syntax_error", (P"[" * rC((locale.print-P"]")^1, "charset") * P"]"));
 		  contents = ( character_range
 			       + character_list
-			       + token("syntax_error", Ct(Cg(Ct(P(1)-P"]"), "charset_contents")))
+			       + token("syntax_error", rC(P(1)-P"]", "charset_contents"))
 			 );
 	       }
 ----------------------------------------------------------------------------------------
@@ -87,7 +88,7 @@ local statement_prefix = ignore * (alias_prefix + grammar_prefix + end_token + a
 
 local expression = P{"expression";
 	       expression = (V"statement_error" + V"ordered_choice" + V"sequence" + V"quantified_exp" + V"plain_exp");
-	       statement_error = token("syntax_error", Ct(Cg(Ct(statement_prefix), "exp_stmt")));
+	       statement_error = token("syntax_error", rC(statement_prefix, "exp_stmt"));
 	       ordered_choice = token("choice", ((V"quantified_exp" + V"plain_exp") * ignore * (P"/" * ignore * V"expression")));
 	       -- sequences are tricky because we have to stop without consuming the next statement
 	       sequence = token("sequence", ((V"quantified_exp" + V"plain_exp") * (ignore * (V"expression" - statement_prefix))^1));
@@ -116,7 +117,7 @@ local statement = P{"start";
 -- Top level
 ----------------------------------------------------------------------------------------
 
-local any_token = (statement + expression + top_level_syntax_error) * Cp()
+local any_token = (statement + expression + top_level_syntax_error) -- * Cp()
 
 function parse_without_error_check(str, pos, tokens)
    pos = pos or 1

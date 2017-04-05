@@ -68,11 +68,13 @@ end
 -- Load the entire rosie world... (which includes the "core" parser for "rpl 1.0")
 ---------------------------------------------------------------------------------------------------
 
+LOAD_ENV = _ENV
+
 function load_all()
-   local loader, msg = loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", _ENV)
+   local loader, msg = loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", LOAD_ENV)
    if not loader then
       -- try loading from source file instead
-      loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", _ENV)
+      loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", LOAD_ENV)
       if not loader then error("Internal error while loading modules: " .. msg); end
       loader()
    end
@@ -164,11 +166,13 @@ end
 function create_encoder_table()
    return {
       json = json.encode,
+      compactjson = 1,
+      bytestring = 0,
       color = color_output.color_string_from_leaf_nodes,
       nocolor = color_output.string_from_leaf_nodes,
       fulltext = common.match_to_text,
-      none = function(...) return nil; end,
-      [false] = function(...) return ...; end
+      none = false;
+      [false] = false;
    }
 end
 
@@ -203,24 +207,27 @@ function main()
    local rosie = {}
    -- When rosie is loaded into Lua, such as for development, for using Rosie in Lua, or for
    -- supporting the foreign function API, these internals are exposed through the rosie package table.  
-   if ROSIE_DEV then rosie._env = _ENV; end
-   local function try ()
-      if not pcall(setup_globals) then throw(); end
-      if not pcall(load_all) then throw(); end
-      if ROSIE_DEV then rosie._module = module; end
-      if not pcall(create_core_engine) then throw(); end
-      if not pcall(create_rosie_engine) then throw(); end
-      if not pcall(populate_info) then throw(); end
+   rosie._env = _ENV
+   local function try (thunk)
+      local ok, msg = pcall(thunk)
+      if not ok then throw(msg);
+      else return msg; end			    -- only catching one return value
+   end
+   local function do_all()
+      try(setup_globals)
+      try(load_all)
+      assert(module, "modules failed to load")
+      rosie._module = module
+      try(create_core_engine)
+      try(create_rosie_engine)
+      try(populate_info)
       rosie.engine = engine
-      local ok, f = pcall(create_file_functions)
-      if not ok then throw();
-      else rosie.file = f; end
-      local ok, e = pcall(create_encoder_table)
-      if not ok then throw();
-      else rosie.encoders = e; end
+      rosie.file = try(create_file_functions)
+      rosie.encoders = try(create_encoder_table)
       rosie.info = function(...) return ROSIE_INFO; end
    end
-   catch(try)
+   err = catch(do_all)
+   if err then print(err); end
    return rosie
 end
 

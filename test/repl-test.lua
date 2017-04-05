@@ -58,11 +58,14 @@ end
 results_common_number =
    {
 'This is Rosie v1-tranche-2',
-'{"s": 1.0, ',
+'{"e": 6.0, ',
+' "s": 1.0, ',
 ' "subs": ',
-'   [{"s": 1.0, ',
+'   [{"e": 6.0, ',
+'     "s": 1.0, ',
 '     "subs": ',
-'       [{"s": 3.0, ',
+'       [{"e": 6.0, ',
+'         "s": 3.0, ',
 '         "text": "123", ',
 '         "type": "common.hex"}], ',
 '     "text": "0x123", ',

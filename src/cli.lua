@@ -53,22 +53,24 @@ end
 assert(type(rosie)=="table", "Return value from init was not the rosie module (a table)")
 
 function open_modules()
-   engine_module = require "engine_module"
-   engine = engine_module.engine
-   argparse = require "argparse"
-   common = require "common"
-   json = require "cjson"
-   list = require("list")
+   engine_module = assert(require("engine_module"), "failed to load engine_module")
+   engine = assert(engine_module.engine, "engine not defined")
+   argparse = assert(require("argparse"), "failed to load argparse")
+   common = assert(require("common"))
+   json = assert(require("cjson"))
+   list = assert(require("list"))
 end
 
-pcall(open_modules)
+ok, msg = pcall(open_modules)
+if not ok then print("Error in cli when opening modules: " .. msg); end
 
 function create_cl_engine()
    CL_ENGINE = rosie.engine.new("command line engine")
    if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
 end
 
-pcall(create_cl_engine)
+ok, msg = pcall(create_cl_engine)
+if not ok then print("Error in cli when creating cli engine: " .. msg); end
 
 local function print_rosie_info()
    local function printf(fmt, ...)
@@ -84,8 +86,8 @@ end
 
 local function set_encoder(name)
    local encode_fcn = rosie.encoders[name]
-   if type(encode_fcn)~="function" then
-      local msg = "Invalid output encoder: " .. tostring(name)
+   if encode_fcn==nil then
+      local msg = "Invalid output encoder (not a function): " .. tostring(name)
       if ROSIE_DEV then error(msg)
       else io.write(msg, "\n"); os.exit(-1); end
    end
@@ -370,7 +372,10 @@ function create_arg_parser()
    local cmd_grep = parser:command("grep")
    :description("Run RPL match in the style of Unix grep (match anywhere in a line)")
 
-   local output_choices={"color","nocolor","fulltext","json", "none"}
+   local output_choices={}
+   for k,v in pairs(rosie.encoders) do
+      if type(k)=="string" then table.insert(output_choices, k); end
+   end
    local output_choices_string = output_choices[1]
    for i=2,#output_choices do
       output_choices_string = output_choices_string .. ", " .. output_choices[i]
@@ -412,7 +417,8 @@ function create_arg_parser()
    
 end
 
-pcall(create_arg_parser)
+ok, msg = pcall(create_arg_parser)
+if not ok then print("Error in cli when creating arg parser: " .. msg); end
 
 -- Check arg[1] in order to catch dev mode for "make test"
 if (not arg[1]) then

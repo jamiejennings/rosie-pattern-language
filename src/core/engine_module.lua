@@ -162,17 +162,21 @@ end
 
 -- N.B. This code is essentially duplicated (for speed, to avoid a function call) in process_input_file.lua
 -- There's still room for optimizations, e.g.
---   + Combine with lpeg.Cp() and store that "final" match-able pattern.
 --   Create a closure over the encode function to avoid looking it up in e.
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
 local function _engine_match(e, pat, input, start)
-   local result, nextpos = rmatch(pat.tlpeg, input, start)
+   local result, nextpos
+   local encode = e.encode_function
+   result, nextpos = rmatch(pat.tlpeg, input, start, type(encode)=="number" and encode)
    if result then
-      return (e.encode_function(result)), (#input - nextpos + 1);
-   else
-      return false, 1;
+      if type(encode)=="function" then
+	 return encode(result), #input - nextpos + 1;
+      else
+	 return result, #input - nextpos + 1;
+      end
    end
+   return false, 1;
 end
 
 -- TODO: Maybe cache expressions?
@@ -273,10 +277,16 @@ local function clear_environment(en, identifier)
    end
 end
 
+-- Built-in encoder options:
+-- false = return lua table as usual
+-- -1 = no output
+--  0 = compact byte encoding with only start/end indices (no text)
+--  1 = compact json encoding with only start/end indices (no text)
 local function get_set_encoder_function(en, f)
-   if not f then return en.encode_function; end
-   if type(f)~="function" then engine_error(e, "Output encoder not a function: " .. tostring(f)); end
-   en.encode_function = f
+   if f==nil then return en.encode_function; end
+   if f==false or type(f)=="function" or (type(f)=="number" and (f>=-2) and (f<=1)) then
+      en.encode_function = f;
+   else engine_error(en, "Invalid output encoder: " .. tostring(f)); end
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -349,7 +359,7 @@ local engine =
 		     _rpl_version=false;
 		     _env=false;
 
-		     encode_function=function(...) return ... end;
+		     encode_function=false;	    -- default: return lua tables
 
 		     id=recordtype.id;
 		     lookup=false;

@@ -8,8 +8,8 @@
 
 local c0 = {}
 
-local P, V, C, S, R, Ct, Cg, Cp, Cc, Cmt, B =
-   lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Ct, lpeg.Cg, lpeg.Cp, lpeg.Cc, lpeg.Cmt, lpeg.B
+local P, V, C, S, R, Cmt, B =
+   lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Cmt, lpeg.B
 
 local locale = lpeg.locale()
 

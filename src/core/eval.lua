@@ -35,13 +35,20 @@ local lpeg = require "lpeg"
 local eval = {}
 
 function match_peg(peg, input, start)
-   local results = { (lpeg.C(peg) * lpeg.Cp()):match(input, start) }
-   local matchtext, pos = results[1], results[#results]
-   if (not matchtext) then return false, 1; end
-   assert(type(matchtext)=="string")
-   assert(type(pos)=="number")
-   return matchtext, pos
+--   print(string.format("*** in match_peg: %s, %s, %s", peg, input, start))
+   local results, nextpos = common.rmatch(common.match_node_wrap(peg, "eval"), input, start)
+--   print(string.format("    results, nextpos: %s, %s", tostring(results), tostring(nextpos)))
+   if results then
+      local name, s, matchtext, subs, e = common.decode_match(results)
+      -- print(string.format("    name, s, matchtext, subs, e: %s, %d %s %d", 
+      -- 			  tostring(name), tonumber(s), tostring(matchtext), tostring(subs), tostring(e)))
+      assert(type(matchtext)=="string")
+      assert(type(e)=="number")
+      return matchtext, e
+   end
+   return false, 1
 end
+
 
 ---------------------------------------------------------------------------------------------------
 -- Reporting
