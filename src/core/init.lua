@@ -71,7 +71,7 @@ end
 LOAD_ENV = _ENV
 
 function load_all()
-   local loader, msg = loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", LOAD_ENV)
+   local loader, msg = nil --loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", LOAD_ENV)
    if not loader then
       -- try loading from source file instead
       loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", LOAD_ENV)
