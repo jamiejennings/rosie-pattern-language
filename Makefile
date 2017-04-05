@@ -89,7 +89,7 @@ $(submodules): $(submodule_sentinel)
 $(submodule_sentinel): #submodules
 	git submodule init
 	git submodule update --checkout
-	cd $(LUA_DIR) && ln -sf src include
+	cd $(LUA_DIR) && rm -f include && ln -sf src include
 	cp -p $(LUA_DIR)/README $(submodule_sentinel)
 
 bin/lua: $(LUA_DIR)/src/lua
