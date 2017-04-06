@@ -135,8 +135,8 @@ if(APPLE)
 	set_property(
 		TARGET lua-bin luac
 		APPEND_STRING
-		PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX"
-		PROPERTY LINK_FLAGS " -Wl")
+		PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX")
+#		PROPERTY LINK_FLAGS " -Wl")
 	target_link_libraries(lua-lib dl readline)
 	target_link_libraries(lua-bin dl readline m)
 	target_link_libraries(luac dl readline m)
@@ -210,7 +210,7 @@ if(WIN32)
 endif()
 
 if(APPLE)
-	add_library(cjson ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
+	add_library(cjson SHARED ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
 else()
 	add_library(cjson SHARED ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
 endif()
@@ -236,7 +236,7 @@ if(APPLE)
 	set_property(
 		TARGET cjson
 		APPEND_STRING
-		PROPERTY LINK_FLAGS " -bundle -undefined dynamic_lookup")
+		PROPERTY LINK_FLAGS " -undefined dynamic_lookup")
 endif()
 target_link_libraries(cjson ${CJSON_MODULE_LINK})
 # }}}
@@ -245,6 +245,8 @@ target_link_libraries(cjson ${CJSON_MODULE_LINK})
 message(STATUS "Processing rosie-lpeg submodule")
 
 set(LPEG_C_FILES
+	${LPEG_DIR}/src/rcap.c
+	${LPEG_DIR}/src/rbuf.c
 	${LPEG_DIR}/src/lpvm.c
 	${LPEG_DIR}/src/lpcap.c
 	${LPEG_DIR}/src/lptree.c
@@ -253,7 +255,7 @@ set(LPEG_C_FILES
 # TODO: Add DEBUG files and CFLAGS
 
 if(APPLE)
-	add_library(lpeg ${LPEG_C_FILES})
+	add_library(lpeg SHARED ${LPEG_C_FILES})
 else()
 	add_library(lpeg SHARED ${LPEG_C_FILES})
 endif()			 
@@ -277,7 +279,7 @@ if(APPLE)
 endif(APPLE)
 
 if(APPLE)
-	add_library(lua-readline ${READLINE_DIR}/src/lua_readline.c)
+	add_library(lua-readline SHARED ${READLINE_DIR}/src/lua_readline.c)
 else()
 	add_library(lua-readline SHARED ${READLINE_DIR}/src/lua_readline.c)
 endif()
@@ -288,7 +290,7 @@ set_target_properties(lua-readline
 set_property(
 	TARGET lua-readline
 	APPEND_STRING
-	PROPERTY COMPILE_FLAGS " -fPIC -O2 -Wl,--retain-symbols-file=${READLINE_DIR}/readline.map")
+	PROPERTY COMPILE_FLAGS " -fPIC -O2 -Wl,--retain-symbols-file,${READLINE_DIR}/readline.map")
 
 if(APPLE)
 	if(USE_LIBEDIT)
@@ -300,7 +302,7 @@ if(APPLE)
 	set_property(
 		TARGET lua-readline
 		APPEND_STRING
-		PROPERTY LINK_FLAGS " -bundle -undefined dynamic_lookup -macosx_version_min 10.11")
+		PROPERTY LINK_FLAGS " -undefined dynamic_lookup")
 elseif(UNIX)
 	target_link_libraries(lua-readline readline)
 elseif(WIN32)
