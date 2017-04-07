@@ -6,6 +6,7 @@
 **/*.dSYM
 **/.DS_Store
 **/*~
+**/*.pyc
 *.tar.gz
 
 ffi/librosie/liblua/*
