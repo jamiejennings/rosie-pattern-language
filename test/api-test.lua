@@ -533,6 +533,10 @@ results = {wapi.eval("foo")}
 ok = results[1]
 check(ok)
 retvals = {table.unpack(results, 2)}
+print("***")
+table.print(retvals, false)
+print("***")
+
 check(retvals[1])
 check(retvals[2]=="0")
 check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
@@ -605,6 +609,7 @@ end
  ok, msg = wapi.configure_engine(json.encode{expression=macosx_log1, encode="json"})
  check(ok)			    
  results = {wapi.eval_file(ROSIE_HOME.."/test/test-input", "/tmp/out", "/dev/null")}
+
  ok = results[1]
  check(ok, "the macosx log pattern in the test file works on some log lines")
  retvals = json.decode(results[2])

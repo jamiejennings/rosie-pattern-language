@@ -6,6 +6,7 @@
 ----
 
 test = require "test-functions"
+eval = require "eval"
 
 check = test.check
 heading = test.heading
@@ -24,7 +25,8 @@ trace = "no trace set"
 
 function check_eval(exp, input, expectation, expected_contents_list)
    set_expression(exp)
-   local ok, m, leftover, localtrace = pcall(lapi.eval, e, input)
+   local ok, m, leftover, trace = pcall(lapi.eval, e, input)
+   local localtrace = eval.trace_tostring(trace)
    check(ok, "failed call to lapi.eval: " .. tostring(m))
    if ok then
       check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..

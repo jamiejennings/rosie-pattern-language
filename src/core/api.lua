@@ -251,6 +251,7 @@ local function eval_(input_text, start)
       arg_error("input argument not a string")
    end
    local result, leftover, trace = lapi.eval(en, input_text, start)
+   trace = json.encode(trace)
    if (type(leftover)~="number") then
       error("Internal error: invalid return from eval (leftover): " .. tostring(leftover), 0)
    elseif (type(trace)~="string") then

@@ -173,7 +173,7 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
       if eval_flag then _, _, trace = engine_eval(e, l); end
       m, nextpos = match(peg, l);
       -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
-      if trace then o_write(outfile, trace, "\n"); end
+      if trace then o_write(outfile, eval.trace_tostring(trace), "\n"); end
       if m then
 	 local str = encode(m)
 	 if str then o_write(outfile, str, "\n"); end

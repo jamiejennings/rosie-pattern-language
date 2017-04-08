@@ -167,12 +167,12 @@ function repl(en)
 			   if cname=="match" then
 			      if debug and (not m) then
 				 local match, leftover, trace = lapi.eval(en, input_text)
-				 io.write(trace, "\n")
+				 io.write(json.encode(trace), "\n")
 			      end
 			   else
 			      -- must be eval
 			      local match, leftover, trace = lapi.eval(en, input_text)
-			      io.write(trace, "\n")
+			      io.write(json.encode(trace), "\n")
 			   end
 			   print_match(m, left, (cname=="eval"))
 			end -- failed to configure engine to do the match
