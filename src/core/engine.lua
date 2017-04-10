@@ -166,6 +166,12 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
    else
       nextline = infile:lines();
    end
+   local encode_trace
+   if e.encode=="json" then
+      encode_trace = function(t) return json.encode(eval.flatten_trace(trace)); end
+   else
+      encode_trace = function(t) return eval.trace_tostring(eval.flatten_trace(trace)); end
+   end
    local o_write, e_write = outfile.write, errfile.write
    local match = peg.match
    local l = nextline(); 
@@ -173,7 +179,10 @@ local function engine_process_file(e, eval_flag, infilename, outfilename, errfil
       if eval_flag then _, _, trace = engine_eval(e, l); end
       m, nextpos = match(peg, l);
       -- What to do with nextpos and this useful calculation: (#input_text - nextpos + 1) ?
-      if trace then o_write(outfile, eval.trace_tostring(trace), "\n"); end
+      if trace then
+	 o_write(outfile, "Input: ", l, "\n");
+	 o_write(outfile, "Trace:\n");
+	 o_write(outfile, encode_trace(trace), "\n"); end
       if m then
 	 local str = encode(m)
 	 if str then o_write(outfile, str, "\n"); end

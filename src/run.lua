@@ -241,7 +241,7 @@ function setup_engine()
       print("Error: currently, the -grep option and the -eval option are incompatible.  Use one or the other.")
       os.exit(-1)
    end
-   local eval = OPTION["-eval"]
+   eval = OPTION["-eval"]
 
    -- (1a) Load the manifest
    if opt_manifest then
