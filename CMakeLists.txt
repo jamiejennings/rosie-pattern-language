@@ -210,7 +210,7 @@ if(WIN32)
 endif()
 
 if(APPLE)
-	add_library(cjson SHARED ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
+	add_library(cjson MODULE ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
 else()
 	add_library(cjson SHARED ${JSON_DIR}/lua_cjson.c ${JSON_DIR}/strbuf.c ${FPCONV_SOURCES})
 endif()
@@ -255,7 +255,8 @@ set(LPEG_C_FILES
 # TODO: Add DEBUG files and CFLAGS
 
 if(APPLE)
-	add_library(lpeg SHARED ${LPEG_C_FILES})
+	add_library(lpeg MODULE ${LPEG_C_FILES})
+	set_property(TARGET lpeg APPEND_STRING PROPERTY LINK_FLAGS " -undefined	dynamic_lookup")
 else()
 	add_library(lpeg SHARED ${LPEG_C_FILES})
 endif()			 
@@ -279,7 +280,7 @@ if(APPLE)
 endif(APPLE)
 
 if(APPLE)
-	add_library(lua-readline SHARED ${READLINE_DIR}/src/lua_readline.c)
+	add_library(lua-readline MODULE ${READLINE_DIR}/src/lua_readline.c)
 else()
 	add_library(lua-readline SHARED ${READLINE_DIR}/src/lua_readline.c)
 endif()
