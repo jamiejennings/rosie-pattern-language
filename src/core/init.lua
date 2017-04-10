@@ -165,9 +165,8 @@ end
 
 function create_encoder_table()
    return {
-      json = json.encode,
-      compactjson = 1,
-      bytestring = 0,
+      json = 1,
+      byte = 0,
       color = color_output.color_string_from_leaf_nodes,
       nocolor = color_output.string_from_leaf_nodes,
       fulltext = common.match_to_text,
