@@ -371,7 +371,7 @@ local function flatten1(trace, NAME)
    end
 end
 
-local function flatten_trace(trace)
+function eval.flatten_trace(trace)
    return flatten1(flatten1(trace, "CHOICE"), "SEQUENCE")
 end
 
