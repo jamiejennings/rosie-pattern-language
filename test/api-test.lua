@@ -396,8 +396,8 @@ match = json.decode(results)
 check(type(match)=="table")
 
 check(match.type=="common.dotted_identifier")
-check(match.text=="x.y.z")
-check(match.subs[2].text=="y")
+check(match.data=="x.y.z")
+check(match.subs[2].data=="y")
 
 subheading("match")
 ok, results, left = wapi.match("common.number", "x.y.z")
@@ -447,7 +447,7 @@ local function check_output_file()
       local l = nextline()
       local j = json.decode(l)
       check(j.type=="*", "the json match in the output file is tagged with a star")
-      check(j.text:find("apple"), "the match in the output file is probably ok")
+      check(j.data:find("apple"), "the match in the output file is probably ok")
       local c=0
       for k,v in pairs(j.subs) do c=c+1; end
       check(c==5, "the match in the output file has 5 submatches as expected")
@@ -558,7 +558,7 @@ results = json.decode(results_js)
 check(results)
 check(leftover=="2")				    -- leftover
 check(results.type=="common.number")
-check(results.text=="abc")
+check(results.data=="abc")
 check(trace:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
 
 subheading("trace file (was eval_file)")
