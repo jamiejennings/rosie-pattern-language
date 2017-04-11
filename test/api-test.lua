@@ -405,6 +405,23 @@ check(ok)
 check(results==false)
 check(left=="1")
 
+ok, jsmatch, left = wapi.match('"☯"+~', "☯☯☯"..string.char(10))    -- newline is escaped in json encoding
+check(ok)
+check(type(jsmatch)=="string")
+print("***", jsmatch, "***")
+check(jsmatch:sub(-4)=="\\n\"}")
+ok, match = pcall(json.decode, jsmatch)
+check(ok)
+if ok then
+   table.print(match)
+   check(match.data==("☯☯☯"..string.char(10)))
+   check(match.pos==1)
+   check(match["end"]==11)		      -- 3 symbols at 3 bytes each, plus a newline, plus 1
+   check(match.type=="*")
+end
+check(left=="0")
+
+
 subheading("file match")
 check(type(wapi.file_match)=="function")
 ok, msg = wapi.file_match()
