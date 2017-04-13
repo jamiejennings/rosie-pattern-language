@@ -150,9 +150,15 @@ local function setup_engine(args)
 
    -- (2) Compile the expression
    if args.pattern then
+      local expression
+      if args.fixed_strings then
+	 expression = '"' .. args.pattern:gsub('"', '\\"') .. '"' -- TODO: rosie.expr.literal(arg[2])
+      else
+	 expression = args.pattern
+      end
       local flavor = (args.command=="grep") and "search" or "match"
       local ok, msgs
-      ok, compiled_pattern, msgs = pcall(CL_ENGINE.compile, CL_ENGINE, args.pattern, flavor)
+      ok, compiled_pattern, msgs = pcall(CL_ENGINE.compile, CL_ENGINE, expression, flavor)
       if not ok then
 	 io.stdout:write(compiled_pattern, "\n")
 	 os.exit(-4)
@@ -161,6 +167,22 @@ local function setup_engine(args)
 	 os.exit(-4)
       end
    end
+end
+
+local function readable_file(fn)
+   local f = io.open(fn, "r")
+   if not f then return nil, "Permission denied"; end
+   local try, msg, code = f:read(0)
+   if not try then
+      -- not sure we can count on code 21 meaning "directory"
+      if (type(msg)=="string") and msg:find("directory") then
+	 return nil, "Is a directory"
+      else
+	 return nil, "No such file"
+      end
+   end
+   f:close()
+   return true
 end
 
 infilename, outfilename, errfilename = nil, nil, nil
@@ -176,10 +198,16 @@ local function process_pattern_against_file(args, infilename)
 	if args.all then errfilename = ""; end	            -- stderr
 
 	-- (4) Set up what kind of encoding we want done on the output
-	set_encoder(args.encode)
+	local default_encoder = (args.command=="match") and "color" or "fulltext"
+	set_encoder(args.encode or default_encoder)
 
+	local ok, msg = readable_file(infilename)
 	if (args.verbose) or (#args.filename > 1) then
-	   print("\n" .. infilename .. ":")		    -- print name of file before its output
+	   if ok then io.write(infilename, ":\n"); end    -- print name of file before its output
+	end
+	if not ok then
+	   io.stderr:write(infilename, ": ", msg, "\n")
+	   return
 	end
 
 	-- (5) Iterate through the lines in the input file
@@ -187,7 +215,8 @@ local function process_pattern_against_file(args, infilename)
 
 	local ok, cin, cout, cerr =
 	   pcall(match_function, CL_ENGINE, compiled_pattern, nil, infilename, outfilename, errfilename, args.wholefile)
-	if not ok then io.write(cin, "\n"); os.exit(-1); end -- cout is error message in this case
+
+	if not ok then io.write(cin, "\n"); return; end	-- cin is error message (a string) in this case
 
 	-- (6) Print summary
 	if args.verbose then
@@ -404,6 +433,9 @@ function create_arg_parser()
       cmd:flag("-a --all", "Output non-matching lines to stderr")
       :default(false)
       :action("store_true")
+      cmd:flag("-F --fixed-strings", "Interpret the pattern as a fixed string, not an RPL pattern")
+      :default(false)
+      :action("store_true")
 
       -- match/trace/grep arguments (required options)
       cmd:argument("pattern", "RPL pattern")
@@ -422,7 +454,6 @@ function create_arg_parser()
 		  end
 		  return nil
 	       end)
-      :default("color")
       :args(1) -- consume argument after option
    end
 
