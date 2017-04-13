@@ -68,7 +68,8 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
       nextline = infile:lines();
    end
    local o_write, e_write = outfile.write, errfile.write
-   local l = nextline(); 
+   local ok, l = pcall(nextline);
+   if not ok then e:_error(l); end
    local _, m, leftover, trace
    while l do
       if trace_flag then _, _, trace = e:tracematch(expression, l); end
