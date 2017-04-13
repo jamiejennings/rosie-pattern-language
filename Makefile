@@ -54,7 +54,7 @@ ROSIE_DOC = $(DESTDIR)/share/doc
 ROSIE_ROOT = $(DESTDIR)/share/rosie
 
 .PHONY: default
-default: $(PLATFORM)
+default: $(PLATFORM) save_build_info
 
 SUBMOD = submodules
 ROSIEBIN = $(BUILD_ROOT)/bin/rosie
@@ -271,6 +271,10 @@ install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
 	@echo     rm -rf $(ROSIED)
 	@echo     rm $(INSTALL_ROSIEBIN) $(ROSIE_ROOT)/rpl $(ROSIE_ROOT)/pkg $(ROSIE_DOC)/rosie
 	@echo 
+
+.PHONY: save_build_info
+save_build_info: $(ROSIEBIN)
+	@$(BUILD_ROOT)/src/build_info.sh $(BUILD_ROOT) $(CC) > $(BUILD_ROOT)/build.log
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)

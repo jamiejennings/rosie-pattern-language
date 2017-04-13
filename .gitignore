@@ -13,9 +13,14 @@
 # a regular lua interpreter. 
 rosie.lua
 
-# The bin and lib directories are created from scratch during the build
+# The bin and lib directories, and some files, are created from scratch during the build
 bin
 lib
+rosie.lua
+build.log
+
+# The CMake tool creates a build dir
+build
 
 ffi/librosie/liblua/*
 ffi/librosie/liblpeg/*
@@ -35,9 +40,4 @@ src/c/librosie/go/src/hello/
 src/c/librosie/go/src/ffi/librosie.c
 src/c/librosie/go/src/ffi/librosie.h
 
-# These directories are created and populated by the build
-bin
-lib
 
-# This file is created by the build
-rosie.lua
