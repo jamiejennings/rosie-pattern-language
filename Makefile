@@ -279,7 +279,7 @@ save_build_info: $(ROSIEBIN)
 .PHONY: sniff
 sniff: $(ROSIEBIN)
 	@RESULT="$(shell $(ROSIEBIN) --version 2> /dev/null)"; \
-	EXPECTED="This is Rosie $(shell head -1 $(BUILD_ROOT)/VERSION)"; \
+	EXPECTED="Rosie $(shell head -1 $(BUILD_ROOT)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
             echo "Rosie Pattern Engine built successfully!"; \

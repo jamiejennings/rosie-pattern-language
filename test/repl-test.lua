@@ -57,7 +57,7 @@ end
 
 results_common_number =
    {
-'This is Rosie v1-tranche-2',
+'Rosie v1-tranche-2',
 '{"data": "0x123", ',
 ' "end": 6.0, ',
 ' "pos": 1.0, ',

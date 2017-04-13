@@ -40,7 +40,7 @@ table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 rosie = false;				    -- must be GLOBAL so repl can use it
 local thunk, msg = loadfile(ROSIE_HOME .. "/lib/init.luac", "b")
 if not thunk then
-   io.stderr:write("Rosie CLI warning: compiled Rosie files not available, loading from source\n")
+   io.stderr:write("Warning: compiled Rosie files not available, loading from source\n")
    rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
 else
    rosie = thunk()
@@ -81,7 +81,7 @@ local function print_rosie_info()
 end
 
 local function greeting()
-   io.write("This is Rosie " .. ROSIE_VERSION .. "\n")
+   io.write("Rosie " .. ROSIE_VERSION .. "\n")
 end
 
 local function set_encoder(name)
@@ -284,12 +284,24 @@ end
 
 
 local function run(args)
-   if args.command == "info" then
+   if not args.command then
       greeting()
-      print_rosie_info()
+      if ROSIE_DEV then return
+      else
+	 print("Error: a command is required (the 'help' command may be useful)")
+	 os.exit(-1)
+      end
+   end
+   if (args.command=="info") or (args.command=="help") then
+      greeting()
+      if args.command=="info" then
+	 print_rosie_info()
+      else
+	 print(parser:get_help())
+      end
       os.exit()
    end
-
+   
    if args.verbose then greeting(); end
 
    if args.command == "test" then
@@ -324,23 +336,24 @@ end -- function run
 
 -- create Parser
 function create_arg_parser()
-   parser = argparse("rosie", "Rosie Pattern Language " .. ROSIE_VERSION)
-   :epilog("Additional information.")
+   parser = argparse("rosie", "Rosie " .. ROSIE_VERSION)
+   parser:require_command(false)
+   --:epilog("Additional information.")
    -- global flags/options can go here
    -- -h,--help is generated automatically
    -- usage message is generated automatically
-   parser:flag("--version", "Print rosie version")
+   parser:flag("-v --version", "Print rosie version")
    :action(function(args,_,exceptions)
 	      greeting()
 	      os.exit()
 	   end)
-   parser:flag("-v --verbose", "Output additional messages")
+   parser:flag("--verbose", "Output additional messages")
    :default(false)
    :action("store_true")
-   parser:option("-m --manifest", "Load a manifest file (single dash '-' for none)")
+   parser:option("--manifest", "Load a manifest file (follow with a single dash '-' for none)")
    :default("$sys/MANIFEST")
    :args(1)
-   parser:option("-f --file", "Load an RPL file")
+   parser:option("--file", "Load an RPL file")
    :args(1)
    :count("*") -- allow multiple loads of a file
    :target("rpls") -- set name of variable index (args.rpls)
@@ -350,6 +363,8 @@ function create_arg_parser()
    :target("statements") -- set name of variable index (args.statements)
    -- target variable for commands
    parser:command_target("command")
+   local cmd_info = parser:command("help")
+   :description("Print this help message")
    -- info command
    local cmd_info = parser:command("info")
    :description("Print rosie installation information")
@@ -413,6 +428,7 @@ function create_arg_parser()
 
    -- test command
    local cmd_test = parser:command("test")
+   :description("Execute pattern tests written within the target rpl file(s)")
    cmd_test:argument("filename", "RPL filename")
    
 end
@@ -420,11 +436,5 @@ end
 ok, msg = pcall(create_arg_parser)
 if not ok then print("Error in cli when creating arg parser: " .. msg); end
 
--- Check arg[1] in order to catch dev mode for "make test"
-if (not arg[1]) then
-   if parser then print(parser:get_help()); end	    -- if initialization failed, we won't have a parser
-else
-   -- parse command-line
-   local args = parser:parse()
-   run(args)
-end
+local args = parser:parse()
+run(args)
