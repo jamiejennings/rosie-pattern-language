@@ -198,7 +198,7 @@ local function process_pattern_against_file(args, infilename)
 	if args.all then errfilename = ""; end	            -- stderr
 
 	-- (4) Set up what kind of encoding we want done on the output
-	local default_encoder = (args.command=="match") and "color" or "fulltext"
+	local default_encoder = (args.command=="grep") and "line" or "color"
 	set_encoder(args.encode or default_encoder)
 
 	local ok, msg = readable_file(infilename)
