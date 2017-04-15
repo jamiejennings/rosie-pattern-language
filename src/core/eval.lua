@@ -104,7 +104,7 @@ local function eval_ref(a, input, start, gmr, source, env, indent, fail_output_o
       -- descend into identifier's definition...
       if (not pat.ast) then
 	 -- built-in identifier with no ast
-	 trace.explanation = {name="PRIMITIVE", trace.expression, trace.result}
+	 trace.explanation = {name="PRIMITIVE", expression=trace.expression, result=trace.result}
       else
 	 local pat = env[text]
 	 assert(pat)
@@ -348,6 +348,7 @@ end
 
 local function flatten1(trace, NAME)
    if not trace then return nil; end
+   assert(type(trace)=="table", "flatten1 called with: " .. tostring(trace));
    local new = {}; for k,v in pairs(trace) do new[k]=v; end
    if trace.name==NAME then
       local c1, c2 = trace.explanation[1], trace.explanation[2]

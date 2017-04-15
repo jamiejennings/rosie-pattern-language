@@ -533,13 +533,12 @@ results = {wapi.eval("foo")}
 ok = results[1]
 check(ok)
 retvals = {table.unpack(results, 2)}
-print("***")
-table.print(retvals, false)
-print("***")
 
 check(retvals[1])
 check(retvals[2]=="0")
-check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+--check(retvals[3]:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+check(retvals[3]:find('"status":"match"'))
+check(retvals[3]:find('"end":4'))
 
 ok, msg = wapi.configure_engine(json.encode{expression="[[:digit:]]", encode="json"})
 check(ok)
@@ -549,7 +548,7 @@ check(ok)
 retvals = {table.unpack(results, 2)}
 check(not retvals[1])
 check(retvals[2]=="3")
-check(retvals[3]:find('FAILED to match against input "foo"'))
+check(retvals[3]:find('"status":"fail"'))
 
 ok, msg = wapi.configure_engine(json.encode{expression="[[:alpha:]]*", encode="json"})
 check(ok)
@@ -559,7 +558,8 @@ check(ok)
 retvals = {table.unpack(results, 2)}
 check(retvals[1])
 check(retvals[2]=="5")
-check(retvals[3]:find('Matched "foo" %(against input "foo56789"%)')) -- % is esc char
+check(retvals[3]:find('"status":"match"'))
+check(retvals[3]:find('"end":4'))
 
 ok, msg = wapi.configure_engine(json.encode{expression="common.number", encode="json"})
 check(ok)
@@ -569,10 +569,8 @@ check(ok)
 retvals = {table.unpack(results, 2)}
 check(retvals[1])				    -- match string
 check(retvals[2]=="2")				    -- leftover
---trace = retvals[3]
---check(match["common.number"])
---check(match["common.number"].text=="abc")
-check(retvals[3]:find('Matched "abc" %(against input "abc.x"%)')) -- % is esc char
+check(retvals[3]:find('"status":"match"'))
+check(retvals[3]:find('"end":4'))
 
 subheading("eval_file")
 check(type(wapi.eval_file)=="function")
@@ -590,7 +588,8 @@ if ok then
    match, leftover, msg = retvals[1], retvals[2], retvals[3]
    check(match)
    check(leftover=="0")
-   check(msg:find('Matched "foo" %(against input "foo"%)')) -- % is esc char
+   check(msg:find('"status":"match"'))
+   check(msg:find('"end":4'))
 end
 
 ok, msg = wapi.configure_engine(json.encode{expression="[[:digit:]]", encode="json"})
@@ -603,7 +602,7 @@ if ok then
    match, leftover, msg = retvals[1], retvals[2], retvals[3]
    check(not match)
    check(leftover=="3")
-   check(msg:find('FAILED to match against input "foo"')) -- % is esc char
+   check(msg:find('"status":"fail"'))
 end
 
  ok, msg = wapi.configure_engine(json.encode{expression=macosx_log1, encode="json"})

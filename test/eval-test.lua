@@ -96,159 +96,508 @@ print("\tNeed tests for built-ins like ., $, and ~")
 ----------------------------------------------------------------------------------------
 heading("Eval literals")
 ----------------------------------------------------------------------------------------
-check_eval('"foo"', "foo", true, {'1..LITERAL: "foo"', 'Matched "foo"'})
-check_eval('"foo"', "foobar", true, {'1..LITERAL: "foo"', 'Matched "foo"'})
-check_eval('"foo"', "notfoo", false, {'1..LITERAL: "foo"', 'FAILED to match'})
+check_eval('"foo"', "foo", true, {'LITERAL: "foo"', 'match from 1 to 4 (length=3)'})
+check_eval('"foo"', "foobar", true, {'LITERAL: "foo"', 'match from 1 to 4 (length=3)'})
+check_eval('"foo"', "notfoo", false, {'LITERAL: "foo"', 'fail at 1'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval sequences")
 ----------------------------------------------------------------------------------------
-check_eval('a b', "a b", true, {'SEQUENCE: (a ~ b)', '1...........LITERAL: "a"'})
-check_eval('a b', "ab", false, {'SEQUENCE: (a ~ b)', '1...........LITERAL: "a"'})
-check_eval('{a b}', "ab", true, {'SEQUENCE: (a b)', '1........LITERAL: "a"', '2........LITERAL: "b"'})
-check_eval('({a b})', "ab", true, {'SEQUENCE: (a b)', '1........LITERAL: "a"', '2........LITERAL: "b"'})
+check_eval('a b', "a b", true, {'SEQUENCE: (a ~ b)',
+				'match from 1 to 4 (length=3)',
+				'SEQUENCE: (a ~)',
+				'match from 1 to 3 (length=2)',
+				'REFERENCE: a',
+				'match from 1 to 2 (length=1)',
+				'LITERAL: "a"',
+				'match from 1 to 2 (length=1)',
+				'REFERENCE: ~',
+				'match from 2 to 3 (length=1)',
+				'REFERENCE: b',
+				'match from 3 to 4 (length=1)',
+				'LITERAL: "b"',
+				'match from 3 to 4 (length=1)'})
+check_eval('a b', "ab", false, {'SEQUENCE: (a ~ b)',
+				'fail at 1',
+				'SEQUENCE: (a ~)',
+				'fail at 1',
+				'REFERENCE: a',
+				'match from 1 to 2 (length=1)',
+				'LITERAL: "a"',
+				'match from 1 to 2 (length=1)',
+				'REFERENCE: ~',
+				'fail at 2'})
+check_eval('{a b}', "ab", true, {'SEQUENCE: (a b)',
+				 'match from 1 to 3 (length=2)',
+				 'REFERENCE: a',
+				 'match from 1 to 2 (length=1)',
+				 'LITERAL: "a"',
+				 'match from 1 to 2 (length=1)',
+				 'REFERENCE: b',
+				 'match from 2 to 3 (length=1)',
+				 'LITERAL: "b"',
+				 'match from 2 to 3 (length=1)'})
+check_eval('({a b})', "ab", true, {'SEQUENCE: (a b)',
+				   'match from 1 to 3 (length=2)',
+				   'REFERENCE: a',
+				   'match from 1 to 2 (length=1)',
+				   'LITERAL: "a"',
+				   'match from 1 to 2 (length=1)',
+				   'REFERENCE: b',
+				   'match from 2 to 3 (length=1)',
+				   'LITERAL: "b"',
+				   'match from 2 to 3 (length=1)'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval alternation (choice)")
 ----------------------------------------------------------------------------------------
 check_eval('a/b/c', "a", true, {'CHOICE: a / b / c',
-				'1........LITERAL: "a"'})
+				'match from 1 to 2 (length=1)',
+				'REFERENCE: a',
+				'match from 1 to 2 (length=1)',
+				'LITERAL: "a"',
+				'match from 1 to 2 (length=1)'})
 
 check_eval('a/b/c', "d", false, {'CHOICE: a / b / c',
-				 'FAILED'})
+				 'fail at 1',
+				 'REFERENCE: a',
+				 'fail at 1',
+				 'LITERAL: "a"',
+				 'fail at 1',
+				 'CHOICE: b / c',
+				 'fail at 1',
+				 'REFERENCE: b',
+				 'fail at 1',
+				 'LITERAL: "b"',
+				 'fail at 1',
+				 'REFERENCE: c',
+				 'fail at 1',
+				 'LITERAL: "c"',
+				 'fail at 1'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval cooked groups")
 ----------------------------------------------------------------------------------------
 check_eval('a b', "a b ", true, {'SEQUENCE: (a ~ b)',
-				 '1...........LITERAL: "a"'})
+				 'match from 1 to 4 (length=3)',
+				 'SEQUENCE: (a ~)',
+				 'match from 1 to 3 (length=2)',
+				 'REFERENCE: a',
+				 'match from 1 to 2 (length=1)',
+				 'LITERAL: "a"',
+				 'match from 1 to 2 (length=1)',
+				 'REFERENCE: ~',
+				 'match from 2 to 3 (length=1)',
+				 'REFERENCE: b',
+				 'match from 3 to 4 (length=1)',
+				 'LITERAL: "b"',
+				 'match from 3 to 4 (length=1)'})
 
 check_eval('(a b)', "a b ", true, {'SEQUENCE: (a ~ b)',
-				   '1...........LITERAL: "a"'})
+				   'match from 1 to 4 (length=3)',
+				   'SEQUENCE: (a ~)',
+				   'match from 1 to 3 (length=2)',
+				   'REFERENCE: a',
+				   'match from 1 to 2 (length=1)',
+				   'LITERAL: "a"',
+				   'match from 1 to 2 (length=1)',
+				   'REFERENCE: ~',
+				   'match from 2 to 3 (length=1)',
+				   'REFERENCE: b',
+				   'match from 3 to 4 (length=1)',
+				   'LITERAL: "b"',
+				   'match from 3 to 4 (length=1)'})
 
 check_eval('a b ~', "a bx", false, {'SEQUENCE: (a ~ b ~ ~)',
-				  '1...........LITERAL: "a"',
-				  'FAILED'})
+				    'fail at 1',
+				    'SEQUENCE: (a ~)',
+				    'match from 1 to 3 (length=2)',
+				    'REFERENCE: a',
+				    'match from 1 to 2 (length=1)',
+				    'LITERAL: "a"',
+				    'match from 1 to 2 (length=1)',
+				    'REFERENCE: ~',
+				    'match from 2 to 3 (length=1)',
+				    'SEQUENCE: (b ~ ~)',
+				    'fail at 3',
+				    'SEQUENCE: (b ~)',
+				    'fail at 3',
+				    'REFERENCE: b',
+				    'match from 3 to 4 (length=1)',
+				    'LITERAL: "b"',
+				    'match from 3 to 4 (length=1)',
+				    'REFERENCE: ~',
+				    'fail at 4'})
 
 check_eval('(a b)~', "a bx", false, {'SEQUENCE: (a ~ b ~ ~)',
-				     '1.................LITERAL: "a"',
-				     'FAILED'})
+				     'fail at 1',
+				     'SEQUENCE: (a ~ b ~)',
+				     'fail at 1',
+				     'SEQUENCE: (a ~ b)',
+				     'match from 1 to 4 (length=3)',
+				     'SEQUENCE: (a ~)',
+				     'match from 1 to 3 (length=2)',
+				     'REFERENCE: a',
+				     'match from 1 to 2 (length=1)',
+				     'LITERAL: "a"',
+				     'match from 1 to 2 (length=1)',
+				     'REFERENCE: ~',
+				     'match from 2 to 3 (length=1)',
+				     'REFERENCE: b',
+				     'match from 3 to 4 (length=1)',
+				     'LITERAL: "b"',
+				     'match from 3 to 4 (length=1)',
+				     'REFERENCE: ~',
+				     'fail at 4'})
 ----------------------------------------------------------------------------------------
 heading("Eval raw groups")
 ----------------------------------------------------------------------------------------
 check_eval('{a b}', "a b ", false, {'SEQUENCE: (a b)',
-				    '1........LITERAL: "a"',
-				    'Matched',
-				    '2........LITERAL: "b"',
-				    'FAILED to match'})
+				    'fail at 1',
+				    'REFERENCE: a',
+				    'match from 1 to 2 (length=1)',
+				    'LITERAL: "a"',
+				    'match from 1 to 2 (length=1)',
+				    'REFERENCE: b',
+				    'fail at 2',
+				    'LITERAL: "b"',
+				    'fail at 2'})
 
 
 check_eval('{a b}', "abx", true, {'SEQUENCE: (a b)',
-				  '1........LITERAL: "a"',
-				  'Matched',
-				  '2........LITERAL: "b"',
-				  'Matched'})
+				  'match from 1 to 3 (length=2)',
+				  'REFERENCE: a',
+				  'match from 1 to 2 (length=1)',
+				  'LITERAL: "a"',
+				  'match from 1 to 2 (length=1)',
+				  'REFERENCE: b',
+				  'match from 2 to 3 (length=1)',
+				  'LITERAL: "b"',
+				  'match from 2 to 3 (length=1)'})
 
-
-check_eval('({a b})~', "abx", false, {'SEQUENCE: (a b ~)',
-				     '1..............LITERAL: "a"',
-				     'Matched',
-				     '2..............LITERAL: "b"',
-				     'Matched',
-				     'REFERENCE: ~',
-				     'FAILED'})
+check_eval('({a b})~', "abx", false, {'SEQUENCE: (a b ~ ~)',
+				      'fail at 1',
+				      'SEQUENCE: (a b ~)',
+				      'fail at 1',
+				      'SEQUENCE: (a b)',
+				      'match from 1 to 3 (length=2)',
+				      'REFERENCE: a',
+				      'match from 1 to 2 (length=1)',
+				      'LITERAL: "a"',
+				      'match from 1 to 2 (length=1)',
+				      'REFERENCE: b',
+				      'match from 2 to 3 (length=1)',
+				      'LITERAL: "b"',
+				      'match from 2 to 3 (length=1)',
+				      'REFERENCE: ~',
+				      'fail at 3'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval look-ahead")
 ----------------------------------------------------------------------------------------
 check_eval('a @b', "a b", true, {'SEQUENCE: (a ~ @b)',
-				 '2.....PREDICATE: @b',
-				 'Matched'})
-check_eval('{a @b}', "ab", true, {'SEQUENCE: (a @b)'})
+				 'match from 1 to 3 (length=2)',
+				 'SEQUENCE: (a ~)',
+				 'match from 1 to 3 (length=2)',
+				 'REFERENCE: a',
+				 'match from 1 to 2 (length=1)',
+				 'LITERAL: "a"',
+				 'match from 1 to 2 (length=1)',
+				 'REFERENCE: ~',
+				 'match from 2 to 3 (length=1)',
+				 'PREDICATE: @b',
+				 'match from 3 to 3 (length=0)',
+				 'REFERENCE: b',
+				 'match from 3 to 4 (length=1)',
+				 'LITERAL: "b"',
+				 'match from 3 to 4 (length=1)'})
+
+check_eval('{a @b}', "ab", true, {'SEQUENCE: (a @b)',
+				  'match from 1 to 2 (length=1)',
+				  'REFERENCE: a',
+				  'match from 1 to 2 (length=1)',
+				  'LITERAL: "a"',
+				  'match from 1 to 2 (length=1)',
+				  'PREDICATE: @b',
+				  'match from 2 to 2 (length=0)',
+				  'REFERENCE: b',
+				  'match from 2 to 3 (length=1)',
+				  'LITERAL: "b"',
+				  'match from 2 to 3 (length=1)'})
 
 check_eval('{a @b}', "a", false, {'SEQUENCE: (a @b)',
-				  '2.....PREDICATE: @b',
-				  'FAILED'})
+				  'fail at 1',
+				  'REFERENCE: a',
+				  'match from 1 to 2 (length=1)',
+				  'LITERAL: "a"',
+				  'match from 1 to 2 (length=1)',
+				  'PREDICATE: @b',
+				  'fail at 2',
+				  'REFERENCE: b',
+				  'fail at 2',
+				  'LITERAL: "b"',
+				  'fail at 2'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval negative look-ahead")
 ----------------------------------------------------------------------------------------
 check_eval('a !b', "ax", false, {'SEQUENCE: (a ~ !b)',
-				 '1...........LITERAL: "a"',
-				 'Matched',
+				 'fail at 1',
+				 'SEQUENCE: (a ~)',
+				 'fail at 1',
+				 'REFERENCE: a',
+				 'match from 1 to 2 (length=1)',
+				 'LITERAL: "a"',
+				 'match from 1 to 2 (length=1)',
 				 'REFERENCE: ~',
-				 'FAILED to match against input "x"'})
+				 'fail at 2'})
 
 check_eval('{a !b}', "ax", true, {'SEQUENCE: (a !b)',
-				  '3...........LITERAL: "b"',
-				  'FAILED to match against input "x"'})
+				  'match from 1 to 2 (length=1)',
+				  'REFERENCE: a',
+				  'match from 1 to 2 (length=1)',
+				  'LITERAL: "a"',
+				  'match from 1 to 2 (length=1)',
+				  'PREDICATE: !b',
+				  'match from 2 to 2 (length=0)',
+				  'REFERENCE: b',
+				  'fail at 2',
+				  'LITERAL: "b"',
+				  'fail at 2'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval precedence and right association")
 ----------------------------------------------------------------------------------------
-check_eval('a b / c', 'b c', false)
-check_eval('a b / c', 'a c', true, {'SEQUENCE: (a ~ b / c)',
-				    'Matched "a" (against input "a c")',
-				    'REFERENCE: ~',
-				    'Matched "c" (against input "c")',
-				    '2...........LITERAL: "b"',
-				    'First option failed.  Proceeding to alternative.',
-				    '3...........LITERAL: "c"'})
+check_eval('a b / c', 'b c', false, {'SEQUENCE: (a ~ b / c)',
+				     'fail at 1',
+				     'SEQUENCE: (a ~)',
+				     'fail at 1',
+				     'REFERENCE: a',
+				     'fail at 1',
+				     'LITERAL: "a"',
+				     'fail at 1'})
 
-check_eval('a b / c {3,3}', 'a ccc', true, {'SEQUENCE: (a ~ b / {c}{3,3})'})
+check_eval('a b / c', 'a c', true, {'SEQUENCE: (a ~ b / c)',
+				    'match from 1 to 4 (length=3)',
+				    'SEQUENCE: (a ~)',
+				    'match from 1 to 3 (length=2)',
+				    'REFERENCE: a',
+				    'match from 1 to 2 (length=1)',
+				    'LITERAL: "a"',
+				    'match from 1 to 2 (length=1)',
+				    'REFERENCE: ~',
+				    'match from 2 to 3 (length=1)',
+				    'CHOICE: b / c',
+				    'match from 3 to 4 (length=1)',
+				    'REFERENCE: b',
+				    'fail at 3',
+				    'LITERAL: "b"',
+				    'fail at 3',
+				    'REFERENCE: c',
+				    'match from 3 to 4 (length=1)',
+				    'LITERAL: "c"',
+				    'match from 3 to 4 (length=1)'})
+
+check_eval('a b / c {3,3}', 'a ccc', true, {'SEQUENCE: (a ~ b / {c}{3,3})',
+					    'match from 1 to 6 (length=5)',
+					    'SEQUENCE: (a ~)',
+					    'match from 1 to 3 (length=2)',
+					    'REFERENCE: a',
+					    'match from 1 to 2 (length=1)',
+					    'LITERAL: "a"',
+					    'match from 1 to 2 (length=1)',
+					    'REFERENCE: ~',
+					    'match from 2 to 3 (length=1)',
+					    'CHOICE: b / {c}{3,3}',
+					    'match from 3 to 6 (length=3)',
+					    'REFERENCE: b',
+					    'fail at 3',
+					    'LITERAL: "b"',
+					    'fail at 3',
+					    'QUANTIFIED EXP: (raw): {c}{3,3}',
+					    'match from 3 to 6 (length=3)',
+					    'The base expression must repeat at least 3 and at most 3 times, with no boundary between each repetition',
+					    'BASE EXP: {c}',
+					    'match from 3 to 4 (length=1)',
+					    'BASE EXP: {c}',
+					    'match from 4 to 5 (length=1)',
+					    'BASE EXP: {c}',
+					    'match from 5 to 6 (length=1)'})
 
 
 check_eval('a b / c {3,3}', 'a cc', false, {'SEQUENCE: (a ~ b / {c}{3,3})',
-					    'FAILED'})
+					    'fail at 1',
+					    'SEQUENCE: (a ~)',
+					    'match from 1 to 3 (length=2)',
+					    'REFERENCE: a',
+					    'match from 1 to 2 (length=1)',
+					    'LITERAL: "a"',
+					    'match from 1 to 2 (length=1)',
+					    'REFERENCE: ~',
+					    'match from 2 to 3 (length=1)',
+					    'CHOICE: b / {c}{3,3}',
+					    'fail at 3',
+					    'REFERENCE: b',
+					    'fail at 3',
+					    'LITERAL: "b"',
+					    'fail at 3',
+					    'QUANTIFIED EXP: (raw): {c}{3,3}',
+					    'fail at 3',
+					    'The base expression must repeat at least 3 and at most 3 times, with no boundary between each repetition',
+					    'BASE EXP: {c}',
+					    'match from 3 to 4 (length=1)',
+					    'BASE EXP: {c}',
+					    'match from 4 to 5 (length=1)',
+					    'BASE EXP: {c}',
+					    'fail at 5'})
 
 print("\t ** Need more precedence and right association tests! **")
 
 ----------------------------------------------------------------------------------------
 heading("Eval quantified expressions")
 ----------------------------------------------------------------------------------------
-check_eval('a*', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
-			    'Matched'})
+check_eval('a*', "", true, {'QUANTIFIED EXP: (raw): {a}*',
+			    'match from 1 to 1 (length=0)',
+			    'The base expression must repeat at least 0 and at most unlimited times, with no boundary between each repetition',
+			    'BASE EXP: {a}',
+			    'fail at 1'})
 
-check_eval('a*', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
-				'Matched'})
+check_eval('a*', "aaaa", true, {'QUANTIFIED EXP: (raw): {a}*',
+				'match from 1 to 5 (length=4)',
+				'The base expression must repeat at least 0 and at most unlimited times, with no boundary between each repetition',
+				'BASE EXP: {a}',
+				'match from 1 to 2 (length=1)',
+				'BASE EXP: {a}',
+				'match from 2 to 3 (length=1)',
+				'BASE EXP: {a}',
+				'match from 3 to 4 (length=1)',
+				'BASE EXP: {a}',
+				'match from 4 to 5 (length=1)',
+				'BASE EXP: {a}',
+				'fail at 5'})
 
+check_eval('a+', "", false, {'QUANTIFIED EXP: (raw): {a}+',
+			     'fail at 1',
+			     'The base expression must repeat at least 1 and at most unlimited times, with no boundary between each repetition',
+			     'BASE EXP: {a}',
+			     'fail at 1'})
 
-check_eval('a+', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
-			     'FAILED'})
+check_eval('a+', "a", true, {'QUANTIFIED EXP: (raw): {a}+',
+			     'match from 1 to 2 (length=1)',
+			     'The base expression must repeat at least 1 and at most unlimited times, with no boundary between each repetition',
+			     'BASE EXP: {a}',
+			     'match from 1 to 2 (length=1)',
+			     'BASE EXP: {a}',
+			     'fail at 2'})
 
-check_eval('a+', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
-			     'Matched'})
+check_eval('{a/b}+', "baaa", true, {'QUANTIFIED EXP: (raw): {a / b}+',
+				    'match from 1 to 5 (length=4)',
+				    'The base expression must repeat at least 1 and at most unlimited times, with no boundary between each repetition',
+				    'BASE EXP: {a / b}',
+				    'match from 1 to 2 (length=1)',
+				    'BASE EXP: {a / b}',
+				    'match from 2 to 3 (length=1)',
+				    'BASE EXP: {a / b}',
+				    'match from 3 to 4 (length=1)',
+				    'BASE EXP: {a / b}',
+				    'match from 4 to 5 (length=1)',
+				    'BASE EXP: {a / b}',
+				    'fail at 5'})
 
-check_eval('{a/b}+', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
-				    'Matched "baaa"'})
+check_eval('{a/b}{3,5}', "baaa", true, {'QUANTIFIED EXP: (raw): {a / b}{3,5}',
+					'match from 1 to 5 (length=4)',
+					'The base expression must repeat at least 3 and at most 5 times, with no boundary between each repetition',
+					'BASE EXP: {a / b}',
+					'match from 1 to 2 (length=1)',
+					'BASE EXP: {a / b}',
+					'match from 2 to 3 (length=1)',
+					'BASE EXP: {a / b}',
+					'match from 3 to 4 (length=1)',
+					'BASE EXP: {a / b}',
+					'match from 4 to 5 (length=1)',
+					'BASE EXP: {a / b}',
+					'fail at 5'})
 
-check_eval('{a/b}{3,5}', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
-					'Matched'})
+check_eval('{a/b}{3,5}', "ba", false, {'QUANTIFIED EXP: (raw): {a / b}{3,5}',
+				       'fail at 1',
+				       'The base expression must repeat at least 3 and at most 5 times, with no boundary between each repetition',
+				       'BASE EXP: {a / b}',
+				       'match from 1 to 2 (length=1)',
+				       'BASE EXP: {a / b}',
+				       'match from 2 to 3 (length=1)',
+				       'BASE EXP: {a / b}',
+				       'fail at 3'})
 
-check_eval('{a/b}{3,5}', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
-				       'FAILED'})
+check_eval('(a*)', "", true, {'QUANTIFIED EXP: (raw): {a}*',
+			      'match from 1 to 1 (length=0)',
+			      'The base expression must repeat at least 0 and at most unlimited times, with no boundary between each repetition',
+			      'BASE EXP: {a}',
+			      'fail at 1'})
 
+check_eval('(a*)', "aaaa", true, {'QUANTIFIED EXP: (raw): {a}*',
+				  'match from 1 to 5 (length=4)',
+				  'The base expression must repeat at least 0 and at most unlimited times, with no boundary between each repetition',
+				  'BASE EXP: {a}',
+				  'match from 1 to 2 (length=1)',
+				  'BASE EXP: {a}',
+				  'match from 2 to 3 (length=1)',
+				  'BASE EXP: {a}',
+				  'match from 3 to 4 (length=1)',
+				  'BASE EXP: {a}',
+				  'match from 4 to 5 (length=1)',
+				  'BASE EXP: {a}',
+				  'fail at 5'})
 
-check_eval('(a*)', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
-			    'Matched'})
+check_eval('(a+)', "", false, {'QUANTIFIED EXP: (raw): {a}+',
+			       'fail at 1',
+			       'The base expression must repeat at least 1 and at most unlimited times, with no boundary between each repetition',
+			       'BASE EXP: {a}',
+			       'fail at 1'})
 
-check_eval('(a*)', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
-				'Matched'})
+check_eval('(a+)', "a", true, {'QUANTIFIED EXP: (raw): {a}+',
+			       'match from 1 to 2 (length=1)',
+			       'The base expression must repeat at least 1 and at most unlimited times, with no boundary between each repetition',
+			       'BASE EXP: {a}',
+			       'match from 1 to 2 (length=1)',
+			       'BASE EXP: {a}',
+			       'fail at 2'})
 
+check_eval('({a/b}+)', "baaa", true, {'QUANTIFIED EXP: (raw): {a / b}+',
+				      'match from 1 to 5 (length=4)',
+				      'The base expression must repeat at least 1 and at most unlimited times, with no boundary between each repetition',
+				      'BASE EXP: {a / b}',
+				      'match from 1 to 2 (length=1)',
+				      'BASE EXP: {a / b}',
+				      'match from 2 to 3 (length=1)',
+				      'BASE EXP: {a / b}',
+				      'match from 3 to 4 (length=1)',
+				      'BASE EXP: {a / b}',
+				      'match from 4 to 5 (length=1)',
+				      'BASE EXP: {a / b}',
+				      'fail at 5'})
 
-check_eval('(a+)', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
-			     'FAILED'})
+check_eval('({a/b}{3,5})', "baaa", true, {'QUANTIFIED EXP: (raw): {a / b}{3,5}',
+					  'match from 1 to 5 (length=4)',
+					  'The base expression must repeat at least 3 and at most 5 times, with no boundary between each repetition',
+					  'BASE EXP: {a / b}',
+					  'match from 1 to 2 (length=1)',
+					  'BASE EXP: {a / b}',
+					  'match from 2 to 3 (length=1)',
+					  'BASE EXP: {a / b}',
+					  'match from 3 to 4 (length=1)',
+					  'BASE EXP: {a / b}',
+					  'match from 4 to 5 (length=1)',
+					  'BASE EXP: {a / b}',
+					  'fail at 5'})
 
-check_eval('(a+)', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
-			     'Matched'})
-
-check_eval('({a/b}+)', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
-				    'Matched "baaa"'})
-
-check_eval('({a/b}{3,5})', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
-					'Matched'})
-
-check_eval('({a/b}{3,5})', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
-				       'FAILED'})
+check_eval('({a/b}{3,5})', "ba", false, {'QUANTIFIED EXP: (raw): {a / b}{3,5}',
+					 'fail at 1',
+					 'The base expression must repeat at least 3 and at most 5 times, with no boundary between each repetition',
+					 'BASE EXP: {a / b}',
+					 'match from 1 to 2 (length=1)',
+					 'BASE EXP: {a / b}',
+					 'match from 2 to 3 (length=1)',
+					 'BASE EXP: {a / b}',
+					 'fail at 3'})
 
 return test.finish()
