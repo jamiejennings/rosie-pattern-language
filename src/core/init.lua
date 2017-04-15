@@ -230,6 +230,7 @@ function main()
    return rosie
 end
 
+collectgarbage("setpause", 194)
 
 return main()
 

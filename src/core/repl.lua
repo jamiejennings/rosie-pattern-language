@@ -13,6 +13,7 @@ local repl = {}
 local common = require "common"
 local environment = require "environment"
 local readline = require "readline"
+local lpeg = require "lpeg"
 
 local repl_patterns = [==[
       rpl_expression = expression
@@ -46,6 +47,7 @@ local parse_and_explain = repl_engine._rpl_parser
 local repl_prompt = "Rosie> "
 
 local function print_match(m, left, eval_p)
+   if type(m)=="userdata" then m = lpeg.getdata(m); end
    if m then 
       io.write(util.prettify_json(m, true), "\n")
       if (left > 0) then

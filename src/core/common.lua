@@ -230,15 +230,15 @@ local function insert_input_text(m, input)
    return m
 end
 
-function common.rmatch(peg, input, start, encode)
+function common.rmatch(peg, input, start, encode, total_time, lpegvm_time)
    local Cencoder = encode or 0			    -- default is compact byte encoding
    if encode==-1 then Cencoder = 0; end		    -- -1 ==> no output
-   local m, nextpos, t1, t2 = peg:rmatch(input, start, Cencoder)
+   local m, nextpos, t1, t2 = peg:rmatch(input, start, Cencoder, total_time, lpegvm_time)
    if not m then return nil, nil, t1, t2; end
    if not encode then return insert_input_text(lpeg.decode(m), input), nextpos, t1, t2
    elseif encode==-1 then return nil, nextpos, t1, t2
-   elseif encode==0 then return lpeg.getdata(m), nextpos, t1, t2
-   elseif encode==1 then return lpeg.getdata(m), nextpos, t1, t2
+   elseif encode==0 then return m, nextpos, t1, t2
+   elseif encode==1 then return m, nextpos, t1, t2
    else error("Internal error: invalid built-in encoder index in rmatch: " .. tostring(encode));
    end
 end

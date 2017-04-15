@@ -81,6 +81,7 @@ local function default_engine_method_caller(method)
 	     local retvals = {api.ENGINE[method](api.ENGINE, ...)}
 	     for i=1,#retvals do
 		local v = retvals[i]
+		if type(v)=="userdata" then v = lpeg.getdata(v); end
 		if type(v)~="string" and type(v)~="boolean" then retvals[i]= json.encode(v); end
 	     end
 	     return table.unpack(retvals)
