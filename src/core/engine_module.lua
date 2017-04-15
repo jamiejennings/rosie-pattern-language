@@ -289,7 +289,7 @@ end
 --  1 = compact json encoding with only start/end indices (no text)
 local function get_set_encoder_function(en, f)
    if f==nil then return en.encode_function; end
-   if f==false or type(f)=="function" or (type(f)=="number" and (f>=-2) and (f<=1)) then
+   if f==false or type(f)=="number" or type(f)=="function" then
       en.encode_function = f;
    else engine_error(en, "Invalid output encoder: " .. tostring(f)); end
 end

@@ -237,10 +237,7 @@ function common.rmatch(peg, input, start, encode, total_time, lpegvm_time)
    if not m then return nil, nil, t1, t2; end
    if not encode then return insert_input_text(lpeg.decode(m), input), nextpos, t1, t2
    elseif encode==-1 then return nil, nextpos, t1, t2
-   elseif encode==0 then return m, nextpos, t1, t2
-   elseif encode==1 then return m, nextpos, t1, t2
-   else error("Internal error: invalid built-in encoder index in rmatch: " .. tostring(encode));
-   end
+   else return m, nextpos, t1, t2; end
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the

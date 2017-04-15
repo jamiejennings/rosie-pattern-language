@@ -165,6 +165,7 @@ end
 
 function create_encoder_table()
    return {
+      line = 2,
       json = 1,
       byte = 0,
       color = color_output.color_string_from_leaf_nodes,
