@@ -170,15 +170,21 @@ local function setup_engine(args)
 end
 
 local function readable_file(fn)
-   local f = io.open(fn, "r")
-   if not f then return nil, "Permission denied"; end
+   local f, msg = io.open(fn, "r")
+   if not f then
+      assert (type(msg)=="string")
+      if msg:find("No such file") then return nil, "No such file"
+      elseif msg:find("Permission denied") then return nil, "Permission denied"
+      else return nil, "Cannot open file"; end
+   end
+   -- now we have a file, but it could be a directory
    local try, msg, code = f:read(0)
    if not try then
-      -- not sure we can count on code 21 meaning "directory"
-      if (type(msg)=="string") and msg:find("directory") then
-	 return nil, "Is a directory"
-      else
-	 return nil, "No such file"
+      -- not sure we can count on the undocumented numeric codes.
+      -- if msg is nil then the file is readable, but is empty.
+      if (type(msg)=="string") then
+	 if msg:find("Is a directory") then return nil, "Is a directory"
+	 else return nil, "Cannot read file"; end
       end
    end
    f:close()
