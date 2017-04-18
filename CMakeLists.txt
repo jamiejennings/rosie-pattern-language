@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(rosie)
 
+set(CMAKE_DEBUG_TARGET_PROPERTIES
+  COMPILE_DEFINITIONS
+  POSITION_INDEPENDENT_CODE
+)
+
 # {{{ Helper cmake modules
 # Include FindReadline.cmake
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
@@ -131,15 +136,20 @@ set_property(
 	TARGET lua-bin luac
 	APPEND_STRING
 	PROPERTY COMPILE_FLAGS " -O2 -Wall -Wextra -DLUA_COMPAT_5_2")
+
 if(APPLE)
 	set_property(
 		TARGET lua-bin luac
 		APPEND_STRING
 		PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX")
-#		PROPERTY LINK_FLAGS " -Wl")
+	set_property(
+		TARGET lua-lib
+		APPEND_STRING
+		PROPERTY LINK_FLAGS " -Wl,-E")
 	target_link_libraries(lua-lib dl readline)
 	target_link_libraries(lua-bin dl readline m)
 	target_link_libraries(luac dl readline m)
+
 elseif(UNIX)
 	set_property(
 		TARGET lua-bin luac
