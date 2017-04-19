@@ -44,6 +44,7 @@ set(JSON_DIR "${SUBMOD_DIR}/lua-cjson")
 set(LPEG_DIR "${SUBMOD_DIR}/rosie-lpeg")
 set(ARGPARSE_DIR "${SUBMOD_DIR}/argparse")
 set(READLINE_DIR "${SUBMOD_DIR}/lua-readline")
+set(LUAMODULES_DIR "${SUBMOD_DIR}/lua-modules")
 
 # {{{ git submodule init+update
 message(STATUS "Init and update submodules")
@@ -108,6 +109,18 @@ add_library(lua-lib STATIC ${BASE_C})
 set_target_properties(lua-lib
 	PROPERTIES
 	OUTPUT_NAME lua)
+
+if(APPLE)
+set_property(
+    TARGET lua-lib
+    APPEND_STRING
+    PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX")
+elseif(UNIX)
+set_property(
+    TARGET lua-lib
+    APPEND_STRING
+    PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX")
+endif()
 
 # Create lua executable
 add_executable(lua-bin ${LUA_DIR}/src/lua.c)
@@ -353,6 +366,10 @@ list(APPEND COMPILED_LUA_FILES argparse.luac)
 message(STATUS "Processing rosie core files")
 
 file(GLOB CORE_LUA ${CMAKE_SOURCE_DIR}/src/core/*.lua)
+list(APPEND CORE_LUA ${LUAMODULES_DIR}/recordtype.lua
+	    	     ${LUAMODULES_DIR}/list.lua
+		     ${LUAMODULES_DIR}/termcolor.lua
+		     ${LUAMODULES_DIR}/test.lua)
 
 add_custom_target(core-rosie ALL
 	DEPENDS luac)

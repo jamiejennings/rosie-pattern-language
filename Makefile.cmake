@@ -15,6 +15,9 @@ all: build
 build: cmake
 	$(MAKE) -C ${builddir}
 
+verbose: cmake
+	$(MAKE) -C ${builddir} CMAKE_ARGS="-DCMAKE_VERBOSE_MAKEFILE=ON" VERBOSE=1
+
 install: cmake
 	$(MAKE) -C ${builddir} install
 
