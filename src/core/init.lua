@@ -71,7 +71,7 @@ end
 LOAD_ENV = _ENV
 
 function load_all()
-   local loader, msg = nil --loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", LOAD_ENV)
+   local loader, msg = loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", LOAD_ENV)
    if not loader then
       -- try loading from source file instead
       loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", LOAD_ENV)
@@ -197,7 +197,7 @@ local function catch(f, ...)
       return table.unpack(results, 2)
    end
    -- error occurred
-   error(table.unpack(results, 2))
+   error(table.unpack(results, 2), 2)
 end
 local throw = co.yield
 
@@ -210,7 +210,7 @@ function main()
    rosie._env = _ENV
    local function try (thunk)
       local ok, msg = pcall(thunk)
-      if not ok then throw(msg);
+      if not ok then error(msg);		    -- throw?
       else return msg; end			    -- only catching one return value
    end
    local function do_all()
