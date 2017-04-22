@@ -8,17 +8,22 @@
 
 local c0 = {}
 
+local string = require "string"
+local coroutine = require "coroutine"
+
+local lpeg = require "lpeg"
+
 local P, V, C, S, R, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Cmt, lpeg.B
 
 local locale = lpeg.locale()
 
-local util = require "util"
-local writer = require "writer"
-local common = require "common"
+local util = import "util"
+local writer = import "writer"
+local common = import "common"
 local pattern = common.pattern
 
-local environment = require "environment"	    -- TEMPORARY
+local environment = import "environment"	    -- TEMPORARY
 local boundary = environment.boundary
 local lookup = environment.lookup
 local bind = environment.bind

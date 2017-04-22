@@ -6,10 +6,11 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
-
-
 local c1 = {}
 local c0 = require "c0"
+
+local string = require "string"
+local lpeg = require "lpeg"
 
 function c1.process_package_decl(ast, gmr, source, env)
    print("->", "package = " .. ast.package_decl.subs[1].packagename.text)

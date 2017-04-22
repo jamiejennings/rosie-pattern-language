@@ -6,11 +6,11 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-
+local io = require "io"
 local math = require "math"
 local lpeg = require "lpeg"
 local json = require "cjson"
-local string = string				    -- defensive
+local string = require "string"
 
 local util = {}
 

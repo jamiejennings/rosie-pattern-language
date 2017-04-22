@@ -33,6 +33,9 @@
 --           the script passes ROSIE_HOME to cli.lua, which has called this file (init).
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
 
+local io = require "io"
+local os = require "os"
+
 local function read_version_or_die(home)
    assert(type(home)=="string")
    local vfile = io.open(home.."/VERSION")
@@ -65,19 +68,68 @@ function setup_globals()
 end
 
 ---------------------------------------------------------------------------------------------------
+-- Make some standard libraries available, and do some essential checks to make sure we can run
+---------------------------------------------------------------------------------------------------
+table = require "table"
+os = require "os"
+math = require "math"
+
+-- Ensure we can fit any current (up to 0x10FFFF) and future (up to 0xFFFFFFFF) Unicode code
+-- points in a single Lua integer.
+if (not math) then
+   error("Internal error: math functions unavailable")
+elseif (0xFFFFFFFF > math.maxinteger) then
+   error("Internal error: max integer on this platform is too small")
+end
+
+---------------------------------------------------------------------------------------------------
 -- Load the entire rosie world... (which includes the "core" parser for "rpl 1.0")
 ---------------------------------------------------------------------------------------------------
 
-LOAD_ENV = _ENV
-
 function load_all()
-   local loader, msg = loadfile(ROSIE_HOME .. "/lib/load-modules.luac", "b", LOAD_ENV)
-   if not loader then
-      -- try loading from source file instead
-      loader, msg = loadfile(ROSIE_HOME .. "/src/core/load-modules.lua", "t", LOAD_ENV)
-      if not loader then error("Internal error while loading modules: " .. msg); end
-      loader()
+   cjson = import("cjson")
+   lpeg = import("lpeg")
+   readline = import("readline")
+
+   -- These MUST have a partial order so that dependencies can be loaded first
+   recordtype = import("recordtype")
+   util = import("util")
+   common = import("common")
+   environment = import("environment")
+   list = import("list")
+   writer = import("writer")
+   syntax = import("syntax")
+   parse = import("parse")
+   c0 = import("c0")
+   c1 = import("c1")
+   compile = import("compile")
+   eval = import("eval")
+   color_output = import("color-output")
+   engine_module = import("engine_module")
+
+   engine = engine_module.engine
+
+   -- manifest code requires a working engine, so we initialize the engine package here
+   assert(parse.core_parse, "error while initializing: parse module not loaded?")
+   assert(syntax.transform0, "error while initializing: syntax module not loaded?")
+   local function rpl_parser(source)
+      local astlist, msgs, leftover = parse.core_parse(source)
+      if not astlist then
+	 return nil, nil, msgs, leftover
+      else
+	 return syntax.transform0(astlist), astlist, msgs, leftover
+      end
    end
+
+   engine_module._set_defaults(rpl_parser, compile.compile0, 0, 0);
+   manifest = import("manifest")
+
+   process_input_file = import("process_input_file")
+   process_rpl_file = import("process_rpl_file")
+
+   assert(_G)
+   argparse = import("argparse")
+
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -120,7 +172,7 @@ end
 
 function create_rosie_engine()
    -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
-   load_module("rpl-parser")
+   rpl_parser = import("rpl-parser")		    -- !@# THIS WON'T WORK
    local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
    -- And make these the defaults for all new engines:
    engine_module._set_defaults(parse_and_explain, compile.compile0, 1, 0);
@@ -188,50 +240,21 @@ function create_file_functions()
    }
 end
 
-local co = require "coroutine"
-local function catch(f, ...)
-   local c = co.create(f)
-   local results = { co.resume(c, ...) }
-   if results[1] then
-      -- no errors
-      return table.unpack(results, 2)
-   end
-   -- error occurred
-   error(table.unpack(results, 2), 2)
-end
-local throw = co.yield
+local rosie_package = {}
 
--- catch/throw is overkill here, where a simple 'return' would do
-
-function main()
-   local rosie = {}
-   -- When rosie is loaded into Lua, such as for development, for using Rosie in Lua, or for
-   -- supporting the foreign function API, these internals are exposed through the rosie package table.  
-   rosie._env = _ENV
-   local function try (thunk)
-      local ok, msg = pcall(thunk)
-      if not ok then error(msg);		    -- throw?
-      else return msg; end			    -- only catching one return value
-   end
-   local function do_all()
-      try(setup_globals)
-      try(load_all)
-      assert(module, "modules failed to load")
-      rosie._module = module
-      try(create_core_engine)
-      try(create_rosie_engine)
-      try(populate_info)
-      rosie.engine = engine
-      rosie.file = try(create_file_functions)
-      rosie.encoders = try(create_encoder_table)
-      rosie.info = function(...) return ROSIE_INFO; end
-   end
-   err = catch(do_all)
-   if err then print(err); end
-   return rosie
-end
+rosie_package._env = _ENV
+setup_globals()
+load_all()
+create_core_engine()
+create_rosie_engine()
+populate_info()
+rosie_package.engine = engine
+rosie_package.file = create_file_functions()
+rosie_package.encoders = create_encoder_table()
+rosie_package.info = function(...) return ROSIE_INFO; end
 
 collectgarbage("setpause", 194)
 
-return main()
+return rosie_package
+
 

@@ -7,6 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
+local string = require "string"
 local common = require "common"
 local list = require "list"
 

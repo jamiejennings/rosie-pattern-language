@@ -14,6 +14,7 @@
 -- compiler.  (In other words, the interpreter called 'eval' should have the same semantics as the
 -- compiler.)  Toward that end, functions internal to the compiler are used liberally here.
 
+local string = require "string"
 local environment = require "environment"	    -- TEMPORARY
 local lookup = environment.lookup
 local boundary = environment.boundary

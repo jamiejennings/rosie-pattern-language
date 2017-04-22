@@ -36,29 +36,30 @@ ROSIE_COMMAND = str:sub(1,-1)                                        -- Remove t
 table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 
 -- Start the Rosie Pattern Engine
+loader, msg = loadfile(ROSIE_HOME .. "/submodules/lua-modules/submodule.lua", "t")
+if not loader then error("Error loading module system: " .. msg); end
+mod = loader(); package.loaded.submodule = mod;
+rosie_mod = mod.new("rosie", ROSIE_HOME, 
+		    "lib",						       -- .luac
+		    "src/core;src;submodules/lua-modules;submodules/argparse/src", -- .lua
+		    "lib")						       -- .so
+mod.import("submodule", rosie_mod)
+rosie = mod.import("init", rosie_mod)
+package.loaded.rosie = rosie
 
-rosie = false;				    -- must be GLOBAL so repl can use it
-local thunk, msg = loadfile(ROSIE_HOME .. "/lib/init.luac", "b")
-if not thunk then
-   io.stderr:write("Warning: compiled Rosie files not available, loading from source\n")
-   rosie = dofile(ROSIE_HOME.."/src/core/init.lua")
-else
-   rosie = thunk()
-   if not rosie then
-      msg = arg[0] .. ": corrupt compiled lua file lib/init.luac\n"
-      if ROSIE_DEV then error(msg)
-      else io.write(msg, "\n"); os.exit(-1); end
-   end
-end
-assert(type(rosie)=="table", "Return value from init was not the rosie module (a table)")
+assert(type(rosie_mod)=="table", "Return value from init was not the rosie module (a table)")
+
+ROSIE_VERSION = rosie_mod.env.ROSIE_VERSION
 
 function open_modules()
-   engine_module = assert(require("engine_module"), "failed to load engine_module")
+   engine_module = assert(rosie_mod.env.engine_module, "failed to load engine_module")
    engine = assert(engine_module.engine, "engine not defined")
-   argparse = assert(require("argparse"), "failed to load argparse")
-   common = assert(require("common"))
-   json = assert(require("cjson"))
-   list = assert(require("list"))
+   argparse = assert(rosie_mod.env.argparse, "failed to load argparse")
+   common = assert(rosie_mod.env.common)
+   json = assert(rosie_mod.env.cjson)
+   list = assert(rosie_mod.env.list)
+   environment = assert(rosie_mod.env.environment)
+   lpeg = assert(rosie_mod.env.lpeg)
 end
 
 ok, msg = pcall(open_modules)
@@ -354,7 +355,7 @@ local function run(args)
    end
 
    if args.command == "repl" then
-      repl_mod = load_module("repl")
+      repl_mod = mod.import("repl", rosie_mod)
       if not args.verbose then greeting(); end
       repl_mod.repl(CL_ENGINE)
       os.exit()

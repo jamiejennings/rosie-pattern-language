@@ -1,19 +1,21 @@
 ---- -*- Mode: Lua; -*- 
 ----
----- test-api.lua
+---- api-test.lua
 ----
----- (c) 2016, Jamie A. Jennings
+---- (c) 2016, 2017, Jamie A. Jennings
 ----
 
 -- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
 assert(ROSIE_HOME, "ROSIE_HOME is not set?")
 assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
+import = rosie._env.import
 if not test then
-   test = load_module("test-functions", "src")
+   test = import("test")
 end
 
-json = rosie._module.loaded.cjson
-environment = rosie._module.loaded.environment
+lpeg = rosie._env.lpeg
+json = rosie._env.cjson
+environment = rosie._env.environment
 lookup = environment.lookup
 
 check = test.check
@@ -29,7 +31,7 @@ test.start(test.current_filename())
 ----------------------------------------------------------------------------------------
 heading("Load the api")
 ----------------------------------------------------------------------------------------
-api = load_module("api", "src")
+api = import("api")
 check(type(api)=="table")
 
 ---------------------------------------------------------------------------------------------------
@@ -131,6 +133,7 @@ check(not ok)
 check(msg:find("not a string", 1, true))
 ok, msg = wapi.load("foo")
 check(not ok)
+print("***", ok, msg)
 check(msg:find("Compile error: reference to undefined identifier: foo"))
 ok, msg = wapi.load('foo = "a"')
 check(ok)

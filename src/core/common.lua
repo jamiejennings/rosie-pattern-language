@@ -6,12 +6,14 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-local lpeg = require "lpeg"
-local util = require "util"
-local recordtype = require "recordtype"
+local lpeg = import "lpeg"
+local util = import "util"
+local recordtype = import "recordtype"
+local string = import "string"
+local table = import "table"
 
 -- REMOVED os dependency in v1-tranche-2
---local os = require "os"
+--local os = import "os"
 
 local common = {}				    -- interface
 

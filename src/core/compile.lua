@@ -6,7 +6,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-
+local string = require "string"
+local coroutine = require "coroutine"
 local common = require "common"
 local pattern = common.pattern
 local lpeg = require "lpeg"

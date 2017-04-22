@@ -5,6 +5,7 @@
 ---- (c) 2016, Jamie A. Jennings
 ----
 
+local table = require "table"
 local common = require "common"			    -- AST functions
 local list = require "list"
 

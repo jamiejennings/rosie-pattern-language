@@ -10,6 +10,7 @@ local repl = {}
 
 -- N.B. 'rosie' is a global defined by init and loaded by cli.lua, which calls the repl
 
+local rosie = require "rosie"
 local common = require "common"
 local environment = require "environment"
 local readline = require "readline"

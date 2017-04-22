@@ -7,6 +7,8 @@
 ---- AUTHOR: Jamie A. Jennings
 
 
+local string = require "string"
+local table = require "table"
 local common = require "common"
 local rmatch = common.rmatch
 

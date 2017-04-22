@@ -11,6 +11,10 @@
 -- debugging.  Only the functions that end up in the api table (returned by this code) will become
 -- part of the external API.
 
+io = require "io"
+debug = require "debug"
+rosie = require "rosie"
+
 if ROSIE_DEV then
    -- This file is being loaded into a Rosie development environment, so rosie is available:
    assert(type(rosie)=="table", "The rosie package is not loaded?!  rosie=" .. tostring(rosie))
@@ -19,7 +23,7 @@ else
    rosie = require "rosie"
 end
 
-json = rosie._module.loaded.cjson
+json = rosie._env.cjson
 
 ROSIE_INFO = rosie.info()
 ROSIE_HOME = ROSIE_INFO.ROSIE_HOME

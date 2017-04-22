@@ -6,7 +6,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-
+local io = require "io"
+local table = require "table"
 local util = require "util"
 local common = require "common"
 local engine_module = require "engine_module"

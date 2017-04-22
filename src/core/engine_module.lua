@@ -81,6 +81,8 @@
 
 local engine_module = {}
 
+local string = require "string"
+
 local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local common = require "common"
