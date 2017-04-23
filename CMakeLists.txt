@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(rosie)
 
-set(CMAKE_DEBUG_TARGET_PROPERTIES
-  COMPILE_DEFINITIONS
-  POSITION_INDEPENDENT_CODE
-)
+# set(CMAKE_DEBUG_TARGET_PROPERTIES
+#   COMPILE_DEFINITIONS
+#   POSITION_INDEPENDENT_CODE
+# )
 
 # {{{ Helper cmake modules
 # Include FindReadline.cmake
@@ -367,6 +367,7 @@ message(STATUS "Processing rosie core files")
 
 file(GLOB CORE_LUA ${CMAKE_SOURCE_DIR}/src/core/*.lua)
 list(APPEND CORE_LUA ${LUAMODULES_DIR}/recordtype.lua
+	    	     ${LUAMODULES_DIR}/submodule.lua
 	    	     ${LUAMODULES_DIR}/list.lua
 		     ${LUAMODULES_DIR}/termcolor.lua
 		     ${LUAMODULES_DIR}/test.lua)

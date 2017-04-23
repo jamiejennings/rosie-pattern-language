@@ -36,8 +36,11 @@ ROSIE_COMMAND = str:sub(1,-1)                                        -- Remove t
 table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 
 -- Start the Rosie Pattern Engine
-loader, msg = loadfile(ROSIE_HOME .. "/submodules/lua-modules/submodule.lua", "t")
-if not loader then error("Error loading module system: " .. msg); end
+loader, msg = loadfile(ROSIE_HOME .. "/lib/submodule.luac", "b")
+if not loader then
+   loader, msg = loadfile(ROSIE_HOME .. "/submodules/lua-modules/submodule.lua", "t")
+   if not loader then error("Error loading module system: " .. msg); end
+end
 mod = loader(); package.loaded.submodule = mod;
 rosie_mod = mod.new("rosie", ROSIE_HOME, 
 		    "lib",						       -- .luac
@@ -321,15 +324,13 @@ end
 
 local function run(args)
    if not args.command then
-      greeting()
-      if ROSIE_DEV then return
+      if ROSIE_DEV then greeting(); return
       else
-	 print("Error: a command is required (the 'help' command may be useful)")
+	 print("Usage: rosie command|help [options] pattern file [...])")
 	 os.exit(-1)
       end
    end
    if (args.command=="info") or (args.command=="help") then
-      greeting()
       if args.command=="info" then
 	 print_rosie_info()
       else
