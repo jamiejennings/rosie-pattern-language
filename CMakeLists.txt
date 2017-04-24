@@ -393,7 +393,7 @@ message(STATUS "Processing installation rules")
 # generate run-rosie
 file(WRITE ${BUILD_BIN_DIR}/rosie
 "#!/usr/bin/env bash
-exec ${ROSIE_INSTALL_BASE_DIR}/src/run-rosie ${ROSIE_INSTALL_BASE_DIR} \"$@\"")
+exec ${ROSIE_INSTALL_BASE_DIR}/lib/run-rosie ${ROSIE_INSTALL_BASE_DIR} \"$@\"")
 
 install(TARGETS lua-bin luac
 	DESTINATION ${ROSIE_INSTALL_BIN_DIR}
