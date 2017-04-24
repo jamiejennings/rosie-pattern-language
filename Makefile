@@ -173,12 +173,10 @@ lib/readline.so: $(readline_lib)
 $(READLINE_DIR)/readline.so:
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUA_INCLUDE_DIR=../$(LUA)/include
 
-compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so
-
 $(EXECROSIE): compile
 	@/usr/bin/env echo "Creating $(EXECROSIE)"
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(EXECROSIE)"
-	@/usr/bin/env echo -n "$(HOME)/src/run-rosie $(HOME)" >> "$(EXECROSIE)"
+	@/usr/bin/env echo -n "$(HOME)/lib/run-rosie $(HOME)" >> "$(EXECROSIE)"
 	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
 	@chmod 755 "$(EXECROSIE)"
 
@@ -188,14 +186,21 @@ lib/list.luac: $(LUAMOD_DIR)/list.lua bin/luac
 lib/recordtype.luac: $(LUAMOD_DIR)/recordtype.lua bin/luac
 	bin/luac -o $@ $<
 
+lib/submodule.luac: $(LUAMOD_DIR)/submodule.lua bin/luac
+	bin/luac -o $@ $<
+
 lib/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 
+lib/run-rosie:
+	mkdir -p lib
+	@cp src/run-rosie lib
+
 core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
-other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac
+other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac
 luaobjects := $(core_objects) $(other_objects)
 
-compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so
+compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so lib/run-rosie
 
 # The PHONY declaration below will force the creation of bin/rosie every time.  This is needed
 # only because the user may move the working directory.  When that happens, the user should
@@ -205,20 +210,20 @@ compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so
 $(ROSIEBIN): compile
 	@/usr/bin/env echo "Creating $(ROSIEBIN)"
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(ROSIEBIN)"
-	@/usr/bin/env echo -n "exec $(BUILD_ROOT)/src/run-rosie $(BUILD_ROOT)" >> "$(ROSIEBIN)"
+	@/usr/bin/env echo -n "exec $(BUILD_ROOT)/lib/run-rosie $(BUILD_ROOT)" >> "$(ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(ROSIEBIN)"
 	@chmod 755 "$(ROSIEBIN)"
 	@/usr/bin/env echo "Creating $(BUILD_LUA_PACKAGE)"
-	@/usr/bin/env echo "local home =  \"$(BUILD_ROOT)\"" > "$(BUILD_LUA_PACKAGE)"
+	@/usr/bin/env echo "local ROSIE_HOME =  \"$(BUILD_ROOT)\"" > "$(BUILD_LUA_PACKAGE)"
 	@cat "$(BUILD_ROOT)/src/rosie-package-template.lua" >> "$(BUILD_LUA_PACKAGE)"
 
 # See comment above re: ROSIEBIN
 .PHONY: $(INSTALL_ROSIEBIN)
 $(INSTALL_ROSIEBIN):
 	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
-	mkdir -p `dirname "$(INSTALL_ROSIEBIN)"` "$(ROSIED)"/{bin,src}
+	mkdir -p `dirname "$(INSTALL_ROSIEBIN)"` "$(ROSIED)"/bin
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo -n "exec $(ROSIED)/src/run-rosie $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo -n "exec $(ROSIED)/lib/run-rosie $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(INSTALL_ROSIEBIN)"
 	cp "$(BUILD_ROOT)"/src/run-rosie "$(ROSIED)"/src
 	@chmod 755 "$(INSTALL_ROSIEBIN)"
@@ -241,12 +246,11 @@ install_metadata:
 	mkdir -p "$(ROSIED)"
 	cp CHANGELOG CONTRIBUTORS LICENSE README VERSION MANIFEST "$(ROSIED)"
 
-# Install the needed lua source files
-.PHONY: install_lua_src
-install_lua_src:
-	mkdir -p "$(ROSIED)"/src
-	@cp src/cli.lua "$(ROSIED)"/src
-#	@cp src/strict.lua "$(ROSIED)"/src
+# Install the real run script
+.PHONY: install_run_script
+install_run_script:
+	mkdir -p "$(ROSIED)"/lib
+	@cp src/run-rosie "$(ROSIED)"/lib
 
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
@@ -257,14 +261,13 @@ install_luac_bin:
 # Install the provided RPL patterns
 .PHONY: install_rpl
 install_rpl:
-	mkdir -p "$(ROSIED)"/{src,rpl}
+	mkdir -p "$(ROSIED)"/src
 	cp -r rpl "$(ROSIED)"/
-#	cp src/rpl-core.rpl "$(ROSIED)"/src
 
 # Main install rule
 .PHONY: install
 install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
-	 install_lua_src install_luac_bin install_rpl
+	install_run_script install_luac_bin install_rpl
 	@echo 
 	@echo TO TEST THE INSTALLATION: make installtest
 	@echo TO UNINSTALL: remove one directory and several files/links, e.g.
