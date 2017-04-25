@@ -81,8 +81,18 @@ local function print_rosie_info()
    local function printf(fmt, ...)
       print(string.format(fmt, ...))
    end
-   local fmt = "%15s = %s"
+   local fmt = "%20s = %s"
    for _,info in ipairs(ROSIE_INFO) do printf(fmt, info.name, info.value); end
+   local log = io.open(ROSIE_HOME .. "/build.log", "r")
+   if log then
+      print()
+      local line = log:read("l")
+      while line do
+	 local name, val = line:match('([^ ]+) (.*)')
+	 printf(fmt, name, val)
+	 line = log:read("l")
+      end
+   end
 end
 
 local function greeting()

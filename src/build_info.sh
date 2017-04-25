@@ -3,10 +3,11 @@
 dir=$1
 cc=$2
 
-echo "DATE $(date)"
-echo "USER $(whoami)"
-echo "REPORTED_PLATFORM $((uname -o || uname -s) 2> /dev/null)"
-echo "PLATFORM_DETAILS $((uname -a) 2> /dev/null)"
+echo "BUILD_DATE $(date)"
+echo "BUILD_USER $(whoami)"
+echo "BUILD_PLATFORM $((uname -o || uname -s) 2> /dev/null)"
+echo "BUILD_PLATFORM_VER $((uname -r) 2> /dev/null)"
+echo "BUILD_PLATFORM_HW $((uname -m) 2> /dev/null)"
 echo "COMPILER $cc"
 
 if [ ! -d "$dir" ]; then
