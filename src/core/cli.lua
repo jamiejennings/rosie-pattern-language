@@ -53,6 +53,7 @@ package.loaded.rosie = rosie
 assert(type(rosie_mod)=="table", "Return value from init was not the rosie module (a table)")
 
 ROSIE_VERSION = rosie_mod.env.ROSIE_VERSION
+ROSIE_INFO = rosie_mod.env.ROSIE_INFO
 
 function open_modules()
    engine_module = assert(rosie_mod.env.engine_module, "failed to load engine_module")
