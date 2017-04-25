@@ -65,7 +65,7 @@ if type(info)=="table" then
    -- ensure that some key entries are in the table
    check(type(info.ROSIE_VERSION)=="string")
    check(type(info.ROSIE_HOME)=="string")
-   check(type(info.ROSIE_ROOT)=="string")
+   check(type(info.ROSIE_LIB)=="string")
    check(type(info.ROSIE_DEV)=="string")
    check(info.ROSIE_DEV=="true")
    check(info.RPL_VERSION=="1.0")
