@@ -119,7 +119,7 @@ elseif(UNIX)
 set_property(
     TARGET lua-lib
     APPEND_STRING
-    PROPERTY COMPILE_FLAGS " -DLUA_USE_MACOSX")
+    PROPERTY COMPILE_FLAGS " -DLUA_USE_LINUX")
 endif()
 
 # Create lua executable
@@ -366,14 +366,14 @@ list(APPEND COMPILED_LUA_FILES argparse.luac)
 message(STATUS "Processing rosie core files")
 
 file(GLOB CORE_LUA ${CMAKE_SOURCE_DIR}/src/core/*.lua)
-list(APPEND CORE_LUA ${LUAMODULES_DIR}/recordtype.lua
-	    	     ${LUAMODULES_DIR}/submodule.lua
-	    	     ${LUAMODULES_DIR}/list.lua
-		     ${LUAMODULES_DIR}/termcolor.lua
-		     ${LUAMODULES_DIR}/test.lua)
-
+list(APPEND CORE_LUA
+        ${LUAMODULES_DIR}/recordtype.lua
+        ${LUAMODULES_DIR}/submodule.lua
+        ${LUAMODULES_DIR}/list.lua
+        ${LUAMODULES_DIR}/termcolor.lua
+${LUAMODULES_DIR}/test.lua)
 add_custom_target(core-rosie ALL
-	DEPENDS luac)
+        DEPENDS luac)
 foreach(lua_file ${CORE_LUA})
 	get_filename_component(lname ${lua_file} NAME)
 	add_custom_command(
