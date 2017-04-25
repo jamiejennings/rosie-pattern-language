@@ -12,12 +12,19 @@
 -- 
 -- ROSIE_HOME indicates from where this executing instance of rosie is running.  It will
 --            typically be a system location like /usr/local/lib/rosie, but could also
---            be any local rosie install directory, like ~/rosie.  Code and other non-RPL
---            artifacts are found via ROSIE_HOME.
--- ROSIE_ROOT is the variable that the rosie code uses to find the standard RPL library.
---            Unless the user supplies a different value (by setting the environment
---            variable ROSIE_ROOT), the value is the set to ROSIE_HOME.  This is the ONLY
---            configuration parameter that the user can control via the environment.
+--            be any local rosie install directory, like ~/rosie.  In the filesystem at
+--            ROSIE_HOME are: 
+--              ROSIE_HOME/rpl the rosie standard library
+--              ROSIE_HOME/bin executables
+--              ROSIE_HOME/lib files needed by executables
+--              ROSIE_HOME/doc documentation
+--              ROSIE_HOME/man man pages (documentation in the unix style)
+--
+-- ROSIE_LIB is the variable that the rosie code uses to find the standard RPL library.
+--           Unless the user supplies a different value (by setting the environment
+--           variable ROSIE_LIB), the value is the set to ROSIE_HOME/rpl.  This is currently
+--           the ONLY configuration parameter that the user can control via the environment.
+--
 -- ROSIE_DEV  will be true iff rosie is running in "development mode".  Certain errors
 --            that are normally fatal will instead return control to the Lua interpreter
 --            (after being signaled) when in development mode.
@@ -56,15 +63,15 @@ function setup_globals()
    -- true so that rosie errors do not invoke os.exit().
    ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
    ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
-   -- The location of the Rosie standard library (of patterns) is ROSIE_ROOT/rpl.
-   -- And compiled Rosie packages are stored in ROSIE_ROOT/pkg.
+   -- The location of the Rosie standard library (of patterns) is ROSIE_LIB/rpl.
+   -- And compiled Rosie packages are stored in ROSIE_LIB/pkg.
    --
-   -- ROSIE_ROOT = ROSIE_HOME by default.  The user can override the default by setting the
-   -- environment variable $ROSIE_ROOT to point somewhere else.
-   ROSIE_ROOT = ROSIE_HOME
-   local ok, value = pcall(os.getenv, "ROSIE_ROOT")
-   if (not ok) then error('Internal error: call to os.getenv(ROSIE_ROOT)" failed'); end
-   if value then ROSIE_ROOT = value; end
+   -- ROSIE_LIB = ROSIE_HOME by default.  The user can override the default by setting the
+   -- environment variable $ROSIE_LIB to point somewhere else.
+   ROSIE_LIB = ROSIE_HOME
+   local ok, value = pcall(os.getenv, "ROSIE_LIB")
+   if (not ok) then error('Internal error: call to os.getenv(ROSIE_LIB)" failed'); end
+   if value then ROSIE_LIB = value; end
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -198,7 +205,7 @@ function populate_info()
       {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
       {name="ROSIE_VERSION", value=ROSIE_VERSION,                       desc="version of rosie installed"},
       {name="RPL_VERSION",   value=tostring(ROSIE_ENGINE._rpl_version), desc="version of rpl (language) accepted"},
-      {name="ROSIE_ROOT",    value=tostring(ROSIE_ROOT),                desc="root of the standard rpl library"},
+      {name="ROSIE_LIB",     value=tostring(ROSIE_LIB),                 desc="location of the standard rpl library"},
       {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),                 desc="true if rosie was started in development mode"},
       {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "",         desc="host on which rosie is running"},
       {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},
