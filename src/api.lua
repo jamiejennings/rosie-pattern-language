@@ -27,10 +27,10 @@ json = rosie._env.cjson
 
 ROSIE_INFO = rosie.info()
 ROSIE_HOME = ROSIE_INFO.ROSIE_HOME
-ROSIE_ROOT = ROSIE_INFO.ROSIE_ROOT
+ROSIE_LIB = ROSIE_INFO.ROSIE_LIB
 
 assert(ROSIE_HOME, "The path to the Rosie installation, ROSIE_HOME, is not set")
-assert(ROSIE_ROOT, "The path to the Rosie standard library, ROSIE_ROOT, is not set")
+assert(ROSIE_LIB, "The path to the Rosie standard library, ROSIE_LIB, is not set")
 
 ----------------------------------------------------------------------------------------
 
