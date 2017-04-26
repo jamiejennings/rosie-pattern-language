@@ -1,0 +1,62 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- date.rpl    Common date patterns in Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+--
+-- RFC3339
+--
+
+--   date-fullyear   = 4DIGIT
+--   date-month      = 2DIGIT  ; 01-12
+--   date-mday       = 2DIGIT  ; 01-28, 01-29, 01-30, 01-31 based on
+--                             ; month/year
+--   time-hour       = 2DIGIT  ; 00-23
+--   time-minute     = 2DIGIT  ; 00-59
+--   time-second     = 2DIGIT  ; 00-58, 00-59, 00-60 based on leap second
+--                             ; rules
+--   time-secfrac    = "." 1*DIGIT
+--   time-numoffset  = ("+" / "-") time-hour ":" time-minute
+--   time-offset     = "Z" / time-numoffset
+--
+--   partial-time    = time-hour ":" time-minute ":" time-second
+--                     [time-secfrac]
+--   full-date       = date-fullyear "-" date-month "-" date-mday
+--   full-time       = partial-time time-offset
+--
+--   date-time       = full-date "T" full-time
+--
+-- Notes:
+-- T and Z may be lowercase.
+-- The "T" separator in the date-time rule can be a space instead.
+
+--import core (for digit)
+-- local until import
+alias date.d = [:digit:]
+
+-- RFC3339 patterns
+date.year = date.d{4,4}
+
+date.month = { {"0" [1-9]} / {"1" [0-2]} }
+
+date.day = {  {"0" [1-9]}		-- single digit dates
+            / {[12][0-9]}		-- most of the two digit dates
+            / {"3" [01]} }		-- and the rest
+
+date.full = { date.year "-" date.month "-" date.day }
+date.date = { date.year "-" date.month "-" date.day }
+
+-- RFC2822 + alternatives
+date.day.shortname = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
+date.day.longname = "Monday" / "Tuesday" / "Wendesday" / "Thursday" / "Friday" / "Saturday" / "Sunday"
+date.day.name = { date.day.shortname / date.day.longname }
+date.month.shortname = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
+date.month.longname = "January" / "February" / "March" / "April" / "May" / "June" / "July" / "August" / "September" / "October" / "November" / "December"
+date.month.name = { date.month.shortname / date.month.longname }
+
+date.altday = date.d{1,2}
+date.altdate = ( date.day.shortname "," )? date.altday date.month.shortname date.year

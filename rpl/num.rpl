@@ -1,0 +1,50 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- common.rpl   Common patterns in Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+rpl 1.0
+
+alias num.digit = [:digit:]
+alias num.hex_letter = { [[a-f][A-F]] }
+alias num.hex_digit = { num.digit / num.hex_letter }
+--alias num.hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
+
+num.int = { [+-]? num.digit+ !num.hex_letter}	     -- at least one digit, and not a hex number
+-- test num.int accepts "34", "+34", "-34"
+-- test num.int rejects "BEEF", "0x20"
+
+num.frac = { [.] num.digit+ }
+-- test num.frac accepts ".0", ".01", ".3210009831", ".1"
+-- test num.exp rejects "0.", "1.1", "-.1"
+
+num.mantissa = { [+-]? num.digit+ "." num.digit+ }  -- float with digits on either side of radix
+-- test num.mantissa accepts "1.23", "+1.23", "-1.23"
+-- test num.mantissa rejects "12", "bob", "1."
+
+num.exp = { [eE] [+-]? num.digit+ }
+-- test num.exp accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
+-- test num.exp rejects "e0.", "e0a", "e+-10", "Ef"
+
+num.float = { num.mantissa num.exp? } 
+-- test num.float accepts "6.02e23", "3.00E08", "0.123", "-2.0", "-2.0e1", "0.456e-101"
+-- test num.float rejects "6.02F23", "3.00E--08", "123"
+-- test num.float accepts "-1.32", "6.02E23", "+0.314e1"
+-- test num.float rejects "0x01", "--2", "a", "-1", "+0"
+
+num.hex = num.hex_digits+ 		     --  use with care! will match words and decimal numbers
+-- test num.hex accepts "BEEF", "f4c3b00c"
+-- test num.hex rejects "0xBEEF", "Facebook"
+
+num.denoted_hex = { "0x" num.hex }
+-- test num.denoted_hex accepts "0xBEEF", "0x20"
+-- test num.denoted_hex rejects "BEEF", "0x2o"
+
+-- N.B. signed_number matches the JSON spec for numbers
+alias num.signed_number = (num.float / num.int)
+num.any =  (num.denoted_hex /  num.float / num.int / num.hex)
+-- test num.any accepts "0", "01", "-1", "-1.0", "+1", "+0", "+0.0", "-0.3e+1", "+1.1E-1", "0x1a", "face"

@@ -1,0 +1,19 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- core.rpl     Rosie Pattern Language core patterns
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Kevin Zander
+
+letter = [:alpha:]
+letter_lower = [:lower:]
+letter_upper = [:upper:]
+
+digit = [:digit:]
+hex_digit = [:xdigit:]
+
+alnum = [:alnum:]
+
+punct = [:punct:]
