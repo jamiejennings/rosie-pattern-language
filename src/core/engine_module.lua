@@ -171,7 +171,7 @@ local function _engine_match(e, pat, input, start, total_time_accum, lpegvm_time
    local result, nextpos
    local encode = e.encode_function
    result, nextpos, total_time_accum, lpegvm_time_accum =
-      rmatch(pat.tlpeg,
+      rmatch(pat.peg,
 	     input,
 	     start,
 	     type(encode)=="number" and encode,

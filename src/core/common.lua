@@ -327,7 +327,6 @@ common.pattern =
 		  { name=recordtype.NIL; -- for reference, debugging
 		    peg=recordtype.NIL;	 -- lpeg pattern
 		    uncap=false;	 -- peg without the top-level capture
-		    tlpeg=false;	 -- top-level peg: tlpeg == peg * lpeg.Cp() 
 		    alias=false;	 -- is this an alias or not
 		    raw=false;		 -- true if the exp was raw at top level
 		    ast=false;		 -- ast that generated this pattern, for pattern debugging

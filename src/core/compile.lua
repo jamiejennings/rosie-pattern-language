@@ -55,7 +55,6 @@ local function make_compile(compile_astlist)
 		   assert(type(messages)=="table")
 		   for i, pat in ipairs(results) do
 		      pat.original_ast = original_astlist[i];
-		      pat.tlpeg = pat.peg -- * lpeg.Cp()   TODO: no longer need tlpeg
 		   end
 		   return results, messages		    -- message may contain compiler warnings
 		else
@@ -112,7 +111,6 @@ local function make_compile_expression(expression_p, compile)
 		-- label it "*" since that can't be an identifier name.
 		result.peg = common.match_node_wrap(result.peg, "*")
 	     end
-	     result.tlpeg = result.peg -- * lpeg.Cp()   TODO: no longer need tlpeg
 	     return result, {}				    -- N.B. returns a single pattern and messages
 	  end
 end

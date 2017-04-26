@@ -50,7 +50,7 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    local encoder = e.encode_function		    -- optimization
    local built_in_encoder = type(encoder)=="number" and encoder
    if built_in_encoder then encoder = false; end
-   local peg = r._pattern.tlpeg			    -- optimization
+   local peg = r._pattern.peg			    -- optimization
    local matcher = function(input, start)
 		      return rmatch(peg, input, start, built_in_encoder)
 		   end                              -- TODO: inline this for performance
