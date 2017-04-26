@@ -6,6 +6,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+test.start(test.current_filename())
+
 -- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
 assert(ROSIE_HOME, "ROSIE_HOME is not set?")
 assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
@@ -32,8 +34,6 @@ else
 end
 print("Found rosie executable: " .. rosie_cmd)
 
-test.start(test.current_filename())
-
 infilename = "/tmp/rosietestinputfile"
 
 input = [[
@@ -55,6 +55,9 @@ f:write(input)
 f:close()
 
 print("Input file (" .. infilename .. ") created successfully")
+
+---------------------------------------------------------------------------------------------------
+test.heading("Match and grep commands")
 
 function run(expression, grep_flag, expectations)
    test.heading(expression)
@@ -159,6 +162,9 @@ check(results, "Expression on command line can contain [[.,.]]") -- command succ
 check(code==0, "Return code is zero")
 check(results[#results]:sub(-9):find("patterns")==1)
 
+---------------------------------------------------------------------------------------------------
+test.heading("Test command")
+
 print("\nSniff test of the lightweight test facility (MORE TESTS LIKE THIS ARE NEEDED)")
 -- Passing tests
 cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-pass.rpl"
@@ -185,5 +191,34 @@ lines = split(results[1], "\n")
 check(lines[#lines]=="")
 check(lines[#lines-1]:find("FAIL"))
 check(lines[#lines-2]:find("FAIL"))
+
+---------------------------------------------------------------------------------------------------
+test.heading("Info command")
+
+cmd = rosie_cmd .. " info"
+print(); print(cmd)
+results, status, code = util.os_execute_capture(cmd, nil)
+check(results, "info command succeeded")
+check(code==0, "Return code is zero")
+-- check for a few of the items displayed by the info command
+check(results[1]:find("ROSIE_HOME"))      
+check(results[1]:find("ROSIE_VERSION"))      
+check(results[1]:find("ROSIE_COMMAND"))      
+check(results[1]:find("BUILD_DATE"))      
+check(results[1]:find("GIT_BRANCH"))      
+check(results[1]:find("GIT_COMMIT"))      
+
+---------------------------------------------------------------------------------------------------
+test.heading("Help command")
+
+cmd = rosie_cmd .. " help"
+print(); print(cmd)
+results, status, code = util.os_execute_capture(cmd, nil)
+check(results, "command succeeded")
+check(code==0, "Return code is zero")
+check(results[1]:find("Usage:"))
+check(results[1]:find("Options:"))
+check(results[1]:find("Commands:"))
+
 
 return test.finish()
