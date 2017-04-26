@@ -385,12 +385,13 @@ end -- function run
 -- create Parser
 function create_arg_parser()
    parser = argparse("rosie", "Rosie " .. ROSIE_VERSION)
+   parser:add_help(false)
    parser:require_command(false)
    --:epilog("Additional information.")
    -- global flags/options can go here
    -- -h,--help is generated automatically
    -- usage message is generated automatically
-   parser:flag("-v --version", "Print rosie version")
+   parser:flag("--version", "Print rosie version")
    :action(function(args,_,exceptions)
 	      greeting()
 	      os.exit()
@@ -401,11 +402,11 @@ function create_arg_parser()
    parser:option("--manifest", "Load a manifest file (follow with a single dash '-' for none)")
    :default("$sys/MANIFEST")
    :args(1)
-   parser:option("--file", "Load an RPL file")
+   parser:option("-f --file", "Load an RPL file")
    :args(1)
    :count("*") -- allow multiple loads of a file
    :target("rpls") -- set name of variable index (args.rpls)
-   parser:option("-r --rpl", "Inline RPL statements")
+   parser:option("--rpl", "Inline RPL statements")
    :args(1)
    :count("*") -- allow multiple RPL statements
    :target("statements") -- set name of variable index (args.statements)
