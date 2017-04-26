@@ -12,6 +12,7 @@ local repl = {}
 
 local rosie = require "rosie"
 local common = require "common"
+local ui = require "ui"
 local environment = require "environment"
 local readline = require "readline"
 local lpeg = require "lpeg"
@@ -130,7 +131,7 @@ function repl.repl(en)
 	       if csubs then
 	          _,_,filter,_ = common.decode_match(csubs[1])
 	       end
-	       environment.print_env(env, filter)
+	       ui.print_env(env, filter)
 	    elseif cname=="clear" then
 	       if csubs and csubs[1] then
 		  local name, pos, id, subs = common.decode_match(csubs[1])

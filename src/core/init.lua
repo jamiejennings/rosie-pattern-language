@@ -113,6 +113,7 @@ function load_all()
    eval = import("eval")
    color_output = import("color-output")
    engine_module = import("engine_module")
+   ui = import("ui")
 
    engine = engine_module.engine
 
