@@ -32,7 +32,7 @@ common.frac = { [.] [0-9]+ }
 common.mantissa = { [+-]? digit+ "." digit+ }  -- float with digits on either side of radix
 -- test common.mantissa accepts "1.23", "+1.23", "-1.23"
 -- test common.mantissa rejects "12", "bob", "1."
-common.exp = { [eE] [+-]? common.int }
+common.exp = { [eE] common.int }
 -- test common.exp accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
 -- test common.exp rejects "e0.", "e0a", "e+-10", "Ef"
 common.float = { common.mantissa common.exp? } 
