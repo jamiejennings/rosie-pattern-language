@@ -186,6 +186,7 @@ local function setup_engine(args)
 end
 
 local function readable_file(fn)
+   if fn=="" then return true; end			    -- "" means standard input
    local f, msg = io.open(fn, "r")
    if not f then
       assert (type(msg)=="string")
@@ -221,7 +222,7 @@ local function process_pattern_against_file(args, infilename)
 
 	-- (4) Set up what kind of encoding we want done on the output
 	local default_encoder = (args.command=="grep") and "line" or "color"
-	set_encoder(args.encode or default_encoder)
+	set_encoder(args.encoder or default_encoder)
 
 	local ok, msg = readable_file(infilename)
 	if (args.verbose) or (#args.filename > 1) then
@@ -432,6 +433,7 @@ function create_arg_parser()
 	       return nil
 	    end)
    :args(1) -- consume argument after option
+   :target("encoder")
    
    -- target variable for commands
    parser:command_target("command")
