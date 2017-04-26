@@ -33,33 +33,41 @@ alias json.true = "true"
 alias json.false = "false"
 alias json.null = "null"
 
--- Here are two examples of JSON grammars.  The first, json.discard, matches JSON input but discards
+-- Here are two examples of JSON grammars.  The first, json.discard_value, matches JSON input but discards
 -- all the submatches.  If you need to match a JSON structure within some larger input, and capture
 -- it for later processing (including JSON decoding), then this is a convenient and efficient way to
 -- do it.
 -- 
--- The second grammar, json.json, includes all the submatches.  You can walk through the output,
+-- The second grammar includes all the submatches.  You can walk through the output,
 -- doing whatever needs to be done with each json.object, json.array, etc.
 
+-- Match against json.discard_value to capture a single json value of any kind, with no submatches
 grammar
-   alias json.discard = ~ json.value
+   alias json.discard_value = json.value
    alias json.value = json.string / json.number / json.object / json.array / json.true / json.false / json.null
    alias json.member = json.string ":" json.value
    alias json.object = "{" (json.member ("," json.member)*)? "}"
    alias json.array = "[" (json.value ("," json.value)*)? "]"
 end
 
+-- Match against json.value to capture a single json value of any kind
 grammar
-   alias json.json = ~ json.value
    alias json.value = json.string / json.number / json.object / json.array / json.true / json.false / json.null
    json.member = json.string ":" json.value
    json.object = "{" (json.member ("," json.member)*)? "}"
    json.array = "[" (json.value ("," json.value)*)? "]"
 end
 
+-- Match against json.json to consume a single json array or object
+json.json = ~ (@"{" / @"[") json.value
+
+-- Match against json.discard to capture a single json array or object with no submatches
+alias json.discard = ~ (@"{" / @"[") json.discard_value
+
+
 ---------------------------------------------------------------------------------------------------
 --
--- Match against 'json.discard' to capture a single json value with no submatches.  This is
+
 -- useful to simply eat up the JSON piece of a larger input, capturing it for later processing.
 --
 -- Match against 'json.json' to capture a single json value and keep all the submatches of
