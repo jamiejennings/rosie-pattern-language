@@ -11,13 +11,23 @@ local c0 = require "c0"
 
 local string = require "string"
 local lpeg = require "lpeg"
+local common = require "common"
+local decode_match = common.decode_match
 
 function c1.process_package_decl(ast, gmr, source, env)
-   print("->", "package = " .. ast.package_decl.subs[1].packagename.text)
+   local typ, pos, text, subs, fin = decode_match(ast)
+   assert(typ=="package_decl")
+   local typ, pos, text, subs, fin = decode_match(subs[1])
+   assert(typ=="packagename")
+   print("->", "package = " .. text)
 end
 
 function c1.process_language_decl(ast, gmr, source, env)
-   print("->", "language = " .. ast.language_decl.subs[1].version_spec.text:sub(1,-2))
+   local typ, pos, text, subs, fin = decode_match(ast)
+   assert(typ=="language_decl")
+   local typ, pos, text, subs, fin = decode_match(subs[1])
+   assert(typ=="version_spec")
+   print("->", "language = " .. text:sub(1,-2))
 end
 
 function c1.process_import_decl(ast, gmr, source, env)
