@@ -43,7 +43,7 @@ function run(cmd, expectations)
    for _,s in ipairs(results) do print("* " .. s); end
    local mismatch_flag = false;
    if expectations then
-      for i=1, #expectations do 
+      for i=2, #expectations do 		    -- skip 1st line which is greeting
 	 print(results[i])
 	 if expectations then
 	    if results[i]~=expectations[i] then print("Mismatch"); mismatch_flag = true; end
