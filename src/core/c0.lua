@@ -21,6 +21,7 @@ local locale = lpeg.locale()
 local util = import "util"
 local writer = import "writer"
 local common = import "common"
+local decode_match = common.decode_match
 local pattern = common.pattern
 
 local environment = import "environment"	    -- TEMPORARY
@@ -34,7 +35,7 @@ local bind = environment.bind
 
 local function explain_quantified_limitation(a, source, maybe_rule)
    assert(a, "did not get ast in explain_quantified_limitation")
-   local name, errpos, text = common.decode_match(a)
+   local name, errpos, text = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
    local msg = "Compile error: pattern with quantifier can match the empty string: " ..
@@ -47,7 +48,7 @@ end
 
 local function explain_repetition_error(a, source)
    assert(a, "did not get ast in explain_repetition_error")
-   local name, errpos, text = common.decode_match(a)
+   local name, errpos, text = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local min = tonumber(rep_args[1]) or 0
    local max = tonumber(rep_args[2])
@@ -61,7 +62,7 @@ end
 
 local function explain_undefined_identifier(a, source)
    assert(a, "did not get ast in explain_undefined_identifier")
-   local name, errpos, text = common.decode_match(a)
+   local name, errpos, text = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local msg = "Compile error: reference to undefined identifier: " .. text .. "\n" ..
       string.format("At line %d:\n", lnum) ..
@@ -72,7 +73,7 @@ end
 
 local function explain_undefined_charset(a, source)
    assert(a, "did not get ast in explain_undefined_charset")
-   local _, errpos, name, subs = common.decode_match(a)
+   local _, errpos, name, subs = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local msg = "Compile error: named charset not defined: " .. name .. "\n" ..
       string.format("At line %d:\n", lnum) ..
@@ -83,7 +84,7 @@ end
 
 local function explain_unknown_quantifier(a, source)
    assert(a, "did not get ast in explain_unknown_quantifier")
-   local name, errpos, text, subs = common.decode_match(a)
+   local name, errpos, text, subs = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local q = subs[2]				    -- IS THIS RIGHT?
    local msg = "Compile error: unknown quantifier: " .. q .. "\n" ..
@@ -95,7 +96,7 @@ end
 
 local function explain_grammar_error(a, source, message)
    assert(a, "did not get ast in explain_grammar_error")
-   local name, errpos, text = common.decode_match(a)
+   local name, errpos, text = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos(source, errpos)
    local maybe_rule = message:match("'%w'$")
    local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
@@ -128,7 +129,7 @@ end
 
 function c0.process_quantified_exp(a, gmr, source, env)
    assert(a, "did not get ast in process_quantified_exp")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    assert(name=="new_quantified_exp")
    local qpeg, min, max
    local append_boundary = true
@@ -147,7 +148,7 @@ function c0.process_quantified_exp(a, gmr, source, env)
    end
    local q = subs[2]
    assert(q, "not getting quantifier clause in process_quantified_exp")
-   local qname, qpos, qtext, qsubs = common.decode_match(q)
+   local qname, qpos, qtext, qsubs = decode_match(q)
    if qname=="plus" then
       if append_boundary then qpeg=(epeg * boundary)^1
       else qpeg=epeg^1; end
@@ -162,11 +163,11 @@ function c0.process_quantified_exp(a, gmr, source, env)
    elseif qname=="repetition" then
       assert(type(qsubs[1])=="table")
       assert(qsubs[1], "not getting min clause in process_quantified_exp")
-      local mname, mpos, mtext = common.decode_match(qsubs[1])
+      local mname, mpos, mtext = decode_match(qsubs[1])
       assert(mname=="low")
       min = tonumber(mtext) or 0
       assert(qsubs[2], "not getting max clause in process_quantified_exp")
-      local mname, mpos, mtext = common.decode_match(qsubs[2])
+      local mname, mpos, mtext = decode_match(qsubs[2])
       max = tonumber(mtext)
       if (min < 0) or (max and (max < 0)) or (max and (max < min)) then
 	 explain_repetition_error(a, source)
@@ -222,7 +223,7 @@ end
 -- rpl 1.0 parser produces literals that have the quotes in them
 function c0.compile_literal0(a, gmr, source, env)
    assert(a, "did not get ast in compile_literal0")
-   local name, pos, text = common.decode_match(a)
+   local name, pos, text = decode_match(a)
    assert(text:sub(1,1)=='"' and text:sub(-1,-1)=='"', "literal not in quotes: " .. text)
    local str = common.unescape_string(text:sub(2,-2))
    return pattern.new{name=name; peg=P(str); ast=a}
@@ -230,14 +231,14 @@ end
 
 function c0.compile_literal(a, gmr, source, env)
    assert(a, "did not get ast in compile_literal")
-   local name, pos, text = common.decode_match(a)
+   local name, pos, text = decode_match(a)
    local str = common.unescape_string(text)
    return pattern.new{name=name; peg=P(str); ast=a}
 end
 
 function c0.compile_ref(a, gmr, source, env)
    assert(a, "did not get ast in compile_ref")
-   local reftype, pos, name = common.decode_match(a)
+   local reftype, pos, name = decode_match(a)
    local pat = lookup(env,name)
    if (not pat) then explain_undefined_identifier(a, source); end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
@@ -246,7 +247,7 @@ end
 
 function c0.compile_predicate(a, gmr, source, env)
    assert(a, "did not get ast in compile_predicate")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    local peg = c0.compile_exp(subs[2], gmr, source, env).peg
    local pred_clause = subs[1]
    local pred_name = pred_clause.type
@@ -261,7 +262,7 @@ end
 -- Regarding debugging: the failure of subs[1] is fatal for a.
 function c0.compile_sequence(a, gmr, source, env)
    assert(a, "did not get ast in compile_sequence")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    local peg1, peg2
    peg1 = c0.compile_exp(subs[1], gmr, source, env).peg
    peg2 = c0.compile_exp(subs[2], gmr, source, env).peg
@@ -270,12 +271,12 @@ end
    
 function c0.compile_named_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_named_charset")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    local complement
    if subs then					    -- core parser won't produce subs
       complement = (subs[1].type=="complement")
       if complement then assert(subs[2] and (subs[2].type=="name")); end
-      name, pos, text, subs = common.decode_match((complement and subs[2]) or subs[1])
+      name, pos, text, subs = decode_match((complement and subs[2]) or subs[1])
    end
    if name=="named_charset0" then
       assert(text:sub(1,2)=="[:" and text:sub(-2,-1)==":]")
@@ -290,7 +291,7 @@ end
 
 function c0.compile_range_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_range_charset")
-   local rname, rpos, rtext, rsubs = common.decode_match(a)
+   local rname, rpos, rtext, rsubs = decode_match(a)
    assert(rsubs and rsubs[1])
    local complement = (rsubs[1].type=="complement")
    if complement then
@@ -300,8 +301,8 @@ function c0.compile_range_charset(a, gmr, source, env)
       assert(rsubs[1].type=="character")
       assert(rsubs[2] and (rsubs[2].type=="character"))
    end
-   local cname1, cpos1, ctext1 = common.decode_match(rsubs[(complement and 2) or 1])
-   local cname2, cpos2, ctext2 = common.decode_match(rsubs[(complement and 3) or 2])
+   local cname1, cpos1, ctext1 = decode_match(rsubs[(complement and 2) or 1])
+   local cname2, cpos2, ctext2 = decode_match(rsubs[(complement and 3) or 2])
    local peg = R(common.unescape_string(ctext1)..common.unescape_string(ctext2))
    return pattern.new{name=rname,
 		  peg=(complement and (1-peg)) or peg,
@@ -310,14 +311,14 @@ end
 
 function c0.compile_charlist(a, gmr, source, env)
    assert(a, "did not get ast in compile_charlist")
-   local clname, clpos, cltext, clsubs = common.decode_match(a)
+   local clname, clpos, cltext, clsubs = decode_match(a)
    local exps = "";
    assert((type(clsubs)=="table") and clsubs[1], "no sub-matches in charlist!")
    local complement = (clsubs[1].type=="complement")
    for i = (complement and 2) or 1, #clsubs do
       local v = clsubs[i]
       assert(v.type=="character", "did not get character sub in compile_charlist")
-      local cname, cpos, ctext = common.decode_match(v)
+      local cname, cpos, ctext = decode_match(v)
       exps = exps .. common.unescape_string(ctext)
    end
    return pattern.new{name=clname, peg=((complement and (1-S(exps))) or S(exps)), ast=a}
@@ -325,7 +326,7 @@ end
 
 function c0.compile_charset(a, gmr, source, env)
    assert(a, "did not get ast in compile_charset")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    if subs[1].type=="range" then
       return c0.compile_range_charset(subs[1], gmr, source, env)
    elseif subs[1].type=="charlist" then
@@ -339,7 +340,7 @@ end
 -- Regarding debugging... 'a' fails only if both alternatives fail
 function c0.compile_choice(a, gmr, source, env)
    assert(a, "did not get ast in compile_choice")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    local peg1 = c0.compile_exp(subs[1], gmr, source, env).peg
    local peg2 = c0.compile_exp(subs[2], gmr, source, env).peg
    return pattern.new{name=name, peg=(peg1+peg2), ast=a}
@@ -347,7 +348,7 @@ end
 
 function c0.compile_raw_exp(a, gmr, source, env)
    assert(a, "did not get ast in compile_raw_exp")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    assert(name=="raw_exp")
    assert(not subs[2])
    local pat = c0.compile_exp(subs[1], gmr, source, env)
@@ -361,13 +362,13 @@ end
 
 function c0.compile_grammar_expression(a, gmr, source, env)
    assert(a, "did not get ast in compile_grammar_expression")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    assert(name=="grammar_" or name=="new_grammar" or name=="grammar_expression")
    assert(type(subs[1])=="table")
    local gtable = environment.new(env)
    local first = subs[1]			    -- first rule in grammar
    assert(first, "not getting first rule in compile_grammar_expression")
-   local fname, fpos, ftext = common.decode_match(first)
+   local fname, fpos, ftext = decode_match(first)
    assert(fname=="binding")
 
    local rule, id_node, id, exp_node
@@ -376,11 +377,11 @@ function c0.compile_grammar_expression(a, gmr, source, env)
    for i = 1, #subs do			    -- for each rule
       local rule = subs[i]
       assert(rule, "not getting rule in compile_grammar_expression")
-      local rname, rpos, rtext, rsubs = common.decode_match(rule)
+      local rname, rpos, rtext, rsubs = decode_match(rule)
       assert(rname=="binding")
       local id_node = rsubs[1]			    -- identifier clause
       assert(id_node and id_node.type=="identifier")
-      local iname, ipos, id = common.decode_match(id_node)
+      local iname, ipos, id = decode_match(id_node)
       local exp_node = rsubs[2]
       assert(exp_node)
       local alias_flag = not rule.capture
@@ -393,10 +394,10 @@ function c0.compile_grammar_expression(a, gmr, source, env)
    for i = 1, #subs do			    -- for each rule
       rule = subs[i]
       assert(rule, "not getting rule in compile_grammar_expression")
-      local rname, rpos, rtext, rsubs = common.decode_match(rule)
+      local rname, rpos, rtext, rsubs = decode_match(rule)
       id_node = rsubs[1]			    -- identifier clause
       assert(id_node, "not getting id_node in compile_grammar_expression")
-      local iname, ipos, id, isubs = common.decode_match(id_node)
+      local iname, ipos, id, isubs = decode_match(id_node)
       if not start then start=id; end		    -- first rule is start rule
       exp_node = rsubs[2]			    -- expression clause
       assert(exp_node, "not getting exp_node in compile_grammar_expression")
@@ -431,23 +432,23 @@ function c0.compile_grammar(a, gmr, source, env)
 end
 
 function c0.expression_p(ast)
-   local name, pos, text, subs = common.decode_match(ast)
+   local name, pos, text, subs = decode_match(ast)
    return not (not c0.compile_exp_functions[name])
 end
 
 function c0.compile_capture(a, gmr, source, env)
    assert(a, "did not get ast in compile_capture")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    assert(name=="capture")
    assert(subs and subs[1] and subs[2] and (not subs[3]), "wrong number of subs in capture ast")
    local ref_exp, captured_exp = subs[1], subs[2]
-   local cap_name, cap_pos, cap_text, cap_subs = common.decode_match(captured_exp)
+   local cap_name, cap_pos, cap_text, cap_subs = decode_match(captured_exp)
    local pat
 
    assert(c0.expression_p(captured_exp),
 	  "compile_capture called with an ast that is not an expression: " .. captured_exp.type)
 
-   local refname, _, reftext, _ = common.decode_match(ref_exp)
+   local refname, _, reftext, _ = decode_match(ref_exp)
    assert(refname=="ref")
    assert(type(reftext)=="string")
 
@@ -505,14 +506,14 @@ end
 
 function c0.compile_binding(a, gmr, source, env)
    assert(a, "did not get ast in compile_binding")
-   local name, pos, text, subs = common.decode_match(a)
+   local name, pos, text, subs = decode_match(a)
    local lhs, rhs = subs[1], subs[2]
    assert(lhs.type=="identifier", "in c0.compile_binding, got: " .. tostring(lhs.type))
    assert(type(rhs)=="table")			    -- the right side of the assignment
    assert(not subs[3])
    assert(type(source)=="string")
    assert(a and (type(a.capture)=="boolean"))
-   local _, ipos, iname = common.decode_match(lhs)
+   local _, ipos, iname = decode_match(lhs)
    local pat = compile_rhs(rhs, gmr, source, env, iname)
    pat.alias = (not a.capture)
    local msg
