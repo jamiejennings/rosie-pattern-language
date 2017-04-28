@@ -1,0 +1,33 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- core.rpl     Rosie Pattern Language core patterns
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Kevin Zander
+
+letter = [:alpha:]
+-- test letter accepts "a", "x", "E", "T"
+-- test letter rejects "0", "+", "*", "~"
+letter_lower = [:lower:]
+-- test letter_lower accepts "a", "e", "i", "o"
+-- test letter_lower rejects "A", "E", "I", "O"
+letter_upper = [:upper:]
+-- test letter_upper accepts "A", "E", "I", "O"
+-- test letter_upper rejects "a", "e", "i", "o"
+
+digit = [:digit:]
+-- test digit accepts "1", "3", "7", "0"
+-- test digit rejects "a", "+", "*", ")"
+hex_digit = [:xdigit:]
+-- test hex_digit accepts "0", "7", "a", "A", "f", "F"
+-- test hex_digit rejects "G", "O", "~", "(", "%", "_"
+
+alnum = [:alnum:]
+-- test alnum accepts "a", "I", "0", "2"
+-- test alnum rejects "~", "#", "*", "_"
+
+punct = [:punct:]
+-- test punct accepts "~", "#", "(", "="
+-- test punct rejects "1", "a", "6", "B"
