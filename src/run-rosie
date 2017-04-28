@@ -45,8 +45,8 @@ export PWD
 
 CLI="$ROSIE_HOME/lib/cli.luac"
 if [[ ! -r $CLI ]]; then
-    CLI="$ROSIE_HOME/src/cli.lua"
-    echo "Loading from source"
+    CLI="$ROSIE_HOME/src/core/cli.lua"
+    >&2 echo "Loading from source"
 fi
 
 ${executable} $i "$CLI" "$ROSIE_HOME" "$dev" "$@"
