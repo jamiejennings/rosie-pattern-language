@@ -36,7 +36,7 @@ num.float = { num.mantissa num.exp? }
 -- test num.float accepts "-1.32", "6.02E23", "+0.314e1"
 -- test num.float rejects "0x01", "--2", "a", "-1", "+0"
 
-num.hex = num.hex_digits+ 		     --  use with care! will match words and decimal numbers
+num.hex = num.hex_digit+ 		     --  use with care! will match words and decimal numbers
 -- test num.hex accepts "BEEF", "f4c3b00c"
 -- test num.hex rejects "0xBEEF", "Facebook"
 

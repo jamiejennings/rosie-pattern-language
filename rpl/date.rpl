@@ -40,15 +40,24 @@ alias date.d = [:digit:]
 
 -- RFC3339 patterns
 date.year = date.d{4,4}
+-- test date.year accepts "1960", "1999", "2010", "9999"
+-- test date.year rejects "99", "00", "12345", "year"
 
 date.month = { {"0" [1-9]} / {"1" [0-2]} }
+-- test date.month accepts "01", "06", "10", "12"
+-- test date.month rejects "00", "1", "13", "99"
 
 date.day = {  {"0" [1-9]}		-- single digit dates
             / {[12][0-9]}		-- most of the two digit dates
             / {"3" [01]} }		-- and the rest
+-- test date.day accepts "01", "06", "10", "16", "20", "29", "31"
+-- test date.day rejects "0", "00", "32", "99"
 
 date.full = { date.year "-" date.month "-" date.day }
+-- test date.full accepts "2017-04-28", "1999-10-31"
+-- test date.full rejects "99-01-01", "2010-15-03", "1999-12-32"
 date.date = { date.year "-" date.month "-" date.day }
+-- the above tests handle date.date
 
 -- RFC2822 + alternatives
 date.day.shortname = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
@@ -59,4 +68,8 @@ date.month.longname = "January" / "February" / "March" / "April" / "May" / "June
 date.month.name = { date.month.shortname / date.month.longname }
 
 date.altday = date.d{1,2}
+-- test date.altday accepts "0", "00", "1", "01", "50", "99"
+-- test date.altday rejects "", "100", "1111"
 date.altdate = ( date.day.shortname "," )? date.altday date.month.shortname date.year
+-- test date.altdate accepts "Fri, 28 Apr 2017", "Fri, 31 Dec 1999", "31 Dec 2001"
+-- test date.altdate rejects "Fri 28, Apr 2010", "Tue, Feb 31st 2001", "Dec 31 2001"
