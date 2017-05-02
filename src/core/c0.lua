@@ -365,7 +365,7 @@ function c0.compile_grammar_expression(a, gmr, source, env)
    local name, pos, text, subs = decode_match(a)
    assert(name=="grammar_" or name=="new_grammar" or name=="grammar_expression")
    assert(type(subs[1])=="table")
-   local gtable = environment.new(env)
+   local gtable = environment.extend(env)
    local first = subs[1]			    -- first rule in grammar
    assert(first, "not getting first rule in compile_grammar_expression")
    local fname, fpos, ftext = decode_match(first)

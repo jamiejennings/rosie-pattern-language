@@ -113,7 +113,7 @@ local engine_error		     -- forward reference
 
 local function compile_search(en, pattern_exp)
    local rpl_parser, env = en._rpl_parser, en._env
-   local env = environment.new(env)		    -- new scope, which will be discarded
+   local env = environment.extend(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
    -- TODO: do something with leftover?
    local astlist, orig_astlist, warnings, leftover = rpl_parser(pattern_exp)

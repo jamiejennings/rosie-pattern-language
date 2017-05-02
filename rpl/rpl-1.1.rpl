@@ -130,7 +130,7 @@ alias rpl_any1 = import_decl / package_decl / language_decl / statement
 rpl_any = rpl_any1*
 
 -- RPL file structure:
-rpl_file = language_decl? package_decl import_decl* statement* ignore
+--rpl_file = language_decl? package_decl import_decl* statement* ignore
 
 ---------------------------------------------------------------------------------------------------
 -- Tests

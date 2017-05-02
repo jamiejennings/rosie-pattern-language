@@ -116,12 +116,13 @@ local function make_compile_expression(expression_p, compile)
 end
 
 local compile0 = make_compile(make_compile_astlist(c0.compile_ast))
-local compile1 = make_compile(make_compile_astlist(c1.compile_ast))
+local compile1 = make_compile(c1.compile_module)
 
 return {compile0 = {compile = compile0,
 		    compile_expression=make_compile_expression(c0.expression_p, compile0)},
 	compile1 = {compile = compile1,
-		    compile_expression=make_compile_expression(c0.expression_p, compile1)}
+		    compile_expression=make_compile_expression(c0.expression_p, compile1),
+		    compile_module=c1.compile_module}
 	}
 		    
 

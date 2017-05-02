@@ -69,11 +69,12 @@ function make_parse_and_explain(rplx_preparse, rplx_rpl, rpl_maj, rpl_min, synta
 			   vstr(rpl_maj, rpl_min)}
 		end
 	     end
-	     -- if major then
-	     -- 	print("-> Parser noted rpl version declaration " .. vstr(major, minor))
-	     -- else
-	     -- 	print("-> Parser saw no rpl version declaration")
-	     -- end
+	     -- TODO: add a check for "debugging output" here
+	     if major then
+	     	io.stderr:write("-> Parser noted rpl version declaration ", vstr(major, minor), "\n")
+	     else
+	     	io.stderr:write("-> Parser saw no rpl version declaration\n")
+	     end
 	     local original_astlist, errlist, leftover = rosie_parse(rplx_rpl, source, pos)
 	     local astlist = syntax_expand(original_astlist)
 	     if #errlist~=0 then

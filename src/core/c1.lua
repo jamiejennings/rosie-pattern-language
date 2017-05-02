@@ -14,36 +14,35 @@ local lpeg = require "lpeg"
 local common = require "common"
 local decode_match = common.decode_match
 
-function c1.process_package_decl(ast, gmr, source, env)
-   local typ, pos, text, subs, fin = decode_match(ast)
+function c1.process_package_decl(typ, pos, text, subs, fin)
    assert(typ=="package_decl")
-   local typ, pos, text, subs, fin = decode_match(subs[1])
+   local typ, pos, text = decode_match(subs[1])
    assert(typ=="packagename")
    print("->", "package = " .. text)
+   return text					    -- return package name
 end
 
-function c1.process_language_decl(ast, gmr, source, env)
-   local typ, pos, text, subs, fin = decode_match(ast)
-   assert(typ=="language_decl")
-   local typ, pos, text, subs, fin = decode_match(subs[1])
-   assert(typ=="version_spec")
-   print("->", "language = " .. text:sub(1,-2))
-end
-
-function c1.process_import_decl(ast, gmr, source, env)
-   local specs = ast.subs
+function c1.process_import_decl(typ, pos, text, subs, fin, env, pkg)
+   print("Importing into package " .. pkg)
+   local results, messages = {}, {}
+   local specs = subs
    for _,spec in ipairs(specs) do
-      io.write("*\t", "import ", spec.subs[1].text)
-      local packagenamesub = spec.subs[2]
-      if packagenamesub then
-	 local key = packagenamesub.type	    -- dot or packagename
-	 io.write(" as ", packagenamesub.text)
+      local typ, pos, text, subs, fin = decode_match(spec)
+      assert(subs and subs[1], "missing package name to import?")
+      local typ, pos, text = decode_match(subs[1])
+      io.write("*\t", "import ", text)
+      if subs[2] then
+	 local typ, pos, text = decode_match(subs[2])
+	 assert(typ=="packagename" or typ=="dot")
+	 io.write(" as ", text)
       end
       io.write('\n')
    end -- for
+   return specs
 end
 
 function c1.compile_local(ast, gmr, source, env)
+   assert(not gmr, "rpl grammar should not allow local decl inside a grammar")
    local name = ast.subs[1].type
    print("->", "local " .. name .. ": " .. ast.subs[1].text)
 end
@@ -51,9 +50,6 @@ end
 function c1.compile_ast(ast, source, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
-		      package_decl = c1.process_package_decl;
-		      language_decl = c1.process_language_decl;
-		      import_decl = c1.process_import_decl;
 		      local_ = c1.compile_local;
 		      binding=c0.compile_binding;
 		      new_grammar=c0.compile_grammar;
@@ -62,5 +58,66 @@ function c1.compile_ast(ast, source, env)
 		   }
    return common.walk_ast(ast, functions, false, source, env)
 end
+
+----------------------------------------------------------------------------------------
+-- Coroutine body
+----------------------------------------------------------------------------------------
+
+-- compile_module enforces the structure of an rpl module:
+--     rpl_module = language_decl? package_decl import_decl* statement* ignore
+--
+-- We could parse a module using that pattern, but it's easier to give useful error messages
+-- this way.
+
+function c1.compile_module(astlist, source, env)
+   assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(astlist))
+   assert(type(source)=="string")
+   local pkg
+   local results, messages = {}, {}
+   local i = 1
+   if not astlist[i] then return results, {"Empty module"}; end
+   local typ, pos, text, subs, fin = decode_match(astlist[i])
+   assert(typ~="language_decl", "language declaration should be handled in preparse/parse")
+   if typ=="package_decl" then
+      -- set the env according to the package name,
+      -- maybe issuing a warning if the env exists already
+      pkg = c1.process_package_decl(typ, pos, text, subs, fin)
+      results[i] = pkg; messages[i] = false
+      i=i+1;
+      if not astlist[i] then
+	 table.insert(messages, "Empty module (nothing after package declaration)")
+	 return results, messages
+      end
+      typ, pos, text, subs, fin = decode_match(astlist[i])
+   end
+   -- if pkg then
+   --    environment.... !@#
+   -- else
+   --    pkg = "."
+   -- end
+   while typ=="import_decl" do
+      -- find module, compile it into its own env,
+      -- maybe issuing a warning if the env exists already.
+      -- and make the imported package's exports accessible to this env
+      result[i], message[i] = c1.process_import_decl(typ, pos, text, subs, fin, env, pkg)
+      -- process_import_decl changes env|pkg
+      -- TODO: make the exports of env|pkg available in this pkg
+
+      i=i+1;
+      if not astlist[i] then
+	 table.insert(messages, "Empty module (nothing after import declaration(s))")
+	 return results, messages
+      end
+      typ, pos, text, subs, fin = decode_match(astlist[i])
+   end
+   repeat
+      results[i], messages[i] = c1.compile_ast(astlist[i], source, env[pkg])
+      if not messages[i] then messages[i] = false; end -- keep messages a proper list: no nils
+      i=i+1
+   until not astlist[i]
+   return results, messages
+end
+
+
 
 return c1

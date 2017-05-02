@@ -16,7 +16,7 @@ local lpeg = require "lpeg"
 local locale = lpeg.locale()
 
 ---------------------------------------------------------------------------------------------------
--- Environment functions and initial environment
+-- Items for the initial environment
 ---------------------------------------------------------------------------------------------------
 
 local b_id = common.boundary_identifier
@@ -36,18 +36,15 @@ local boundary = locale.space^1 + #locale.punct
 environment.boundary = boundary
 local utf8_char_peg = common.utf8_char_peg
 	   
--- Base environment, which can be extended with new_env, but not written to directly,
--- because it is shared between match engines:
-
-local default_pkg = "."
+-- The base environment is ENV, which can be extended with new_env, but not written to directly,
+-- because it is shared between match engines.  Eventually, it will be replaced by a "standard
+-- prelude", a la Haskell.  :-)
 
 local ENV =
-   {[default_pkg] = 
     {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
      [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
   }
-}
 	      
 setmetatable(ENV, {__tostring = function(env)
 				   return "<base environment>"
@@ -58,39 +55,56 @@ setmetatable(ENV, {__tostring = function(env)
 				end;
 		})
 
-function environment.new(base_env)
-   local env = {[default_pkg]={}}
-   base_env = base_env or ENV
-   setmetatable(env[default_pkg], {__index = base_env[default_pkg]})
-   setmetatable(env, {__index = function(...) error("Internal error (get): env impl not a table") end,
-		      __newindex = function(...) error("Internal error (set): env impl not a table") end,
-		      __tostring = function(env) return "<environment>"; end;})
+
+-- Each engine has a "global" module table that maps: importpath -> env
+-- where env is the environment for the module, containing both local and exported bindings. 
+function environment.make_module_table()
+   return setmetatable({}, {__tostring = function(env) return "<module_table>"; end;})
+end
+
+local OPENMODULES = 1
+
+-- Environments can be extended in a way that new bindings shadow old ones.  This permits a tree
+-- of environments that model nested scopes.  Currently, that nesting is used rarely.  Grammar
+-- compilation uses this.
+-- 
+-- The root of an environment tree is the "base environment" for a module M.  For each other
+-- module, X, open in M, the OPENMODULES table maps the prefix for X to the module environment for
+-- X.
+
+function environment.new()
+   local env = environment.extend(ENV)
+   env[OPENMODULES]={}
    return env
+end
+
+function environment.extend(parent_env)
+   return setmetatable({}, {__index = parent_env,
+			    __tostring = function(env) return "<environment>"; end;})
 end
 
 local function lookup(env, id, prefix)
    assert(prefix==nil)				    -- !@# TEMPORARY
-   return env[default_pkg][id]
+   return env[id]
 end
 
 environment.lookup = lookup
 
 local function bind(env, id, value)
-   env[default_pkg][id] = value
+   env[id] = value
 end
 
 environment.bind = bind
 
 -- return a flat representation of env (recall that environments are nested)
 function environment.flatten(env, output_table)
-   if not output_table then
-      assert(env[default_pkg], "not a proper environment")	    -- !@# TEMPORARY
-      env = env[default_pkg]					    -- !@# TEMPORARY
-      output_table = {}
-   end
+   output_table = output_table or {}
    for item, value in pairs(env) do
-      -- if already seen, do not overwrite with value from parent env
-      if not output_table[item] then output_table[item] = value; end
+      -- access only string keys.  numeric keys are for other things.
+      if type(item)=="string" then
+	 -- if already seen, do not overwrite with value from parent env
+	 if not output_table[item] then output_table[item] = value; end
+      end
    end
    local mt = getmetatable(env)
    if mt and type(mt.__index)=="table" then
