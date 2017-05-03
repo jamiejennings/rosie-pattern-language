@@ -443,7 +443,8 @@ function syntax.top_level_transform1(ast)
    local name = ast.type
    if name=="statement" then
       local name = common.decode_match(ast.subs[1])
-      assert(name=="alias_" or name=="assignment_" or name=="grammar_" or name=="local_")
+      assert(name=="alias_" or name=="assignment_" or name=="grammar_" or name=="local_",
+	  "unknown ast node type: " .. tostring(name))
       -- strip off the 'statement' wrapper
       return syntax.top_level_transform1(ast.subs[1])
    elseif (name=="assignment_") or (name=="alias_") then

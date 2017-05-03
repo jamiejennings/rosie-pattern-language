@@ -56,7 +56,8 @@ function make_parse_and_explain(rplx_preparse, rplx_rpl, rpl_maj, rpl_min, synta
 	     local rpl_warning
 	     if major then
 		if rpl_maj > major then
-		   -- Warn in case major version not backwards compatible
+		   -- Warn in case major version not backwards compatible?  TODO: remove this
+		   -- after debugging.
 		   rpl_warning = "Warning: loading rpl at version " .. 
 		                 vstr(major, minor) .. 
 			         " into engine at version " .. 
@@ -69,14 +70,13 @@ function make_parse_and_explain(rplx_preparse, rplx_rpl, rpl_maj, rpl_min, synta
 			   vstr(rpl_maj, rpl_min)}
 		end
 	     end
-	     -- TODO: add a check for "debugging output" here
+	     -- TODO: add a check here for "should we print debugging output?"
 	     if major then
 	     	io.stderr:write("-> Parser noted rpl version declaration ", vstr(major, minor), "\n")
 	     else
 	     	io.stderr:write("-> Parser saw no rpl version declaration\n")
 	     end
 	     local original_astlist, errlist, leftover = rosie_parse(rplx_rpl, source, pos)
-	     local astlist = syntax_expand(original_astlist)
 	     if #errlist~=0 then
 		local msgs = {}
 		if rpl_warning then table.insert(msgs, rpl_warning); end
@@ -86,6 +86,7 @@ function make_parse_and_explain(rplx_preparse, rplx_rpl, rpl_maj, rpl_min, synta
 		end
 		return nil, nil, msgs, leftover
 	     else -- successful parse
+		local astlist = syntax_expand(original_astlist)
 		local warnings = {}
 		if rpl_warning then table.insert(warnings, rpl_warning); end
 		return astlist, original_astlist, warnings, leftover
