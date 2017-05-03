@@ -1,0 +1,59 @@
+---- -*- Mode: rpl; -*- 
+---- vim:syn=rosie
+----
+---- test.rpl
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+rpl 1.0
+package test 
+--package foo/bar/baz
+
+-- import "foo/bar"
+-- import "foo/bar", "/usr/local/bass", "/usr/bin/time"
+-- import "foo/bar" as foo
+-- import "foo/bar" as foo, "/usr/local/baz", /usr/bin/time
+-- import "foo/bar" as foo, "/usr/local/baz" as ., "/usr/bin/time"
+-- import foo/bar/bass
+-- import foo/bar, /usr/lo-cal/b_az, "/usr/bin/time"
+-- import foo/bar as foo
+-- import foo/bar as foo, "/usr/local/baz", /usr/bin/time -- foo bar
+-- import -f_o-o as foo, /usr/local/baz as ., /usr/bin/time
+-- import -f_o-o/bar as foo, "/usr/local/baz" as ., "/usr/bin/time"
+
+import "common"
+import test2
+
+alias any=.
+alias whitespace = [:space:]
+digit = [:digit:]
+
+letter= [:alpha:]					    -- akdlaskd
+
+local bar = "bar"
+local foo = bar
+ignore = ""
+identifier = "asklaksdlaskdlaskdlas"
+end_token = "end"
+exp = "expressions la la la"
+
+ grammar
+ -- adklakdladkaldaskdal
+ -- akldkaldks
+    alias stmnt = local_ / exported
+    alias exported = alias_ / grammar_ / assignment_ 
+    local_ = "local" ignore alias_ / grammar_ / assignment_ 
+    alias_ = { "alias" ignore identifier ignore "=" exp }
+    grammar_ = { "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token }
+    assignment_ = { identifier ignore "=" exp }
+ end
+
+local localfoo = "hello"
+
+grammar
+   akd = "123"
+   akld = "1"
+end
+
