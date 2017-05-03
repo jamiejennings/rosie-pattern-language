@@ -122,7 +122,9 @@ return {compile0 = {compile = compile0,
 		    compile_expression=make_compile_expression(c0.expression_p, compile0)},
 	compile1 = {compile = compile1,
 		    compile_expression=make_compile_expression(c0.expression_p, compile1),
-		    compile_module=c1.compile_module}
+		    compile_module=c1.compile_module,
+		    read_module=c1.read_module	    -- TODO: remove?
+		 }
 	}
 		    
 
