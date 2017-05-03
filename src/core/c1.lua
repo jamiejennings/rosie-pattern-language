@@ -47,7 +47,9 @@ function c1.compile_local(ast, gmr, source, env)
    assert(typ=="local_")
    local name, pos, text = decode_match(subs[1])
    print("->", "local " .. name .. ": " .. text)
-   return c0.compile_binding(subs[1], false, source, env)
+   local pat = c0.compile_binding(subs[1], false, source, env)
+   pat.exported = false;
+   return pat
 end
 
 function c1.compile_ast(ast, source, env)
