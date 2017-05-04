@@ -62,19 +62,16 @@ function environment.make_module_table()
    return setmetatable({}, {__tostring = function(env) return "<module_table>"; end;})
 end
 
-local OPENMODULES = 1
-
 -- Environments can be extended in a way that new bindings shadow old ones.  This permits a tree
 -- of environments that model nested scopes.  Currently, that nesting is used rarely.  Grammar
 -- compilation uses this.
 -- 
 -- The root of an environment tree is the "base environment" for a module M.  For each other
--- module, X, open in M, the OPENMODULES table maps the prefix for X to the module environment for
--- X.
+-- module, X, that is open in M, there is a binding in M: X.prefix->X.env where X.prefix is the
+-- prefix used for X in M, and X.env is the module environment for X.
 
 function environment.new()
    local env = environment.extend(ENV)
-   env[OPENMODULES]={}
    return env
 end
 

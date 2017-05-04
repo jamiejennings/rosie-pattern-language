@@ -22,16 +22,18 @@ function c1.process_package_decl(typ, pos, text, subs, fin)
    return text					    -- return package name
 end
 
-function c1.read_module(importpath)
-   -- This is a HACK right now
-   -- TODO: replace dots in importpath with common.dirsep
-   if importpath:sub(1,1)=='"' then
-      assert(importpath:sub(-1)=='"', 
-	     "malformed input path that grammar should have caught: " .. importpath)
-      importpath = common.unescape_string(importpath:sub(2,-2))
+local function dequote(str)
+   if str:sub(1,1)=='"' then
+      assert(str:sub(-1)=='"', 
+	     "malformed quoted string that the grammar should have caught: " .. str)
+      return common.unescape_string(str:sub(2,-2))
    end
-   if #importpath==0 then return nil, nil, "nil import path"; end
-   local try = "rpl1.1" .. common.dirsep .. importpath .. ".rpl"
+   return str
+end
+
+function c1.read_module(dequoted_importpath)
+   if #dequoted_importpath==0 then return nil, nil, "nil import path"; end
+   local try = "rpl1.1" .. common.dirsep .. dequoted_importpath .. ".rpl"
    return try, util.readfile(try)
 end
 
@@ -39,15 +41,19 @@ local compile_module = false;				    -- forward reference
 
 function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtable)
    local compiled_imports = {}
+   local prefix
    for _,spec in ipairs(specs) do
       local typ, pos, text, subs, fin = decode_match(spec)
       assert(subs and subs[1], "missing package name to import?")
       local typ, pos, importpath = decode_match(subs[1])
-      io.write("*\t", "import ", importpath)
+      importpath = dequote(importpath)
+      io.write("*\t", "import |", importpath, "|")
       if subs[2] then
-	 local typ, pos, prefix = decode_match(subs[2])
+	 typ, pos, prefix = decode_match(subs[2])
 	 assert(typ=="packagename" or typ=="dot")
 	 io.write(" as ", prefix)
+      else
+	 _, prefix = util.split_path(importpath, "/")
       end
       if modtable[importpath] then
 	 io.write("  (Found in modtable)\n");
@@ -55,6 +61,7 @@ function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtabl
 	 local fullpath, source, err = c1.read_module(importpath)
 	 if source then
 	    io.write("  (Found in filesystem at " .. fullpath .. ")\n");
+	    print("COMPILING MODULE " .. importpath)	    
 	    local results, msgs, env =
 	       compile_module(parser, source, env, modtable, importpath)
 	    if not results then error(table.concat(msgs, "\n")); end
@@ -65,6 +72,7 @@ function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtabl
 			  env=env,
 			  results=results,
 			  messages=msgs})
+	    modtable[importpath] = env
 	 else
 	    -- we could not find the module source
 	    error(err)
@@ -180,20 +188,26 @@ compile_module = function(parser, source, env, modtable, importpath)
       -- point to it. (Since modules are immutable, they can be shared.)
       -- Otherwise, find the module in the filesystem, then compile it into a fresh env.
 
-	 local compiled_modules =
-	    c1.process_import_decl(typ, pos, text, subs, fin, parser, env, modtable)
+      local compiled_modules = c1.process_import_decl(typ, pos, text, subs, fin, parser, env, modtable)
 
 	 --results[i], messages[i] =
 	 -- TODO:
-	 -- (1) process the compiled_modules table
-	 -- (2) create a binding in env that maps the prefix to its module env
+	 -- (+) process the compiled_modules table
+	 -- (+) create a binding in env that maps the prefix to its module env
 	 --     ** this way, we can in future treat the module as a first class object
 	 --     ** but we must prohibit rebinding of this name (and we will prohibit
 	 --        rebinding names in general, except in the repl)
-	 --     ** now we do NOT need the OPENMODULES table!  yay!!!
-	 
-      -- Finally, in both cases we must make the imported package's exports accessible in this env.
-      -- TODO: make the exports of modtable[importpath] available in this env.
+
+      for _, mod in ipairs(compiled_modules) do
+	 if environment.lookup(env, mod.prefix) then
+	    table.insert(messages, "REBINDING "..mod.prefix) -- TODO: make this an error
+	 end
+	 environment.bind(env, mod.prefix, mod.env)
+	 print("-> binding module prefix: " .. mod.prefix)
+	 -- TODO: do we need to keep results at all?
+	 for _, result in ipairs(mod.results) do table.insert(results, result); end
+	 for _, message in ipairs(mod.messages) do table.insert(messages, message); end
+      end
 
       i=i+1;
       if not astlist[i] then
