@@ -1,4 +1,4 @@
 
--- hi
-
+package test2
 import common
+a_test2_pattern = "hello"

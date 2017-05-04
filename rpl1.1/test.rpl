@@ -9,7 +9,15 @@
 
 rpl 1.0
 package test 
---package foo/bar/baz
+
+import "common"
+import test2
+
+alias any=.
+local alias whitespace = [:space:]
+
+digit = [:digit:]
+local letter= [:alpha:]					    -- akdlaskd
 
 -- import "foo/bar"
 -- import "foo/bar", "/usr/local/bass", "/usr/bin/time"
@@ -23,37 +31,12 @@ package test
 -- import -f_o-o as foo, /usr/local/baz as ., /usr/bin/time
 -- import -f_o-o/bar as foo, "/usr/local/baz" as ., "/usr/bin/time"
 
-import "common"
-import test2
 
-alias any=.
-alias whitespace = [:space:]
-digit = [:digit:]
-
-letter= [:alpha:]					    -- akdlaskd
-
-local bar = "bar"
-local foo = bar
-ignore = ""
-identifier = "asklaksdlaskdlaskdlas"
-end_token = "end"
-exp = "expressions la la la"
-
- grammar
- -- adklakdladkaldaskdal
- -- akldkaldks
-    alias stmnt = local_ / exported
-    alias exported = alias_ / grammar_ / assignment_ 
-    local_ = "local" ignore alias_ / grammar_ / assignment_ 
-    alias_ = { "alias" ignore identifier ignore "=" exp }
-    grammar_ = { "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token }
-    assignment_ = { identifier ignore "=" exp }
- end
-
-local localfoo = "hello"
-
-grammar
-   akd = "123"
-   akld = "1"
+local grammar
+   G = {"b" A} / {"a" B} / ""
+   A = {"a" G} / {"b" A A}
+   B = {"b" G} / {"a" B B}
 end
+
+
 
