@@ -396,7 +396,8 @@ function c0.compile_grammar_expression(a, gmr, source, env)
       local rname, rpos, rtext, rsubs = decode_match(rule)
       assert(rname=="binding")
       local id_node = rsubs[1]			    -- identifier clause
-      assert(id_node and id_node.type=="identifier")
+      assert(id_node and (id_node.type=="identifier" or id_node.type=="localname"),
+	     "grammar rule lhs not an identifier or localname: " .. id_node.type)
       local iname, ipos, id = decode_match(id_node)
       local exp_node = rsubs[2]
       assert(exp_node)
