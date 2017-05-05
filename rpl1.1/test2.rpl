@@ -1,5 +1,8 @@
 
 package test2
+
 import common
+
 a_test2_pattern = "hello" common.number
+local notvisible = "you can't see this"
 

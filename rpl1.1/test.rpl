@@ -13,24 +13,14 @@ package test
 import "common"
 import test2
 
+-- Testing local vs exported:
+--this_should_not_compile = test2.notvisible
+
 alias any=.
 local alias whitespace = [:space:]
 
 digit = [:digit:]
 local letter= [:alpha:]					    -- akdlaskd
-
--- import "foo/bar"
--- import "foo/bar", "/usr/local/bass", "/usr/bin/time"
--- import "foo/bar" as foo
--- import "foo/bar" as foo, "/usr/local/baz", /usr/bin/time
--- import "foo/bar" as foo, "/usr/local/baz" as ., "/usr/bin/time"
--- import foo/bar/bass
--- import foo/bar, /usr/lo-cal/b_az, "/usr/bin/time"
--- import foo/bar as foo
--- import foo/bar as foo, "/usr/local/baz", /usr/bin/time -- foo bar
--- import -f_o-o as foo, /usr/local/baz as ., /usr/bin/time
--- import -f_o-o/bar as foo, "/usr/local/baz" as ., "/usr/bin/time"
-
 
 local grammar
    G = {"b" A} / {"a" B} / ""

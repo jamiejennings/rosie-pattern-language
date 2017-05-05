@@ -90,10 +90,9 @@ end
 local function lookup(env, id, prefix)
    if prefix then
       local mod = env[prefix]
-      print("*** looking up " .. prefix .. " gives " .. tostring(mod))
       if environment.is(mod) then
 	 local val = mod[id]
-	 if val then-- and val.exported then		    -- hmmm, we are duck typing here
+	 if val and val.exported then		    -- hmmm, we are duck typing here
 	    return val
 	 else
 	    return nil
