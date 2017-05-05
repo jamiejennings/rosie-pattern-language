@@ -75,14 +75,35 @@ function environment.new()
    return env
 end
 
+local environment_tostring = function(env) return "<environment>"; end
+
+function environment.is(e)
+   local mt = getmetatable(e)
+   return mt and mt.__tostring==environment_tostring
+end
+
 function environment.extend(parent_env)
    return setmetatable({}, {__index = parent_env,
-			    __tostring = function(env) return "<environment>"; end;})
+			    __tostring = environment_tostring})
 end
 
 local function lookup(env, id, prefix)
-   assert(prefix==nil)				    -- !@# TEMPORARY
-   return env[id]
+   if prefix then
+      local mod = env[prefix]
+      print("*** looking up " .. prefix .. " gives " .. tostring(mod))
+      if environment.is(mod) then
+	 local val = mod[id]
+	 if val then-- and val.exported then		    -- hmmm, we are duck typing here
+	    return val
+	 else
+	    return nil
+	 end
+      else -- found prefix but it is not a module
+	 return nil, prefix .. " is not a valid module reference"
+      end
+   else -- no prefix
+      return env[id]
+   end
 end
 
 environment.lookup = lookup

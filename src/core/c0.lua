@@ -238,9 +238,25 @@ end
 
 function c0.compile_ref(a, gmr, source, env)
    assert(a, "did not get ast in compile_ref")
-   local reftype, pos, name = decode_match(a)
-   local pat = lookup(env,name)
-   if (not pat) then explain_undefined_identifier(a, source); end -- throw
+   local reftype, pos, name, subs = decode_match(a)
+   local packagename, localname
+   if reftype=="ref" then
+      localname = name
+   elseif reftype=="extref" then
+      local typ, pos, name = decode_match(subs[1])
+      assert(typ=="packagename")
+      packagename = name
+      local typ, pos, name = decode_match(subs[2])
+      assert(typ=="localname")
+      localname = name
+   else assert(false, "in compile_ref, got " .. reftyp)
+   end
+   local pat, msg = lookup(env, localname, packagename)
+   if (not pat) then 
+      print("*** Lookup failed for: "); table.print(a) -- !@#
+      print("*** return values: ", pat, msg)
+      explain_undefined_identifier(a, source);
+   end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
    return pattern.new{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
 end
@@ -468,6 +484,7 @@ end
 c0.compile_exp_functions = {"compile_exp";
 				    capture=c0.compile_capture;	    
 				    ref=c0.compile_ref;
+			            extref=c0.compile_ref;
 				    predicate=c0.compile_predicate;
 				    raw_exp=c0.compile_raw_exp;
 				    choice=c0.compile_choice;
@@ -508,7 +525,7 @@ function c0.compile_binding(a, gmr, source, env)
    assert(a, "did not get ast in compile_binding")
    local name, pos, text, subs = decode_match(a)
    local lhs, rhs = subs[1], subs[2]
-   assert(lhs.type=="identifier", "in c0.compile_binding, got: " .. tostring(lhs.type))
+   assert(lhs.type=="identifier" or lhs.type=="localname", "in c0.compile_binding, got: " .. tostring(lhs.type))
    assert(type(rhs)=="table")			    -- the right side of the assignment
    assert(not subs[3])
    assert(type(source)=="string")

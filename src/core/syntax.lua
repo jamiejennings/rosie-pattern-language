@@ -10,7 +10,8 @@ local common = require "common"			    -- AST functions
 local list = require "list"
 
 local function err(...)
-   error(table.concat({...}, " "))
+   print(debug.traceback("error in syntax expansion"))
+   error(table.concat({...}, " "), 1)
 end
 
 local syntax = {}
@@ -199,7 +200,16 @@ end
 
 syntax.id_to_ref =
    syntax.make_transformer(function(ast)
-			      return common.create_match("ref", ast.s, ast.text)
+			      local typ, pos, text, subs, fin = common.decode_match(ast)
+			      assert(typ=="identifier")
+			      if (subs and subs[1]) and subs[1].type=="packagename" then
+				 -- external reference (to an imported module)
+				 local typ1, pos1, text1, subs1, fin1 = common.decode_match(subs[1])
+				 assert(subs[2].type=="localname")
+				 return common.create_match("extref", pos, text, subs[1], subs[2])
+			      else
+				 return common.create_match("ref", pos, text)
+			      end
 			   end,
 			   "identifier",
 			   true)		    -- RECURSIVE
@@ -379,7 +389,7 @@ syntax.to_binding =
 			      local original_rhs_name = rhs.type
 			      if (name=="assignment_") then
 				 local name, pos, text, subs = common.decode_match(lhs)
-				 assert(name=="identifier")
+				 assert(name=="identifier" or name=="localname")
 				 rhs = syntax.capture(syntax.expand_rhs(rhs, original_rhs_name), text)
 			      else
 				 rhs = syntax.expand_rhs(rhs, original_rhs_name)

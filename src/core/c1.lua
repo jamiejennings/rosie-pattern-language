@@ -41,7 +41,7 @@ local compile_module = false;				    -- forward reference
 
 function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtable)
    local compiled_imports = {}
-   local prefix
+   local prefix, modenv
    for _,spec in ipairs(specs) do
       local typ, pos, text, subs, fin = decode_match(spec)
       assert(subs and subs[1], "missing package name to import?")
@@ -55,29 +55,31 @@ function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtabl
       else
 	 _, prefix = util.split_path(importpath, "/")
       end
-      if modtable[importpath] then
+      modenv = modtable[importpath]
+      if modenv then
 	 io.write("  (Found in modtable)\n");
       else
+	 local results, msgs
 	 local fullpath, source, err = c1.read_module(importpath)
 	 if source then
 	    io.write("  (Found in filesystem at " .. fullpath .. ")\n");
 	    print("COMPILING MODULE " .. importpath)	    
-	    local results, msgs, env =
+	    results, msgs, modenv =
 	       compile_module(parser, source, env, modtable, importpath)
 	    if not results then error(table.concat(msgs, "\n")); end
-	    table.insert(compiled_imports,
-			 {importpath=importpath,
-			  fullpath=fullpath,
-			  prefix=prefix,
-			  env=env,
-			  results=results,
-			  messages=msgs})
-	    modtable[importpath] = env
+	    modtable[importpath] = modenv
 	 else
 	    -- we could not find the module source
 	    error(err)
 	 end
       end
+      table.insert(compiled_imports,
+		   {importpath=importpath,
+		    fullpath=fullpath,
+		    prefix=prefix,
+		    env=modenv,
+		    results=results or {},
+		    messages=msgs or {}})
    end -- for
    return compiled_imports
 end

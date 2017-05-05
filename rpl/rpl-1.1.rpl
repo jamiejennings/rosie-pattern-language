@@ -60,7 +60,7 @@ repetition = { "{" ignore low ignore "," ignore high ignore "}" }
 
 alias quantifier = star / question / plus / repetition
 
-assignment_prefix = identifier ignore "="
+assignment_prefix = localname ignore "="
 stmnt_prefix = {keyword / assignment_prefix}
 
 alias slash =         { [/] }
@@ -90,9 +90,9 @@ grammar
    alias stmnt = local_ / exported
    alias exported = alias_ / grammar_ / assignment_ 
    local_ = "local" ignore alias_ / grammar_ / assignment_ 
-   alias_ = { "alias" ignore identifier ignore "=" exp }
+   alias_ = { "alias" ignore localname ignore "=" exp }
    grammar_ = { "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token }
-   assignment_ = { identifier ignore "=" exp }
+   assignment_ = { localname ignore "=" exp }
 end
 
 importpath = quoted_string		  -- double quoted, interpreted, pattern name is "literal"
