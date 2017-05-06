@@ -1,0 +1,18 @@
+-- top level rpl file
+
+import "test"
+
+-- G is local, so this will fail:
+--foo = test.G
+
+-- letter is local, so this will fail:
+--foo = test.letter+
+
+-- common is bound in test, but it's an environment so this will fail:
+--foo = test.common
+
+-- this works, because digit is exported from test
+foo2 = test.digit+
+
+-- digit is not defined locally, so this will fail:
+-- foo = digit

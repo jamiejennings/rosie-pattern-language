@@ -331,10 +331,13 @@ local function engine_create(name)
 		   _rpl_parser=default_rpl_parser;
 		   _rpl_compiler=default_rpl_compiler;
 		   _rpl_version=default_rpl_version;
+
 		   _env=environment.new(),
+		   _modtable=environment.make_module_table(),
 
 		   lookup=get_environment,
 		   clear=clear_environment,
+
 		   id=recordtype.id,
 		   name=function(en)
 			   -- checking the unused arg for consistency with other engine functions
@@ -365,6 +368,7 @@ local engine =
 		     _rpl_compiler=false;
 		     _rpl_version=false;
 		     _env=false;
+		     _modtable=false;
 
 		     encode_function=false;	    -- default: return lua tables
 

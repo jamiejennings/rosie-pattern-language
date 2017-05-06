@@ -180,13 +180,34 @@ end
 
 function create_rosie_engine()
    -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
-   rpl_parser = import("rpl-parser")		    -- !@# THIS WON'T WORK
+   rpl_parser = import("rpl-parser")
    local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
    -- And make these the defaults for all new engines:
    engine_module._set_defaults(parse_and_explain, compile.compile0, 1, 0);
 
    ROSIE_ENGINE = engine.new("RPL 1.0 engine")
    announce("ROSIE_ENGINE", ROSIE_ENGINE)
+end
+
+function create_rpl1_1_engine()
+   -- Create an engine, and load the rpl 1.1 definition, which is written in rpl 1.0
+   local rpl_1_1_filename = ROSIE_HOME.."/rpl/rpl-1.1.rpl"
+   local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
+   if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
+   local e = engine.new("RPL 1.1 engine")
+   e:load(rpl_1_1)
+   local messages
+   RPL1_1_RPLX, messages = e:compile('rpl_any')
+
+   -- Install the fancier parser, parse_and_explain
+   rpl_parser = import("rpl-parser")		    -- idempotent
+   local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, RPL1_1_RPLX, 1, 1, syntax.transform1)
+
+   -- RPL 1.1 is now the default for new engines
+   engine_module._set_defaults(parse_and_explain, compile.compile1, 1, 1);
+
+   RPL1_1_ENGINE = e
+   announce("RPL1_1_ENGINE", RPL1_1_ENGINE)
 end
 
 ----------------------------------------------------------------------------------------
@@ -255,6 +276,7 @@ setup_globals()
 load_all()
 create_core_engine()
 create_rosie_engine()
+create_rpl1_1_engine()
 populate_info()
 rosie_package.engine = engine
 rosie_package.file = create_file_functions()
