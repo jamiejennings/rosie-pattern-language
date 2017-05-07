@@ -108,9 +108,9 @@ local function make_compile_expression(expression_p, compile)
 	     assert(type(env)=="table")
 	     local astlist, original_astlist, messages = parser(source)
 
-	     print("*** source:" .. source)
-	     print("*** astlist:"); table.print(astlist)
-	     print("*** original_astlist:"); table.print(original_astlist)
+	     -- print("*** source:" .. source)
+	     -- print("*** astlist:"); table.print(astlist)
+	     -- print("*** original_astlist:"); table.print(original_astlist)
 
 	     if not astlist then return nil, messages; end
 	     assert(type(astlist)=="table")

@@ -2,6 +2,7 @@
 
 --import "test"
 import core
+import net
 
 -- G is local, so this will fail:
 --foo = test.G
@@ -18,3 +19,6 @@ foo2 = core.digit+
 
 -- digit is not defined locally, so this will fail:
 -- foo = digit
+
+word = [:alpha:]+
+resolv = word net.any
