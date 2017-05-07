@@ -266,6 +266,18 @@ function create_encoder_table()
 end
 
 ----------------------------------------------------------------------------------------
+-- Provide an API for setting/checking modes
+----------------------------------------------------------------------------------------
+
+local mode_table = {}
+function setmode(name, optional_value)
+   mode_table[name] = (optional_value==nil and false) or optional_value or true
+end
+function mode(name)
+   return mode_table[name]
+end
+
+----------------------------------------------------------------------------------------
 -- Build the rosie module as seen by the Lua client
 ----------------------------------------------------------------------------------------
 function create_file_functions()
@@ -291,6 +303,9 @@ rosie_package.file = create_file_functions()
 rosie_package.encoders = create_encoder_table()
 rosie_package.info = function(...) return ROSIE_INFO; end
 rosie_package.import = import
+
+rosie_package.setmode = setmode
+rosie_package.mode = mode
 
 collectgarbage("setpause", 194)
 
