@@ -1,0 +1,22 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- os.rpl   OS patterns in Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+rpl 1.1
+
+package os
+
+-- This definition is essentially what grok uses, which isn't great:
+--   unix_path = { "/" ([:alnum:]/[_%!$@:.,~-])+ / ".." / "." }+
+
+alias path_unix = { {".." / "."}? {"/" {[:alnum:]/[_%!$@:.,~-]}+ }+  }
+--alias os.pathchar = [[:alnum:][_%!$@:.,~-]]
+--alias os.unix_path = { {"../" / "./" / "/"}? {pathchar+ {"/" pathchar+}+ } }
+alias path_windows = { {[:alpha:]+ ":"}? {"\\" {![\\?*] .}* }+ }
+path = path_unix / path_windows
+-- TODO: create tests

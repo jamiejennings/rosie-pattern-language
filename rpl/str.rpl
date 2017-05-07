@@ -1,0 +1,60 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- common.rpl   Common patterns in Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+rpl 1.1
+
+package str
+
+alias letter = [:alpha:]
+alias digit = [:digit:]
+
+alias graph = {![:space:] .}
+
+word = letter+
+-- test word accepts "foo"
+-- test word rejects "12356", "  ", "#!", "ac475"
+
+alias id_char = [_-] / {![:space:] ![:punct:] .}
+-- test id_char accepts "_", "-", "i", "3"
+-- test id_char rejects "#", "%", "`"
+
+-- An escaped_string is a json string, in which double quotes must be escaped.
+escaped = ["] { {[\\].} / [^"\\] }* ["]   -- "
+-- test escaped accepts "\"\"", "\"foo\"", "\"I said, \\\"Hi\\\"\""
+-- test escaped rejects "", "\"foo", "\"I said, \"Hi\""
+
+-- Quoted strings, using single or double quote
+--
+-- Within a dquoted_string, the quote character can be escaped using a slash, OR by repeating it
+-- twice, e.g. "".
+alias dquoted_string = "\""  {"\\\"" / {! [\"] .}}* "\""
+
+local alias dquote = "\""				    -- "
+local alias escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\""   -- \" or \"\" or "" 
+local alias squote = "'"				    -- '
+local alias escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
+-- Capture the contents of a quoted field by assigning it to an RPL name:
+local double_quoted = {escaped_dquote / {!dquote .}}*
+-- TODO: create tests
+local single_quoted = {escaped_squote / {!squote .}}*
+-- TODO: create tests
+
+-- Wrap the field contents with quotation marks:
+local alias dq = {dquote double_quoted dquote}
+local alias sq = {squote single_quoted squote}
+
+-- Look for either double or single quoted fields
+quoted = dq / sq
+-- TODO: create tests
+
+-- GUID matching
+local alias h = [:xdigit:]
+local alias type4_guid_nocap = {h{8,8} "-" {h{4,4} "-"}{3,3} h{12,12}}
+type4_guid = type4_guid_nocap
+-- TODO: create tests

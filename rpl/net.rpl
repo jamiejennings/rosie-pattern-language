@@ -1,0 +1,101 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- net.rpl     Rosie Pattern Language patterns for hostnames, ip addresses, and such
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+rpl 1.1
+
+package net
+-- [1] RFC1123 Requirements for Internet Hosts -- Application and Support
+-- (https:--tools.ietf.org/html/rfc1123) 
+-- [2] RFC3696 Application Techniques for Checking and Transformation of Names
+-- (https:--tools.ietf.org/html/rfc3696)
+
+import core 
+import num
+
+-- IP ADDRESSES
+local alias ipv4_component = digit{1,3}
+local alias ip_address_v4 = { ipv4_component "." ipv4_component "." ipv4_component "." ipv4_component }
+local alias ipv6_component = hex{1,4}
+local alias ipv6_rest = { ":" ipv6_component }
+-- ipv6 is complex, but we don't need to be as exact as rfc3986 is
+-- this could be expanded a little more
+local alias ip_address_v6 = {
+	{ ipv6_component ipv6_rest{7,7} } /
+	{ ipv6_component ipv6_rest{0,5} "::" ipv6_component ipv6_rest{0,4} } /
+	{ ipv6_component ipv6_rest{1,5} "::" } /
+	{ "::" ipv6_component ipv6_rest{0,5} } /
+	{ "::" }  -- undefined address
+}
+
+ipv4 = ip_address_v4
+-- test ipv4 accepts "0.0.0.0", "1.2.234.123", "999.999.999.999"
+-- test ipv4 rejects "1234.1.2.3"
+-- TODO: add some more rejecting tests
+ipv6 = ip_address_v6
+-- test ipv6 accepts "::", "::1", "::face:b00c"
+-- test ipv6 accepts "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8:0:0:0:ff00:42:8329", "2001:db8::ff00:42:8329"
+-- TODO: add some rejecting tests
+
+ip = ipv4 / ipv6
+-- the above tests validate ip
+
+
+-- FQDNs
+local alias port_spec = { ":" digit+ }
+local alias dn_start = { letter / digit }
+local alias dn_rest = { letter / digit / "-" }+
+local alias dn_component1 = { letter dn_rest* }
+local alias dn_component2 = { { digit / "-" }+ dn_component1 }
+local alias dn_component = { dn_component1 / dn_component2 }
+-- Qualified domain name (may not be fully qualified, but everyone knows the
+-- abbreviation fqdn, so we'll use it).  An odd quirk of this pattern is
+-- that when given "jj.raleigh.-.com", which is an illegal domain name, it
+-- will match the prefix "jj.raleigh" because that part is legal name
+-- syntax.  Blame the hostname spec if you don't like it.
+local alias fqdn_core = {dn_component {"." dn_component}+ port_spec?}
+-- We try to avoid thinking that a dotted identifier is a hostname, e.g. this:
+-- CentOS-6.5-x86_64-heat-swcfg_fcr01a.dal09.softlayer.com_port
+fqdn =  { ![-_] fqdn_core {!"_"} }	    -- Note that [-_] is a set of two chars, - and _
+host = fqdn
+-- TODO: add fqdn tests
+
+
+-- EMAIL ADDRESSES
+-- Per RFC3696, the specification for the alias part of an email address is considerably more
+-- involved than this simple pattern, which will may accept some invalid addresses and may reject
+-- some valid ones.
+
+alias email_char = { [:alnum:] / [!#$%\^&*()_-+=|\\'`~?/{}{}:;] }
+alias email_alias_part = { email_char {email_char / "."}* }
+email = { email_alias_part "@" fqdn }
+-- test email accepts "me@here.com", "you+filter@somewhere.org"
+-- TODO: add rejecting email strings
+
+
+-- URI
+-- URI syntax highly simplified here (e.g. no query parms)
+protocol = {{letter+} "://"}
+local alias pathchar = [:alpha:] / [:digit:] / "-" / "." / "_" / "~" / { "%" [:xdigit:] [:xdigit:] } / [!$&'()*+,;=] / ":" / "@"
+path = { "/" pathchar* }*
+url = {protocol {fqdn / ipv4}? path}
+-- test url accepts "http://www.google.com", "http://google.com/"
+-- test url accepts "https://www.github.com/jamiejennings/rosie-pattern-language"
+-- test url accepts "ftp://some.ftp.net/path/to/file.zip"
+
+
+-- HTTP commands
+-- Some very simple HTTP patterns
+http_command_name = "GET" / "HEAD" / "PUT" / "POST" / "DELETE" / 
+                    "TRACE" / "OPTIONS" / "CONNECT" / "PATCH"
+http_command = http_command_name (url / path)
+http_version = {"HTTP" "/" digit+ "." digit+}     -- e.g. "HTTP1.1"
+
+-- ANY pattern
+-- Match an IP, FQDN/Host, Email, URL, or HTTP Command
+any = ip / fqdn / email / url / http_command
