@@ -136,7 +136,7 @@ function load_all()
    process_rpl_file = import("process_rpl_file")
 
    assert(_G)
-   argparse = import("argparse")
+--   argparse = import("argparse")
 
 end
 
@@ -147,7 +147,7 @@ end
 -- The engines we create now will use parse.core_parse, which defines "rpl 0.0", i.e. the core
 -- language (which has many limitations).
 -- 
--- An engine that accepts "rpl 0.0" is needed to parse $ROSIE_HOME/rpl/rpl-1.0.rpl, which defines
+-- An engine that accepts "rpl 0.0" is needed to parse $ROSIE_HOME/rpl/rosie/rpl_1_0.rpl, which defines
 -- "rpl 1.0".  This is the version of rpl used for the Rosie v0.99x releases.
 --
 
@@ -164,7 +164,7 @@ function create_core_engine()
    CORE_ENGINE = engine.new("RPL core engine")
    announce("CORE_ENGINE", CORE_ENGINE)
    -- Into the core engine, load the rpl 1.0 definition, which is written in rpl 0.0
-   local rpl_1_0_filename = ROSIE_HOME.."/rpl/rpl-1.0.rpl"
+   local rpl_1_0_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_0.rpl"
    local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
    if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
    CORE_ENGINE:load(rpl_1_0)
@@ -197,7 +197,7 @@ end
 
 function create_rpl1_1_engine()
    -- Create an engine, and load the rpl 1.1 definition, which is written in rpl 1.0
-   local rpl_1_1_filename = ROSIE_HOME.."/rpl/rpl-1.1.rpl"
+   local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
    local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
    if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
    local e = engine.new("RPL 1.1 engine")
@@ -290,6 +290,7 @@ rosie_package.engine = engine
 rosie_package.file = create_file_functions()
 rosie_package.encoders = create_encoder_table()
 rosie_package.info = function(...) return ROSIE_INFO; end
+rosie_package.import = import
 
 collectgarbage("setpause", 194)
 

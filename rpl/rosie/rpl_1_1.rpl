@@ -1,0 +1,168 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- rpl-1.1.rpl     RPL language version 1.1, written in RPL version 1.0
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+alias newline = [\n]
+
+alias comment = { "--" {!newline .}* {newline / $} }
+alias ignore = { { [[:space:]] / comment }* }
+
+alias id_char = { [[:alnum:]] / [_] }
+alias id = { [[:alpha:]] id_char* }
+
+localname = id 
+          / [.]		 -- a single dot
+	  / [$]		 -- a single dollar sign
+	  / [~]		 -- a single tilde
+packagename = id
+identifier = { {packagename "."}? localname }
+
+alias dquote = { [\"] }
+alias esc =    { [\\] }
+literal = { {!{esc/dquote} .} / {esc .} }* 
+alias quoted_string = { dquote literal dquote }
+
+
+star =     { [*] }
+question = { [?] }
+plus =     { [+] }
+alias end_token = { "end" !id_char }
+alias keyword_list = { "local" / "alias" / "grammar" / "end" }
+keyword = { keyword_list !id_char }
+
+-- it is important that an error consume at least one character here.
+-- as a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
+rest_of_line = { {!newline .}+ ignore }
+syntax_error = { rest_of_line }
+
+complement = "^"
+character = { {!esc !"[" !"^" !"]" .} / {esc .} }
+range = { complement? character [-] !"]" character } 
+charlist = { complement? {!"]" character}+ }		    -- cannot be empty
+name = {!":" .}+
+named_charset = { complement? name } 
+alias one_charset = { "[" { ":" named_charset ":]" } /
+	                  { range "]" } /
+		          { charlist "]" } /
+		          syntax_error
+		    }
+charset_exp = { "[" complement? ignore (one_charset ignore)+ "]" } / one_charset
+
+low =  [[:digit:]]*				    -- an int or nothing
+high = [[:digit:]]* 
+repetition = { "{" ignore low ignore "," ignore high ignore "}" }
+	          
+
+alias quantifier = star / question / plus / repetition
+
+assignment_prefix = identifier ignore "="
+stmnt_prefix = {keyword / assignment_prefix}
+
+alias slash =         { [/] }
+alias open =          { [(] }
+alias openraw =       { [{] }
+alias close =         { [)] }
+alias closeraw =      { [}] }
+
+negation = { [!] }
+lookat = { [@] }
+alias predicate_symbol = { negation / lookat }
+	    
+grammar
+   alias exp = {ignore { syntax_error / choice / sequence / quantified_exp / plain_exp} }
+   syntax_error = { stmnt_prefix rest_of_line }
+   choice = { {quantified_exp / plain_exp} ignore slash exp }
+   sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }
+   alias plain_exp = { ignore 
+		       { identifier / quoted_string / raw / cooked / charset_exp / predicate } }
+   quantified_exp = { plain_exp ignore quantifier }
+   cooked = { open exp+ ignore close }
+   raw = { openraw exp+ ignore closeraw }
+   predicate = { predicate_symbol ignore {quantified_exp / plain_exp} }
+end
+
+grammar
+   alias stmnt = local_ / exported
+   alias exported = alias_ / grammar_ / assignment_ 
+   local_ = "local" ignore alias_ / grammar_ / assignment_ 
+   alias_ = { "alias" ignore identifier ignore "=" exp }
+   grammar_ = { "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token }
+   assignment_ = { identifier ignore "=" exp }
+end
+
+importpath = quoted_string		  -- double quoted, interpreted, pattern name is "literal"
+              / {[[:alnum:]]/[_-//]}+	  -- whitespace terminated, uninterpreted
+
+major = [0-9]{1,2}
+minor = major
+version_spec = { major "." minor ignore }
+dot = "."
+import_spec = ignore importpath ("as" (packagename / dot))?
+
+----------------------------------------------------------------------------------------
+-- Top level patterns
+----------------------------------------------------------------------------------------
+
+-- ONE rpl stmnt or exp:
+--   Useful when you want to catch user errors such as supplying an assignment stmnt 
+--   where an exp is expected.  E.g. in compile.exp_p()
+alias rpl1 = ignore {stmnt / exp / syntax_error}
+
+rpl = rpl1* ignore $
+
+statement = ignore (stmnt / syntax_error)
+-- FUTURE: if not exp, then syntax error
+--  expression = ignore (exp / syntax_error)
+expression = ignore exp
+language_decl = ignore "rpl" version_spec
+package_decl = ignore "package" packagename
+import_decl = ignore "import" import_spec ("," ignore import_spec)*
+
+preparse = language_decl
+
+-- ANY single rpl language element:
+-- FUTURE: do NOT include expression in any1
+--alias rpl_any1 = import_decl / package_decl / language_decl / statement
+
+-- Possibly empty sequence of ANY rpl module elements:
+--rpl_any = rpl_any1*
+
+-- RPL file structure:
+--rpl_file = language_decl? package_decl import_decl* statement* ignore
+
+rpl_any = language_decl? package_decl? import_decl* rpl1* ignore $
+
+---------------------------------------------------------------------------------------------------
+-- Tests
+---------------------------------------------------------------------------------------------------
+
+-- test language_decl rejects "rpl", "rpl ", "rpl a", "rpl 1.a", "rpl 1.", "rpl 1.123", "rpl 1.\n1"
+-- test language_decl accepts "rpl 0.0", "  rpl 1.0\n", "rpl 52.99", "rpl 99.99", "rpl 1.1 -- Comment\n"
+
+-- test package_decl accepts "package foo", "package fooBar", "package f_oo"
+-- test package_decl rejects "package", "package _foo", "package 6foo", "package .foo", "package foo.bar"
+
+-- test import_decl rejects "import"
+
+-- importpath can be QUOTED STRING:
+-- test import_decl rejects "import \"foo/bar\","
+-- test import_decl accepts "import \"foo/bar\""
+-- test import_decl accepts "import \"foo/bar\", \"/usr/local/baz\", \"/usr/bin/time\""
+-- test import_decl accepts "import \"foo/bar\" as foo"
+-- test import_decl accepts "import \"foo/bar\" as foo, \"/usr/local/baz\", \"/usr/bin/time\""
+-- test import_decl accepts "import \"foo/bar\" as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
+
+-- importpath can be PLAIN SYMBOL, uninterpreted:
+-- test import_decl rejects "import foo,"
+-- test import_decl rejects "import foo["
+-- test import_decl accepts "import foo/bar/baz"
+-- test import_decl accepts "import foo/bar", /usr/lo-cal/b_az, \"/usr/bin/time\""
+-- test import_decl accepts "import foo/bar as foo"
+-- test import_decl accepts "import foo/bar as foo, \"/usr/local/baz\", /usr/bin/time"
+-- test import_decl accepts "import -f_o-o as foo, /usr/local/baz as ., /usr/bin/time"
+-- test import_decl accepts "import -f_o-o/bar as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""

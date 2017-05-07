@@ -35,40 +35,39 @@ ROSIE_COMMAND = str:sub(1,-1)                                        -- Remove t
 -- Shift args by 2, to remove ROSIE_HOME and ROSIE_DEV
 table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
 
--- Start the Rosie Pattern Engine
-loader, msg = loadfile(ROSIE_HOME .. "/lib/submodule.luac", "b")
-if not loader then
-   loader, msg = loadfile(ROSIE_HOME .. "/submodules/lua-modules/submodule.lua", "t")
-   if not loader then error("Error loading module system: " .. msg); end
-end
-mod = loader(); package.loaded.submodule = mod;
-rosie_mod = mod.new("rosie", ROSIE_HOME, 
-		    "lib",						       -- .luac
-		    "src/core;src;submodules/lua-modules;submodules/argparse/src", -- .lua
-		    "lib")						       -- .so
-mod.import("submodule", rosie_mod)
-rosie = mod.import("init", rosie_mod)
+-- Load rosie
+
+rosie = dofile(ROSIE_HOME .. "/rosie.lua", "t")
 package.loaded.rosie = rosie
 
-assert(type(rosie_mod)=="table", "Return value from init was not the rosie module (a table)")
 
-ROSIE_VERSION = rosie_mod.env.ROSIE_VERSION
-ROSIE_INFO = rosie_mod.env.ROSIE_INFO
+-- -- Start the Rosie Pattern Engine
+-- loader, msg = loadfile(ROSIE_HOME .. "/lib/submodule.luac", "b")
+-- if not loader then
+--    loader, msg = loadfile(ROSIE_HOME .. "/submodules/lua-modules/submodule.lua", "t")
+--    if not loader then error("Error loading module system: " .. msg); end
+-- end
+-- mod = loader(); package.loaded.submodule = mod;
+-- rosie_mod = mod.new("rosie", ROSIE_HOME, 
+-- 		    "lib",						       -- .luac
+-- 		    "src/core;src;submodules/lua-modules;submodules/argparse/src", -- .lua
+-- 		    "lib")						       -- .so
+-- mod.import("submodule", rosie_mod)
+-- rosie = mod.import("init", rosie_mod)
+-- package.loaded.rosie = rosie
 
-function open_modules()
-   engine_module = assert(rosie_mod.env.engine_module, "failed to load engine_module")
-   engine = assert(engine_module.engine, "engine not defined")
-   argparse = assert(rosie_mod.env.argparse, "failed to load argparse")
-   common = assert(rosie_mod.env.common)
-   json = assert(rosie_mod.env.cjson)
-   list = assert(rosie_mod.env.list)
-   environment = assert(rosie_mod.env.environment)
-   lpeg = assert(rosie_mod.env.lpeg)
-   ui = assert(rosie_mod.env.ui)
-end
+-- assert(type(rosie_mod)=="table", "Return value from init was not the rosie module (a table)")
 
-ok, msg = pcall(open_modules)
-if not ok then print("Error in cli when opening modules: " .. msg); end
+info = rosie.info()
+
+ROSIE_VERSION = info.ROSIE_VERSION
+ROSIE_INFO = info
+
+engine_module = assert(rosie.import("engine_module"), "failed to load engine_module package")
+argparse = assert(rosie.import("argparse"), "failed to load argparse package")
+common = assert(rosie.import("common"), "failed to open common package")
+lpeg = assert(rosie.import("lpeg"), "failed to open lpeg package")
+ui = assert(rosie.import("ui"), "failed to open ui package")
 
 function create_cl_engine()
    CL_ENGINE = rosie.engine.new("command line engine")
@@ -120,21 +119,8 @@ local function load_string(en, input)
 end
 
 local function setup_engine(args)
-   -- (1a) Load the manifest
-   -- if args.manifest then
-   --    if args.verbose then
-   -- 	 io.stdout:write("Compiling files listed in manifest ", args.manifest, "\n")
-   --    end
-   --    local success, messages = pcall(rosie.file.load, CL_ENGINE, args.manifest, "manifest")
-   --    if not success then
-   -- 	 io.stdout:write(table.concat(messages, "\n"), "\n")
-   -- 	 os.exit(-4)
-   --    else
-   -- 	 if args.verbose then
-   -- 	    for _, msg in ipairs(messages) do io.stdout:write(msg, "\n"); end
-   -- 	 end
-   --    end
-   -- end -- load manifest
+   -- (1a) Load whatever is specified in ~/.rosierc ???
+
 
    -- (1b) Load an rpl file
    if args.rpls then
@@ -163,7 +149,6 @@ local function setup_engine(args)
 	 end
       end
    end
-
    -- (2) Compile the expression
    if args.pattern then
       local expression
@@ -185,6 +170,7 @@ local function setup_engine(args)
    end
 end
 
+-- FUTURE: use lua_filesystem equivalent instead of this
 local function readable_file(fn)
    if fn=="" then return true; end			    -- "" means standard input
    local f, msg = io.open(fn, "r")

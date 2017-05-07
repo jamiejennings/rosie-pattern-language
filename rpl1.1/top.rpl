@@ -1,8 +1,9 @@
 -- top level rpl file
 
 --import "test"
-import core
 import net
+
+local digit = [:digit:]
 
 -- G is local, so this will fail:
 --foo = test.G
@@ -15,7 +16,7 @@ import net
 
 -- this works, because digit is exported from test
 --foo2 = test.digit+
-foo2 = core.digit+
+foo2 = digit+
 
 -- digit is not defined locally, so this will fail:
 -- foo = digit
