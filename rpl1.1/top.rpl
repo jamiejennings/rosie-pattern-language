@@ -1,6 +1,7 @@
 -- top level rpl file
 
-import "test"
+--import "test"
+import core
 
 -- G is local, so this will fail:
 --foo = test.G
@@ -12,7 +13,8 @@ import "test"
 --foo = test.common
 
 -- this works, because digit is exported from test
-foo2 = test.digit+
+--foo2 = test.digit+
+foo2 = core.digit+
 
 -- digit is not defined locally, so this will fail:
 -- foo = digit

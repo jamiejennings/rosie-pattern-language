@@ -168,9 +168,6 @@ function create_core_engine()
    local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
    if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
    CORE_ENGINE:load(rpl_1_0)
-   CORE_ENGINE:compile('rpl', 'match')
-
-   
    local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl', 'match')
    if not success then error("Error while initializing: could not compile 'rpl' in "
 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
@@ -207,6 +204,8 @@ function create_rpl1_1_engine()
    e:load(rpl_1_1)
    local messages
    RPL1_1_RPLX, messages = e:compile('rpl_any')
+   -- FUTURE: have separate parsers for rpl modules and rpl expressions, e.g.
+   --   RPL1_1_RPLX_EXP, messages = e:compile('expression')
 
    -- Install the fancier parser, parse_and_explain
    rpl_parser = import("rpl-parser")		    -- idempotent

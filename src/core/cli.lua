@@ -121,20 +121,20 @@ end
 
 local function setup_engine(args)
    -- (1a) Load the manifest
-   if args.manifest then
-      if args.verbose then
-	 io.stdout:write("Compiling files listed in manifest ", args.manifest, "\n")
-      end
-      local success, messages = pcall(rosie.file.load, CL_ENGINE, args.manifest, "manifest")
-      if not success then
-	 io.stdout:write(table.concat(messages, "\n"), "\n")
-	 os.exit(-4)
-      else
-	 if args.verbose then
-	    for _, msg in ipairs(messages) do io.stdout:write(msg, "\n"); end
-	 end
-      end
-   end -- load manifest
+   -- if args.manifest then
+   --    if args.verbose then
+   -- 	 io.stdout:write("Compiling files listed in manifest ", args.manifest, "\n")
+   --    end
+   --    local success, messages = pcall(rosie.file.load, CL_ENGINE, args.manifest, "manifest")
+   --    if not success then
+   -- 	 io.stdout:write(table.concat(messages, "\n"), "\n")
+   -- 	 os.exit(-4)
+   --    else
+   -- 	 if args.verbose then
+   -- 	    for _, msg in ipairs(messages) do io.stdout:write(msg, "\n"); end
+   -- 	 end
+   --    end
+   -- end -- load manifest
 
    -- (1b) Load an rpl file
    if args.rpls then
@@ -168,7 +168,7 @@ local function setup_engine(args)
    if args.pattern then
       local expression
       if args.fixed_strings then
-	 expression = '"' .. args.pattern:gsub('"', '\\"') .. '"' -- TODO: rosie.expr.literal(arg[2])
+	 expression = '"' .. args.pattern:gsub('"', '\\"') .. '"' -- FUTURE: rosie.expr.literal(arg[2])
       else
 	 expression = args.pattern
       end
@@ -401,9 +401,9 @@ function create_arg_parser()
    parser:flag("--verbose", "Output additional messages")
    :default(false)
    :action("store_true")
-   parser:option("--manifest", "Load a manifest file (follow with a single dash '-' for none)")
-   :default("$sys/MANIFEST")
-   :args(1)
+   -- parser:option("--manifest", "Load a manifest file (follow with a single dash '-' for none)")
+   -- :default("$sys/MANIFEST")
+   -- :args(1)
    parser:option("--rpl", "Inline RPL statements")
    :args(1)
    :count("*") -- allow multiple RPL statements

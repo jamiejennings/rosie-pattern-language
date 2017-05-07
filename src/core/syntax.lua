@@ -182,7 +182,7 @@ local function transform_quantified_exp(ast)
       or name=="charset" 
       or name=="named_charset" or name=="named_charset0"
       or name=="literal" or name=="literal0" 
-      or name=="ref"
+      or name=="ref" or name=="extref"
    then
       new_exp = syntax.generate("raw_exp", syntax.raw(new_exp))
    else
@@ -425,7 +425,7 @@ function syntax.expression_p(ast)
 	   (name=="range") or
 	   (name=="charlist") or
 	   (name=="charset_exp") or
---	   (name=="charset") or			    -- only used by core
+--	   (name=="charset") or		-- only used by core, which does not use syntax expansion
 	   (name=="choice") or
 	   (name=="sequence") or
 	   (name=="predicate"))
@@ -456,6 +456,10 @@ function syntax.top_level_transform1(ast)
       assert(name=="alias_" or name=="assignment_" or name=="grammar_" or name=="local_",
 	  "unknown ast node type: " .. tostring(name))
       -- strip off the 'statement' wrapper
+      return syntax.top_level_transform1(ast.subs[1])
+   elseif name=="expression" then
+      local name = common.decode_match(ast.subs[1])
+      -- strip off the 'expression' wrapper
       return syntax.top_level_transform1(ast.subs[1])
    elseif (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)

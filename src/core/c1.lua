@@ -33,7 +33,7 @@ end
 
 function c1.read_module(dequoted_importpath)
    if #dequoted_importpath==0 then return nil, nil, "nil import path"; end
-   local try = "rpl1.1" .. common.dirsep .. dequoted_importpath .. ".rpl"
+   local try = "rpl" .. common.dirsep .. dequoted_importpath .. ".rpl"
    return try, util.readfile(try)
 end
 
