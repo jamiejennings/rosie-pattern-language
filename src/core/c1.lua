@@ -37,8 +37,6 @@ function c1.read_module(dequoted_importpath)
    return try, util.readfile(try)
 end
 
-local compile_module = false;				    -- forward reference
-
 function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtable)
    local compiled_imports = {}
    local prefix, modenv
@@ -65,7 +63,7 @@ function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtabl
 	    io.write("  (Found in filesystem at " .. fullpath .. ")\n");
 	    print("COMPILING MODULE " .. importpath)	    
 	    results, msgs, modenv =
-	       compile_module(parser, source, env, modtable, importpath)
+	       c1.compile_module(parser, source, env, modtable, importpath)
 	    if not results then error(table.concat(msgs, "\n")); end
 	    modtable[importpath] = modenv
 	 else
@@ -107,52 +105,17 @@ function c1.compile_ast(ast, source, env)
    return common.walk_ast(ast, functions, false, source, env)
 end
 
----------------------------------------------------------------------------------------------------
--- Launch a co-routine to compile an astlist
----------------------------------------------------------------------------------------------------
-
-local function make_compile(compile_astlist)
-   return function(parser, source, env, modtable, importpath)
-	     assert(type(parser)=="function", "Internal error: compile: parser not a function")
---	     assert(type(astlist)=="table", "Internal error: compile: astlist not a table")
---	     assert(type(original_astlist)=="table", "Internal error: compile: original_astlist not a table")
-	     assert(type(source)=="string", "Internal error: compile: source not a string")
-	     assert(type(env)=="table", "Internal error: compile: env not a table")
-	     assert(type(modtable)=="table")
-	     assert(type(importpath)=="string")
-	     local c = coroutine.create(compile_astlist)
-	     local no_lua_error, results, messages =
-		coroutine.resume(c, parser, source, env, modtable, importpath)
-	     if no_lua_error then
-		-- Return results and compilation messages
-		if results then
-		   assert(type(messages)=="table")
-		   for i, pat in ipairs(results) do
--- TODO: syntax-expand should save each original_ast as part of the new ast (or something)
---		      if common.pattern.is(pat) then pat.original_ast = original_astlist[i]; end
-		   end
-		   return results, messages		    -- message may contain compiler warnings
-		else
-		   assert(type(messages)=="string")
-		   return false, {messages}		    -- message is a string in this case
-		end
-	     else
-		error("Internal error (compiler): " .. tostring(results))
-	     end
-	  end
-end
-
 ----------------------------------------------------------------------------------------
 -- Coroutine body
 ----------------------------------------------------------------------------------------
 
 -- compile_module enforces the structure of an rpl module:
---     rpl_module = language_decl? package_decl import_decl* statement* ignore
+--     rpl_module = language_decl? package_decl? import_decl* statement* ignore
 --
--- We could parse a module using that rpl_module pattern, but it's easier to give useful
+-- We could parse a module using that rpl_module pattern, but we can give better
 -- error messages this way.
 
-compile_module = function(parser, source, env, modtable, importpath)
+function c1.compile_module(parser, source, env, modtable, importpath)
    local astlist, orig_astlist, messages = parser(source)
    if not astlist then return nil, messages; end
    -- modtable is the global module table (one per engine)
@@ -161,7 +124,7 @@ compile_module = function(parser, source, env, modtable, importpath)
    local results, messages = {}, {}
    local i = 1
    if not astlist[i] then return results, {"Empty module"}; end
-   local typ, pos, text, subs, fin = decode_match(astlist[i])
+   local typ, pos, text, subs, fin = common.decode_match(astlist[i])
    assert(typ~="language_decl", "language declaration should be handled in preparse/parse")
    if typ=="package_decl" then
       -- create/set the compilation environment according to the package name,
@@ -173,7 +136,7 @@ compile_module = function(parser, source, env, modtable, importpath)
 	 table.insert(messages, "Empty module (nothing after package declaration)")
 	 return results, messages
       end
-      typ, pos, text, subs, fin = decode_match(astlist[i])
+      typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end
    -- If there is a package_decl, then this code is a module.  It gets its own fresh
    -- environment, and it is registered (by its importpath) in the per-engine modtable.
@@ -192,13 +155,11 @@ compile_module = function(parser, source, env, modtable, importpath)
 
       local compiled_modules = c1.process_import_decl(typ, pos, text, subs, fin, parser, env, modtable)
 
-	 --results[i], messages[i] =
-	 -- TODO:
-	 -- (+) process the compiled_modules table
-	 -- (+) create a binding in env that maps the prefix to its module env
-	 --     ** this way, we can in future treat the module as a first class object
-	 --     ** but we must prohibit rebinding of this name (and we will prohibit
-	 --        rebinding names in general, except in the repl)
+      -- Below we process the compiled_modules table.
+      -- Each imported module is reified as a binding in env that maps the prefix to its module env
+      --   ** This way, we can in future treat the module as a first class object.
+      --   ** But we must prohibit rebinding of this name (and we will prohibit
+      --      rebinding names in general, except in the repl).
 
       for _, mod in ipairs(compiled_modules) do
 	 if environment.lookup(env, mod.prefix) then
@@ -216,7 +177,7 @@ compile_module = function(parser, source, env, modtable, importpath)
 	 table.insert(messages, "Empty module (nothing after import declaration(s))")
 	 return results, messages
       end
-      typ, pos, text, subs, fin = decode_match(astlist[i])
+      typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end
    repeat
       results[i], messages[i] = c1.compile_ast(astlist[i], source, env)
@@ -226,6 +187,6 @@ compile_module = function(parser, source, env, modtable, importpath)
    return results, messages, env
 end
 
-c1.compile_module = make_compile(compile_module)
+
 
 return c1

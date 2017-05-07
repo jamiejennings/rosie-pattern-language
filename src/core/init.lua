@@ -130,7 +130,7 @@ function load_all()
    end
 
    engine_module._set_defaults(rpl_parser, compile.compile0, 0, 0);
-   manifest = import("manifest")
+--   manifest = import("manifest")
 
    process_input_file = import("process_input_file")
    process_rpl_file = import("process_rpl_file")
@@ -168,24 +168,33 @@ function create_core_engine()
    local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
    if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
    CORE_ENGINE:load(rpl_1_0)
-   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl')
+   CORE_ENGINE:compile('rpl', 'match')
+
+   
+   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl', 'match')
    if not success then error("Error while initializing: could not compile 'rpl' in "
 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
    ROSIE_RPLX = result
-   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse')
+   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse', 'match')
    if not success then error("Error while initializing: could not compile 'preparse' in "
 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
    ROSIE_PREPARSE = result
 end
+
+-- function make_compile0(en)
+--    return {compile = function(astlist, original_astlist, source, env)
+-- 			return compile.compile1.compile(en._rpl_parser, source, env, en._modtable, "")
+-- 		     end,
+-- 	   compile_expression = compile.compile0.compile_expression}
+-- end
 
 function create_rosie_engine()
    -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
    rpl_parser = import("rpl-parser")
    local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
    -- And make these the defaults for all new engines:
-   engine_module._set_defaults(parse_and_explain, compile.compile0, 1, 0);
-
    ROSIE_ENGINE = engine.new("RPL 1.0 engine")
+   engine_module._set_defaults(parse_and_explain, compile.compile0, 1, 0);
    announce("ROSIE_ENGINE", ROSIE_ENGINE)
 end
 

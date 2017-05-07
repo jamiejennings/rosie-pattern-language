@@ -20,6 +20,40 @@ local bind = environment.bind
 local c0 = require "c0"
 local c1 = require "c1"
 
+---------------------------------------------------------------------------------------------------
+-- Launch a co-routine to compile an astlist
+---------------------------------------------------------------------------------------------------
+
+local function make_compile(compile_astlist)
+   return function(parser, source, env, modtable, importpath)
+	     assert(type(parser)=="function", "Internal error: compile: parser not a function")
+	     assert(type(source)=="string", "Internal error: compile: source not a string")
+	     assert(type(env)=="table", "Internal error: compile: env not a table")
+	     assert(type(modtable)=="table" or modtable==nil)
+	     assert(type(importpath)=="string" or importpath==nil)
+	     local c = coroutine.create(compile_astlist)
+	     local no_lua_error, results, messages =
+		coroutine.resume(c, parser, source, env, modtable, importpath)
+	     if no_lua_error then
+		-- Return results and compilation messages
+		if results then
+		   assert(type(messages)=="table")
+		   for i, pat in ipairs(results) do
+-- TODO: syntax-expand should save each original_ast as part of the new ast (or something)
+--		      if common.pattern.is(pat) then pat.original_ast = original_astlist[i]; end
+		   end
+		   return results, messages		    -- message may contain compiler warnings
+		else
+		   assert(type(messages)=="string")
+		   return false, {messages}		    -- message is a string in this case
+		end
+	     else
+		error("Internal error (compiler): " .. tostring(results))
+	     end
+	  end
+end
+
+
 ----------------------------------------------------------------------------------------
 -- Coroutine body
 ----------------------------------------------------------------------------------------
@@ -41,38 +75,42 @@ end
 -- Top-level interface to compilers
 ----------------------------------------------------------------------------------------
 
-local function make_compile(compile_astlist)
-   return function(astlist, original_astlist, source, env)
-	     assert(type(astlist)=="table", "Internal error: compile: astlist not a table")
-	     assert(type(original_astlist)=="table", "Internal error: compile: original_astlist not a table")
-	     assert(type(source)=="string", "Internal error: compile: source not a string")
-	     assert(type(env)=="table", "Internal error: compile: env not a table")
-	     local c = coroutine.create(compile_astlist)
-	     local no_lua_error, results, messages = coroutine.resume(c, astlist, source, env)
-	     if no_lua_error then
-		-- Return results and compilation messages
-		if results then
-		   assert(type(messages)=="table")
-		   for i, pat in ipairs(results) do
-		      pat.original_ast = original_astlist[i];
-		   end
-		   return results, messages		    -- message may contain compiler warnings
-		else
-		   assert(type(messages)=="string")
-		   return false, {messages}		    -- message is a string in this case
-		end
-	     else
-		error("Internal error (compiler): " .. tostring(results))
-	     end
-	  end
-end
+-- local function make_compile(compile_astlist)
+--    return function(astlist, original_astlist, source, env)
+-- 	     assert(type(astlist)=="table", "Internal error: compile: astlist not a table")
+-- 	     assert(type(original_astlist)=="table", "Internal error: compile: original_astlist not a table")
+-- 	     assert(type(source)=="string", "Internal error: compile: source not a string")
+-- 	     assert(type(env)=="table", "Internal error: compile: env not a table")
+-- 	     local c = coroutine.create(compile_astlist)
+-- 	     local no_lua_error, results, messages = coroutine.resume(c, astlist, source, env)
+-- 	     if no_lua_error then
+-- 		-- Return results and compilation messages
+-- 		if results then
+-- 		   assert(type(messages)=="table")
+-- 		   for i, pat in ipairs(results) do
+-- 		      pat.original_ast = original_astlist[i];
+-- 		   end
+-- 		   return results, messages		    -- message may contain compiler warnings
+-- 		else
+-- 		   assert(type(messages)=="string")
+-- 		   return false, {messages}		    -- message is a string in this case
+-- 		end
+-- 	     else
+-- 		error("Internal error (compiler): " .. tostring(results))
+-- 	     end
+-- 	  end
+-- end
 
 local function make_compile_expression(expression_p, compile)
-   return function(astlist, original_astlist, source, env)
-	     assert(type(astlist)=="table")
-	     assert(type(original_astlist)=="table")
+   return function(parser, source, env)
+	     assert(type(parser)=="function", "Internal error: compile: parser not a function")
 	     assert(type(source)=="string")
 	     assert(type(env)=="table")
+	     local astlist, original_astlist, messages = parser(source)
+	     if not astlist then return nil, messages; end
+	     assert(type(astlist)=="table")
+	     assert(type(original_astlist)=="table")
+
 	     -- After adding support for semi-colons to end statements, can change this
 	     -- restriction to allow arbitrary statements, followed by an expression, like
 	     -- scheme's 'begin' form.
@@ -96,7 +134,7 @@ local function make_compile_expression(expression_p, compile)
 		pat = lookup(env, text)
 	     end
 	     -- Compile the expression
-	     local results, msgs = compile(astlist, original_astlist, source, env)
+	     local results, msgs = compile(parser, source, env)
 	     if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
 		return false, msgs
 	     end
@@ -115,16 +153,14 @@ local function make_compile_expression(expression_p, compile)
 	  end
 end
 
-local compile0 = make_compile(make_compile_astlist(c0.compile_ast))
+--local compile0 = make_compile(make_compile_astlist(c0.compile_ast))
 local compile1 = make_compile(c1.compile_module)
 
-return {compile0 = {compile = compile0,
-		    compile_expression=make_compile_expression(c0.expression_p, compile0)},
+return {compile0 = {compile = compile1,
+		    compile_expression=make_compile_expression(c0.expression_p, compile1)},
 	compile1 = {compile = compile1,
 		    compile_expression=make_compile_expression(c0.expression_p, compile1),
-		    compile_module=c1.compile_module,
-		    read_module=c1.read_module	    -- TODO: remove?
+--		    compile_module=c1.compile_module, -- remove?
+		    read_module=c1.read_module	    -- TODO: factor into find_module and read_module?
 		 }
-	}
-		    
-
+     }

@@ -138,12 +138,11 @@ end
 local function compile_match(en, source)
    local rpl_parser, env = en._rpl_parser, en._env
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   -- TODO: do something with leftover?
-   local astlist, original_astlist, warnings, leftover = rpl_parser(source)
-   if (not astlist) then
-      return false, warnings			    -- warnings contains errors in this case
-   end
-   return en._rpl_compiler.compile_expression(astlist, original_astlist, source, env)
+   -- local astlist, original_astlist, warnings, leftover = rpl_parser(source)
+   -- if (not astlist) then
+   --    return false, warnings			    -- warnings contains errors in this case
+   -- end
+   return en._rpl_compiler.compile_expression(rpl_parser, source, env)
 end
 
 local function engine_compile(en, expression, flavor)
@@ -231,7 +230,7 @@ local function load_string(e, input)
    if not astlist then
       engine_error(e, table.concat(warnings, '\n')) -- in this case, warnings contains errors
    end
-   local results, messages = e._rpl_compiler.compile(astlist, original_astlist, input, e._env)
+   local results, messages = e._rpl_compiler.compile(e._rpl_parser, input, e._env, e._modtable, "(no path)")
    if results then
       assert(type(messages)=="table")
       for i,w in ipairs(warnings) do table.insert(messages, i, w); end
