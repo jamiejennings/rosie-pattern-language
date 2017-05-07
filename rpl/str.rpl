@@ -1,0 +1,59 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- common.rpl   Common patterns in Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+rpl 1.0
+
+
+alias str.letter = [:alpha:]
+alias str.digit = [:digit:]
+
+alias str.graph = {![:space:] .}
+
+str.word = str.letter+
+-- test str.word accepts "foo"
+-- test str.word rejects "12356", "  ", "#!", "ac475"
+
+alias str.id_char = [_-] / {![:space:] ![:punct:] .}
+-- test str.id_char accepts "_", "-", "i", "3"
+-- test str.id_char rejects "#", "%", "`"
+
+-- An escaped_string is a json string, in which double quotes must be escaped.
+str.escaped = ["] { {[\\].} / [^"\\] }* ["]   -- "
+-- test str.escaped accepts "\"\"", "\"foo\"", "\"I said, \\\"Hi\\\"\""
+-- test str.escaped rejects "", "\"foo", "\"I said, \"Hi\""
+
+-- Quoted strings, using single or double quote
+--
+-- Within a dquoted_string, the quote character can be escaped using a slash, OR by repeating it
+-- twice, e.g. "".
+alias str.dquoted_string = "\""  {"\\\"" / {! [\"] .}}* "\""
+
+alias str.dquote = "\""			      -- "
+alias str.escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\"" -- \" or \"\" or "" 
+alias str.squote = "'"			      -- '
+alias str.escaped_squote = "\\'" / "\\'\\'" / "''"      -- \' or \'\' or ''
+-- Capture the contents of a quoted field by assigning it to an RPL name:
+str.double_quoted = {str.escaped_dquote / {!str.dquote .}}*
+-- TODO: create tests
+str.single_quoted = {str.escaped_squote / {!str.squote .}}*
+-- TODO: create tests
+
+-- Wrap the field contents with quotation marks:
+alias str.dq = {str.dquote str.double_quoted str.dquote}
+alias str.sq = {str.squote str.single_quoted str.squote}
+
+-- Look for either double or single quoted fields
+str.quoted = str.dq / str.sq
+-- TODO: create tests
+
+-- GUID matching
+alias str.h = [:xdigit:]
+alias str.type4_guid_nocap = {str.h{8,8} "-" {str.h{4,4} "-"}{3,3} str.h{12,12}}
+str.type4_guid = str.type4_guid_nocap
+-- TODO: create tests
