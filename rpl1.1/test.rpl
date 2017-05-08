@@ -7,7 +7,10 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+-- TODO: this should produce at least a warning, if not an error, because
+-- this file needs rpl 1.1 to work!
 rpl 1.0
+
 package test 
 
 import "common"

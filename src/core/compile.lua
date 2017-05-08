@@ -53,7 +53,6 @@ local function make_compile(compile_astlist)
 	  end
 end
 
-
 ----------------------------------------------------------------------------------------
 -- Coroutine body
 ----------------------------------------------------------------------------------------
@@ -75,42 +74,12 @@ end
 -- Top-level interface to compilers
 ----------------------------------------------------------------------------------------
 
--- local function make_compile(compile_astlist)
---    return function(astlist, original_astlist, source, env)
--- 	     assert(type(astlist)=="table", "Internal error: compile: astlist not a table")
--- 	     assert(type(original_astlist)=="table", "Internal error: compile: original_astlist not a table")
--- 	     assert(type(source)=="string", "Internal error: compile: source not a string")
--- 	     assert(type(env)=="table", "Internal error: compile: env not a table")
--- 	     local c = coroutine.create(compile_astlist)
--- 	     local no_lua_error, results, messages = coroutine.resume(c, astlist, source, env)
--- 	     if no_lua_error then
--- 		-- Return results and compilation messages
--- 		if results then
--- 		   assert(type(messages)=="table")
--- 		   for i, pat in ipairs(results) do
--- 		      pat.original_ast = original_astlist[i];
--- 		   end
--- 		   return results, messages		    -- message may contain compiler warnings
--- 		else
--- 		   assert(type(messages)=="string")
--- 		   return false, {messages}		    -- message is a string in this case
--- 		end
--- 	     else
--- 		error("Internal error (compiler): " .. tostring(results))
--- 	     end
--- 	  end
--- end
-
 local function make_compile_expression(expression_p, compile)
    return function(parser, source, env)
 	     assert(type(parser)=="function", "Internal error: compile: parser not a function")
 	     assert(type(source)=="string")
 	     assert(type(env)=="table")
 	     local astlist, original_astlist, messages = parser(source)
-
-	     -- print("*** source:" .. source)
-	     -- print("*** astlist:"); table.print(astlist)
-	     -- print("*** original_astlist:"); table.print(original_astlist)
 
 	     if not astlist then return nil, messages; end
 	     assert(type(astlist)=="table")
@@ -157,6 +126,68 @@ local function make_compile_expression(expression_p, compile)
 	     return result, {}				    -- N.B. returns a single pattern and messages
 	  end
 end
+
+----------------------------------------------------------------------------------------
+-- Compiler interface
+----------------------------------------------------------------------------------------
+
+-- Relationship between engine and compiler:
+--
+-- Until now, the compiler did not know anything about engines.  The engine kept an environment,
+-- which was passed to the compiler.  The engine recently acquired a parser (now that there can be
+-- several, instead of a single "universal" rpl parser), and it used its parser on source, passing
+-- the resulting ast forest to the compiler.
+--
+-- With the creation of rpl 1.1, the engine acquired its own compiler as well (instead of one
+-- "universal" compiler).  For a brief time, there was, by necessity, a uniform set of interfaces
+-- enabling an engine to orchestrate: parse -> syntax-expand -> compile (with appropriate error
+-- handling between).
+--
+-- But rpl 1.1 supports modules, which means that while compiling a unit of rpl code, we may need
+-- to find, read, parse, and compile another unit of rpl (i.e. an imported module).  In the
+-- future, it will be possible to load a module that has already been compiled, but that is not
+-- the case today.
+--
+-- With rpl 1.1 and its modules, the following scenarios need to be supported:
+--
+--   Engine    Find a file of module code in the filesystem
+--             find_file(importpath, ROSIE_PATH) --> file contents
+--   Engine    Match a pattern against an input string
+--             match(rplx, input, encoder) --> encoded result or nil, bytes leftover, time in microsec
+--             match(source, input, encoder, importpath/nil) where source parses to an expression
+--                and importpath specifies an environment via the modtable (this is for pattern testing)
+--   Compiler  Load source into an environment (modules into their own fresh environment)
+--             load_astlist(importpath/nil, astlist, modtable, env) --> packagename/nil, list of bindings (names) created
+--             load_source(importpath/nil, source, modtable, env)
+--   Compiler  Import an already-loaded module into an environment
+--             import(importpath, prefix, env) --> success/failure
+--   Compiler  Compile an expression, producing a compiled expression object
+--             compile_expression_astlist(astlist, importpath/nil) --> rplx object
+--             compile_expression_source(source, importpath/nil)
+--                where importpath specifies an environment via the modtable (useful for testing)
+--   Compiler  Calculate the dependencies (transitive closure) for top-level or a module
+--             deps_astlist(astlist, modtable) --> list of dep where dep = {importpath, prefix, fullpath/error}
+--             deps_source(source, modtable)
+-- X Tester    USE ENGINE'S MATCH INTERFACE AND SUPPLY THE IMPORTPATH
+--             Run a lightweight pattern test for top-level code
+--             Create an engine.  Load the code.
+--             test(engine, nil, name, input, encoder) --> same as match function
+-- X Tester    USE ENGINE'S MATCH INTERFACE AND SUPPLY THE IMPORTPATH
+--             Run the lightweight pattern tests for a module (via special api?)
+--             Create an engine.  Load the module code.
+--             test(engine, importpath, name, input, encoder) --> same as match function
+--   Compiler  Extract a list of prefixes used in a given expression
+--             prefixes_ast(astlist) --> list of packagenames
+--             prefixes_source(source) --> list of packagenames
+
+-- !!! The modtable is going to need to store a ref to the top-level engine env, so that we can
+-- !!! pass nil into the above API in the (default, usual) case of compiling in the top level
+-- !!! environment.
+
+-- !!! When we re-do the AST representation, we need a slot in each AST node record for the rpl
+-- !!! version in which this feature appeared.  That way we can detect mislabeled `rpl x.y`
+-- !!! declarations and abort compilation.
+
 
 --local compile0 = make_compile(make_compile_astlist(c0.compile_ast))
 local compile1 = make_compile(c1.compile_module)
