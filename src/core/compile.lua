@@ -176,7 +176,11 @@ end
 --             Run the lightweight pattern tests for a module (via special api?)
 --             Create an engine.  Load the module code.
 --             test(engine, importpath, name, input, encoder) --> same as match function
---   Compiler  Extract a list of prefixes used in a given expression
+--   Parser    Look for and parse the (1) optional BOM, (2) optional rpl language level
+--             declaration. 
+--             preparse(source) --> major, minor, nextpos, bom -OR- nil, nil, 1, bom
+--                where bom is nil, "UTF-8", "UTF-16BE", "UTF16-LE", "UTF-32BE", or "UTF-32LE"
+--   Parser    Extract a list of prefixes used in the given expressions or statements
 --             prefixes_ast(astlist) --> list of packagenames
 --             prefixes_source(source) --> list of packagenames
 
@@ -187,6 +191,7 @@ end
 -- !!! When we re-do the AST representation, we need a slot in each AST node record for the rpl
 -- !!! version in which this feature appeared.  That way we can detect mislabeled `rpl x.y`
 -- !!! declarations and abort compilation.
+
 
 
 --local compile0 = make_compile(make_compile_astlist(c0.compile_ast))

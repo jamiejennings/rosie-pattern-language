@@ -239,4 +239,14 @@ function parse.core_parse(source)
    end
 end
 
+function parse.core_parse_expression(source)
+   local astlist, warnings, leftover = parse.core_parse(source)
+   if not astlist then return nil, warnings, leftover; end -- warnings contains errors in this case
+   assert(type(astlist)=="table")
+   if not astlist[1] then return nil, "empty expression", 1
+   elseif astlist[2] then return nil, "not an expression", 1
+   else return astlist, warnings, leftover
+   end
+end
+      
 return parse

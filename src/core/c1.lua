@@ -158,8 +158,8 @@ function c1.compile_module(parser, source, env, modtable, importpath)
       -- Below we process the compiled_modules table.
       -- Each imported module is reified as a binding in env that maps the prefix to its module env
       --   ** This way, we can in future treat the module as a first class object.
-      --   ** But we must prohibit rebinding of this name (and we will prohibit
-      --      rebinding names in general, except in the repl).
+      --   ** But we must prohibit rebinding of this name (and we will also prohibit
+      --      rebinding names *inside* a module in general).
 
       for _, mod in ipairs(compiled_modules) do
 	 if environment.lookup(env, mod.prefix) then

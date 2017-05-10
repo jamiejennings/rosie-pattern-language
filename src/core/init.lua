@@ -117,26 +117,10 @@ function load_all()
 
    engine = engine_module.engine
 
-   -- manifest code requires a working engine, so we initialize the engine package here
-   assert(parse.core_parse, "error while initializing: parse module not loaded?")
-   assert(syntax.transform0, "error while initializing: syntax module not loaded?")
-   local function rpl_parser(source)
-      local astlist, msgs, leftover = parse.core_parse(source)
-      if not astlist then
-	 return nil, nil, msgs, leftover
-      else
-	 return syntax.transform0(astlist), astlist, msgs, leftover
-      end
-   end
-
-   engine_module._set_defaults(rpl_parser, compile.compile0, 0, 0);
---   manifest = import("manifest")
-
    process_input_file = import("process_input_file")
    process_rpl_file = import("process_rpl_file")
 
    assert(_G)
---   argparse = import("argparse")
 
 end
 
@@ -153,21 +137,62 @@ end
 
 local function announce(name, engine)
    if ROSIE_DEV then
-      print(name .. " created: _rpl_version = ".. tostring(engine._rpl_version) ..
-	                    "; _rpl_parser = " .. tostring(engine._rpl_parser))
+      print(name .. " created, accepting ".. tostring(engine.compiler.version))
    end
 end
 
+local unsupported = function()
+		       error("operation not supported in core parser")
+		    end
+
 function create_core_engine()
+   assert(parse.core_parse, "error while initializing: parse module not loaded?")
+   assert(syntax.transform0, "error while initializing: syntax module not loaded?")
+
+   local function rpl_parser(source)
+      local astlist, msgs, leftover = parse.core_parse(source)
+      if not astlist then
+	 return nil, nil, msgs, leftover
+      else
+	 return syntax.transform0(astlist), astlist, msgs, leftover
+      end
+   end
+
+   local function rpl_exp_parser(source)
+      local astlist, msgs, leftover = parse.core_parse_expression(source)
+      if not astlist then
+	 return nil, nil, msgs, leftover
+      else
+	 return syntax.transform0(astlist), astlist, msgs, leftover
+      end
+   end
+   
+   core_parser =
+      common.parser.new{ version = common.rpl_version.new(0, 0);
+			 preparse = unsupported;
+			 parse_statements = rpl_parser;
+			 parse_expression = rpl_exp_parser;
+			 prefixes = unsupported;
+		      }
+   corecompiler =
+      common.compiler.new{ version = common.rpl_version.new(0, 0);
+			   load = compile.compile0.compile;
+			   import = unsupported;
+			   compile_expression = compile.compile0.compile_expression;
+			   deps = unsupported;
+			   parser = core_parser;
+			}
+
    -- Create a core engine that accepts rpl 0.0
-   -- N.B. default rpl parser has been set in load-modules because manifest package needs it
-   CORE_ENGINE = engine.new("RPL core engine")
+   CORE_ENGINE = engine.new("RPL core engine", corecompiler)
    announce("CORE_ENGINE", CORE_ENGINE)
+
    -- Into the core engine, load the rpl 1.0 definition, which is written in rpl 0.0
    local rpl_1_0_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_0.rpl"
    local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
    if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
    CORE_ENGINE:load(rpl_1_0)
+
    local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl', 'match')
    if not success then error("Error while initializing: could not compile 'rpl' in "
 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
@@ -178,20 +203,30 @@ function create_core_engine()
    ROSIE_PREPARSE = result
 end
 
--- function make_compile0(en)
---    return {compile = function(astlist, original_astlist, source, env)
--- 			return compile.compile1.compile(en._rpl_parser, source, env, en._modtable, "")
--- 		     end,
--- 	   compile_expression = compile.compile0.compile_expression}
--- end
 
 function create_rosie_engine()
    -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
    rpl_parser = import("rpl-parser")
    local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
-   -- And make these the defaults for all new engines:
-   ROSIE_ENGINE = engine.new("RPL 1.0 engine")
-   engine_module._set_defaults(parse_and_explain, compile.compile0, 1, 0);
+
+   parser1_0 =
+      common.parser.new{ version = common.rpl_version.new(1, 0);
+			 preparse = unsupported;               -- FIXME
+			 parse_statements = parse_and_explain;
+			 parse_expression = parse_and_explain; -- FIXME: separate out
+			 prefixes = unsupported;	       -- FIXME
+		      }
+   compiler1_0 =
+      common.compiler.new{ version = common.rpl_version.new(1, 0);
+			   load = compile.compile0.compile;
+			   import = unsupported;
+			   compile_expression = compile.compile0.compile_expression;
+			   deps = unsupported;
+			   parser = parser1_0;
+			}
+   ROSIE_ENGINE = engine.new("RPL 1.0 engine", compiler1_0)
+   -- And make this the default for all new engines:
+   engine_module._set_default_compiler(compiler1_0)
    announce("ROSIE_ENGINE", ROSIE_ENGINE)
 end
 
@@ -211,8 +246,24 @@ function create_rpl1_1_engine()
    rpl_parser = import("rpl-parser")		    -- idempotent
    local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, RPL1_1_RPLX, 1, 1, syntax.transform1)
 
+   parser1_1 =
+      common.parser.new{ version = common.rpl_version.new(1, 1);
+			 preparse = unsupported;               -- FIXME
+			 parse_statements = parse_and_explain;
+			 parse_expression = parse_and_explain; -- FIXME: separate out
+			 prefixes = unsupported;	       -- FIXME
+		      }
+   compiler1_1 =
+      common.compiler.new{ version = common.rpl_version.new(1, 1);
+			   load = compile.compile1.compile;
+			   import = unsupported;               -- FIXME
+			   compile_expression = compile.compile1.compile_expression;
+			   deps = unsupported;	               -- FIXME
+			   parser = parser1_1;
+			}
+
    -- RPL 1.1 is now the default for new engines
-   engine_module._set_defaults(parse_and_explain, compile.compile1, 1, 1);
+   engine_module._set_default_compiler(compiler1_1)
 
    RPL1_1_ENGINE = e
    announce("RPL1_1_ENGINE", RPL1_1_ENGINE)
@@ -231,10 +282,11 @@ end
 ROSIE_INFO = {}
 
 function populate_info()
+   local rpl_version = ROSIE_ENGINE.compiler.version
    ROSIE_INFO = {
       {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
       {name="ROSIE_VERSION", value=ROSIE_VERSION,                       desc="version of rosie installed"},
-      {name="RPL_VERSION",   value=tostring(ROSIE_ENGINE._rpl_version), desc="version of rpl (language) accepted"},
+      {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
       {name="ROSIE_LIB",     value=tostring(ROSIE_LIB),                 desc="location of the standard rpl library"},
       {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),                 desc="true if rosie was started in development mode"},
       {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "",         desc="host on which rosie is running"},

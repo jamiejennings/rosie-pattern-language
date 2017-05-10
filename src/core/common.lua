@@ -9,6 +9,7 @@
 local lpeg = import "lpeg"
 local util = import "util"
 local recordtype = import "recordtype"
+local math = import "math"
 local string = import "string"
 local table = import "table"
 
@@ -303,6 +304,48 @@ function common.compare_matches(t1, t2)
    end
 end
       
+
+----------------------------------------------------------------------------------------
+-- Compiler and parser
+----------------------------------------------------------------------------------------
+
+local function undefined() assert(false, "undefined function"); end
+
+common.rpl_version =
+   recordtype.new("rpl_version",
+		  { major=0;
+		    minor=0;
+		 },
+		  function(maj, min)
+		     if type(maj)~="number" or type(min)~="number" or 
+		        (not math.tointeger(maj)) or (not math.tointeger(min)) then
+			error("major and minor arguments must be integers")
+		     end
+		     return common.rpl_version.factory{major=maj; minor=min};
+		  end,
+		  function(v)
+		     return "<rpl version " .. tostring(v.major).."."..tostring(v.minor) .. ">"
+		  end)
+
+common.compiler = 
+   recordtype.new("compiler",
+		  { version=false;	 -- rpl version supported
+		    load=undefined;
+		    import=undefined;
+		    compile_expression=undefined;
+		    deps=undefined;
+		    parser=false;
+		  })
+
+common.parser =
+   recordtype.new("parser",
+		  { version=false;	 -- rpl version supported
+		    preparse=undefined;
+		    parse_statements=undefined;
+		    parse_expression=undefined;
+		    prefixes=undefined;
+		 })
+
 
 ----------------------------------------------------------------------------------------
 -- Pattern definition

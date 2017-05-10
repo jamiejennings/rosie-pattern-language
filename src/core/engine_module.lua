@@ -112,14 +112,13 @@ local engine_error		     -- forward reference
 -- refactoring) syntax module.
 
 local function compile_search(en, pattern_exp)
-   local rpl_parser, env = en._rpl_parser, en._env
+   local parse_exp, env = en.compiler.parser.parse_expression, en._env
    local env = environment.extend(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
    -- TODO: do something with leftover?
-   local astlist, orig_astlist, warnings, leftover = rpl_parser(pattern_exp)
-   if not astlist then return nil, warnings; end	    -- warnings contains errors in this case
-   assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
-   local pat, msgs = en._rpl_compiler.compile_expression(astlist, orig_astlist, pattern_exp, env)
+   local astlist, orig_astlist, warnings, leftover = parse_exp(pattern_exp)
+   if not astlist then return nil, warnings, leftover; end
+   local pat, msgs = en.compiler.compile_expression(astlist, orig_astlist, pattern_exp, env)
    if not pat then return nil, msgs; end
    local replacement = pat.ast
    -- Next, transform pat.ast
@@ -128,7 +127,7 @@ local function compile_search(en, pattern_exp)
    local template = astlist[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   return en._rpl_compiler.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
+   return en.compiler.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
    -- local pat, msgs = compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
    -- if not pat then return nil, msgs; end
    -- assert(pat.peg)
@@ -136,13 +135,13 @@ local function compile_search(en, pattern_exp)
 end
 
 local function compile_match(en, source)
-   local rpl_parser, env = en._rpl_parser, en._env
+   local rpl_parser, env = en.compiler.parser.parse_expression, en._env
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
    -- local astlist, original_astlist, warnings, leftover = rpl_parser(source)
    -- if (not astlist) then
    --    return false, warnings			    -- warnings contains errors in this case
    -- end
-   return en._rpl_compiler.compile_expression(rpl_parser, source, env)
+   return en.compiler.compile_expression(rpl_parser, source, env)
 end
 
 local function engine_compile(en, expression, flavor)
@@ -226,11 +225,11 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 --   if any step fails, generate useful error messages and return nil, nil, msgs, leftover
 
 local function load_string(e, input)
-   local astlist, original_astlist, warnings, leftover = e._rpl_parser(input)
+   local astlist, original_astlist, warnings, leftover = e.compiler.parser.parse_statements(input)
    if not astlist then
       engine_error(e, table.concat(warnings, '\n')) -- in this case, warnings contains errors
    end
-   local results, messages = e._rpl_compiler.compile(e._rpl_parser, input, e._env, e._modtable, "(no path)")
+   local results, messages = e.compiler.load(e.compiler.parser.parse_statements, input, e._env, e._modtable, "(no path)")
    if results then
       assert(type(messages)=="table")
       for i,w in ipairs(warnings) do table.insert(messages, i, w); end
@@ -297,63 +296,22 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
-local default_rpl_parser = function(...) error("default_rpl_parser not initialized"); end
-local default_rpl_compiler = function(...) error("default_rpl_compiler not initialized"); end
-local default_rpl_version
-local function set_defaults(parse_expand_explain, compiler, major, minor)
-   if type(parse_expand_explain)~="function" then
-      error("default rpl parser not a function: " .. tostring(default_rpl_parser))
-   elseif type(compiler)~="table" then
-      error("default rpl compiler not a table: " .. tostring(compiler))
-   elseif type(compiler.compile_expression)~="function" then
-      error("default compiler is missing compile_expression function: " .. tostring(compiler.compile_expression))
-   elseif type(compiler.compile)~="function" then
-      error("default compiler is missing compile function: " .. tostring(compiler.compile))
-   elseif type(major)~="number" then
-      error("major version not a number: " .. tostring(major))
-   elseif type(minor)~="number" then
-      error("minor version not a number: " .. tostring(minor))
-   end
-   local vt = {major=major, minor=minor}
-   default_rpl_parser = parse_expand_explain
-   default_rpl_compiler = compiler
-   default_rpl_version = setmetatable({}, {__index=vt,
-					   __newindex=function(...) error("read-only table") end,
-					   __tostring=function(self) return tostring(vt.major).."."..tostring(vt.minor); end,
-					})
+local default_compiler = false
+
+local function set_default_compiler(compiler)
+   default_compiler = compiler
 end
 
 ---------------------------------------------------------------------------------------------------
 
-local function engine_create(name)
-   local params = {_name=name,
-		   _rpl_parser=default_rpl_parser;
-		   _rpl_compiler=default_rpl_compiler;
-		   _rpl_version=default_rpl_version;
-
-		   _env=environment.new(),
-		   _modtable=environment.make_module_table(),
-
-		   lookup=get_environment,
-		   clear=clear_environment,
-
-		   id=recordtype.id,
-		   name=function(en)
-			   -- checking the unused arg for consistency with other engine functions
-			   if engine.is(en) then return name;
-			   else error("Arg to name function is not an engine: " .. tostring(en))
-			   end
-			end,
-		   output=get_set_encoder_function,
-
-		   match=engine_match,
-		   tracematch=engine_tracematch,
-		   load=load_string,
-		   compile=engine_compile,
-
-		   _error=engine_error,
-		}
-   return engine.factory(params)
+local function engine_create(name, compiler)
+   compiler = compiler or default_compiler
+   if not compiler then error("no default compiler set"); end
+   return engine.factory { name=function() return name; end,
+			   compiler=compiler,
+			   _env=environment.new(),
+			   _modtable=environment.make_module_table(),
+			}
 end
 
 function engine_error(e, msg)
@@ -362,28 +320,26 @@ end
 
 local engine = 
    recordtype.new("engine",
-		  {  _name=recordtype.NIL;	    -- for reference, debugging
-		     _rpl_parser=false;
-		     _rpl_compiler=false;
-		     _rpl_version=false;
-		     _env=false;
-		     _modtable=false;
+		  {  name=function() return nil; end, -- for reference, debugging
+		     compiler=false,
+		     _env=false,
+		     _modtable=false,
+		     _error=engine_error,
 
-		     encode_function=false;	    -- default: return lua tables
+		     id=recordtype.id,
 
-		     id=recordtype.id;
-		     lookup=false;
-		     clear=false;
-		     name=false;
-		     output=false;
+		     encode_function=false,	    -- false or nil ==> use default encoder
+		     output=get_set_encoder_function,
 
-		     load=false;
-		     compile=false;
+		     lookup=get_environment,
+		     clear=clear_environment,
 
-		     match=false;
-		     tracematch=false;
+		     load=load_string,
+		     compile=engine_compile,
 
-		     _error=engine_error;
+		     match=engine_match,
+		     tracematch=engine_tracematch,
+
 		  },
 		  engine_create
 	       )
@@ -409,7 +365,7 @@ rplx = recordtype.new("rplx",
 ---------------------------------------------------------------------------------------------------
 
 engine_module.engine = engine
-engine_module._set_defaults = set_defaults
+engine_module._set_default_compiler = set_default_compiler
 engine_module.rplx = rplx
 
 return engine_module
