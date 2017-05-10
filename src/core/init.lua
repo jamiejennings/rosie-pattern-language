@@ -207,11 +207,13 @@ end
 function create_rosie_engine()
    -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
    rpl_parser = import("rpl-parser")
-   local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, ROSIE_RPLX, 1, 0, syntax.transform0)
+   local supported_version = common.rpl_version.new(1, 0)
+   local preparser = make_preparser(ROSIE_PREPARSE, supported_version);
+   local parse_and_explain = make_parse_and_explain(preparser, supported_version, ROSIE_RPLX, syntax.transform0)
 
    parser1_0 =
-      common.parser.new{ version = common.rpl_version.new(1, 0);
-			 preparse = unsupported;               -- FIXME
+      common.parser.new{ version = supported_version;
+			 preparse = preparser;
 			 parse_statements = parse_and_explain;
 			 parse_expression = parse_and_explain; -- FIXME: separate out
 			 prefixes = unsupported;	       -- FIXME
@@ -244,11 +246,13 @@ function create_rpl1_1_engine()
 
    -- Install the fancier parser, parse_and_explain
    rpl_parser = import("rpl-parser")		    -- idempotent
-   local parse_and_explain = make_parse_and_explain(ROSIE_PREPARSE, RPL1_1_RPLX, 1, 1, syntax.transform1)
+   local supported_version = common.rpl_version.new(1, 1)
+   local preparser = make_preparser(ROSIE_PREPARSE, supported_version);
+   local parse_and_explain = make_parse_and_explain(preparser, supported_version, RPL1_1_RPLX, syntax.transform1)
 
    parser1_1 =
       common.parser.new{ version = common.rpl_version.new(1, 1);
-			 preparse = unsupported;               -- FIXME
+			 preparse = preparser;
 			 parse_statements = parse_and_explain;
 			 parse_expression = parse_and_explain; -- FIXME: separate out
 			 prefixes = unsupported;	       -- FIXME

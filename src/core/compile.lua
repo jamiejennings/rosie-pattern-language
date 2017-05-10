@@ -165,7 +165,7 @@ end
 --             compile_expression_astlist(astlist, importpath/nil) --> rplx object
 --             compile_expression_source(source, importpath/nil)
 --                where importpath specifies an environment via the modtable (useful for testing)
---   Compiler  Calculate the dependencies (transitive closure) for top-level or a module
+--   Compiler  Calculate the dependencies for top-level or a module
 --             deps_astlist(astlist, modtable) --> list of dep where dep = {importpath, prefix, fullpath/error}
 --             deps_source(source, modtable)
 -- X Tester    USE ENGINE'S MATCH INTERFACE AND SUPPLY THE IMPORTPATH
@@ -202,6 +202,6 @@ return {compile0 = {compile = compile1,
 	compile1 = {compile = compile1,
 		    compile_expression=make_compile_expression(c0.expression_p, compile1),
 --		    compile_module=c1.compile_module, -- remove?
-		    read_module=c1.read_module	    -- TODO: factor into find_module and read_module?
+--		    read_module=c1.read_module	    -- TODO: factor into find_module and read_module?
 		 }
      }
