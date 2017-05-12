@@ -33,6 +33,12 @@ local bind = environment.bind
 -- Compile-time error reporting
 ----------------------------------------------------------------------------------------
 
+local function explain_invalid_charset_escape(a, source, char)
+   local msg = "Compile error: invalid escape sequence in character set: \\" .. char
+   msg = msg .. '\nin expression: ' .. writer.reveal_ast(a)
+   coroutine.yield(false, msg)			    -- throw
+end
+
 local function explain_quantified_limitation(a, source, maybe_rule)
    assert(a, "did not get ast in explain_quantified_limitation")
    local name, errpos, text = decode_match(a)
@@ -225,15 +231,23 @@ function c0.compile_literal0(a, gmr, source, env)
    assert(a, "did not get ast in compile_literal0")
    local name, pos, text = decode_match(a)
    assert(text:sub(1,1)=='"' and text:sub(-1,-1)=='"', "literal not in quotes: " .. text)
-   local str = common.unescape_string(text:sub(2,-2))
-   return pattern.new{name=name; peg=P(str); ast=a}
+   local str, offense = common.unescape_string(text:sub(2,-2))
+   if not str then
+      explain_invalid_charset_escape(a, source, offense)
+   else
+      return pattern.new{name=name; peg=P(str); ast=a}
+   end
 end
 
 function c0.compile_literal(a, gmr, source, env)
    assert(a, "did not get ast in compile_literal")
    local name, pos, text = decode_match(a)
-   local str = common.unescape_string(text)
-   return pattern.new{name=name; peg=P(str); ast=a}
+   local str, offense = common.unescape_string(text)
+   if not str then
+      explain_invalid_charset_escape(a, source, offense)
+   else
+      return pattern.new{name=name; peg=P(str); ast=a}
+   end
 end
 
 function c0.compile_ref(a, gmr, source, env)
@@ -319,10 +333,18 @@ function c0.compile_range_charset(a, gmr, source, env)
    end
    local cname1, cpos1, ctext1 = decode_match(rsubs[(complement and 2) or 1])
    local cname2, cpos2, ctext2 = decode_match(rsubs[(complement and 3) or 2])
-   local peg = R(common.unescape_string(ctext1)..common.unescape_string(ctext2))
-   return pattern.new{name=rname,
-		  peg=(complement and (1-peg)) or peg,
-		  ast=a}
+   local c1, offense1 = common.unescape_charlist(ctext1)
+   local c2, offense2 = common.unescape_charlist(ctext2)
+   if not c1 then
+      explain_invalid_charset_escape(a, source, offense1)
+   elseif not c2 then
+      explain_invalid_charset_escape(a, source, offense2)
+   else
+      local peg = R(c1..c2)
+      return pattern.new{name=rname,
+			 peg=(complement and (1-peg)) or peg,
+			 ast=a}
+   end
 end
 
 function c0.compile_charlist(a, gmr, source, env)
@@ -335,8 +357,12 @@ function c0.compile_charlist(a, gmr, source, env)
       local v = clsubs[i]
       assert(v.type=="character", "did not get character sub in compile_charlist")
       local cname, cpos, ctext = decode_match(v)
-      exps = exps .. common.unescape_string(ctext)
-   end
+      local ctext_unescaped, offense = common.unescape_charlist(ctext)
+      if not ctext_unescaped then
+	 explain_invalid_charset_escape(a, source, offense)
+      end
+      exps = exps .. ctext_unescaped
+   end -- for
    return pattern.new{name=clname, peg=((complement and (1-S(exps))) or S(exps)), ast=a}
 end
 

@@ -107,5 +107,8 @@ minor = major
 version_spec = { major "." minor {[[:space:]]/$}}	    -- core lacks ~
 preparse = ignore "rpl" (version_spec / syntax_error)
 
+rpl_statements = (ignore statement / syntax_error)* ignore $
+rpl_expression = ignore expression ignore $
+
 alias item = {ignore {statement / expression / syntax_error}}
 rpl = item* ignore $

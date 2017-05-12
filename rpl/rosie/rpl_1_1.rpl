@@ -108,34 +108,17 @@ import_spec = ignore importpath ("as" (packagename / dot))?
 -- Top level patterns
 ----------------------------------------------------------------------------------------
 
--- ONE rpl stmnt or exp:
---   Useful when you want to catch user errors such as supplying an assignment stmnt 
---   where an exp is expected.  E.g. in compile.exp_p()
-alias rpl1 = ignore {stmnt / exp / syntax_error}
-
-rpl = rpl1* ignore $
-
-statement = ignore (stmnt / syntax_error)
--- FUTURE: if not exp, then syntax error
---  expression = ignore (exp / syntax_error)
-expression = ignore exp
 language_decl = ignore "rpl" version_spec
 package_decl = ignore "package" packagename
 import_decl = ignore "import" import_spec ("," ignore import_spec)*
 
+rpl_statements = (ignore package_decl / import_decl / stmnt / syntax_error)* ignore $
+rpl_expression = exp
+
 preparse = language_decl
 
--- ANY single rpl language element:
--- FUTURE: do NOT include expression in any1
---alias rpl_any1 = import_decl / package_decl / language_decl / statement
-
--- Possibly empty sequence of ANY rpl module elements:
---rpl_any = rpl_any1*
-
--- RPL file structure:
---rpl_file = language_decl? package_decl import_decl* statement* ignore
-
-rpl_any = language_decl? package_decl? import_decl* rpl1* ignore $
+-- RPL module structure:
+-- rpl_module = language_decl? package_decl import_decl* statement* ignore
 
 ---------------------------------------------------------------------------------------------------
 -- Tests

@@ -22,15 +22,6 @@ function c1.process_package_decl(typ, pos, text, subs, fin)
    return text					    -- return package name
 end
 
-local function dequote(str)
-   if str:sub(1,1)=='"' then
-      assert(str:sub(-1)=='"', 
-	     "malformed quoted string that the grammar should have caught: " .. str)
-      return common.unescape_string(str:sub(2,-2))
-   end
-   return str
-end
-
 function c1.read_module(dequoted_importpath)
    if #dequoted_importpath==0 then return nil, nil, "nil import path"; end
    local try = "rpl" .. common.dirsep .. dequoted_importpath .. ".rpl"
@@ -44,7 +35,7 @@ function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtabl
       local typ, pos, text, subs, fin = decode_match(spec)
       assert(subs and subs[1], "missing package name to import?")
       local typ, pos, importpath = decode_match(subs[1])
-      importpath = dequote(importpath)
+      importpath = common.dequote(importpath)
       io.write("*\t", "import |", importpath, "|")
       if subs[2] then
 	 typ, pos, prefix = decode_match(subs[2])

@@ -48,7 +48,8 @@ local function make_compile(compile_astlist)
 		   return false, {messages}		    -- message is a string in this case
 		end
 	     else
-		error("Internal error (compiler): " .. tostring(results))
+		local st = debug.traceback()
+		error("Internal error (compiler): " .. tostring(results) .. '\n' .. st)
 	     end
 	  end
 end
@@ -150,24 +151,21 @@ end
 --
 -- With rpl 1.1 and its modules, the following scenarios need to be supported:
 --
---   Engine    Find a file of module code in the filesystem
---             find_file(importpath, ROSIE_PATH) --> file contents
+--   Common    Find a file of module code in the filesystem
+--             search_path(importpath, ROSIE_PATH) --> fullpath, file contents
 --   Engine    Match a pattern against an input string
 --             match(rplx, input, encoder) --> encoded result or nil, bytes leftover, time in microsec
 --             match(source, input, encoder, importpath/nil) where source parses to an expression
 --                and importpath specifies an environment via the modtable (this is for pattern testing)
 --   Compiler  Load source into an environment (modules into their own fresh environment)
---             load_astlist(importpath/nil, astlist, modtable, env) --> packagename/nil, list of bindings (names) created
---             load_source(importpath/nil, source, modtable, env)
+--             load(importpath/nil, source/astlist, modtable, env) --> packagename/nil, list of bindings (names) created
 --   Compiler  Import an already-loaded module into an environment
 --             import(importpath, prefix, env) --> success/failure
 --   Compiler  Compile an expression, producing a compiled expression object
---             compile_expression_astlist(astlist, importpath/nil) --> rplx object
---             compile_expression_source(source, importpath/nil)
+--             compile_expression(source/astlist, importpath/nil) --> rplx object
 --                where importpath specifies an environment via the modtable (useful for testing)
---   Compiler  Calculate the dependencies for top-level or a module
---             deps_astlist(astlist, modtable) --> list of dep where dep = {importpath, prefix, fullpath/error}
---             deps_source(source, modtable)
+--   Parser    Calculate the dependencies for top-level or a module
+--             parse_deps(source/astlist, modtable) --> list of dep where dep = {importpath, prefix}
 -- X Tester    USE ENGINE'S MATCH INTERFACE AND SUPPLY THE IMPORTPATH
 --             Run a lightweight pattern test for top-level code
 --             Create an engine.  Load the code.
@@ -192,7 +190,15 @@ end
 -- !!! version in which this feature appeared.  That way we can detect mislabeled `rpl x.y`
 -- !!! declarations and abort compilation.
 
-
+-- local function deps(parser, input, modtable)
+--    local alldeps = {}				    -- transitive closure
+--    local deps = parser.parse_deps(input)
+--    for _, d in ipairs(deps) do
+--       local importpath, prefix = d[1], d[2]
+--       local mod = modtable[importpath]
+--       if mod then
+-- 
+-- end
 
 --local compile0 = make_compile(make_compile_astlist(c0.compile_ast))
 local compile1 = make_compile(c1.compile_module)
@@ -201,6 +207,7 @@ return {compile0 = {compile = compile1,
 		    compile_expression=make_compile_expression(c0.expression_p, compile1)},
 	compile1 = {compile = compile1,
 		    compile_expression=make_compile_expression(c0.expression_p, compile1),
+		    deps = deps,
 --		    compile_module=c1.compile_module, -- remove?
 --		    read_module=c1.read_module	    -- TODO: factor into find_module and read_module?
 		 }

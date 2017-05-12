@@ -13,10 +13,35 @@ local math = import "math"
 local string = import "string"
 local table = import "table"
 
--- REMOVED os dependency in v1-tranche-2
---local os = import "os"
-
 local common = {}				    -- interface
+
+----------------------------------------------------------------------------------------
+-- Path handling
+----------------------------------------------------------------------------------------
+
+-- parse_path returns a table of the directories in path, which is a colon separated list
+-- on all platforms except windows, where it is a semi-colon separated list
+function common.parse_path(path)
+   assert(common.pathsep)
+   assert(type(path)=="string")
+   local dirs = {}
+   for dir in path:gmatch("([^" .. common.pathsep .. "]+)") do
+      table.insert(dirs, dir)
+   end
+   return dirs
+end
+
+function common.get_file(filepath, searchpath, extension)
+   extension = extension or ".rpl"
+   local dirs = common.parse_path(searchpath)
+   for _, dir in ipairs(dirs) do
+      local fullpath = dir .. common.dirsep .. filepath .. '.' .. extension
+      local contents = util.readfile(fullpath)
+      if contents then return fullpath, contents; end
+   end
+   return nil
+end
+
 
 ----------------------------------------------------------------------------------------
 -- UTF-8 considerations
@@ -54,36 +79,8 @@ common.utf8_char_peg = b1_lead +
 	    
 common.dirsep = package.config:sub(1, (package.config:find("\n"))-1)
 assert(#common.dirsep==1, "directory separator should be a forward or a backward slash")
-
--- function common.compute_full_path(path, manifest_path, home)
---    -- return the full path, the dirname of the path, and the basename of the path
---    local full_path
---    if (type(path)~="string") or (path=="") then
---       error("Internal error: bad path argument to compute_full_path: " .. tostring(path))
---    end
---    if path:sub(1,1)=="$" then
---       local sym = path:match("$([^" .. common.dirsep .. "]*)")
---       local rest = path:match("$[^" .. common.dirsep .. "]*(.*)")
---       if sym=="sys" then
--- 	 full_path = home .. rest
---       elseif sym=="lib" then
--- 	 if (type(manifest_path)~="string") or (manifest_path=="") then
--- 	    return false, "Error: cannot reference $lib outside of a manifest file: " .. path
--- 	 end
--- 	 if (manifest_path:sub(-1,-1)==common.dirsep) then
--- 	    manifest_path = manifest_path:sub(1,-2)
--- 	 end
--- 	 full_path = manifest_path .. rest
---       else -- sym is not any of the valid things
--- 	 return false, string.format("Invalid file path syntax: %s", path)
---       end
---    else -- path does NOT start with $
---       full_path = path
---    end
---    full_path = (full_path:gsub("\\ ", " "))	    -- unescape any spaces in the name
---    local proper_path, base_name, splits = util.split_path(full_path, common.dirsep)
---    return full_path, proper_path, base_name
--- end
+common.pathsep = ":"
+if common.dirsep=="\\" then common.pathsep = ";" end
 
 -- Always return a table, possibly empty
 function common.compact_messages(tbl)
@@ -96,7 +93,6 @@ function common.compact_messages(tbl)
 end
 
 common.escape_substitutions =			    -- characters that change when escaped are:
-   setmetatable(
    { a = "\a";					    -- bell
      b = "\b";					    -- backspace
      f = "\f";					    -- formfeed
@@ -106,23 +102,80 @@ common.escape_substitutions =			    -- characters that change when escaped are:
      v = "\v"; 					    -- vertical tab
      ['\\'] = '\\';				    -- backslash
      ['"'] = '"';				    -- double quote
---     ["'"] = "'";				    -- single quote
-  },
-   {__index = function(self, key) return key end}   -- TEMP
-   -- FUTURE:
-   -- any other escaped characters are errors
-   -- {__index = function(self, key) error("Invalid escape sequence: \\" .. key); end}
-)
+     ["'"] = "'";				    -- single quote
+  }
 
-function common.unescape_string(s)
+function common.unescape_string(s, escape_table)
    -- the only escape character is \
    -- a literal backslash is obtained using \\
-   return (string.gsub(s, '\\(.)', common.escape_substitutions))
-end
+   escape_table = escape_table or common.escape_substitutions
+   local result = ""
+   local i = 1
+   while (i <= #s) do
+      if s:sub(i,i)=="\\" then
+	 local escaped_char = s:sub(i+1,i+1)
+	 local actual = escape_table[escaped_char]
+	 if actual then
+	    result = result .. actual
+	    i = i + 2
+	 else
+	    return nil, escaped_char
+	 end
+      else
+	 result = result .. s:sub(i,i)
+	 i = i + 1
+      end
+   end -- for each character in s
+   return result
+end	    
 
 function common.escape_string(s)
    return (string.format("%q", s)):sub(2,-2)
 end
+
+-- dequote removes double quotes surrounding an interpolated string, and un-interpolates the
+-- contents 
+function common.dequote(str)
+   if str:sub(1,1)=='"' then
+      assert(str:sub(-1)=='"', 
+	     "malformed quoted string: " .. str)
+      return common.unescape_string(str:sub(2,-2))
+   end
+   return str
+end
+
+local additional_escape_substitutions = 
+   { ['['] = '[';				    -- open bracket
+     [']'] = ']';				    -- close bracket
+     ['^'] = '^';				    -- caret (signifies complement)
+  }
+   
+common.charlist_escape_substitutions = {}
+for k,v in pairs(common.escape_substitutions) do
+   common.charlist_escape_substitutions[k] = v
+end
+for k,v in pairs(additional_escape_substitutions) do
+   common.charlist_escape_substitutions[k] = v
+end
+
+function common.unescape_charlist(s)
+   -- the only escape character is \
+   -- these characters MUST be escaped: \^ \[ \] \\
+   -- and no others.
+   return common.unescape_string(s, common.charlist_escape_substitutions)
+end
+
+----------------------------------------------------------------------------------------
+-- Functions for logging informational messages (note) and warnings (warn) to stderr
+----------------------------------------------------------------------------------------
+
+function common.note(...)
+   for _, item in ipairs{...} do io.stderr:write(item); end
+   io.stderr:write("\n")
+end
+
+function common.warn(str, ...) note("Warning: ", str, ..., "\n"); end
+
 
 ----------------------------------------------------------------------------------------
 -- AST functions
@@ -177,38 +230,6 @@ end
 --common.create_match = lpeg.r_create_match
 common.create_match = create_match
 
--- local function create_match_indices(name, pos, ...)
---    local t = {};
---    t.pos = pos;
---    t.subs = {...};
---    assert(#t.subs > 0)
---    if type(t.subs[#t.subs])=="number" then
---       t.text = t.subs[#t.subs]
--- --      print("** NEW #subs = " .. tostring(#t.subs) .. ", text = " .. t.text)
---       t.subs[#t.subs]= nil
---    elseif type(t.subs[1])=="string" then
---       -- old style
---       t.text = t.subs[1]
---       print("** Old style #subs = " .. tostring(#t.subs) .. ", text = " .. t.text)
---       table.move(t.subs, 2, #t.subs, 1)		    -- shift up
---       t.subs[#t.subs] = nil
---    else
---       error("text field not a string and not a number")
---    end
---    if (not t.subs[1]) then t.subs=nil; end
---    return {[name]=t};
--- end
-
--- local function create_match_indices(name, pos_start, ...)
---    local subs = {...}
---    local nsubs = #subs; assert(nsubs > 0)
---    local lastsub = subs[nsubs]; assert(type(lastsub)=="number")
---    if (nsubs==1) then subs=nil;
---    else subs[nsubs]= nil; end
--- --   return {[name] = {s = pos_start, text = lastsub, subs = subs}};
---    return {type = name, s = pos_start, text = lastsub, subs = subs};
--- end
-
 assert(lpeg.rcap, "lpeg.rcap not defined: wrong version of lpeg???")
 common.match_node_wrap = lpeg.rcap
 
@@ -240,70 +261,6 @@ end
 function common.decode_match(t)
    return t.type, t.s, t.text, t.subs, t.e
 end
-
-function common.subs(match)
-   return match.subs or {}
-end
-
-function common.match_to_text(t)
-   return t.text
-end
-
--- verify that a match has the correct structure
-function common.verify_match(t)
-   assert(type(t)=="table", "Match is not a table")
-   local name, pos, text, subs = decode_match(t)
-   assert(type(name)=="string", "Match name is not a string: "..tostring(name))
-   assert(type(text)=="string", "Match text is not a string: "..tostring(text).." in match name: "..name)
-   assert(type(pos)=="number", "Match position is not a number: "..tostring(pos).." in match name: "..name)
-   if subs then
-      for i = 1, #subs do
-	 local v = subs[i]
-	 assert(type(v)=="table", "Sub match is not a table: "..tostring(v).." in match name: "..name)
-	 assert(verify_match(v))
-      end
-   end
-   return true
-end
-
-function common.compare_matches(t1, t2)
-   local function check_pos_mismatch(p1, p2)
-      if p ~= p2 then
-	 print("Warning: pos fields don't match ("
-	       .. tostring(p1) .. "," .. tostring(p2) .. ")")
-      end
-   end
-   local name1, pos1, text1, subs1 = common.decode_match(t1)
-   local name2, pos2, text2, subs2 = common.decode_match(t2)
-   if name1 == name2 and text1 == text2
-   then
-      if subs1 then
-	 -- subs exist
-	 local mismatch = false;
-	 for i = 1, #subs1 do
-	    local ok, m1, m2 = common.compare_matches(subs1[i], subs2[i])
-	    if not ok then
-	       mismatch = i
-	       break;
-	    end
-	 end -- for each sub-match
-	 if mismatch then
-	    return false, m1, m2
-	 else
-	    check_pos_mismatch(pos1, pos2)
-	    return true
-	 end
-      else
-	 -- no subs
-	 check_pos_mismatch(pos1, pos2)
-	 return true
-      end
-   else
-      -- one of the values didn't match
-      return false, t1, t2
-   end
-end
-      
 
 ----------------------------------------------------------------------------------------
 -- Compiler and parser
@@ -343,6 +300,7 @@ common.parser =
 		    preparse=undefined;
 		    parse_statements=undefined;
 		    parse_expression=undefined;
+		    parse_deps=undefined;
 		    prefixes=undefined;
 		 })
 

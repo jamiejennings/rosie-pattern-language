@@ -193,10 +193,16 @@ function create_core_engine()
    if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
    CORE_ENGINE:load(rpl_1_0)
 
-   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl', 'match')
-   if not success then error("Error while initializing: could not compile 'rpl' in "
+   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_statements', 'match')
+   if not success then error("Error while initializing: could not compile 'rpl_statements' in "
 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
    ROSIE_RPLX = result
+
+   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_expression', 'match')
+   if not success then error("Error while initializing: could not compile 'rpl_expression' in "
+			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
+   ROSIE_EXP_RPLX = result
+
    local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse', 'match')
    if not success then error("Error while initializing: could not compile 'preparse' in "
 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
@@ -210,12 +216,13 @@ function create_rosie_engine()
    local supported_version = common.rpl_version.new(1, 0)
    local preparser = make_preparser(ROSIE_PREPARSE, supported_version);
    local parse_and_explain = make_parse_and_explain(preparser, supported_version, ROSIE_RPLX, syntax.transform0)
+   local parse_and_explain_exp = make_parse_and_explain(nil, nil, ROSIE_EXP_RPLX, syntax.transform0)
 
    parser1_0 =
       common.parser.new{ version = supported_version;
 			 preparse = preparser;
 			 parse_statements = parse_and_explain;
-			 parse_expression = parse_and_explain; -- FIXME: separate out
+			 parse_expression = parse_and_explain_exp;
 			 prefixes = unsupported;	       -- FIXME
 		      }
    compiler1_0 =
@@ -240,21 +247,20 @@ function create_rpl1_1_engine()
    local e = engine.new("RPL 1.1 engine")
    e:load(rpl_1_1)
    local messages
-   RPL1_1_RPLX, messages = e:compile('rpl_any')
-   -- FUTURE: have separate parsers for rpl modules and rpl expressions, e.g.
-   --   RPL1_1_RPLX_EXP, messages = e:compile('expression')
-
-   -- Install the fancier parser, parse_and_explain
+   RPL1_1_RPLX, messages = e:compile('rpl_statements')
+   RPL1_1_EXP_RPLX, messages = e:compile('rpl_expression')
    rpl_parser = import("rpl-parser")		    -- idempotent
    local supported_version = common.rpl_version.new(1, 1)
    local preparser = make_preparser(ROSIE_PREPARSE, supported_version);
    local parse_and_explain = make_parse_and_explain(preparser, supported_version, RPL1_1_RPLX, syntax.transform1)
+   local parse_and_explain_exp = make_parse_and_explain(nil, nil, RPL1_1_EXP_RPLX, syntax.transform1)
 
    parser1_1 =
       common.parser.new{ version = common.rpl_version.new(1, 1);
 			 preparse = preparser;
 			 parse_statements = parse_and_explain;
-			 parse_expression = parse_and_explain; -- FIXME: separate out
+			 parse_expression = parse_and_explain_exp;
+			 parse_deps = parse_deps;
 			 prefixes = unsupported;	       -- FIXME
 		      }
    compiler1_1 =
@@ -315,7 +321,7 @@ function create_encoder_table()
       byte = 0,
       color = color_output.color_string_from_leaf_nodes,
       nocolor = color_output.string_from_leaf_nodes,
-      fulltext = common.match_to_text,
+      fulltext = function(m) return m.text end,
       none = false;
       [false] = false;
    }
