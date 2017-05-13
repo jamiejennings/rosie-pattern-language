@@ -310,13 +310,16 @@ common.parser =
 
 
 ----------------------------------------------------------------------------------------
--- Pattern definition
+-- Binding types: undeclared, pattern, pfunction, environment
 ----------------------------------------------------------------------------------------
 
--- Before assigning a new (transformed) ast, push the current one onto the history list.
--- local function push_ast(pat, ast)
---    table.insert(pat.ast_history, 1, ast)
--- end
+common.undeclared =
+   recordtype.new("undeclared", {})
+
+common.pfunction =
+   recordtype.new("pfunction", {})
+
+-- TODO: get rid of original_ast?
 
 common.pattern = 
    recordtype.new("pattern",

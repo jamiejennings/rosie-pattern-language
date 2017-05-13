@@ -6,12 +6,19 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
-
+-- Environments can be extended in a way that new bindings shadow old ones.  This permits a tree
+-- of environments that model nested scopes.  Currently, that nesting is used rarely.  Grammar
+-- compilation uses this.
+-- 
+-- The root of an environment tree is the "base environment" for a module M.  For each other
+-- module, X, that is open in M, there is a binding in M: X.prefix->X.env where X.prefix is the
+-- prefix used for X in M, and X.env is the module environment for X.
 
 local environment = {}
 
 local common = require "common"
 local pattern = common.pattern
+local recordtype = require "recordtype"
 local lpeg = require "lpeg"
 local locale = lpeg.locale()
 
@@ -56,42 +63,42 @@ setmetatable(ENV, {__tostring = function(env)
 		})
 
 
+
 -- Each engine has a "global" module table that maps: importpath -> env
 -- where env is the environment for the module, containing both local and exported bindings. 
 function environment.make_module_table()
    return setmetatable({}, {__tostring = function(env) return "<module_table>"; end;})
 end
 
--- Environments can be extended in a way that new bindings shadow old ones.  This permits a tree
--- of environments that model nested scopes.  Currently, that nesting is used rarely.  Grammar
--- compilation uses this.
--- 
--- The root of an environment tree is the "base environment" for a module M.  For each other
--- module, X, that is open in M, there is a binding in M: X.prefix->X.env where X.prefix is the
--- prefix used for X in M, and X.env is the module environment for X.
+local env					    -- forward ref for env.factory
+env = recordtype.new("environment",
+		     {store = recordtype.NIL;
+		      parent = recordtype.NIL;},
+		     function(parent)
+			return env.factory{store={}, parent=parent}; end)
 
-function environment.new()
-   local env = environment.extend(ENV)
-   return env
-end
+local base_environment = env.new(); base_environment.store = ENV
 
-local environment_tostring = function(env) return "<environment>"; end
+environment.new = function (...)
+		     if #{...}==0 then return env.new(base_environment); end
+		     error("new environment called with arg(s)")
+		  end
 
-function environment.is(e)
-   local mt = getmetatable(e)
-   return mt and mt.__tostring==environment_tostring
-end
+environment.extend = function (parent)
+			if env.is(parent) then return env.new(parent); end
+			error("extend environment called with arg that is not an environment: "
+			      .. tostring(parent))
+			end
 
-function environment.extend(parent_env)
-   return setmetatable({}, {__index = parent_env,
-			    __tostring = environment_tostring})
-end
+environment.is = env.is
 
-local function lookup(env, id, prefix)
+function environment.lookup(env, id, prefix)
+   assert(environment.is(env))
    if prefix then
-      local mod = env[prefix]
+      local mod = env.store[prefix] or
+	 (env.parent and environment.lookup(env.parent, id, prefix))
       if environment.is(mod) then
-	 local val = mod[id]
+	 local val = mod.store[id]
 	 if val and val.exported then		    -- hmmm, we are duck typing here
 	    return val
 	 else
@@ -101,32 +108,27 @@ local function lookup(env, id, prefix)
 	 return nil, prefix .. " is not a valid module reference"
       end
    else -- no prefix
-      return env[id]
+      return env.store[id] or (env.parent and environment.lookup(env.parent, id))
    end
 end
 
-environment.lookup = lookup
-
-local function bind(env, id, value)
-   env[id] = value
+function environment.bind(env, id, value)
+   assert(environment.is(env))
+   env.store[id] = value
 end
-
-environment.bind = bind
 
 -- return a flat representation of env (recall that environments are nested)
 function environment.flatten(env, output_table)
    output_table = output_table or {}
-   for item, value in pairs(env) do
+   for item, value in pairs(env.store) do
       -- access only string keys.  numeric keys are for other things.
       if type(item)=="string" then
 	 -- if already seen, do not overwrite with value from parent env
 	 if not output_table[item] then output_table[item] = value; end
       end
    end
-   local mt = getmetatable(env)
-   if mt and type(mt.__index)=="table" then
-      -- there is a parent environment
-      return environment.flatten(mt.__index, output_table)
+   if env.parent then
+      return environment.flatten(p, output_table)
    else
       return output_table
    end

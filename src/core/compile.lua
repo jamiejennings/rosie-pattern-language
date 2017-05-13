@@ -152,7 +152,7 @@ end
 -- With rpl 1.1 and its modules, the following scenarios need to be supported:
 --
 --   Common    Find a file of module code in the filesystem
---             search_path(importpath, ROSIE_PATH) --> fullpath, file contents
+--             get_file(importpath, ROSIE_PATH) --> fullpath, file contents
 --   Engine    Match a pattern against an input string
 --             match(rplx, input, encoder) --> encoded result or nil, bytes leftover, time in microsec
 --             match(source, input, encoder, importpath/nil) where source parses to an expression
