@@ -31,6 +31,11 @@ function common.parse_path(path)
    return dirs
 end
 
+-- path assembles a path from its components
+function common.path(...)
+   return table.concat({...}, common.dirsep)
+end
+
 function common.get_file(filepath, searchpath, extension)
    extension = extension or ".rpl"
    local dirs = common.parse_path(searchpath)
@@ -290,7 +295,6 @@ common.compiler =
 		    load=undefined;
 		    import=undefined;
 		    compile_expression=undefined;
-		    deps=undefined;
 		    parser=false;
 		  })
 

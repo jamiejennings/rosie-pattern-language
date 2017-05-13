@@ -12,7 +12,7 @@ function match.set_encoder(rosie, en, name)
    local encode_fcn = rosie.encoders[name]
    if encode_fcn==nil then
       local msg = "invalid output encoder: " .. tostring(name)
-      if rosie.mode("dev") then error(msg)
+      if ROSIE_DEV then error(msg)
       else io.write(msg, "\n"); os.exit(-1); end
    end
    en:output(encode_fcn)

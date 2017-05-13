@@ -12,7 +12,7 @@ local p = {}
 local function load_string(rosie, en, input)
    local ok, results, messages = pcall(en.load, en, input)
    if not ok then
-      if rosie.mode("dev") then error(results)
+      if ROSIE_DEV then error(results)
       else io.write("Cannot load rpl: \n", results); os.exit(-1); end
    end
    return results, messages

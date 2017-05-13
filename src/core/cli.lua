@@ -145,8 +145,7 @@ local function setup_engine(args)
 end
 
 local function run(args)
-   if args.verbose then rosie.setmode("verbose"); end
-   if ROSIE_DEV then rosie.setmode("dev"); end
+   if args.verbose then ROSIE_VERBOSE = true; end
 
    if not args.command then
       if ROSIE_DEV then greeting(); return

@@ -6,8 +6,6 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
-assert(ROSIE_LIB, "The path to the Rosie standard library (ROSIE_LIB) is not set")
-
 local p = {}
 
 local common = require "common"
@@ -20,8 +18,6 @@ end
 function p.load_file(en, path)
    if not engine.is(en) then arg_error("not an engine: " .. tostring(en)); end
    if type(path)~="string" then arg_error("path not a string: " .. tostring(path)); end
---   local full_path, msg = common.compute_full_path(path, nil, ROSIE_LIB)
---   if not full_path then return false, msg; end
    local full_path = path
    
    local input, msg = util.readfile(full_path)
