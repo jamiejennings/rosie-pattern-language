@@ -278,7 +278,7 @@ end
 -- find and load any missing dependency
 load_dependency =
    function(e, astlist, target_env, dep, importpath)
-      local success, messages
+      local messages = {}
       print("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
       local modname = dep.prefix
       local modenv = e._modtable[dep.importpath]
@@ -291,6 +291,7 @@ load_dependency =
 	    engine_error(e, err)
 	 else
 	    common.note("Loading ", dep.importpath, " from ", fullpath)
+	    target_env = environment.new()
 	    modname, messages = load_input(e, target_env, source, dep.importpath) -- recursive
 	 end -- if not fullpath
       end -- if dependency was not already loaded

@@ -112,7 +112,7 @@ local function make_compile_expression(expression_p, compile_ast)
 		   end
 		   local typ, pos, text, subs = common.decode_match(astlist[1])
 		   if (typ~="ref") or pat.alias then
-		      pat.peg = common.match_node_wrap(result.peg, "*") -- anonymous expression
+		      pat.peg = common.match_node_wrap(pat.peg, "*") -- anonymous expression
 		      pat.alias = false
 		   end
 		   return true, pat, {message}
