@@ -40,7 +40,7 @@ function common.get_file(filepath, searchpath, extension)
    extension = extension or ".rpl"
    local dirs = common.parse_path(searchpath)
    for _, dir in ipairs(dirs) do
-      local fullpath = dir .. common.dirsep .. filepath .. '.' .. extension
+      local fullpath = dir .. common.dirsep .. filepath .. extension
       local contents = util.readfile(fullpath)
       if contents then return fullpath, contents; end
    end
@@ -297,6 +297,12 @@ common.compiler =
 		    compile_expression=undefined;
 		    parser=false;
 		  })
+
+-- parser contract:
+--   parse source to produce original_astlist;
+--   transform original_astlist as needed (e.g. syntax expand); 
+--   return the result (astlist), original_astlist, table of messages, leftover count
+--   if any step fails, generate useful error messages and return nil, nil, msgs, leftover
 
 common.parser =
    recordtype.new("parser",

@@ -153,7 +153,7 @@ local function announce(name, engine)
    end
 end
 
-local unsupported = function() init_error("operation not supported in core parser"); end
+local unsupported = function() init_error("operation not supported in this parser"); end
 
 local function create_core_engine()
    assert(parse.core_parse, "error while initializing: parse module not loaded?")
@@ -175,7 +175,7 @@ local function create_core_engine()
 			 preparse = unsupported;
 			 parse_statements = make_parser_expander(parse.core_parse);
 			 parse_expression = make_parser_expander(parse.core_parse_expression);
-			 parse_deps = unsupported;
+			 parse_deps = function() return {} end;
 			 prefixes = unsupported;
 		      }
    corecompiler =
@@ -188,13 +188,14 @@ local function create_core_engine()
 
    -- Create a core engine that accepts rpl 0.0
    CORE_ENGINE = engine.new("RPL core engine", corecompiler)
+   CORE_ENGINE.searchpath = ROSIE_LIB
    announce("CORE_ENGINE", CORE_ENGINE)
 
    -- Into the core engine, load the rpl 1.0 definition, which is written in rpl 0.0
    local rpl_1_0_filename = common.path(ROSIE_LIB, "rosie", "rpl_1_0.rpl")
    local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
    if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
-   CORE_ENGINE:load(rpl_1_0)
+   CORE_ENGINE:load(rpl_1_0, "rosie/rpl_1_0.rpl")
 
    local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_statements', 'match')
    if not success then error("Error while initializing: could not compile 'rpl_statements' in "
@@ -226,7 +227,7 @@ function create_rpl1_0_engine()
 			 preparse = preparser;
 			 parse_statements = parse_and_explain;
 			 parse_expression = parse_and_explain_exp;
-			 parse_deps = unsupported;
+			 parse_deps = function() return {} end;
 			 prefixes = unsupported;
 		      }
    compiler1_0 =
@@ -237,6 +238,7 @@ function create_rpl1_0_engine()
 			   parser = parser1_0;
 			}
    RPL1_0_ENGINE = engine.new("RPL 1.0 engine", compiler1_0)
+   RPL1_0_ENGINE.searchpath = ROSIE_LIB
    announce("RPL1_0_ENGINE", RPL1_0_ENGINE)
 end
 
@@ -246,7 +248,8 @@ function create_rpl1_1_engine()
    local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
    if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
    local e = engine.new("RPL 1.1 engine", compiler1_0)
-   e:load(rpl_1_1)
+   e.searchpath = ROSIE_LIB
+   e:load(rpl_1_1, "rosie/rpl_1_1.rpl")
    local messages
    RPL1_1_RPLX, messages = e:compile('rpl_statements')
    RPL1_1_EXP_RPLX, messages = e:compile('rpl_expression')
@@ -274,6 +277,7 @@ function create_rpl1_1_engine()
 
    -- Make RPL 1.1 the default for new engines
    engine_module._set_default_compiler(compiler1_1)
+   engine_module._set_default_searchpath(ROSIE_PATH)
 
    RPL1_1_ENGINE = e
    announce("RPL1_1_ENGINE", RPL1_1_ENGINE)
@@ -350,7 +354,7 @@ function create_file_functions()
       match = process_input_file.match,
       tracematch = process_input_file.tracematch,
       grep = process_input_file.grep,
-      load = process_rpl_file.load_file	    -- TEMP until module system
+--      load = process_rpl_file.load_file	    -- TEMP until module system
    }
 end
 

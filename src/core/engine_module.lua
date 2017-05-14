@@ -94,7 +94,7 @@ local writer = require "writer"
 local eval = require "eval"
 
 local rplx 					    -- forward reference
-local engine_error		     -- forward reference
+local engine_error				    -- forward reference
 
 ----------------------------------------------------------------------------------------
 
@@ -128,19 +128,11 @@ local function compile_search(en, pattern_exp)
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
    return en.compiler.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
-   -- local pat, msgs = compile.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
-   -- if not pat then return nil, msgs; end
-   -- assert(pat.peg)
-   -- return pat, msgs
 end
 
 local function compile_match(en, source)
    local rpl_parser, env = en.compiler.parser.parse_expression, en._env
    assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   -- local astlist, original_astlist, warnings, leftover = rpl_parser(source)
-   -- if (not astlist) then
-   --    return false, warnings			    -- warnings contains errors in this case
-   -- end
    return en.compiler.compile_expression(rpl_parser, source, env)
 end
 
@@ -216,38 +208,128 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 
 ----------------------------------------------------------------------------------------
 
--- load rpl into the engine.  the rpl input has "file scope".
--- returns a possibly-empty table of messages; throws an error if compilation fails.
--- rpl_parser contract:
---   parse source to produce original_astlist;
---   transform original_astlist as needed (e.g. syntax expand); 
---   return the result (astlist), original_astlist, table of messages, leftover count
---   if any step fails, generate useful error messages and return nil, nil, msgs, leftover
+local load_dependency				    -- forward reference
+local load_dependencies				    -- forward reference
+local import_dependency				    -- forward reference
 
-local function load_string(e, input)
-   local astlist, original_astlist, warnings, leftover = e.compiler.parser.parse_statements(input)
+-- load rpl code (statements) into the engine.  
+-- returns a possibly-empty table of messages, and throws an error if compilation fails.
+
+local function load_string(e, target_env, input, required_by)
+   assert(environment.is(target_env), "target not an environment: " .. tostring(target_env))
+--   assert(type(required_by)=="string", "required_by not a string")
+   assert(type(e.searchpath)=="string", "search path not a string")
+   local results, env
+   local messages = {}
+   local parser = e.compiler.parser
+   local astlist, original_astlist, warnings, leftover
+   if type(input)=="string" then
+      astlist, original_astlist, warnings, leftover = parser.parse_statements(input)
+   else
+      assert(type(input)=="table")
+      astlist, original_astlist, warnings, leftover = input, input, {}, 0
+   end
+   table.insert(warnings, 1, "Processing " .. (required_by or "<top level>"))
    if not astlist then
       engine_error(e, table.concat(warnings, '\n')) -- in this case, warnings contains errors
    end
-   local results, messages = e.compiler.load(e.compiler.parser.parse_statements, input, e._env, e._modtable, "(no path)")
+   -- load_dependencies has side-effects on e._modtable and target_env
+   load_dependencies(e, astlist, target_env, messages, required_by)
+   -- now we can compile the input
+   local foo = function(...) print("*** load_dependency"); table.print{...}; error(); end
+   results, messages, env = e.compiler.load(foo, --e.compiler.parser.parse_statements,
+                                            astlist,
+                                            target_env,
+					    e._modtable,
+					    required_by)
+   local modname
+   if not required_by then modname = "<top level>" else modname = required_by; end
    if results then
+      assert(environment.is(env))
       assert(type(messages)=="table")
+      common.note(string.format("COMPILED %s", modname))
       for i,w in ipairs(warnings) do table.insert(messages, i, w); end
-      return common.compact_messages(messages) 
+      return messages, env
    else
+      common.note(string.format("FAILED TO COMPILE %s", modname))
       assert(type(messages)=="table")
       table.move(messages, 1, #messages, #warnings+1, warnings)
       engine_error(e, table.concat(warnings, '\n'))
    end
 end
 
+load_dependencies =
+   function(e, astlist, target_env, messages, required_by)
+      local deps = e.compiler.parser.parse_deps(e.compiler.parser, astlist)
+      -- find and load all dependencies
+      for _, dep in ipairs(deps) do
+	 local new_messages
+	 new_messages, dep.env = load_dependency(e, astlist, target_env, dep, required_by);
+	 assert(type(new_messages)=="table")
+	 assert(environment.is(dep.env))
+	 for i,w in ipairs(messages) do table.insert(new_messages, i, w); end
+	 if dep.env~=target_env then
+	    assert(e._modtable[dep.importpath],
+		   tostring(dep.importpath) .. " is not empty and not in module table?")
+	 end
+      end
+      -- if all dependecies loaded ok, we can import them
+      for _, dep in ipairs(deps) do import_dependency(e, target_env, dep); end
+end
+      
+-- find and load any missing dependency
+load_dependency =
+   function(e, astlist, target_env, dep, required_by)
+      local results, messages, modenv
+      local importpath = dep.importpath
+      print("-> Loading dependency " .. importpath .. " required by " .. (required_by or "<top level>"))
+      modenv = e._modtable[importpath]
+      if not modenv then
+	 common.note("Looking for ", importpath, " required by ", (required_by or "<top level>"))
+	 local fullpath, source = common.get_file(importpath, e.searchpath)
+	 if not fullpath then
+	    local err = "cannot find module '" .. importpath ..
+	       "' needed by module '" .. (required_by or "<top level>") .. "'"
+	    engine_error(e, err)
+	 else
+	    common.note("Loading ", importpath, " from ", fullpath)
+	    --messages, modenv = load_string(e, target_env, source, importpath) -- recursive
+
+	    local foo = function(...) print("*** load_dependency"); table.print{...}; error(); end
+	    results, messages, modenv = e.compiler.load(foo, --e.compiler.parser.parse_statements,
+	       astlist,
+	       target_env,
+	       e._modtable,
+	       required_by)
+	    
+	    if results and (modenv~=target_env) then
+	       assert(environment.is(e._modtable[importpath]));
+	    end
+	 end
+      end -- if dependency was not already loaded
+      assert(environment.is(modenv))
+      return messages, modenv
+   end
+
+import_dependency =
+   function(e, target_env, dep)
+      assert(engine.is(e))
+      assert(environment.is(target_env))
+      assert(environment.is(dep.env))
+      if environment.lookup(target_env, dep.prefix) then
+	 table.insert(messages, "REBINDING " .. dep.prefix) -- TODO: make this an error
+      end
+      environment.bind(target_env, dep.prefix, dep.env)
+      print("-> Binding module prefix: " .. dep.prefix)
+   end
+
 ----------------------------------------------------------------------------------------
 
 local function reconstitute_pattern_definition(id, p)
    if p then
       return ( (p.original_ast and writer.reveal_ast(p.original_ast)) or
-	       (p.ast and writer.reveal_ast(p.ast)) or
-	        "// built-in RPL pattern //" )
+	    (p.ast and writer.reveal_ast(p.ast)) or
+	 "// built-in RPL pattern //" )
    end
    engine_error(e, "undefined identifier: " .. id)
 end
@@ -302,20 +384,29 @@ local function set_default_compiler(compiler)
    default_compiler = compiler
 end
 
+local default_searchpath = false
+
+local function set_default_searchpath(str)
+   default_searchpath = str
+end
+
 ---------------------------------------------------------------------------------------------------
 
-local function engine_create(name, compiler)
+local function engine_create(name, compiler, searchpath)
    compiler = compiler or default_compiler
+   searchpath = searchpath or default_searchpath
    if not compiler then error("no default compiler set"); end
    return engine.factory { name=function() return name; end,
 			   compiler=compiler,
+			   searchpath=searchpath,
 			   _env=environment.new(),
 			   _modtable=environment.make_module_table(),
 			}
 end
 
 function engine_error(e, msg)
-   error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 0)
+   error(string.format("Engine %s: %s\n%s", tostring(e), tostring(msg),
+		       ROSIE_DEV and (debug.traceback().."\n") or "" ), 0)
 end
 
 local engine = 
@@ -328,14 +419,17 @@ local engine =
 
 		     id=recordtype.id,
 
-		     encode_function=false,	    -- false or nil ==> use default encoder
+		     encode_function=false,	      -- false or nil ==> use default encoder
 		     output=get_set_encoder_function,
 
 		     lookup=get_environment,
 		     clear=clear_environment,
 
-		     load=load_string,
+		     load=function(e, input)
+			     return load_string(e, e._env, input)
+			  end,
 		     compile=engine_compile,
+		     searchpath="";
 
 		     match=engine_match,
 		     tracematch=engine_tracematch,
@@ -366,6 +460,7 @@ rplx = recordtype.new("rplx",
 
 engine_module.engine = engine
 engine_module._set_default_compiler = set_default_compiler
+engine_module._set_default_searchpath = set_default_searchpath
 engine_module.rplx = rplx
 
 return engine_module

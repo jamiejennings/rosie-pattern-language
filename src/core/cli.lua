@@ -56,6 +56,7 @@ parser = argparser.create(rosie)
 function create_cl_engine()
    CL_ENGINE = rosie.engine.new("command line engine")
    if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
+   CL_ENGINE.searchpath = rosie.info().ROSIE_PATH
 end
 
 ok, msg = pcall(create_cl_engine)
@@ -84,12 +85,12 @@ local function greeting()
 end
 
 local function load_string(en, input)
-   local ok, results, messages = pcall(en.load, en, input)
+   local ok, messages = pcall(en.load, en, input, "")
    if not ok then
-      if ROSIE_DEV then error(results)
-      else io.write("Cannot load rpl: \n", results); os.exit(-1); end
+      if ROSIE_DEV then error("Cannot load rpl: \n" .. messages)
+      else io.write("Cannot load rpl: \n", messages); os.exit(-1); end
    end
-   return results, messages
+   return ok, messages
 end
 
 local function setup_engine(args)

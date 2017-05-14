@@ -22,7 +22,7 @@ function p.load_file(en, path)
    
    local input, msg = util.readfile(full_path)
    if not input then error(msg, 0); end
-   local result, msg = en:load(input)
+   local result, msg = en:load(input, full_path)
    if not result then error(msg, 0); end
    -- normal return from 'en:load()' is a table of warnings (possibly empty)
    return common.compact_messages(result), full_path

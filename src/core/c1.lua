@@ -22,63 +22,64 @@ function c1.process_package_decl(typ, pos, text, subs, fin)
    return text					    -- return package name
 end
 
-function c1.read_module(dequoted_importpath)
-   if #dequoted_importpath==0 then return nil, nil, "nil import path"; end
-   local try = "rpl" .. common.dirsep .. dequoted_importpath .. ".rpl"
-   return try, util.readfile(try)
-end
+-- function c1.read_module(dequoted_importpath)
+--    if #dequoted_importpath==0 then return nil, nil, "nil import path"; end
+--    local try = "rpl" .. common.dirsep .. dequoted_importpath .. ".rpl"
+--    return try, util.readfile(try)
+-- end
 
-function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtable)
-   local compiled_imports = {}
-   local prefix, modenv
-   for _,spec in ipairs(specs) do
-      local typ, pos, text, subs, fin = decode_match(spec)
-      assert(subs and subs[1], "missing package name to import?")
-      local typ, pos, importpath = decode_match(subs[1])
-      importpath = common.dequote(importpath)
-      io.write("*\t", "import |", importpath, "|")
-      if subs[2] then
-	 typ, pos, prefix = decode_match(subs[2])
-	 assert(typ=="packagename" or typ=="dot")
-	 io.write(" as ", prefix)
-      else
-	 _, prefix = util.split_path(importpath, "/")
-      end
-      modenv = modtable[importpath]
-      if modenv then
-	 io.write("  (Found in modtable)\n");
-      else
-	 local results, msgs
-	 local fullpath, source, err = c1.read_module(importpath)
-	 if source then
-	    io.write("  (Found in filesystem at " .. fullpath .. ")\n");
-	    print("COMPILING MODULE " .. importpath)	    
-	    results, msgs, modenv =
-	       c1.compile_module(parser, source, env, modtable, importpath)
-	    if not results then error(table.concat(msgs, "\n")); end
-	    modtable[importpath] = modenv
-	 else
-	    -- we could not find the module source
-	    error(err)
-	 end
-      end
-      table.insert(compiled_imports,
-		   {importpath=importpath,
-		    fullpath=fullpath,
-		    prefix=prefix,
-		    env=modenv,
-		    results=results or {},
-		    messages=msgs or {}})
-   end -- for
-   return compiled_imports
-end
+-- function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtable)
+--    local compiled_imports = {}
+--    local prefix, modenv
+--    for _,spec in ipairs(specs) do
+--       local typ, pos, text, subs, fin = decode_match(spec)
+--       assert(subs and subs[1], "missing package name to import?")
+--       local typ, pos, importpath = decode_match(subs[1])
+--       importpath = common.dequote(importpath)
+--       io.write("*\t", "import |", importpath, "|")
+--       if subs[2] then
+-- 	 typ, pos, prefix = decode_match(subs[2])
+-- 	 assert(typ=="packagename" or typ=="dot")
+-- 	 io.write(" as ", prefix)
+--       else
+-- 	 _, prefix = util.split_path(importpath, "/")
+--       end
+--       modenv = modtable[importpath]
+--       if modenv then
+-- 	 io.write("  (Found in modtable)\n");
+--       else
+-- 	 -- local results, msgs
+-- 	 -- local fullpath, source, err = c1.read_module(importpath)
+-- 	 -- if source then
+-- 	 --    io.write("  (Found in filesystem at " .. fullpath .. ")\n");
+-- 	 --    print("COMPILING MODULE " .. importpath)	    
+-- 	 --    results, msgs, modenv =
+-- 	 --       c1.compile_module(parser, source, env, modtable, importpath)
+-- 	 --    if not results then error(table.concat(msgs, "\n")); end
+-- 	 --    modtable[importpath] = modenv
+-- 	 -- else
+-- 	    -- we could not find the module source
+-- 	    -- error(err)
+-- 	 -- end
+-- 	 assert(false, "module not loaded: " .. importpath .. "\n" .. debug.traceback())
+--       end
+--       table.insert(compiled_imports,
+-- 		   {importpath=importpath,
+-- 		    fullpath=fullpath,
+-- 		    prefix=prefix,
+-- 		    env=modenv,
+-- 		    results=results or {},
+-- 		    messages=msgs or {}})
+--    end -- for
+--    return compiled_imports
+-- end
 
 function c1.compile_local(ast, gmr, source, env)
    assert(not gmr, "rpl grammar allowed a local decl inside a grammar???")
    local typ, _, _, subs = decode_match(ast)
    assert(typ=="local_")
    local name, pos, text = decode_match(subs[1])
-   print("->", "local " .. name .. ": " .. text)
+--   print("->", "local " .. name .. ": " .. text)
    local pat = c0.compile_ast(subs[1], source, env)
    pat.exported = false;
    return pat
@@ -106,26 +107,32 @@ end
 -- We could parse a module using that rpl_module pattern, but we can give better
 -- error messages this way.
 
-function c1.compile_module(parser, source, env, modtable, importpath)
-   local astlist, orig_astlist, messages = parser(source)
-   if not astlist then return nil, messages; end
+function c1.compile_module(parser, input, env, modtable, importpath)
+   assert(environment.is(env))
    -- modtable is the global module table (one per engine)
-   -- importpath is the filesystem path from $ROSIE_PATH down to and including the source file
+   -- importpath is a relative filesystem path to the source file
+   local source, astlist, orig_astlist, messages
+   if type(input)=="string" then
+      source = input
+      astlist, orig_astlist, messages = parser(source)
+   else
+      astlist, orig_astlist, messages = input, input, {}
+      source = "(no source)"
+   end
+   if not astlist then return nil, messages; end    -- syntax errors
    local thispkg
    local results, messages = {}, {}
    local i = 1
-   if not astlist[i] then return results, {"Empty module"}; end
+   if not astlist[i] then return nil, {"Empty module"}; end
    local typ, pos, text, subs, fin = common.decode_match(astlist[i])
    assert(typ~="language_decl", "language declaration should be handled in preparse/parse")
    if typ=="package_decl" then
       -- create/set the compilation environment according to the package name,
       -- maybe issuing a warning if the env exists already
       thispkg = c1.process_package_decl(typ, pos, text, subs, fin)
-      results[i] = thispkg; messages[i] = false
       i=i+1;
       if not astlist[i] then
-	 table.insert(messages, "Empty module (nothing after package declaration)")
-	 return results, messages
+	 return nil, {"Empty module (nothing after package declaration)"}
       end
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end
@@ -134,47 +141,25 @@ function c1.compile_module(parser, source, env, modtable, importpath)
    -- Otherwise, if there is no package decl, then the code is compiled in the default, or
    -- "top level" environment.  Nothing special to do in that case.
    if thispkg then
-      assert(not modtable[importpath],
-	     "module " .. importpath .. " already compiled and loaded")
-      env = environment.new()			    -- shadowing the env argument
-      modtable[importpath] = env
+      assert(not modtable[importpath], "module " .. importpath .. " already compiled and loaded?")
+      env = environment.new()			    -- purposely shadowing the env argument
    end
+   -- Dependencies must have been compiled and imported before we get here, so we can skip over
+   -- the import declarations.
    while typ=="import_decl" do
-      -- If the module has been compiled, it will have an entry in modtable.  We can just
-      -- point to it. (Since modules are immutable, they can be shared.)
-      -- Otherwise, find the module in the filesystem, then compile it into a fresh env.
-
-      local compiled_modules = c1.process_import_decl(typ, pos, text, subs, fin, parser, env, modtable)
-
-      -- Below we process the compiled_modules table.
-      -- Each imported module is reified as a binding in env that maps the prefix to its module env
-      --   ** This way, we can in future treat the module as a first class object.
-      --   ** But we must prohibit rebinding of this name (and we will also prohibit
-      --      rebinding names *inside* a module in general).
-
-      for _, mod in ipairs(compiled_modules) do
-	 if environment.lookup(env, mod.prefix) then
-	    table.insert(messages, "REBINDING "..mod.prefix) -- TODO: make this an error
-	 end
-	 environment.bind(env, mod.prefix, mod.env)
-	 print("-> binding module prefix: " .. mod.prefix)
-	 -- TODO: do we need to keep results at all?
-	 for _, result in ipairs(mod.results) do table.insert(results, result); end
-	 for _, message in ipairs(mod.messages) do table.insert(messages, message); end
-      end
-
-      i=i+1;
-      if not astlist[i] then
-	 table.insert(messages, "Empty module (nothing after import declaration(s))")
-	 return results, messages
-      end
+      i=i+1
+      if not astlist[i] then return nil, {"Empty module (nothing after import declarations)"}; end
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
-   end
+   end -- while skipping import_decls
    repeat
       results[i], messages[i] = c1.compile_ast(astlist[i], source, env)
       if not messages[i] then messages[i] = false; end -- keep messages a proper list: no nils
       i=i+1
    until not astlist[i]
+   -- success! save this env in the modtable, if we have an importpath.  pre-module system code
+   -- (rpl 1.0 and rpl 0.0) will not use the modtable and will not supply an importpath.
+   assert(environment.is(env))
+   if modtable and importpath then modtable[importpath] = env; end
    return results, messages, env
 end
 

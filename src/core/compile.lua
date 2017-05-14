@@ -27,12 +27,14 @@ local c1 = require "c1"
 local function make_compile(compile_astlist)
    return function(parser, source, env, modtable, importpath)
 	     assert(type(parser)=="function", "Internal error: compile: parser not a function")
-	     assert(type(source)=="string", "Internal error: compile: source not a string")
-	     assert(type(env)=="table", "Internal error: compile: env not a table")
+	     assert(type(source)=="string" or type(source)=="table",
+		    "Internal error: compile: source not a string or astlist\n" .. debug.traceback())
+	     assert(environment.is(env), "Internal error: compile: env not an environment")
 	     assert(type(modtable)=="table" or modtable==nil)
 	     assert(type(importpath)=="string" or importpath==nil)
 	     local c = coroutine.create(compile_astlist)
-	     local no_lua_error, results, messages =
+	     -- may get a new env back 
+	     local no_lua_error, results, messages, env =
 		coroutine.resume(c, parser, source, env, modtable, importpath)
 	     if no_lua_error then
 		-- Return results and compilation messages
@@ -42,10 +44,10 @@ local function make_compile(compile_astlist)
 -- TODO: syntax-expand should save each original_ast as part of the new ast (or something)
 --		      if common.pattern.is(pat) then pat.original_ast = original_astlist[i]; end
 		   end
-		   return results, messages		    -- message may contain compiler warnings
+		   return results, messages, env    -- message may contain compiler warnings
 		else
 		   assert(type(messages)=="string")
-		   return false, {messages}		    -- message is a string in this case
+		   return false, {messages}	    -- message is a string in this case
 		end
 	     else
 		local st = debug.traceback()
@@ -79,7 +81,7 @@ local function make_compile_expression(expression_p, compile)
    return function(parser, source, env)
 	     assert(type(parser)=="function", "Internal error: compile: parser not a function")
 	     assert(type(source)=="string")
-	     assert(type(env)=="table")
+	     assert(environment.is(env))
 	     local astlist, original_astlist, messages = parser(source)
 
 	     if not astlist then return nil, messages; end
@@ -124,7 +126,7 @@ local function make_compile_expression(expression_p, compile)
 		-- label it "*" since that can't be an identifier name.
 		result.peg = common.match_node_wrap(result.peg, "*")
 	     end
-	     return result, {}				    -- N.B. returns a single pattern and messages
+	     return result, {}			    -- N.B. result is a single pattern
 	  end
 end
 

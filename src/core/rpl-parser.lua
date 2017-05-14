@@ -91,7 +91,9 @@ end -- make_preparser
 function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_expand)
    return function(source)
 	     local maj, min, pos, err
-	     assert(type(source)=="string", "Error: source argument is not a string: "..tostring(source))
+	     assert(type(source)=="string",
+		    "Error: source argument is not a string: "..tostring(source) ..
+		    "\n" .. debug.traceback())
 	     if preparse then
 		-- preparse to look for rpl language version declaration
 		maj, min, pos, err = preparse(source, supported_version)
@@ -117,6 +119,9 @@ function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_ex
 	  end -- parse and explain function
 end -- make_parse_and_explain
 
+-- parse_deps takes input (source or astlist) and returns a table of dependencies calculated by
+-- processing any import statements.  the table contains entries with the keys: 
+-- importpath, prefix, env.  (env is filled in during compilation.)
 function parse_deps(parser, input)
    local maj, min, pos, err = parser.preparse(input)
    if not maj then return nil, err; end
@@ -154,7 +159,7 @@ function parse_deps(parser, input)
 	 else
 	    _, prefix = util.split_path(importpath, "/")
 	 end
-	 table.insert(deps, {importpath, prefix})
+	 table.insert(deps, {importpath=importpath, prefix=prefix})
       end -- for each importspec in the import_decl
       i=i+1;
       typ, pos, text, specs, fin = common.decode_match(astlist[i])
