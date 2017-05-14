@@ -141,7 +141,6 @@ function c1.load(importpath, astlist, modtable, env)
    -- "top level" environment.  
    if thispkg then
       assert(not modtable[importpath], "module " .. importpath .. " already compiled and loaded?")
---      env = environment.new()			    -- purposely shadowing the env argument
    end
    -- Dependencies must have been compiled and imported before we get here, so we can skip over
    -- the import declarations.
@@ -152,8 +151,8 @@ function c1.load(importpath, astlist, modtable, env)
    end -- while skipping import_decls
    local results, messages = {}, {}
    repeat
-      results[i], messages[i] = c1.compile_ast(astlist[i], "(no source)", env)
-      if not messages[i] then messages[i] = false; end -- keep messages a proper list: no nils
+      results[i], message = c1.compile_ast(astlist[i], "(no source)", env)
+      if message then table.insert(messages, message); end
       i=i+1
    until not astlist[i]
    -- success! save this env in the modtable, if we have an importpath.

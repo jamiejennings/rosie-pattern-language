@@ -134,7 +134,6 @@ end
 local function compile_match(en, source)
    local parse = en.compiler.parser.parse_expression
    local astlist, original_astlist, warnings = parse(source)
-   print("*** in compile_match, source is:\n" .. source)
    return en.compiler.compile_expression(nil, astlist, en._modtable, en._env)
 end
 
@@ -230,11 +229,11 @@ local function load_input(e, target_env, input, importpath)
    local astlist, original_astlist, warnings, leftover
    if type(input)=="string" then
       astlist, original_astlist, warnings, leftover = parser.parse_statements(input)
-   else
-      assert(type(input)=="table")
+   elseif type(input)=="table" then
       astlist, original_astlist, warnings, leftover = input, input, {}, 0
+   else
+      engine_error(e, "Error: input not a string: " .. tostring(input));
    end
-   table.insert(warnings, 1, "Processing " .. (importpath or "<top level>"))
    if not astlist then
       engine_error(e, table.concat(warnings, '\n')) -- in this case, warnings contains errors
    end
@@ -371,10 +370,18 @@ local function set_default_compiler(compiler)
    default_compiler = compiler
 end
 
+local function get_default_compiler()
+   return default_compiler
+end
+
 local default_searchpath = false
 
 local function set_default_searchpath(str)
    default_searchpath = str
+end
+
+local function get_default_searchpath()
+   return default_searchpath
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -448,6 +455,8 @@ rplx = recordtype.new("rplx",
 engine_module.engine = engine
 engine_module._set_default_compiler = set_default_compiler
 engine_module._set_default_searchpath = set_default_searchpath
+engine_module._get_default_compiler = get_default_compiler
+engine_module._get_default_searchpath = get_default_searchpath
 engine_module.rplx = rplx
 
 return engine_module

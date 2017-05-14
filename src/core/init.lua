@@ -260,7 +260,7 @@ function create_rpl1_1_engine()
    local parse_and_explain_exp = make_parse_and_explain(nil, nil, RPL1_1_EXP_RPLX, syntax.transform1)
 
    parser1_1 =
-      common.parser.new{ version = common.rpl_version.new(1, 1);
+      common.parser.new{ version = supported_version;
 			 preparse = preparser;
 			 parse_statements = parse_and_explain;
 			 parse_expression = parse_and_explain_exp;
@@ -268,7 +268,7 @@ function create_rpl1_1_engine()
 			 prefixes = unsupported;	       -- FIXME
 		      }
    compiler1_1 =
-      common.compiler.new{ version = common.rpl_version.new(1, 1);
+      common.compiler.new{ version = supported_version;
 			   load = compile.compile1.compile;
 			   import = unsupported;               -- FIXME
 			   compile_expression = compile.compile1.compile_expression;
@@ -298,7 +298,7 @@ end
 ROSIE_INFO = {}
 
 function populate_info()
-   local rpl_version = ROSIE_ENGINE.compiler.version
+   local rpl_version = engine_module._get_default_compiler().version
    ROSIE_INFO = {
       {name="ROSIE_VERSION", value=tostring(ROSIE_VERSION),             desc="version of rosie cli/api"},
       {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
@@ -366,6 +366,7 @@ setup_paths()
 create_core_engine()
 create_rpl1_0_engine()
 create_rpl1_1_engine()
+assert(ROSIE_ENGINE)
 populate_info()
 
 rosie_package.engine = engine

@@ -139,7 +139,7 @@ function environment.flatten(env, output_table)
       end
    end
    if env.parent then
-      return environment.flatten(p, output_table)
+      return environment.flatten(env.parent, output_table)
    else
       return output_table
    end

@@ -104,7 +104,6 @@ local function make_compile_expression(expression_p, compile_ast)
 
 	     local c = coroutine.create(compile_ast)
 	     local no_lua_error, pat, message = coroutine.resume(c, astlist[1], "<no source>", env)
-	     --local pat, message = compile_ast(astlist[1], "<no source>", env)
 	     if no_lua_error then
 		if pat then
 		   if not pattern.is(pat) then

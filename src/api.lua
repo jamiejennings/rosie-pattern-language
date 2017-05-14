@@ -148,17 +148,8 @@ api.engine_lookup = api_wrap(make_env_accessor("lookup"), "object")
 api.engine_clear = api_wrap(make_env_accessor("clear"), "boolean")
 
 ----------------------------------------------------------------------------------------
--- Loading manifests, files, strings
+-- Loading files, strings
 ----------------------------------------------------------------------------------------
-
--- local function check_results(ok, messages, full_path)
---    if not ok then error(messages, 0); end
---    if messages and (type(messages)~="table") then
---       error("Internal error: invalid messages returned: " .. tostring(messages), 0)
---    elseif (type(full_path)~="string") then
---       error("Internal error: invalid path returned: " .. tostring(full_path), 0)
---    end
--- end
 
 api.file_load = api_wrap(call_with_default_engine(rosie.file.load), "string", "string*")
 api.load = api_wrap(default_engine_method_caller("load"), "string*")
