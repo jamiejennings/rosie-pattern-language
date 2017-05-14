@@ -25,29 +25,25 @@ local c1 = require "c1"
 ---------------------------------------------------------------------------------------------------
 
 local function make_compile(compile_astlist)
-   return function(parser, source, env, modtable, importpath)
-	     assert(type(parser)=="function", "Internal error: compile: parser not a function")
-	     assert(type(source)=="string" or type(source)=="table",
-		    "Internal error: compile: source not a string or astlist\n" .. debug.traceback())
-	     assert(environment.is(env), "Internal error: compile: env not an environment")
-	     assert(type(modtable)=="table" or modtable==nil)
+   return function(importpath, astlist, modtable, env)
 	     assert(type(importpath)=="string" or importpath==nil)
+	     assert(type(astlist)=="table")
+	     assert(type(modtable)=="table")
+	     assert(environment.is(env))
 	     local c = coroutine.create(compile_astlist)
 	     -- may get a new env back 
-	     local no_lua_error, results, messages, env =
-		coroutine.resume(c, parser, source, env, modtable, importpath)
+	     local no_lua_error, success, packagename, messages =
+		coroutine.resume(c, importpath, astlist, modtable, env)
+--	     print("*** compile/load results:", no_lua_error, success, packagename, messages)
 	     if no_lua_error then
-		-- Return results and compilation messages
-		if results then
+		if success then
+		   assert(type(packagename)=="string" or packagename==nil)
 		   assert(type(messages)=="table")
-		   for i, pat in ipairs(results) do
--- TODO: syntax-expand should save each original_ast as part of the new ast (or something)
---		      if common.pattern.is(pat) then pat.original_ast = original_astlist[i]; end
-		   end
-		   return results, messages, env    -- message may contain compiler warnings
+		   return success, packagename, messages -- message may contain compiler warnings
 		else
-		   assert(type(messages)=="string")
-		   return false, {messages}	    -- message is a string in this case
+		   messages = packagename	    -- error message is second return value
+		   assert(type(messages)=="string", "messages is: " .. tostring(messages))
+		   return false, nil, {messages}
 		end
 	     else
 		local st = debug.traceback()
@@ -60,73 +56,73 @@ end
 -- Coroutine body
 ----------------------------------------------------------------------------------------
 
-local function make_compile_astlist(compile_ast)
-   return function(astlist, source, env)
-	     assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(astlist))
-	     assert(type(source)=="string")
-	     local results, messages = {}, {}
-	     for i,a in ipairs(astlist) do
-		results[i], messages[i] = compile_ast(a, source, env)
-		if not messages[i] then messages[i] = false; end -- keep messages a proper list: no nils
-	     end
-	     return results, messages
-	  end
-end
+-- local function make_compile_astlist(compile_ast)
+--    return function(astlist, source, env)
+-- 	     assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(astlist))
+-- 	     assert(type(source)=="string")
+-- 	     local results, messages = {}, {}
+-- 	     for i,a in ipairs(astlist) do
+-- 		results[i], messages[i] = compile_ast(a, source, env)
+-- 		if not messages[i] then messages[i] = false; end -- keep messages a proper list: no nils
+-- 	     end
+-- 	     return results, messages
+-- 	  end
+-- end
 
-----------------------------------------------------------------------------------------
--- Top-level interface to compilers
-----------------------------------------------------------------------------------------
+-- N.B. make_compile_expression produces a compiler for expressions meant for top level matching.
+-- The patterns produced are guaranteed to capture something, and the top level capture will be
+-- named "*" UNLESS the expression is an identifier bound to a pattern that is not an alias.  In
+-- that case, the top level capture will have the name of the identifier.
 
-local function make_compile_expression(expression_p, compile)
-   return function(parser, source, env)
-	     assert(type(parser)=="function", "Internal error: compile: parser not a function")
-	     assert(type(source)=="string")
-	     assert(environment.is(env))
-	     local astlist, original_astlist, messages = parser(source)
-
-	     if not astlist then return nil, messages; end
+local function make_compile_expression(expression_p, compile_ast)
+   return function(importpath, astlist, modtable, env)
+	     assert(type(importpath)=="string" or importpath==nil)
 	     assert(type(astlist)=="table")
-	     assert(type(original_astlist)=="table")
+	     assert(type(modtable)=="table")
+	     assert(environment.is(env))
 
-	     -- After adding support for semi-colons to end statements, can change this
-	     -- restriction to allow arbitrary statements, followed by an expression, like
-	     -- scheme's 'begin' form.
+	     if importpath then
+		env = modtable[importpath]
+		if not env then return false, nil, {"Error: no loaded module " .. importpath}; end
+	     end
+	     
+	     -- We COULD allow more than one ast in astlist, in order to allow arbitrary
+	     -- statements, followed by an expression, like scheme's 'begin' form.  If the grammar
+	     -- allowed semi-colons to end statements, this feature would be more usable as
+	     -- convenience for users.
+
+	     -- TODO: Do we need to check HERE that we have an expression?  We are now using
+	     -- parse_expression, which will succeed only for an expression.
 	     if (#astlist~=1) then
-		local msgs = {"Error: source did not produce a single pattern: " .. source}
+		local msgs = {"Error: expression source did not produce a single pattern"}
 		for i, a in ipairs(astlist) do
 		   table.insert(msgs, "Pattern " .. i .. ": " .. writer.reveal_ast(a))
 		end
-		return false, msgs
+		return false, nil, msgs
 	     end
-	     assert(astlist[1] and original_astlist[1], 
-		    "Internal error: missing astlist/original_astlist in compile_expression")
-	     if not expression_p(astlist[1]) then
-		local msgs = {"Error: not an expression: " .. source}
-		return false, msgs
+	     if not expression_p(astlist[1]) then return false, nil, {"Error: not an expression"}; end
+
+	     local c = coroutine.create(compile_ast)
+	     local no_lua_error, pat, message = coroutine.resume(c, astlist[1], "<no source>", env)
+	     --local pat, message = compile_ast(astlist[1], "<no source>", env)
+	     if no_lua_error then
+		if pat then
+		   if not pattern.is(pat) then
+		      return false, nil, {"Error: expression not a pattern: " .. tostring(pat)}
+		   end
+		   local typ, pos, text, subs = common.decode_match(astlist[1])
+		   if (typ~="ref") or pat.alias then
+		      pat.peg = common.match_node_wrap(result.peg, "*") -- anonymous expression
+		      pat.alias = false
+		   end
+		   return true, pat, {message}
+		else -- compilation failed
+		   return false, nil, {message}
+		end
+	     else -- lua error (a bug)
+		local st = debug.traceback()
+		error("Internal error (compiler): " .. tostring(results) .. '\n' .. st)
 	     end
-	     -- Check to see if the expression is a reference
-	     local name, pos, text, subs = common.decode_match(astlist[1])
-	     local pat
-	     if (name=="ref") then
-		pat = lookup(env, text)
-	     end
-	     -- Compile the expression
-	     local results, msgs = compile(parser, source, env)
-	     if (type(results)~="table") or (not pattern.is(results[1])) then -- compile-time error
-		return false, msgs
-	     end
-	     local result = results[1]
-	     if pat then result.alias = pat.alias; end
-	     if not (pat and (not pat.alias)) then
-		-- If the user entered an identifier, then we are all set, unless it is an alias,
-		-- which by itself may capture nothing and thus should be handled like any other
-		-- kind of expression.
-		-- If the user entered an expression other than an identifier, we should treat it
-		-- like it is the RHS of an assignment statement.  Need to give it a name, so we
-		-- label it "*" since that can't be an identifier name.
-		result.peg = common.match_node_wrap(result.peg, "*")
-	     end
-	     return result, {}			    -- N.B. result is a single pattern
 	  end
 end
 
@@ -160,7 +156,7 @@ end
 --             match(source, input, encoder, importpath/nil) where source parses to an expression
 --                and importpath specifies an environment via the modtable (this is for pattern testing)
 --   Compiler  Load source into an environment (modules into their own fresh environment)
---             load(importpath/nil, source/astlist, modtable, env) --> packagename/nil, list of bindings (names) created
+--             load(importpath/nil, source/astlist, modtable, env) --> packagename/nil, list of bindings created
 --   Compiler  Import an already-loaded module into an environment
 --             import(importpath, prefix, env) --> success/failure
 --   Compiler  Compile an expression, producing a compiled expression object
@@ -184,31 +180,25 @@ end
 --             prefixes_ast(astlist) --> list of packagenames
 --             prefixes_source(source) --> list of packagenames
 
--- !!! The modtable is going to need to store a ref to the top-level engine env, so that we can
--- !!! pass nil into the above API in the (default, usual) case of compiling in the top level
--- !!! environment.
-
 -- !!! When we re-do the AST representation, we need a slot in each AST node record for the rpl
 -- !!! version in which this feature appeared.  That way we can detect mislabeled `rpl x.y`
 -- !!! declarations and abort compilation.
 
--- local function deps(parser, input, modtable)
---    local alldeps = {}				    -- transitive closure
---    local deps = parser.parse_deps(input)
---    for _, d in ipairs(deps) do
---       local importpath, prefix = d[1], d[2]
---       local mod = modtable[importpath]
---       if mod then
--- 
--- end
+-- TODO: Create a thread-level message queue when we create the compiler coroutine, so that
+-- warnings and other messages can be enqueued there via a function call, and not by directly
+-- manipulating a table of strings.
 
---local compile0 = make_compile(make_compile_astlist(c0.compile_ast))
-local compile1 = make_compile(c1.compile_module)
+
+----------------------------------------------------------------------------------------
+-- Top-level interface to compilers
+----------------------------------------------------------------------------------------
+
+local compile1 = make_compile(c1.load)
 
 return {compile0 = {compile = compile1,
-		    compile_expression=make_compile_expression(c0.expression_p, compile1)},
+		    compile_expression=make_compile_expression(c0.expression_p, c1.compile_ast)},
 	compile1 = {compile = compile1,
-		    compile_expression=make_compile_expression(c0.expression_p, compile1),
+		    compile_expression=make_compile_expression(c0.expression_p, c1.compile_ast),
 		    deps = deps,
 --		    compile_module=c1.compile_module, -- remove?
 --		    read_module=c1.read_module	    -- TODO: factor into find_module and read_module?

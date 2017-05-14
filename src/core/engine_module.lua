@@ -112,6 +112,7 @@ local engine_error				    -- forward reference
 -- refactoring) syntax module.
 
 local function compile_search(en, pattern_exp)
+   error("compile_search NOT REWRITTEN YET")
    local parse_exp, env = en.compiler.parser.parse_expression, en._env
    local env = environment.extend(env)		    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
@@ -131,24 +132,25 @@ local function compile_search(en, pattern_exp)
 end
 
 local function compile_match(en, source)
-   local rpl_parser, env = en.compiler.parser.parse_expression, en._env
-   assert(type(env)=="table", "Compiler: environment argument is not a table: "..tostring(env))
-   return en.compiler.compile_expression(rpl_parser, source, env)
+   local parse = en.compiler.parser.parse_expression
+   local astlist, original_astlist, warnings = parse(source)
+   print("*** in compile_match, source is:\n" .. source)
+   return en.compiler.compile_expression(nil, astlist, en._modtable, en._env)
 end
 
 local function engine_compile(en, expression, flavor)
    flavor = flavor or "match"
    if type(expression)~="string" then engine_error(en, "Expression not a string: " .. tostring(expression)); end
    if type(flavor)~="string" then engine_error(en, "Flavor not a string: " .. tostring(flavor)); end
-   local pat, msgs
+   local ok, pat, msgs
    if flavor=="match" then
-      pat, msgs = compile_match(en, expression)
+      ok, pat, msgs = compile_match(en, expression)
    elseif flavor=="search" then
-      pat, msgs = compile_search(en, expression)
+      ok, pat, msgs = compile_search(en, expression)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
-   if not pat then return en:_error(table.concat(msgs, '\n')); end
+   if not ok then return en:_error(table.concat(msgs, '\n')); end
    return rplx.new(en, pat), msgs
 end
 
@@ -212,14 +214,17 @@ local load_dependency				    -- forward reference
 local load_dependencies				    -- forward reference
 local import_dependency				    -- forward reference
 
--- load rpl code (statements) into the engine.  
--- returns a possibly-empty table of messages, and throws an error if compilation fails.
+-- load a unit of rpl code (decls and statements) into an environment:
+--   * parse out the dependencies (import decls)
+--   * load dependencies that have not been loaded (into the modtable)
+--   * import the dependencies into the target environment
+--   * compile the input in the target environment
+--   * return a possibly-empty table of messages, or throw an error if compilation fails.
 
-local function load_string(e, target_env, input, required_by)
+local function load_input(e, target_env, input, importpath)
+   assert(engine.is(e))
    assert(environment.is(target_env), "target not an environment: " .. tostring(target_env))
---   assert(type(required_by)=="string", "required_by not a string")
-   assert(type(e.searchpath)=="string", "search path not a string")
-   local results, env
+   assert(type(e.searchpath)=="string", "engine search path not a string")
    local messages = {}
    local parser = e.compiler.parser
    local astlist, original_astlist, warnings, leftover
@@ -229,48 +234,41 @@ local function load_string(e, target_env, input, required_by)
       assert(type(input)=="table")
       astlist, original_astlist, warnings, leftover = input, input, {}, 0
    end
-   table.insert(warnings, 1, "Processing " .. (required_by or "<top level>"))
+   table.insert(warnings, 1, "Processing " .. (importpath or "<top level>"))
    if not astlist then
       engine_error(e, table.concat(warnings, '\n')) -- in this case, warnings contains errors
    end
    -- load_dependencies has side-effects on e._modtable and target_env
-   load_dependencies(e, astlist, target_env, messages, required_by)
+   load_dependencies(e, astlist, target_env, messages, importpath)
    -- now we can compile the input
-   local foo = function(...) print("*** load_dependency"); table.print{...}; error(); end
-   results, messages, env = e.compiler.load(foo, --e.compiler.parser.parse_statements,
-                                            astlist,
-                                            target_env,
-					    e._modtable,
-					    required_by)
-   local modname
-   if not required_by then modname = "<top level>" else modname = required_by; end
-   if results then
-      assert(environment.is(env))
+   local success, modname, messages = e.compiler.load(importpath, astlist, e._modtable, target_env)
+
+   if not modname then modname = "<top level>"; end -- for display
+
+   if success then
       assert(type(messages)=="table")
       common.note(string.format("COMPILED %s", modname))
-      for i,w in ipairs(warnings) do table.insert(messages, i, w); end
-      return messages, env
+      table.move(messages, 1, #messages, #warnings+1, warnings)
+      return modname, warnings
    else
       common.note(string.format("FAILED TO COMPILE %s", modname))
-      assert(type(messages)=="table")
+      assert(type(messages)=="table", "messages is: " .. tostring(messages))
       table.move(messages, 1, #messages, #warnings+1, warnings)
       engine_error(e, table.concat(warnings, '\n'))
    end
 end
 
 load_dependencies =
-   function(e, astlist, target_env, messages, required_by)
+   function(e, astlist, target_env, messages, importpath)
       local deps = e.compiler.parser.parse_deps(e.compiler.parser, astlist)
       -- find and load all dependencies
       for _, dep in ipairs(deps) do
-	 local new_messages
-	 new_messages, dep.env = load_dependency(e, astlist, target_env, dep, required_by);
-	 assert(type(new_messages)=="table")
-	 assert(environment.is(dep.env))
-	 for i,w in ipairs(messages) do table.insert(new_messages, i, w); end
-	 if dep.env~=target_env then
+	 local new_messages, modname
+	 modname, new_messages = load_dependency(e, astlist, target_env, dep, importpath);
+	 table.move(new_messages, 1, #new_messages, #messages+1, messages)
+	 if modname then
 	    assert(e._modtable[dep.importpath],
-		   tostring(dep.importpath) .. " is not empty and not in module table?")
+		   tostring(dep.importpath) .. " is not in module table?")
 	 end
       end
       -- if all dependecies loaded ok, we can import them
@@ -279,47 +277,35 @@ end
       
 -- find and load any missing dependency
 load_dependency =
-   function(e, astlist, target_env, dep, required_by)
-      local results, messages, modenv
-      local importpath = dep.importpath
-      print("-> Loading dependency " .. importpath .. " required by " .. (required_by or "<top level>"))
-      modenv = e._modtable[importpath]
+   function(e, astlist, target_env, dep, importpath)
+      local success, messages
+      print("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
+      local modname = dep.prefix
+      local modenv = e._modtable[dep.importpath]
       if not modenv then
-	 common.note("Looking for ", importpath, " required by ", (required_by or "<top level>"))
-	 local fullpath, source = common.get_file(importpath, e.searchpath)
+	 common.note("Looking for ", dep.importpath, " required by ", (importpath or "<top level>"))
+	 local fullpath, source = common.get_file(dep.importpath, e.searchpath)
 	 if not fullpath then
-	    local err = "cannot find module '" .. importpath ..
-	       "' needed by module '" .. (required_by or "<top level>") .. "'"
+	    local err = "cannot find module '" .. dep.importpath ..
+	       "' needed by module '" .. (importpath or "<top level>") .. "'"
 	    engine_error(e, err)
 	 else
-	    common.note("Loading ", importpath, " from ", fullpath)
-	    --messages, modenv = load_string(e, target_env, source, importpath) -- recursive
-
-	    local foo = function(...) print("*** load_dependency"); table.print{...}; error(); end
-	    results, messages, modenv = e.compiler.load(foo, --e.compiler.parser.parse_statements,
-	       astlist,
-	       target_env,
-	       e._modtable,
-	       required_by)
-	    
-	    if results and (modenv~=target_env) then
-	       assert(environment.is(e._modtable[importpath]));
-	    end
-	 end
+	    common.note("Loading ", dep.importpath, " from ", fullpath)
+	    modname, messages = load_input(e, target_env, source, dep.importpath) -- recursive
+	 end -- if not fullpath
       end -- if dependency was not already loaded
-      assert(environment.is(modenv))
-      return messages, modenv
+      return modname, messages
    end
 
 import_dependency =
    function(e, target_env, dep)
       assert(engine.is(e))
       assert(environment.is(target_env))
-      assert(environment.is(dep.env))
       if environment.lookup(target_env, dep.prefix) then
 	 table.insert(messages, "REBINDING " .. dep.prefix) -- TODO: make this an error
       end
-      environment.bind(target_env, dep.prefix, dep.env)
+      local modenv = e._modtable[dep.importpath]
+      environment.bind(target_env, dep.prefix, modenv)
       print("-> Binding module prefix: " .. dep.prefix)
    end
 
@@ -426,7 +412,7 @@ local engine =
 		     clear=clear_environment,
 
 		     load=function(e, input)
-			     return load_string(e, e._env, input)
+			     return load_input(e, e._env, input)
 			  end,
 		     compile=engine_compile,
 		     searchpath="";

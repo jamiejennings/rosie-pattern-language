@@ -95,14 +95,14 @@ environment.is = env.is
 function environment.lookup(env, id, prefix)
    assert(environment.is(env))
    if prefix then
-      if prefix=="num" then
-	 print("*** env.store:")
-	 for k,v in pairs(env.store) do print(k,v) end
-	 print("***")
-      end
-      print("*** looking up: ", id, tostring(prefix))	 
+      -- if prefix=="num" then
+      -- 	 print("*** env.store:")
+      -- 	 for k,v in pairs(env.store) do print(k,v) end
+      -- 	 print("***")
+      -- end
+--      print("*** looking up: ", id, tostring(prefix))	 
       local mod = environment.lookup(env, prefix)
-      print("*** mod is ", tostring(mod))
+--      print("*** mod is ", tostring(mod))
       if environment.is(mod) then
 	 local val = environment.lookup(mod, id)
 	 if val and val.exported then		    -- hmmm, we are duck typing here
@@ -114,9 +114,9 @@ function environment.lookup(env, id, prefix)
 	 return nil, prefix .. " is not a valid module reference"
       end
    else -- no prefix
-      if env.store[id] then
-	 print("*** found ", id)
-      end
+      -- if env.store[id] then
+      -- 	 print("*** found ", id)
+      -- end
       return env.store[id] or (env.parent and environment.lookup(env.parent, id))
    end
 end

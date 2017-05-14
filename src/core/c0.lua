@@ -267,11 +267,9 @@ function c0.compile_ref(a, gmr, source, env)
    end
    local pat, msg = lookup(env, localname, packagename)
    if (not pat) then 
---      print("*** Lookup failed for: "); table.print(a) -- !@#
---      print("*** return values: ", pat, msg)
       explain_undefined_identifier(a, source);
    end -- throw
-   assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat))
+   assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat)) -- TODO: create explain_not_a_pattern
    return pattern.new{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
 end
 

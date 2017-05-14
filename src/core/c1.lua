@@ -101,45 +101,44 @@ end
 -- Coroutine body
 ----------------------------------------------------------------------------------------
 
--- compile_module enforces the structure of an rpl module:
+-- the load procedure enforces the structure of an rpl module:
 --     rpl_module = language_decl? package_decl? import_decl* statement* ignore
 --
 -- We could parse a module using that rpl_module pattern, but we can give better
 -- error messages this way.
+--
+-- The load procedure compiles in a fresh environment (creating new bindings there) UNLESS
+-- importpath is nil, which indicates "top level" loading into env.  Each dependency must already
+-- be compiled and have an entry in modtable, else the compilation will fail.
+--
+-- importpath: a relative filesystem path to the source file, or nil
+-- astlist: the already preparsed, parsed, and expanded input to be compiled
+-- modtable: the global module table (one per engine) because modules can be shared
+-- 
+-- return value are success, packagename/nil, table of messages
 
-function c1.compile_module(parser, input, env, modtable, importpath)
+function c1.load(importpath, astlist, modtable, env)
+   assert(type(importpath)=="string" or importpath==nil)
+   assert(type(astlist)=="table")
+   assert(type(modtable)=="table")
    assert(environment.is(env))
-   -- modtable is the global module table (one per engine)
-   -- importpath is a relative filesystem path to the source file
-   local source, astlist, orig_astlist, messages
-   if type(input)=="string" then
-      source = input
-      astlist, orig_astlist, messages = parser(source)
-   else
-      astlist, orig_astlist, messages = input, input, {}
-      source = "(no source)"
-   end
-   if not astlist then return nil, messages; end    -- syntax errors
    local thispkg
-   local results, messages = {}, {}
    local i = 1
-   if not astlist[i] then return nil, {"Empty module"}; end
+   if not astlist[i] then return true, nil, {"Empty input"}; end
    local typ, pos, text, subs, fin = common.decode_match(astlist[i])
    assert(typ~="language_decl", "language declaration should be handled in preparse/parse")
    if typ=="package_decl" then
-      -- create/set the compilation environment according to the package name,
-      -- maybe issuing a warning if the env exists already
       thispkg = c1.process_package_decl(typ, pos, text, subs, fin)
       i=i+1;
       if not astlist[i] then
-	 return nil, {"Empty module (nothing after package declaration)"}
+	 return true, thispkg, {"Empty module (nothing after package declaration)"}
       end
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end
    -- If there is a package_decl, then this code is a module.  It gets its own fresh
    -- environment, and it is registered (by its importpath) in the per-engine modtable.
    -- Otherwise, if there is no package decl, then the code is compiled in the default, or
-   -- "top level" environment.  Nothing special to do in that case.
+   -- "top level" environment.  
    if thispkg then
       assert(not modtable[importpath], "module " .. importpath .. " already compiled and loaded?")
       env = environment.new()			    -- purposely shadowing the env argument
@@ -148,21 +147,19 @@ function c1.compile_module(parser, input, env, modtable, importpath)
    -- the import declarations.
    while typ=="import_decl" do
       i=i+1
-      if not astlist[i] then return nil, {"Empty module (nothing after import declarations)"}; end
+      if not astlist[i] then return true, thispkg, {"Module consists only of import declarations"}; end
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end -- while skipping import_decls
+   local results, messages = {}, {}
    repeat
-      results[i], messages[i] = c1.compile_ast(astlist[i], source, env)
+      results[i], messages[i] = c1.compile_ast(astlist[i], "(no source)", env)
       if not messages[i] then messages[i] = false; end -- keep messages a proper list: no nils
       i=i+1
    until not astlist[i]
-   -- success! save this env in the modtable, if we have an importpath.  pre-module system code
-   -- (rpl 1.0 and rpl 0.0) will not use the modtable and will not supply an importpath.
-   assert(environment.is(env))
-   if modtable and importpath then modtable[importpath] = env; end
-   return results, messages, env
+   -- success! save this env in the modtable, if we have an importpath.
+   if importpath then modtable[importpath] = env; end
+   return true, thispkg, messages
 end
-
 
 
 return c1
