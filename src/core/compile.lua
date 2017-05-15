@@ -34,7 +34,6 @@ local function make_compile(compile_astlist)
 	     -- may get a new env back 
 	     local no_lua_error, success, packagename, messages =
 		coroutine.resume(c, importpath, astlist, modtable, env)
---	     print("*** compile/load results:", no_lua_error, success, packagename, messages)
 	     if no_lua_error then
 		if success then
 		   assert(type(packagename)=="string" or packagename==nil)
@@ -47,7 +46,8 @@ local function make_compile(compile_astlist)
 		end
 	     else
 		local st = debug.traceback()
-		error("Internal error (compiler): " .. tostring(results) .. '\n' .. st)
+		-- in the event of an error, the next value returned is the message
+		error("Internal error (compiler): " .. tostring(success) .. '\n' .. st)
 	     end
 	  end
 end
@@ -77,7 +77,7 @@ end
 local function make_compile_expression(expression_p, compile_ast)
    return function(importpath, astlist, modtable, env)
 	     assert(type(importpath)=="string" or importpath==nil)
-	     assert(type(astlist)=="table")
+	     assert(type(astlist)=="table", "astlist is: " .. tostring(astlist))
 	     assert(type(modtable)=="table")
 	     assert(environment.is(env))
 
@@ -110,7 +110,7 @@ local function make_compile_expression(expression_p, compile_ast)
 		      return false, nil, {"Error: expression not a pattern: " .. tostring(pat)}
 		   end
 		   local typ, pos, text, subs = common.decode_match(astlist[1])
-		   if (typ~="ref") or pat.alias then
+		   if (typ~="ref" and typ~="extref") or pat.alias then
 		      pat.peg = common.match_node_wrap(pat.peg, "*") -- anonymous expression
 		      pat.alias = false
 		   end

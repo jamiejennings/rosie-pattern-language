@@ -60,7 +60,7 @@ check(rosie.engine.is(e))
 
 subheading("Setting up assignments")
 t1, t2 = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
-check(type(t1)=="table")
+check(type(t1)=="string")
 if t2 then check(type(t2)=="table"); end
 t = e:lookup("a")
 check(type(t)=="table")
@@ -1350,36 +1350,43 @@ check_match("cookeddot", "", false)
 
 subheading("Raw and cooked versions of the same definition")
 
-check((rosie.file.load(e, "$sys/MANIFEST", "manifest")))
+check(e:load("import num   word=[:alpha:]+"))
 
-m = check_match("common.int", "42", true)
-check(m.type=="common.int" and (not m.subs))
-m = check_match("{common.int}", "42", true)
-check(m.subs[1] and m.subs[1].type=="common.int" and (not m.subs[1].subs))
-m = check_match("(common.int)", "42", true)
-check(m.type=="common.int" and (not m.subs))
---check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
 
-m = check_match("common.int", "42x", true, 1, "42")
-check(m.type=="common.int" and (not m.subs))
-m = check_match("{common.int}", "42x", true, 1, "42")
-check((m.subs[1]) and m.subs[1].type=="common.int" and (not m.subs[1].subs))
-m = check_match("(common.int)", "42x", true, 1)
-m = check_match("(common.int ~)", "42x", false)
+print("*** LEFT OFF HERE.  Need to decide whether an int from the num package should be labeled")
+print("*** 'num.int' or just 'int' in the output.  This would change the compiler for modules.")
+print("*** ALSO, need to ensure that the name INSIDE the package is used instead of the prefix.")
 
-m = check_match("common.int common.word", "42x", false)
-m = check_match("{common.int common.word}", "42x", true, 0, "42x")
-check((m.subs[1]) and m.subs[1].type=="common.int" and
-      (m.subs[2]) and m.subs[2].type=="common.word")
-m = check_match("(common.int common.word)", "42x", false)
 
-m = check_match("common.int common.word", "42 x", true)
-check((m.subs[1]) and m.subs[1].type=="common.int" and
-      (m.subs[2]) and m.subs[2].type=="common.word")
-m = check_match("{common.int common.word}", "42 x", false)
-m = check_match("(common.int common.word)", "42 x", true)
 
-check((e:load("int = common.int word = common.word")))
+m = check_match("num.int", "42", true)
+check(m.type=="num.int" and (not m.subs))
+m = check_match("{num.int}", "42", true)
+check(m.subs[1] and m.subs[1].type=="num.int" and (not m.subs[1].subs))
+m = check_match("(num.int)", "42", true)
+check(m.type=="num.int" and (not m.subs))
+--check((m["*"].subs[1]) and m["*"].subs[1]["num.int"] and (not m["*"].subs[1]["num.int"].subs))
+
+m = check_match("num.int", "42x", true, 1, "42")
+check(m.type=="num.int" and (not m.subs))
+m = check_match("{num.int}", "42x", true, 1, "42")
+check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
+m = check_match("(num.int)", "42x", true, 1)
+m = check_match("(num.int ~)", "42x", false)
+
+m = check_match("num.int word", "42x", false)
+m = check_match("{num.int word}", "42x", true, 0, "42x")
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="word")
+m = check_match("(num.int word)", "42x", false)
+
+m = check_match("num.int word", "42 x", true)
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="word")
+m = check_match("{num.int word}", "42 x", false)
+m = check_match("(num.int word)", "42 x", true)
+
+check((e:load("int = num.int word = word")))
        
 m = check_match("int", "42", true)
 --check((not m["*"]) and m["int"] and (#m["int"].subs==1))
@@ -1414,35 +1421,35 @@ m = check_match("(int word)", "42 x", true)
 check((m.subs[1]) and m.subs[1].type=="int" and
       (m.subs[2]) and m.subs[2].type=="word")
 
-check((e:load("alias int = common.int alias word = common.word")))
+check((e:load("alias int = num.int alias aword = word")))
        
 m = check_match("int", "42", true)
-check(m.type=="*" and m.subs[1].type=="common.int" and (not m.subs[1].subs))
+check(m.type=="*" and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("{int}", "42", true)
-check((m.subs[1]) and m.subs[1].type=="common.int" and (not m.subs[1].subs))
+check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("(int)", "42", true)
-check((m.subs[1]) and m.subs[1].type=="common.int" and (not m.subs[1].subs))
+check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 
 m = check_match("int", "42x", true, 1, "42")
-check(m.type=="*" and m.subs[1].type=="common.int" and (not m.subs[1].subs))
+check(m.type=="*" and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("{int}", "42x", true, 1, "42")
-check((m.subs[1]) and m.subs[1].type=="common.int" and (not m.subs[1].subs))
+check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 
-m = check_match("int word", "42x", false)
-m = check_match("{int word}", "42x", true, 0, "42x")
-check((m.subs[1]) and m.subs[1].type=="common.int" and
-      (m.subs[2]) and m.subs[2].type=="common.word")
-m = check_match("(int word)", "42x", false)
+m = check_match("int aword", "42x", false)
+m = check_match("{int aword}", "42x", true, 0, "42x")
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="aword")
+m = check_match("(int aword)", "42x", false)
 
-m = check_match("int word", "42 x", true)
-check((m.subs[1]) and m.subs[1].type=="common.int" and
-      (m.subs[2]) and m.subs[2].type=="common.word")
-m = check_match("{int word}", "42 x", false)
-m = check_match("(int word)", "42 x", true)
-check((m.subs[1]) and m.subs[1].type=="common.int" and
-      (m.subs[2]) and m.subs[2].type=="common.word")
+m = check_match("int aword", "42 x", true)
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="aword")
+m = check_match("{int aword}", "42 x", false)
+m = check_match("(int aword)", "42 x", true)
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="aword")
 
 subheading("Bindings (equivalence of reference and referent)")
 

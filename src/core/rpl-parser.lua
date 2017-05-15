@@ -162,6 +162,7 @@ function parse_deps(parser, input)
 	 table.insert(deps, {importpath=importpath, prefix=prefix})
       end -- for each importspec in the import_decl
       i=i+1;
+      if not astlist[i] then break; end
       typ, pos, text, specs, fin = common.decode_match(astlist[i])
    end
    return deps

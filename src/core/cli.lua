@@ -93,17 +93,26 @@ local function load_string(en, input)
    return ok, messages
 end
 
+local function load_file(en, filename)
+   local ok, messages = pcall(en.loadfile, en, filename)
+   if not ok then
+      if ROSIE_DEV then error("Cannot load file: \n" .. messages)
+      else io.write("Cannot load file: \n", messages); os.exit(-1); end
+   end
+   return ok, messages
+end
+
 local function setup_engine(args)
    -- (1a) Load whatever is specified in ~/.rosierc ???
 
 
    -- (1b) Load an rpl file
    if args.rpls then
-      for _,file in pairs(args.rpls) do
+      for _,filename in pairs(args.rpls) do
 	 if args.verbose then
-	    io.stdout:write("Compiling additional file ", file, "\n")
+	    io.stdout:write("Compiling additional file ", filename, "\n")
 	 end
-	 local success, msg = pcall(rosie.file.load, CL_ENGINE, file, "rpl")
+	 local success, msg = pcall(CL_ENGINE.loadfile, CL_ENGINE, filename)
 	 if not success then
 	    io.stdout:write(msg, "\n")
 	    os.exit(-4)

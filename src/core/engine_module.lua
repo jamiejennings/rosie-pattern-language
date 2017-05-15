@@ -134,6 +134,7 @@ end
 local function compile_match(en, source)
    local parse = en.compiler.parser.parse_expression
    local astlist, original_astlist, warnings = parse(source)
+   if not astlist then engine_error(table.concat(warnings, "\n")); end
    return en.compiler.compile_expression(nil, astlist, en._modtable, en._env)
 end
 
@@ -302,12 +303,31 @@ import_dependency =
       assert(engine.is(e))
       assert(environment.is(target_env))
       if environment.lookup(target_env, dep.prefix) then
-	 table.insert(messages, "REBINDING " .. dep.prefix) -- TODO: make this an error
+	 common.note("REBINDING ", dep.prefix)
       end
       local modenv = e._modtable[dep.importpath]
       environment.bind(target_env, dep.prefix, modenv)
       print("-> Binding module prefix: " .. dep.prefix)
    end
+
+local function get_file_contents(e, filename)
+   if util.absolutepath(filename) then
+      local data, msg = util.readfile(filename)
+      if not data then engine_error(e, msg); end
+      return filename, data
+   else
+      local actual_path, data = common.get_file(filename, e.searchpath, "")
+      if not actual_path then
+	 engine_error("Could not find " .. filename .. " on search path")
+      end
+      return actual_path, data
+   end
+end
+
+local function load_file(e, filename)
+   local actual_path, source = get_file_contents(e, filename)
+   return load_input(e, e._env, source, filename)
+end
 
 ----------------------------------------------------------------------------------------
 
@@ -399,8 +419,9 @@ local function engine_create(name, compiler, searchpath)
 end
 
 function engine_error(e, msg)
+--   error(string.format("Engine %s: %s", tostring(e), tostring(msg)), 0)
    error(string.format("Engine %s: %s\n%s", tostring(e), tostring(msg),
-		       ROSIE_DEV and (debug.traceback().."\n") or "" ), 0)
+   		       ROSIE_DEV and (debug.traceback().."\n") or "" ), 0)
 end
 
 local engine = 
@@ -422,8 +443,9 @@ local engine =
 		     load=function(e, input)
 			     return load_input(e, e._env, input)
 			  end,
+		     loadfile=load_file,
 		     compile=engine_compile,
-		     searchpath="";
+		     searchpath="",
 
 		     match=engine_match,
 		     tracematch=engine_tracematch,

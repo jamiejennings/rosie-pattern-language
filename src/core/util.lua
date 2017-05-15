@@ -356,6 +356,14 @@ function util.split_path(path, separator)
    return path:sub(1,lastpos-1), results[#results], results
 end
 
+-- tests if the path is absolute, returning evidence if so, or nil otherwise.
+-- relies on common.dirsep to tell if we are on unix or windows.  this may be a bad idea.
+function util.absolutepath(path)
+   assert(type(path)=="string")
+   return ((path:sub(1,1)==common.dirsep and common.dirsep) or
+	   ((common.dirsep=="\\" and path:sub(1,2):match("%a:")))) or nil
+end
+
 function util.readfile(fullpath)
    local ok, f = pcall(io.open, fullpath);
    if (not ok) or (not f) then
@@ -364,7 +372,7 @@ function util.readfile(fullpath)
    local data = f:read("a")
    f:close()
    if (not data) then
-      return false, string.format('Error: cannot read file %q', fullpath)
+      return false, string.format('Error: cannot read file %q', tostring(fullpath))
    end
    return data
 end

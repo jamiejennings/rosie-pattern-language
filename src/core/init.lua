@@ -349,14 +349,6 @@ end
 ----------------------------------------------------------------------------------------
 -- Build the rosie module as seen by the Lua client
 ----------------------------------------------------------------------------------------
-function create_file_functions()
-   return {
-      match = process_input_file.match,
-      tracematch = process_input_file.tracematch,
-      grep = process_input_file.grep,
---      load = process_rpl_file.load_file	    -- TEMP until module system
-   }
-end
 
 local rosie_package = {}
 
@@ -370,7 +362,6 @@ assert(ROSIE_ENGINE)
 populate_info()
 
 rosie_package.engine = engine
-rosie_package.file = create_file_functions()
 rosie_package.encoders = create_encoder_table()
 rosie_package.info = function(...) return ROSIE_INFO; end
 rosie_package.import = import
