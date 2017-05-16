@@ -1439,17 +1439,18 @@ m = check_match("(int ~)", "42x", false)
 
 m = check_match("int aword", "42x", false)
 m = check_match("{int aword}", "42x", true, 0, "42x")
+print("***"); table.print(m)
 check((m.subs[1]) and m.subs[1].type=="num.int" and
-      (m.subs[2]) and m.subs[2].type=="aword")
+      (m.subs[2]) and m.subs[2].type=="word")
 m = check_match("(int aword)", "42x", false)
 
 m = check_match("int aword", "42 x", true)
 check((m.subs[1]) and m.subs[1].type=="num.int" and
-      (m.subs[2]) and m.subs[2].type=="aword")
+      (m.subs[2]) and m.subs[2].type=="word")
 m = check_match("{int aword}", "42 x", false)
 m = check_match("(int aword)", "42 x", true)
 check((m.subs[1]) and m.subs[1].type=="num.int" and
-      (m.subs[2]) and m.subs[2].type=="aword")
+      (m.subs[2]) and m.subs[2].type=="word")
 
 subheading("Bindings (equivalence of reference and referent)")
 

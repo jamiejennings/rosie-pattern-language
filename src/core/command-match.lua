@@ -68,7 +68,7 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    end
    
    -- Iterate through the lines in the input file
-   local match_function = (args.command=="trace") and rosie.file.tracematch or rosie.file.match 
+   local match_function = (args.command=="trace") and en.tracematchfile or en.matchfile
 
    local ok, cin, cout, cerr =
       pcall(match_function, en, compiled_pattern, nil, infilename, outfilename, errfilename, args.wholefile)
