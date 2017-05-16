@@ -326,6 +326,7 @@ function common.modtableref(tbl, importpath)
 end
 
 function common.modtableset(tbl, importpath, p, e)
+   assert(p and e and type(importpath)=="string")
    tbl[importpath] = modtabletype.new{packagename=p, env=e}
 end
 

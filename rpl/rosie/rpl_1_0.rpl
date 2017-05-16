@@ -7,7 +7,6 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-
 -- Requires an engine configured using the parser in parse.lua (and no macro expansion step).
 -- N.B. This is written in rpl 0.0, the "rpl core" language:
 --    Character set expressions are SINGLE SETS in double brackets [[set]]
@@ -18,6 +17,7 @@
 --    Repetition supported: star, plus, question, and {n,m}
 --    AND compilation is done in sequence, top to bottom, so bindings must be ordered
 
+package rpl_1_0
 
 alias newline = {"\n"}				    -- raw mode just to suppress compiler warning 
 
@@ -107,7 +107,11 @@ minor = major
 version_spec = { major "." minor {[[:space:]]/$}}	    -- core lacks ~
 preparse = ignore "rpl" (version_spec / syntax_error)
 
-rpl_statements = (ignore statement / syntax_error)* ignore $
+-- we fake-parse a package declaration, which is not part of rpl 1.0.
+-- this makes it possible to put a package declaration in rpl_1_1.rpl.
+alias package_decl = {"package" [[:space:]]} {!newline .}*
+
+rpl_statements = (ignore statement / package_decl / syntax_error)* ignore $
 rpl_expression = ignore expression ignore $
 
 alias item = {ignore {statement / expression / syntax_error}}

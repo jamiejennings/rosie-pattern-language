@@ -7,6 +7,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+package rpl_1_1
+
 alias newline = [\n]
 
 alias comment = { "--" {!newline .}* {newline / $} }
@@ -32,7 +34,7 @@ star =     { [*] }
 question = { [?] }
 plus =     { [+] }
 alias end_token = { "end" !id_char }
-alias keyword_list = { "local" / "alias" / "grammar" / "end" }
+alias keyword_list = "local" / "alias" / "grammar" / "end"
 keyword = { keyword_list !id_char }
 
 -- it is important that an error consume at least one character here.
@@ -88,11 +90,11 @@ end
 
 grammar
    alias stmnt = local_ / exported
-   alias exported = alias_ / grammar_ / assignment_ 
+   alias exported = alias_ / grammar_ / assignment_
    local_ = "local" ignore alias_ / grammar_ / assignment_ 
-   alias_ = { "alias" ignore identifier ignore "=" exp }
-   grammar_ = { "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token }
-   assignment_ = { identifier ignore "=" exp }
+   alias_ = "alias" ignore identifier ignore "=" exp 
+   grammar_ = "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token
+   assignment_ = identifier ignore "=" exp 
 end
 
 importpath = quoted_string		  -- double quoted, interpreted, pattern name is "literal"
@@ -108,9 +110,9 @@ import_spec = ignore importpath ("as" (packagename / dot))?
 -- Top level patterns
 ----------------------------------------------------------------------------------------
 
-language_decl = ignore "rpl" version_spec
-package_decl = ignore "package" packagename
-import_decl = ignore "import" import_spec ("," ignore import_spec)*
+language_decl = ignore {"rpl" [:space:]} version_spec
+package_decl = ignore {"package" [:space:]} packagename
+import_decl = ignore {"import" [:space:]} import_spec ("," ignore import_spec)*
 
 rpl_statements = (ignore package_decl / import_decl / stmnt / syntax_error)* ignore $
 rpl_expression = exp

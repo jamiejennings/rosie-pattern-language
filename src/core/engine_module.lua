@@ -222,7 +222,7 @@ local import_dependency				    -- forward reference
 --   * compile the input in the target environment
 --   * return a possibly-empty table of messages, or throw an error if compilation fails.
 
-local function load_input(e, target_env, input, importpath)
+local function load_input(e, target_env, input, importpath, modonly)
    assert(engine.is(e))
    assert(environment.is(target_env), "target not an environment: " .. tostring(target_env))
    assert(type(e.searchpath)=="string", "engine search path not a string")
@@ -244,7 +244,13 @@ local function load_input(e, target_env, input, importpath)
    -- now we can compile the input
    local success, modname, messages = e.compiler.load(importpath, astlist, e._modtable, target_env)
 
-   if not modname then modname = "<top level>"; end -- for display
+   if not modname then
+      if modonly then
+	 engine_error(e, importpath .. " is not a module (no package declaration found)")
+      else
+	 modname = "<top level>"		    -- for display purposes
+      end
+   end
 
    if success then
       assert(type(messages)=="table")
@@ -267,10 +273,10 @@ load_dependencies =
 	 local new_messages, modname
 	 modname, new_messages = maybe_load_dependency(e, astlist, target_env, dep, importpath);
 	 table.move(new_messages, 1, #new_messages, #messages+1, messages)
-	 if modname then
-	    assert(e:modtableref(dep.importpath),
-		   tostring(dep.importpath) .. " is not in module table?")
-	 end
+	 -- if modname then
+	 --    assert(e:modtableref(dep.importpath),
+	 -- 	   tostring(dep.importpath) .. " is not in module table?")
+	 -- end
       end
       -- if all dependecies loaded ok, we can import them
       for _, dep in ipairs(deps) do import_dependency(e, target_env, dep); end
@@ -282,7 +288,7 @@ maybe_load_dependency =
       local messages = {}
       print("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
       local modname, modenv = e:modtableref(dep.importpath)
-      if not modenv then
+      if not modname then
 	 common.note("Looking for ", dep.importpath, " required by ", (importpath or "<top level>"))
 	 local fullpath, source = common.get_file(dep.importpath, e.searchpath)
 	 if not fullpath then
@@ -292,7 +298,9 @@ maybe_load_dependency =
 	 else
 	    common.note("Loading ", dep.importpath, " from ", fullpath)
 	    target_env = environment.new()
-	    modname, messages = load_input(e, target_env, source, dep.importpath) -- recursive
+	    -- mutually recursive call to load_input, but now we can require that load_input
+	    -- accept only modules, not any file of rpl code.
+	    modname, messages = load_input(e, target_env, source, dep.importpath, true)
 	 end -- if not fullpath
       end -- if dependency was not already loaded
       return modname, messages
@@ -324,22 +332,22 @@ import_dependency =
       end
    end
 
-local function get_file_contents(e, filename)
-   if util.absolutepath(filename) then
+local function get_file_contents(e, filename, nosearch)
+   if nosearch or util.absolutepath(filename) then
       local data, msg = util.readfile(filename)
       if not data then engine_error(e, msg); end
       return filename, data
    else
       local actual_path, data = common.get_file(filename, e.searchpath, "")
       if not actual_path then
-	 engine_error("Could not find " .. filename .. " on search path")
+	 engine_error(e, "Could not find " .. filename .. " on search path")
       end
       return actual_path, data
    end
 end
 
-local function load_file(e, filename)
-   local actual_path, source = get_file_contents(e, filename)
+local function load_file(e, filename, nosearch)
+   local actual_path, source = get_file_contents(e, filename, nosearch)
    return load_input(e, e._env, source, filename)
 end
 

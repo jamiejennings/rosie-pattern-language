@@ -112,7 +112,8 @@ local function setup_engine(args)
 	 if args.verbose then
 	    io.stdout:write("Compiling additional file ", filename, "\n")
 	 end
-	 local success, msg = pcall(CL_ENGINE.loadfile, CL_ENGINE, filename)
+	 -- nosearch is true so that files given on command line are not searched for
+	 local success, msg = pcall(CL_ENGINE.loadfile, CL_ENGINE, filename, true)
 	 if not success then
 	    io.stdout:write(msg, "\n")
 	    os.exit(-4)
@@ -185,7 +186,8 @@ local function run(args)
 	 table.insert(args.rpls, args.filename)
       end
       setup_engine(args);
-      test.setup_and_run(rosie, CL_ENGINE, args);   -- TODO: right now, this calls os.exit()
+      test.setup_and_run(rosie, CL_ENGINE, args)
+      os.exit()
    end
    
    setup_engine(args);
@@ -195,18 +197,16 @@ local function run(args)
       local env = CL_ENGINE:lookup()
       ui.print_env(env, args.filter)
       os.exit()
-   end
-
-   if args.command == "repl" then
+   elseif args.command == "repl" then
       repl_mod = mod.import("repl", rosie_mod)
       if not args.verbose then greeting(); end
       repl_mod.repl(CL_ENGINE)
       os.exit()
-   end
-
-   for _,fn in ipairs(args.filename) do
-      match.process_pattern_against_file(rosie, CL_ENGINE, args, compiled_pattern, fn)
-   end
+   else
+      for _,fn in ipairs(args.filename) do
+	 match.process_pattern_against_file(rosie, CL_ENGINE, args, compiled_pattern, fn)
+      end
+   end -- if command is list or repl or other
 end -- function run
 
 local args = parser:parse()

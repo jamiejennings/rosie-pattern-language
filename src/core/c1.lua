@@ -156,7 +156,7 @@ function c1.load(importpath, astlist, modtable, env)
       i=i+1
    until not astlist[i]
    -- success! save this env in the modtable, if we have an importpath.
-   if importpath then common.modtableset(modtable, importpath, thispkg, env); end
+   if importpath and thispkg then common.modtableset(modtable, importpath, thispkg, env); end
    return true, thispkg, messages
 end
 

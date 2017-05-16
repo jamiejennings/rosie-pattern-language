@@ -530,6 +530,7 @@ c0.compile_exp_functions = {"compile_exp";
 				    new_quantified_exp=c0.compile_new_quantified_exp;
 				    syntax_error=c0.compile_syntax_error;
 				    grammar_expression=c0.compile_grammar_expression;
+			            fake_package=function(...) return nil; end;
 				 }
 
 function c0.compile_exp(a, gmr, source, env)

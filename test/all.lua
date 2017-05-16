@@ -23,7 +23,7 @@ json = require "cjson"
 --test.dofile(ROSIE_HOME .. "/test/api-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
 --test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
---test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
+test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
 --test.dofile(ROSIE_HOME .. "/test/repl-test.lua")
 
 passed = test.print_grand_total(results)

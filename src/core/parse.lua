@@ -115,11 +115,16 @@ local statement = P{"start";
 	      grammar = token("grammar_", P"grammar" * ignore * ((V"alias" + V"assignment") * ignore)^1 * end_token);
 	      }
 
+-- here we fake-parse a package declaration, which is not part of the core language
+-- so that we can put such a declaration into rpl_1_0.rpl, which is parsed by core.
+local fake_package = token("fake_package",
+			   ignore * P"package" * locale.space^1 * (P(1) - P"=") * ((P(1) - (P"\n"))^0))
+
 ----------------------------------------------------------------------------------------
 -- Top level
 ----------------------------------------------------------------------------------------
 
-local any_token = (statement + expression + top_level_syntax_error) -- * Cp()
+local any_token = (fake_package + statement + expression + top_level_syntax_error)
 
 function parse_without_error_check(str, pos, tokens)
    pos = pos or 1

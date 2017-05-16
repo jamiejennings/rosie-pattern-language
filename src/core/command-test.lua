@@ -8,7 +8,7 @@
 
 local p = {}
 
--- TODO: find another place for this, which is also in cli.lua
+-- FUTURE: find another place for this, which is also in cli.lua
 local function load_string(rosie, en, input)
    local ok, results, messages = pcall(en.load, en, input)
    if not ok then
@@ -18,31 +18,35 @@ local function load_string(rosie, en, input)
    return results, messages
 end
 
+local function startswith(str,sub)
+  return string.sub(str,1,string.len(sub))==sub
+end
+
+-- from http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html
+local function split(s, sep)
+  sep = lpeg.P(sep)
+  local elem = lpeg.C((1 - sep)^0)
+  local p = lpeg.Ct(elem * (sep * elem)^0)
+  return lpeg.match(p, s)
+end
+
+local function find_test_lines(str)
+  local num = 0
+  local lines = {}
+  for _,line in pairs(split(str, "\n")) do
+     if startswith(line,'-- test') then
+	table.insert(lines, line)
+	num = num + 1
+     end
+  end
+  return num, lines
+end
+
 function p.setup_and_run(rosie, en, args)
    local match = rosie.import("command-match")
 
-   local function startswith(str,sub)
-      return string.sub(str,1,string.len(sub))==sub
-   end
-   -- from http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html
-   local function split(s, sep)
-      sep = lpeg.P(sep)
-      local elem = lpeg.C((1 - sep)^0)
-      local p = lpeg.Ct(elem * (sep * elem)^0)
-      return lpeg.match(p, s)
-   end
-   local function find_test_lines(str)
-      local num = 0
-      local lines = {}
-      for _,line in pairs(split(str, "\n")) do
-	 if startswith(line,'-- test') then
-	    table.insert(lines, line)
-	    num = num + 1
-	 end
-      end
-      return num, lines
-   end
-   local f = io.open(args.filename, 'r')
+   local f, msg = io.open(args.filename, 'r')
+   if not f then error(msg); end
    local num_patterns, test_lines = find_test_lines(f:read('*a'))
    f:close()
    if num_patterns > 0 then
@@ -63,8 +67,8 @@ function p.setup_and_run(rosie, en, args)
 	    test_line = "-- test" identifier testKeyword quoted_string (ignore "," ignore quoted_string)*
          ]==]
 
-      rosie.file.load(en, "rpl/rosie/rpl_1_1.rpl")
-      load_string(rosie, en, test_patterns)
+      en:load("import rosie/rpl_1_1 as .")
+      en:load(test_patterns)
       match.set_encoder(rosie, en, false, rosie.encoders)
       local failures = 0
       local exp = "test_line"

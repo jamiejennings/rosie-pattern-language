@@ -376,6 +376,8 @@ function syntax.expand_rhs(ast, original_rhs_name)
       new = syntax.generate("raw_exp", new)
       new.replaces = ast
       return new
+   elseif name=="fake_package" then
+      return ast
    else
       error("Error in transform: unrecognized parse result: " .. name)
    end
