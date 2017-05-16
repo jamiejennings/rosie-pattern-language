@@ -270,7 +270,13 @@ function c0.compile_ref(a, gmr, source, env)
       explain_undefined_identifier(a, source);
    end -- throw
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat)) -- TODO: create explain_not_a_pattern
-   return pattern.new{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
+   local newpat = pattern.new{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
+   if reftype=="extref" and (not pat.alias) then
+      -- pat was wrapped with only a local name when its module was compiled.  need to rewrap
+      -- using packagename as the prefix, since this is how the current code refers to this value.
+      newpat.peg = common.match_node_wrap(pat.uncap, packagename .. "." .. localname)
+   end
+   return newpat
 end
 
 function c0.compile_predicate(a, gmr, source, env)

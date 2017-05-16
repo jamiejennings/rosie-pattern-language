@@ -140,7 +140,7 @@ function c1.load(importpath, astlist, modtable, env)
    -- Otherwise, if there is no package decl, then the code is compiled in the default, or
    -- "top level" environment.  
    if thispkg then
-      assert(not modtable[importpath], "module " .. importpath .. " already compiled and loaded?")
+      assert(not common.modtableref(modtable, importpath), "module " .. importpath .. " already compiled and loaded?")
    end
    -- Dependencies must have been compiled and imported before we get here, so we can skip over
    -- the import declarations.
@@ -156,7 +156,7 @@ function c1.load(importpath, astlist, modtable, env)
       i=i+1
    until not astlist[i]
    -- success! save this env in the modtable, if we have an importpath.
-   if importpath then modtable[importpath] = env; end
+   if importpath then common.modtableset(modtable, importpath, thispkg, env); end
    return true, thispkg, messages
 end
 

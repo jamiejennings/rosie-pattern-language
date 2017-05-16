@@ -1353,10 +1353,10 @@ subheading("Raw and cooked versions of the same definition")
 check(e:load("import num   word=[:alpha:]+"))
 
 
-print("*** LEFT OFF HERE.  Need to decide whether an int from the num package should be labeled")
+print("\n*** LEFT OFF HERE.  Need to decide whether an int from the num package should be labeled")
 print("*** 'num.int' or just 'int' in the output.  This would change the compiler for modules.")
 print("*** ALSO, need to ensure that the name INSIDE the package is used instead of the prefix.")
-
+print()
 
 
 m = check_match("num.int", "42", true)

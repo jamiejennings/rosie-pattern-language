@@ -315,6 +315,20 @@ common.parser =
 		 })
 
 
+local modtabletype =
+   recordtype.new("modtable", {packagename=recordtype.NIL,
+			       env=recordtype.NIL} )
+
+function common.modtableref(tbl, importpath)
+   local entry = tbl[importpath]
+   if entry then return entry.packagename, entry.env;
+   else return nil; end
+end
+
+function common.modtableset(tbl, importpath, p, e)
+   tbl[importpath] = modtabletype.new{packagename=p, env=e}
+end
+
 ----------------------------------------------------------------------------------------
 -- Binding types: undeclared, pattern, pfunction, environment
 ----------------------------------------------------------------------------------------

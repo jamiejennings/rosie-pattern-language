@@ -6,8 +6,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- TODO: a module-aware version of strict.lua that works with _ENV and not _G
---require "strict"
+-- TODO: a Lua-module-aware version of strict.lua that works with _ENV and not _G
+-- require "strict"
 
 -- The two principle use case categories for Rosie may be characterized as Interactive and
 -- Production, where the latter includes big data scenarios in which performance is paramount and
@@ -210,7 +210,7 @@ local engine_tracematch = make_matcher(function(e, pat, input, start)
 
 ----------------------------------------------------------------------------------------
 
-local load_dependency				    -- forward reference
+local maybe_load_dependency			    -- forward reference
 local load_dependencies				    -- forward reference
 local import_dependency				    -- forward reference
 
@@ -264,10 +264,10 @@ load_dependencies =
       -- find and load all dependencies
       for _, dep in ipairs(deps) do
 	 local new_messages, modname
-	 modname, new_messages = load_dependency(e, astlist, target_env, dep, importpath);
+	 modname, new_messages = maybe_load_dependency(e, astlist, target_env, dep, importpath);
 	 table.move(new_messages, 1, #new_messages, #messages+1, messages)
 	 if modname then
-	    assert(e._modtable[dep.importpath],
+	    assert(e:modtableref(dep.importpath),
 		   tostring(dep.importpath) .. " is not in module table?")
 	 end
       end
@@ -276,12 +276,11 @@ load_dependencies =
 end
       
 -- find and load any missing dependency
-load_dependency =
+maybe_load_dependency =
    function(e, astlist, target_env, dep, importpath)
       local messages = {}
       print("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
-      local modname = dep.prefix
-      local modenv = e._modtable[dep.importpath]
+      local modname, modenv = e:modtableref(dep.importpath)
       if not modenv then
 	 common.note("Looking for ", dep.importpath, " required by ", (importpath or "<top level>"))
 	 local fullpath, source = common.get_file(dep.importpath, e.searchpath)
@@ -302,12 +301,26 @@ import_dependency =
    function(e, target_env, dep)
       assert(engine.is(e))
       assert(environment.is(target_env))
-      if environment.lookup(target_env, dep.prefix) then
-	 common.note("REBINDING ", dep.prefix)
+      local modname, modenv = e:modtableref(dep.importpath)
+      if dep.prefix=="." then
+	 -- import all exported bindings into the current environment
+	 for name, obj in modenv:bindings() do
+	    if obj.exported then		    -- quack
+	       if environment.lookup(target_env, name) then
+		  common.note("REBINDING ", name)
+	       end
+	       bind(target_env, name, obj)
+	    end
+	 end -- for each obj in the module environment
+      else
+	 -- import the entire package under the desired name
+	 local packagename = dep.prefix or modname
+	 if environment.lookup(target_env, packagename) then
+	    common.note("REBINDING ", packagename)
+	 end
+	 bind(target_env, packagename, modenv)
+	 print("-> Binding module prefix: " .. packagename)
       end
-      local modenv = e._modtable[dep.importpath]
-      environment.bind(target_env, dep.prefix, modenv)
-      print("-> Binding module prefix: " .. dep.prefix)
    end
 
 local function get_file_contents(e, filename)
@@ -433,6 +446,13 @@ local engine =
 		     _error=engine_error,
 
 		     id=recordtype.id,
+
+		     modtableref=function(self, path)
+				    return common.modtableref(self._modtable, path)
+				 end,
+		     modtableset=function(self, path, p, e)
+				    common.modtableset(self._modtable, path, p, e)
+				 end,
 
 		     encode_function=false,	      -- false or nil ==> use default encoder
 		     output=get_set_encoder_function,

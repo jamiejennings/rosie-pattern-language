@@ -121,7 +121,11 @@ end -- make_parse_and_explain
 
 -- parse_deps takes input (source or astlist) and returns a table of dependencies calculated by
 -- processing any import statements.  the table contains entries with the keys: 
--- importpath, prefix, env.  (env is filled in during compilation.)
+-- importpath, prefix, env.
+-- Notes:
+-- (1) env is assigned during compilation, to hold the module environment
+-- (2) prefix is filled in here iff there is an "as" clause in the import statment,
+--     else it will be filled in later with the package name from the module source
 function parse_deps(parser, input)
    local maj, min, pos, err = parser.preparse(input)
    if not maj then return nil, err; end
@@ -156,8 +160,8 @@ function parse_deps(parser, input)
 	    typ, pos, prefix = decode_match(subs[2])
 	    assert(typ=="packagename" or typ=="dot")
 	    common.note("\t  as ", prefix)
-	 else
-	    _, prefix = util.split_path(importpath, "/")
+--	 else
+--	    _, prefix = util.split_path(importpath, "/")
 	 end
 	 table.insert(deps, {importpath=importpath, prefix=prefix})
       end -- for each importspec in the import_decl

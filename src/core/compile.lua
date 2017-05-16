@@ -81,8 +81,9 @@ local function make_compile_expression(expression_p, compile_ast)
 	     assert(type(modtable)=="table")
 	     assert(environment.is(env))
 
+	     local modname
 	     if importpath then
-		env = modtable[importpath]
+		modname, env = common.modtableref(modtable, importpath)
 		if not env then return false, nil, {"Error: no loaded module " .. importpath}; end
 	     end
 	     

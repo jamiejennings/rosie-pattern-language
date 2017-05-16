@@ -72,8 +72,20 @@ end
 
 local env					    -- forward ref for env.factory
 env = recordtype.new("environment",
-		     {store = recordtype.NIL;
-		      parent = recordtype.NIL;},
+		     {store = recordtype.NIL,
+		      parent = recordtype.NIL,
+		      exported = false,
+		      next = function(self, key)
+				return next(self.store, key)
+			     end,
+		      bindings = function(self)
+				    return function(store, key)
+					      return next(store, key)
+					   end,
+				    self.store,
+				    nil
+				 end,
+		   },
 		     function(parent)
 			return env.factory{store={}, parent=parent}; end)
 
@@ -95,14 +107,7 @@ environment.is = env.is
 function environment.lookup(env, id, prefix)
    assert(environment.is(env))
    if prefix then
-      -- if prefix=="num" then
-      -- 	 print("*** env.store:")
-      -- 	 for k,v in pairs(env.store) do print(k,v) end
-      -- 	 print("***")
-      -- end
---      print("*** looking up: ", id, tostring(prefix))	 
       local mod = environment.lookup(env, prefix)
---      print("*** mod is ", tostring(mod))
       if environment.is(mod) then
 	 local val = environment.lookup(mod, id)
 	 if val and val.exported then		    -- hmmm, we are duck typing here
@@ -113,10 +118,8 @@ function environment.lookup(env, id, prefix)
       else -- found prefix but it is not a module
 	 return nil, prefix .. " is not a valid module reference"
       end
-   else -- no prefix
-      -- if env.store[id] then
-      -- 	 print("*** found ", id)
-      -- end
+   else
+      -- no prefix
       return env.store[id] or (env.parent and environment.lookup(env.parent, id))
    end
 end
