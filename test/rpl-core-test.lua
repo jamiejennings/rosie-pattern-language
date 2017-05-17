@@ -1352,20 +1352,12 @@ subheading("Raw and cooked versions of the same definition")
 
 check(e:load("import num   word=[:alpha:]+"))
 
-
-print("\n*** LEFT OFF HERE.  Need to decide whether an int from the num package should be labeled")
-print("*** 'num.int' or just 'int' in the output.  This would change the compiler for modules.")
-print("*** ALSO, need to ensure that the name INSIDE the package is used instead of the prefix.")
-print()
-
-
 m = check_match("num.int", "42", true)
 check(m.type=="num.int" and (not m.subs))
 m = check_match("{num.int}", "42", true)
 check(m.subs[1] and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("(num.int)", "42", true)
 check(m.type=="num.int" and (not m.subs))
---check((m["*"].subs[1]) and m["*"].subs[1]["num.int"] and (not m["*"].subs[1]["num.int"].subs))
 
 m = check_match("num.int", "42x", true, 1, "42")
 check(m.type=="num.int" and (not m.subs))
@@ -1439,7 +1431,6 @@ m = check_match("(int ~)", "42x", false)
 
 m = check_match("int aword", "42x", false)
 m = check_match("{int aword}", "42x", true, 0, "42x")
-print("***"); table.print(m)
 check((m.subs[1]) and m.subs[1].type=="num.int" and
       (m.subs[2]) and m.subs[2].type=="word")
 m = check_match("(int aword)", "42x", false)
@@ -1451,6 +1442,26 @@ m = check_match("{int aword}", "42 x", false)
 m = check_match("(int aword)", "42 x", true)
 check((m.subs[1]) and m.subs[1].type=="num.int" and
       (m.subs[2]) and m.subs[2].type=="word")
+
+subheading("Import 'as foo' and 'as .'")
+
+check((e:load("import num as foo")))
+
+m = check_match("foo.float", "42.1", true)
+check(m and m.type=="foo.float" and m.subs)
+m = check_match("num.float", "42.1", true)	    -- and num still works
+check(m.type=="num.float" and m.subs)
+ok, msg = pcall(e.match, e, "float", "42.1")	    -- float is not a top level binding
+check(msg:find("undefined identifier"))
+
+check((e:load("import num as .")))
+
+m = check_match("foo.float", "42.1", true)	    -- foo still works
+check(m and m.type=="foo.float" and m.subs)
+m = check_match("num.float", "42.1", true)	    -- and num still works
+check(m.type=="num.float" and m.subs)
+m = check_match("float", "42.1", true)		    -- and now float works at top level
+check(m.type=="float" and m.subs, true)
 
 subheading("Bindings (equivalence of reference and referent)")
 

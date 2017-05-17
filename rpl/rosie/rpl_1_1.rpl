@@ -115,7 +115,7 @@ package_decl = ignore {"package" [:space:]} packagename
 import_decl = ignore {"import" [:space:]} import_spec ("," ignore import_spec)*
 
 rpl_statements = (ignore package_decl / import_decl / stmnt / syntax_error)* ignore $
-rpl_expression = exp
+rpl_expression = exp / syntax_error
 
 preparse = language_decl
 

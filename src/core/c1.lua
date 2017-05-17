@@ -18,68 +18,15 @@ function c1.process_package_decl(typ, pos, text, subs, fin)
    assert(typ=="package_decl")
    local typ, pos, text = decode_match(subs[1])
    assert(typ=="packagename")
-   print("In package " .. text)
+   common.note("In package " .. text)
    return text					    -- return package name
 end
-
--- function c1.read_module(dequoted_importpath)
---    if #dequoted_importpath==0 then return nil, nil, "nil import path"; end
---    local try = "rpl" .. common.dirsep .. dequoted_importpath .. ".rpl"
---    return try, util.readfile(try)
--- end
-
--- function c1.process_import_decl(typ, pos, text, specs, fin, parser, env, modtable)
---    local compiled_imports = {}
---    local prefix, modenv
---    for _,spec in ipairs(specs) do
---       local typ, pos, text, subs, fin = decode_match(spec)
---       assert(subs and subs[1], "missing package name to import?")
---       local typ, pos, importpath = decode_match(subs[1])
---       importpath = common.dequote(importpath)
---       io.write("*\t", "import |", importpath, "|")
---       if subs[2] then
--- 	 typ, pos, prefix = decode_match(subs[2])
--- 	 assert(typ=="packagename" or typ=="dot")
--- 	 io.write(" as ", prefix)
---       else
--- 	 _, prefix = util.split_path(importpath, "/")
---       end
---       modenv = modtable[importpath]
---       if modenv then
--- 	 io.write("  (Found in modtable)\n");
---       else
--- 	 -- local results, msgs
--- 	 -- local fullpath, source, err = c1.read_module(importpath)
--- 	 -- if source then
--- 	 --    io.write("  (Found in filesystem at " .. fullpath .. ")\n");
--- 	 --    print("COMPILING MODULE " .. importpath)	    
--- 	 --    results, msgs, modenv =
--- 	 --       c1.compile_module(parser, source, env, modtable, importpath)
--- 	 --    if not results then error(table.concat(msgs, "\n")); end
--- 	 --    modtable[importpath] = modenv
--- 	 -- else
--- 	    -- we could not find the module source
--- 	    -- error(err)
--- 	 -- end
--- 	 assert(false, "module not loaded: " .. importpath .. "\n" .. debug.traceback())
---       end
---       table.insert(compiled_imports,
--- 		   {importpath=importpath,
--- 		    fullpath=fullpath,
--- 		    prefix=prefix,
--- 		    env=modenv,
--- 		    results=results or {},
--- 		    messages=msgs or {}})
---    end -- for
---    return compiled_imports
--- end
 
 function c1.compile_local(ast, gmr, source, env)
    assert(not gmr, "rpl grammar allowed a local decl inside a grammar???")
    local typ, _, _, subs = decode_match(ast)
    assert(typ=="local_")
    local name, pos, text = decode_match(subs[1])
---   print("->", "local " .. name .. ": " .. text)
    local pat = c0.compile_ast(subs[1], source, env)
    pat.exported = false;
    return pat

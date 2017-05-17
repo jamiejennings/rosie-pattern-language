@@ -169,7 +169,7 @@ local function run(args)
       if args.command=="info" then
 	 print_rosie_info()
       else
-	 print(parse:get_help())
+	 print(parser:get_help())
       end
       os.exit()
    end

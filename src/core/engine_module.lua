@@ -243,10 +243,12 @@ local function load_input(e, target_env, input, importpath, modonly)
    load_dependencies(e, astlist, target_env, messages, importpath)
    -- now we can compile the input
    local success, modname, messages = e.compiler.load(importpath, astlist, e._modtable, target_env)
-
+   if not success then
+      engine_error(e, "package " .. (importpath or "<top level>") .. " failed to compile:\n" .. table.concat(messages, "\n"))
+   end
    if not modname then
       if modonly then
-	 engine_error(e, importpath .. " is not a module (no package declaration found)")
+	 engine_error(e, (importpath or "<top level>") .. " is not a module (no package declaration found)")
       else
 	 modname = "<top level>"		    -- for display purposes
       end
@@ -286,7 +288,7 @@ end
 maybe_load_dependency =
    function(e, astlist, target_env, dep, importpath)
       local messages = {}
-      print("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
+      common.note("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
       local modname, modenv = e:modtableref(dep.importpath)
       if not modname then
 	 common.note("Looking for ", dep.importpath, " required by ", (importpath or "<top level>"))
@@ -328,7 +330,7 @@ import_dependency =
 	    common.note("REBINDING ", packagename)
 	 end
 	 bind(target_env, packagename, modenv)
-	 print("-> Binding module prefix: " .. packagename)
+	 common.note("-> Binding module prefix: " .. packagename)
       end
    end
 

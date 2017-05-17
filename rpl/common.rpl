@@ -1,0 +1,43 @@
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- common.rpl   Patterns in Rosie Pattern Language for common syntactic components
+----
+---- © Copyright IBM Corporation 2016, 2017
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+rpl 1.1
+
+package common
+
+-- Note: These patterns make use of ASCII (Posix) character classes, which is a limitation that can
+-- be lifted when Unicode character classes are introduced (after rpl 1.1).
+
+ws = [:space:]+						    -- whitespace (non-empty)
+digit = [:digit:]
+letter = [:alpha:]
+
+word = [:alpha:]+
+id = { [:alpha:] [[_-][:alnum:]]* }			    -- identifier
+dotted_id = { id { "." id}+ }
+
+-- Upper case words which may also contain digits, dashes, and underlines. Note that we explicitly
+-- fail if the first upper case letter is followed by a lower case one, since most sentences and
+-- proper names start that way.
+maybe_id = { [:upper:] ![:lower:] [[:upper:][:digit:][-_]]* }
+
+-- Quoted strings, using single or double quote
+--
+-- Within a string, the quote character can be escaped using a backslash, OR by repeating it twice,
+-- e.g. "".
+
+local alias dquote = "\""			      -- "
+local alias escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\"" -- \" or \"\" or "" 
+local alias squote = "'"			      -- '
+local alias escaped_squote = "\\'" / "\\'\\'" / "''"      -- \' or \'\' or ''
+
+dqstring = {dquote {escaped_dquote / {!dquote .}}* dquote}
+sqstring = {squote {escaped_squote / {!squote .}}* squote}
+
+qstring = dqstring / sqstring
+

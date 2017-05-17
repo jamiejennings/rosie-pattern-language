@@ -56,15 +56,15 @@ f:close()
 
 print("Input file (" .. infilename .. ") created successfully")
 
----------------------------------------------------------------------------------------------------
-test.heading("Match and grep commands")
-
-function run(expression, grep_flag, expectations)
+function run(import, expression, grep_flag, expectations)
    test.heading(expression)
    test.subheading((grep_flag and "Using grep command") or "Using match command")
    local verb = (grep_flag and "Grepping for") or "Matching"
    print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
-   local cmd = rosie_cmd .. (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
+   local import_option = ""
+   if import then import_option = " --rpl '" .. import .. "' "; end
+   local cmd = rosie_cmd .. import_option ..
+      (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
    print(cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
@@ -90,6 +90,10 @@ function run(expression, grep_flag, expectations)
    return results
 end
 
+---------------------------------------------------------------------------------------------------
+test.heading("Match and grep commands")
+---------------------------------------------------------------------------------------------------
+
 results_basic_matchall = 
    {"\27[30m#\27[0m ",
     "\27[30m#\27[0m \27[33mThis\27[0m \27[33mfile\27[0m \27[33mis\27[0m \27[33mautomatically\27[0m \27[33mgenerated\27[0m \27[33mon\27[0m \27[36mOSX\27[0m \27[30m.\27[0m ",
@@ -114,43 +118,44 @@ results_common_word_grep =
     "/usr/share/bin/foo",
     "jjennings@us.ibm.com"
  }
-   -- {"\27[33mThis\27[0m \27[33mfile\27[0m \27[33mis\27[0m \27[33mautomatically\27[0m \27[33mgenerated\27[0m \27[33mon\27[0m \27[33mOSX\27[0m ",
-   --  "\27[33msearch\27[0m \27[33mnc\27[0m \27[33mrr\27[0m \27[33mcom\27[0m ",
-   --  "\27[33mnameserver\27[0m ",
-   --  "\27[33mnameserver\27[0m \27[33ma\27[0m \27[33mf\27[0m \27[33mfff\27[0m \27[33mfed\27[0m \27[33mdc\27[0m \27[33mf\27[0m ",
-   --  "\27[33musr\27[0m \27[33mshare\27[0m \27[33mbin\27[0m \27[33mfoo\27[0m ",
-   --  "\27[33mjjennings\27[0m \27[33mus\27[0m \27[33mibm\27[0m \27[33mcom\27[0m "}
 
 results_word_network = 
-   {"\27[33msearch\27[0m \27[31mnc.rr.com\27[0m ",
-    "\27[33mnameserver\27[0m \27[31m10.0.1.1\27[0m "}
+   {"[33msearch[0m [30mnc.rr.com[0m ",
+    "[33mnameserver[0m [30m10.0.1.1[0m ",
+    "[33mnameserver[0m [30m2606[0m [30ma000[0m [30m1120[0m [30m8152[0m [30m2f7[0m [30m6fff[0m [30mfed4[0m [30mdc1f[0m "}
+
+--   {"\27[33msearch\27[0m \27[31mnc.rr.com\27[0m ",
+--    "\27[33mnameserver\27[0m \27[31m10.0.1.1\27[0m "}
 
 results_common_number =
    {"nameserver 10.0.1.1",
     "nameserver 2606:a000:1120:8152:2f7:6fff:fed4:dc1f"}
 
-   -- {"\27[4m10.0\27[0m \27[4m1.1\27[0m ",
-   --  "\27[4m2606\27[0m \27[4ma000\27[0m \27[4m1120\27[0m \27[4m8152\27[0m \27[4m2f7\27[0m \27[4m6fff\27[0m \27[4mfed4\27[0m \27[4mdc1f\27[0m "}
 
-run("basic.matchall", nil, results_basic_matchall)
-run("common.word", nil, results_common_word)
-run("common.word", true, results_common_word_grep)
-run("common.word basic.network_patterns", nil, results_word_network)
-run("~common.number~", true, results_common_number)
 
-ok, msg = pcall(run, "foo = common.word", nil, nil)
-check(ok)
-check(msg[1]:find("not an expression"))
 
-ok, msg = pcall(run, "foo = common.word", true, nil)
-check(ok)
-check(msg[1]:find("not an expression"))
+-- FIXME: add basic.matchall back in when we have the equivalent pattern written for rpl 1.1
+--run("basic.matchall", nil, results_basic_matchall)
 
-ok, msg = pcall(run, "/foo/", nil, nil)
+-- FIXME: re-enable the grep test cases
+run("import common", "common.word", nil, results_common_word)
+--run("import common", "common.word", true, results_common_word_grep)
+run("import common, net", "common.word net.any", nil, results_word_network)
+--run("import common", "~common.number~", true, results_common_number)
+
+ok, msg = pcall(run, "import common", "foo = common.word", nil, nil)
 check(ok)
 check(msg[1]:find("syntax error"))
 
-ok, ignore = pcall(run, '"Gold"', nil, nil)
+--ok, msg = pcall(run, "import common", "foo = common.word", true, nil)
+--check(ok)
+--check(msg[1]:find("syntax error"))
+
+ok, msg = pcall(run, "import common", "/foo/", nil, nil)
+check(ok)
+check(msg[1]:find("syntax error"))
+
+ok, ignore = pcall(run, "import common", '"Gold"', nil, nil)
 check(ok, [[testing for a shell quoting error in which rpl expressions containing double quotes
       were not properly passed to lua in bin/run-rosie]])
 
