@@ -18,33 +18,34 @@ local readline = require "readline"
 local lpeg = require "lpeg"
 
 local repl_patterns = [==[
-      rpl_expression = expression
-      comma_or_quoted_string = ","? quoted_string
+      comma_or_quoted_string = ","? common.dqstring
       rpl_exp_placeholder = {!{comma_or_quoted_string $} .}+
-      parsed_args = rpl_exp_placeholder? ","? quoted_string?
+      parsed_args = rpl_exp_placeholder? ","? common.dqstring?
       path = {![[:space:]] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path?
-      manifest = ".manifest" path?
       args = .*
       match = ".match" args 
       trace = ".trace" args
       on_off = "on" / "off"
       debug = ".debug" on_off?
       alnum = { [[:alpha:]] / [[:digit:]] }
-      patterns = ".patterns" { identifier / {alnum+} }?
+      package = rpl.packagename
+      list = ".list" package? {alnum+}?
       star = "*"
-      clear = ".clear" (identifier / star)?
+      clear = ".clear" (rpl.identifier / star)?
       help = ".help"
       badcommand = {"." .+}
-      command = load / manifest / match / trace / debug / patterns / clear / help / badcommand
-      input = command / statement / identifier
+      command = load / match / trace / debug / list / clear / help / badcommand
+      statements = rpl.rpl_statements
+      identifier = ~ rpl.identifier ~ $
+      input = command / identifier / statements
 ]==]
 
 local repl_engine = rosie.engine.new("repl")
 repl.repl_engine = repl_engine
-rosie.file.load(repl_engine, "$sys/rpl/rpl-1.0.rpl", "rpl")
+repl_engine:load("import rosie/rpl_1_1 as rpl, common")
 repl_engine:load(repl_patterns)
-local parse_and_explain = repl_engine._rpl_parser
+local parse_and_explain = repl_engine.compiler.parser
 
 local repl_prompt = "Rosie> "
 
@@ -98,20 +99,15 @@ function repl.repl(en)
 	    end
 	 elseif name=="command" then
 	    local cname, cpos, ctext, csubs = common.decode_match(subs[1])
-	    if cname=="load" or cname=="manifest" then
+	    if cname=="load" then
 	       if not csubs then
 		  io.write("Command requires a file name\n")
 	       else
 		  local pname, ppos, path = common.decode_match(csubs[1])
 		  local ok, messages, full_path
-		  if cname=="load" then 
-		     ok, messages, full_path = pcall(rosie.file.load, en, path, "rpl")
-		  else -- manifest command
-		     ok, messages, full_path = pcall(rosie.file.load, en, path, "manifest")
-		  end
+		  ok, messages, full_path = pcall(en.loadfile, en, path)
 		  if ok then
 		     if messages then
-			--list.foreach(print, messages)
 			for _,msg in ipairs(messages) do print(msg); end
 		     end
 		     io.write("Loaded ", full_path, "\n")
@@ -125,12 +121,13 @@ function repl.repl(en)
 		  debug = (arg=="on")
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
-	    elseif cname=="patterns" then
-	       local env = en:lookup()
+	    elseif cname=="list" then
+	       print("\n*** TODO: decide on a syntax for listing the patterns from an imported module ***")
 	       local filter = nil
-	       if csubs then
+	       if csubs and csubs[1] then
 	          _,_,filter,_ = common.decode_match(csubs[1])
 	       end
+	       local env = en:lookup()
 	       ui.print_env(env, filter)
 	    elseif cname=="clear" then
 	       if csubs and csubs[1] then
@@ -162,7 +159,7 @@ function repl.repl(en)
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
-		     local astlist, original_astlist = parse_and_explain(exp_string)
+		     local astlist, original_astlist = en.compiler.parser.parse_expression(exp_string)
 		     if not astlist then
 			if original_astlist then
 			   io.write(original_astlist, "\n") -- error message
@@ -176,20 +173,22 @@ function repl.repl(en)
 			local ename, epos, exp = common.decode_match(original_astlist[1])
 			if ename=="literal" then exp = '"'..exp..'"'; end
 			local tname, tpos, input_text = common.decode_match(msubs[2])
-			input_text = common.unescape_string(input_text)
+			assert(tname=="common.dqstring")
+			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
+			input_text = common.unescape_string(input_text:sub(2, -2))
 			local ok, m, left = pcall(en.match, en, exp, input_text)
 			if not ok then
 			   io.write(m, "\n") -- syntax and compile errors
 			else
-			   if cname=="match" then
-			      if debug and (not m) then
-				 local match, leftover, trace = en:tracematch(exp, input_text)
-				 io.write(trace, "\n")
-			      end
-			   else
-			      local match, leftover, trace = en:tracematch(exp, input_text)
-			      io.write(trace, "\n")
-			   end
+			--    if cname=="match" then
+			--       if debug and (not m) then
+			-- 	 local match, leftover, trace = en:tracematch(exp, input_text)
+			-- 	 io.write(trace, "\n")
+			--       end
+			--    else
+			--       local match, leftover, trace = en:tracematch(exp, input_text)
+			--       io.write(trace, "\n")
+			--    end
 			   print_match(m, left, (cname=="trace"))
 			end -- did the pcall to en.match succeed or not
 		     end -- could not parse out the expression and input string from the repl input
@@ -200,14 +199,11 @@ function repl.repl(en)
 	    else
 	       io.write("Repl: Unknown command (Type .help for help.)\n")
 	    end -- switch on command
-	 elseif name=="alias_" or name=="assignment_" or name=="grammar_" then
+	 elseif name=="statements" then
 	    local ok, messages = pcall(en.load, en, text);
-	    if not ok then io.write(messages, "\n")
-	    elseif messages then
-	       for _, msg in ipairs(messages) do if msg then io.write(msg, "\n"); end; end
-	    end
+	    io.write(messages, "\n")
 	 else
-	    io.write("Repl: internal error\n")
+	    io.write("Repl: internal error (name was '" .. tostring(name) .. "')\n")
 	 end -- switch on type of input received
       end
    end
@@ -222,19 +218,13 @@ local help_text = [[
    definition), or an RPL statement.  Commands start with a dot (".") as
    follows:
 
-   .load path                    load RPL file (see note below)
-   .manifest path                load manifest file (see note below)
-   .match exp quoted_string      match RPL exp against (quoted) input data
-   .trace exp quoted_string      show full trace output of the matching process
-   .debug {on|off}               show debug state; with an argument, set it
-   .patterns [filter]            list patterns in the environment
-   .clear <id>                   clear the pattern definition of <id>, * for all
-   .help                         print this message
-
-   Note on paths to RPL and manifest files: A filename may begin with $sys,
-   which refers to the Rosie install directory, or $(VAR), which is the value of
-   the environment variable $VAR.  For filenames inside a manifest file, $lib
-   refers to the directory containing the manifest file.
+   .load path                 load RPL file 
+   .match exp quoted_string   match RPL exp against (quoted) input data
+   .trace exp quoted_string   show full trace output of the matching process
+   .debug {on|off}            show debug state; with an argument, set it
+   .list [package] [filter]   list patterns in package (if given) that match filter (if given)
+   .clear <id>                clear the pattern definition of <id>, * for all
+   .help                      print this message
 
    EOF (^D) will exit the read/eval/print loop.
 ]]      

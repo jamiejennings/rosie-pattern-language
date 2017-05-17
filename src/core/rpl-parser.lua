@@ -148,9 +148,9 @@ function parse_deps(parser, input)
       typ, pos, text, specs, fin = decode_match(astlist[i])
    end
    local deps = {}
-   local importpath, prefix
    while typ=="import_decl" do
       for _,spec in ipairs(specs) do
+	 local importpath, prefix
 	 local typ, pos, text, subs, fin = decode_match(spec)
 	 assert(subs and subs[1], "missing package name to import?")
 	 local typ, pos, importpath = decode_match(subs[1])

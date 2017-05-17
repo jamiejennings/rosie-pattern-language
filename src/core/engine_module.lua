@@ -253,7 +253,6 @@ local function load_input(e, target_env, input, importpath, modonly)
 	 modname = "<top level>"		    -- for display purposes
       end
    end
-
    if success then
       assert(type(messages)=="table")
       common.note(string.format("COMPILED %s", modname))
@@ -275,10 +274,6 @@ load_dependencies =
 	 local new_messages, modname
 	 modname, new_messages = maybe_load_dependency(e, astlist, target_env, dep, importpath);
 	 table.move(new_messages, 1, #new_messages, #messages+1, messages)
-	 -- if modname then
-	 --    assert(e:modtableref(dep.importpath),
-	 -- 	   tostring(dep.importpath) .. " is not in module table?")
-	 -- end
       end
       -- if all dependecies loaded ok, we can import them
       for _, dep in ipairs(deps) do import_dependency(e, target_env, dep); end
@@ -317,7 +312,7 @@ import_dependency =
 	 -- import all exported bindings into the current environment
 	 for name, obj in modenv:bindings() do
 	    if obj.exported then		    -- quack
-	       if environment.lookup(target_env, name) then
+	       if lookup(target_env, name) then
 		  common.note("REBINDING ", name)
 	       end
 	       bind(target_env, name, obj)
@@ -326,7 +321,7 @@ import_dependency =
       else
 	 -- import the entire package under the desired name
 	 local packagename = dep.prefix or modname
-	 if environment.lookup(target_env, packagename) then
+	 if lookup(target_env, packagename) then
 	    common.note("REBINDING ", packagename)
 	 end
 	 bind(target_env, packagename, modenv)
@@ -350,7 +345,8 @@ end
 
 local function load_file(e, filename, nosearch)
    local actual_path, source = get_file_contents(e, filename, nosearch)
-   return load_input(e, e._env, source, filename)
+   local modname, warnings = load_input(e, e._env, source, filename)
+   return modname, warnings, actual_path
 end
 
 ----------------------------------------------------------------------------------------
@@ -364,23 +360,48 @@ local function reconstitute_pattern_definition(id, p)
    engine_error(e, "undefined identifier: " .. id)
 end
 
-local function pattern_properties(name, pat)
-   local kind = (pat.alias and "alias") or "definition"
-   local color = (co and co.colormap and co.colormap[item]) or ""
-   local binding = reconstitute_pattern_definition(name, pat)
-   return {type=kind, color=color, binding=binding}
+-- FUTURE: Update this to make a use general pretty printer for the contents of the environment.
+local function properties(name, obj)
+   if common.pattern.is(obj) then
+      local kind = (obj.alias and "alias") or "definition"
+      local color = (co and co.colormap and co.colormap[item]) or ""
+      local binding = reconstitute_pattern_definition(name, obj)
+      return {type=kind, color=color, binding=binding}
+   elseif environment.is(obj) then
+      return {type="package", color="", binding="<package>"}
+--   elseif pfunction.is(obj) then...
+   else
+      error("Internal error: unknown kind of object in environment, stored at " ..
+	    tostring(name) .. ": " .. tostring(obj))
+   end
 end
 
+local function parse_identifier(en, str)
+   local m = en.compiler.parser.parse_expression(str)
+   if m and #m==1 then
+      m = m[1]
+      if m.type=="ref" then
+	 return m.text, nil
+      elseif m.type=="extref" then
+	 assert(m.subs and m.subs[1] and m.subs[2])
+	 assert(m.subs[1].type=="packagename")
+	 assert(m.subs[2].type=="localname")
+	 return m.subs[2].text, m.subs[1].text
+      end -- is there a packagename in the identifier?
+   end -- did we get an identifier?
+end
+	    
 -- Lookup an identifier in the engine's environment, and get a human-readable definition of it
 -- (reconstituted from its ast).  If identifier is null, return the entire environment.
 local function get_environment(en, identifier)
    if identifier then
-      local val = lookup(en._env, identifier)
-      return val and pattern_properties(identifier, val)
+      local localname, prefix = parse_identifier(en, identifier)
+      local val = lookup(en._env, localname, prefix)
+      return val and properties(identifier, val)
    end
    local flat_env = environment.flatten(en._env)
    -- Rewrite the flat_env table, replacing the pattern with a table of properties
-   for id, pat in pairs(flat_env) do flat_env[id] = pattern_properties(id, pat); end
+   for id, pat in pairs(flat_env) do flat_env[id] = properties(id, pat); end
    return flat_env
 end
 

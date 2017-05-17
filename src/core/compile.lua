@@ -76,7 +76,7 @@ end
 
 local function make_compile_expression(expression_p, compile_ast)
    return function(importpath, astlist, modtable, env)
-	     assert(type(importpath)=="string" or importpath==nil)
+	     assert(type(importpath)=="string" or importpath==nil, "importpath was: " .. tostring(importpath))
 	     assert(type(astlist)=="table", "astlist is: " .. tostring(astlist))
 	     assert(type(modtable)=="table")
 	     assert(environment.is(env))

@@ -36,7 +36,7 @@ print("Found rosie executable: " .. rosie_cmd)
 
 function run(cmd, expectations)
    test.heading(cmd)
-   local cmd = "echo '" .. cmd .. "' | " .. rosie_cmd .. " repl"
+   local cmd = "echo '" .. cmd .. "' | " .. rosie_cmd .. " --rpl 'import num' repl"
    print(cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
@@ -63,7 +63,7 @@ function run(cmd, expectations)
    return results
 end
 
-results_common_number =
+results_num_any =
    {
 'Rosie v1-tranche-2',
 '{"data": "0x123", ',
@@ -77,12 +77,15 @@ results_common_number =
 '       [{"data": "123", ',
 '         "end": 6.0, ',
 '         "pos": 3.0, ',
-'         "type": "common.hex"}], ',
-'     "type": "common.denoted_hex"}], ',
-' "type": "common.number"}',
+'         "type": "hex"}], ',
+'     "type": "denoted_hex"}], ',
+' "type": "num.any"}',
 }
 
-run('.match common.number "0x123"', results_common_number)
+run('.match num.any "0x123"', results_num_any)
+
+
+
 --run("common.word", nil, results_common_word)
 
 -- ok, msg = pcall(run, "foo = common.word", nil, nil)
