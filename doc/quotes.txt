@@ -1,3 +1,12 @@
+"Code Search was Google's first and only search engine to accept regular
+expression queries, which was geekily great but a very small niche. The sad fact
+is that many programmers can't write regular expressions, let alone correct
+ones. When we started Code Search, a Google search for “regular expression
+search engine” turned up sites where you typed “phone number” and got back
+“\(\d{3}\) \d{3}-\d{4}”."
+Russ Cox, in "Regular Expression Matching with a Trigram Index" (https://swtch.com/~rsc/regexp/regexp4.html)
+
+
 On the importance of not only API clarity but on the fact that the algorithm
 behind the API must be understood as well:  (I would argue this supports Rosie's
 linear time approach versus the typically variable regex approach.)
