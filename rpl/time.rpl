@@ -67,8 +67,6 @@ partial = { hour ":" minute ":" second secfrac? }
 
 full = { partial offset }
 -- the above tests should handle this
-time = { partial offset }
--- the above tests should handle this
 
 -- RFC2822 (Alternative patterns, less exact than RFC3339)
 althour = d{2,2}
@@ -88,3 +86,6 @@ alttimeofday = { althour ":" altminute { ":" altsecond }? }
 -- test alttimeofday rejects "", "2341", "10:50.22", "now"
 alttime = alttimeofday altzone
 -- the above tests should handle this
+
+time = { partial offset? }
+

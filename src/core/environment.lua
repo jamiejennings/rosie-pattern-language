@@ -124,10 +124,10 @@ function environment.lookup(env, id, prefix)
    end
 end
 
+-- N.B. value can be nil (this is how bindings are removed)
 function environment.bind(env, id, value)
    assert(environment.is(env))
    assert(type(id)=="string")
-   assert(value)
    env.store[id] = value
 end
 

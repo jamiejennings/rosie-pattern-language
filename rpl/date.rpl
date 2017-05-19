@@ -46,21 +46,23 @@ year = d{4,4}
 -- test year accepts "1960", "1999", "2010", "9999"
 -- test year rejects "99", "00", "12345", "year"
 
-month = { {"0" [1-9]} / {"1" [0-2]} }
--- test month accepts "01", "06", "10", "12"
+month = { {"0"? [1-9]} / {"1" [0-2]} }
+-- test month accepts "01", "06", "10", "12", "1", "9"
 -- test month rejects "00", "1", "13", "99"
 
-day = {  {"0" [1-9]}		-- single digit dates
+day = {  {"0"? [1-9]}		-- single digit dates
             / {[12][0-9]}		-- most of the two digit dates
             / {"3" [01]} }		-- and the rest
--- test day accepts "01", "06", "10", "16", "20", "29", "31"
+-- test day accepts "01", "06", "10", "16", "20", "29", "31", "1", "9"
 -- test day rejects "0", "00", "32", "99"
 
-full = { year "-" month "-" day }
--- test full accepts "2017-04-28", "1999-10-31"
--- test full rejects "99-01-01", "2010-15-03", "1999-12-32"
-date = { year "-" month "-" day }
--- the above tests handle date
+dashed = { year "-" month "-" day }
+-- test dashed accepts "2017-04-28", "1999-10-31"
+-- test dashed rejects "99-01-01", "2010-15-03", "1999-12-32"
+
+slashed = { year "/" month "/" day }
+-- test slashed accepts "2017/04/28", "1999/10/31"
+-- test slashed rejects "99/01/01", "2010/15/03", "1999/12/32"
 
 -- RFC2822 + alternatives
 day_shortname = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
@@ -68,7 +70,7 @@ day_longname = "Monday" / "Tuesday" / "Wendesday" / "Thursday" / "Friday" / "Sat
 day_name = { day_shortname / day_longname }
 month_shortname = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
 month_longname = "January" / "February" / "March" / "April" / "May" / "June" / "July" / "August" / "September" / "October" / "November" / "December"
-month_name = { month_shortname / month_longname }
+month_name =  month_longname / month_shortname
 
 altday = d{1,2}
 -- test altday accepts "0", "00", "1", "01", "50", "99"
@@ -76,3 +78,10 @@ altday = d{1,2}
 altdate = ( day_shortname "," )? altday month_shortname year
 -- test altdate accepts "Fri, 28 Apr 2017", "Fri, 31 Dec 1999", "31 Dec 2001"
 -- test altdate rejects "Fri 28, Apr 2010", "Tue, Feb 31st 2001", "Dec 31 2001"
+
+
+std_US = month_name day year?
+
+any = dashed / slashed / std_US
+
+

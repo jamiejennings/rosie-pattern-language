@@ -269,7 +269,7 @@ end
 load_dependencies =
    function(e, astlist, target_env, messages, importpath)
       local deps = e.compiler.parser.parse_deps(e.compiler.parser, astlist)
-      -- find and load all dependencies
+      if not deps then return; end
       for _, dep in ipairs(deps) do
 	 local new_messages, modname
 	 modname, new_messages = maybe_load_dependency(e, astlist, target_env, dep, importpath);
@@ -344,6 +344,9 @@ local function get_file_contents(e, filename, nosearch)
 end
 
 local function load_file(e, filename, nosearch)
+   if type(filename)~="string" then
+      engine_error(e, "file name argument not a string: " .. tostring(filename))
+   end
    local actual_path, source = get_file_contents(e, filename, nosearch)
    local modname, warnings = load_input(e, e._env, source, filename)
    return modname, warnings, actual_path

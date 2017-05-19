@@ -35,13 +35,15 @@ function preparse(rplx_preparse, input)
    if type(input)=="string" then
       language_decl, leftover = rplx_preparse:match(input)
    elseif type(input)=="table" then
-      -- assume astlist
+      -- assume astlist provided, although it will be empty even if the original source was not, 
+      -- because the source could contain only comments
+      if not input[1] then return nil, nil, 1; end
       if input[1].type=="language_decl" then
 	 language_decl = input[1]
 	 leftover = #input - language_decl.fin
       end
    else
-      error("preparse called with neither string nor astlist as input: " .. tostring(input))
+      assert(false, "preparse called with neither string nor astlist as input: " .. tostring(input))
    end
    if language_decl then
       if parse.syntax_error_check(language_decl) then
@@ -97,7 +99,7 @@ function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_ex
 	     if preparse then
 		-- preparse to look for rpl language version declaration
 		maj, min, pos, err = preparse(source, supported_version)
-		if not maj then return nil, nil, err; end
+		if not maj then return nil, nil, {err}; end
 	     else
 		pos = 1
 	     end

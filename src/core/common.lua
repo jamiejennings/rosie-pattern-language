@@ -179,7 +179,7 @@ function common.note(...)
    io.stderr:write("\n")
 end
 
-function common.warn(str, ...) note("Warning: ", str, ..., "\n"); end
+function common.warn(str, ...) common.note("Warning: ", str, ..., "\n"); end
 
 
 ----------------------------------------------------------------------------------------

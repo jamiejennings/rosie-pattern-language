@@ -14,6 +14,7 @@
 io = require "io"
 debug = require "debug"
 rosie = require "rosie"
+recordtype = rosie.import "recordtype"
 
 if ROSIE_DEV then
    -- This file is being loaded into a Rosie development environment, so rosie is available:
@@ -151,7 +152,7 @@ api.engine_clear = api_wrap(make_env_accessor("clear"), "boolean")
 -- Loading files, strings
 ----------------------------------------------------------------------------------------
 
-api.file_load = api_wrap(call_with_default_engine(rosie.file.load), "string", "string*")
+api.loadfile = api_wrap(default_engine_method_caller("loadfile"), "string*")
 api.load = api_wrap(default_engine_method_caller("load"), "string*")
 
 ----------------------------------------------------------------------------------------
@@ -171,9 +172,10 @@ end
 
 local function compile(expression, flavor)
    if not api.ENGINE then error("rosie api not initialized", 0); end
+   -- compile method will throw an error if expression does not compile
    local r = api.ENGINE:compile(expression, flavor)
    -- Put the id into the environment
-   return gensym_bind(api.ENGINE, r.id(), r._pattern)
+   return gensym_bind(api.ENGINE, recordtype.id(r), r._pattern)
 end
 
 api.compile = api_wrap(compile, "string")
@@ -184,11 +186,12 @@ api.compile = api_wrap(compile, "string")
 
 -- TODO: ensure argument checking is being done correctly in the C api
 
+-- TODO: add encoder arg
 api.match = api_wrap(default_engine_method_caller("match"), "string", "int")
-api.file_match = api_wrap(call_with_default_engine(rosie.file.match), "int", "int", "int")
+api.matchfile = api_wrap(default_engine_method_caller("matchfile"), "int", "int", "int")
 
 api.tracematch = api_wrap(default_engine_method_caller("tracematch"), "string", "int", "string")
-api.file_tracematch = api_wrap(call_with_default_engine(rosie.file.tracematch), "int", "int", "int")
+api.tracematchfile = api_wrap(default_engine_method_caller("tracematchfile"), "int", "int", "int")
 
 ---------------------------------------------------------------------------------------------------
 -- Generate C code for librosie
