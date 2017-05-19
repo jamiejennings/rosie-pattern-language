@@ -205,7 +205,7 @@ local engine_match = make_matcher(_engine_match)
 -- returns matches, leftover, trace
 local engine_tracematch = make_matcher(function(e, pat, input, start)
 				    local m, left, ttime, lptime = _engine_match(e, pat, input, start)
-				    local _,_,trace, ttime, lptime = eval.eval(pat, input, start, e._env, false)
+				    local _,_,trace, ttime, lptime = eval.eval(pat, input, start, e, false)
 				    return m, left, trace, ttime, lptime
 				 end)
 

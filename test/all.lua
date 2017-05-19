@@ -22,7 +22,8 @@ json = require "cjson"
 
 --test.dofile(ROSIE_HOME .. "/test/api-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
---test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
+test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
+print("\n\n*** NEED TO RE-ENABLE THE GREP TESTS IN cli-test.lua ***\n\n")
 test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
 test.dofile(ROSIE_HOME .. "/test/repl-test.lua")
 

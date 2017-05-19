@@ -69,7 +69,7 @@ check(ok)
 
 subheading("Setting up assignments")
 t1, t2 = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
-check(type(t1)=="table")
+check(type(t1)=="string" and t1:find("top level"))
 if t2 then check(type(t2)=="table"); end
 t = e:lookup("a")
 check(type(t)=="table")

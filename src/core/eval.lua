@@ -1,55 +1,43 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- eval.lua     Also called "tracematch": step by step evaluation of Rosie patterns
+---- eval.lua        Step by step evaluation of Rosie patterns
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+
+-- In v0.99k and earlier, eval returned a string that contained an explanation of how the match
+-- was executed, i.e. a trace of the matching steps.  Now, this explanation is returned as a
+-- nested table structure (which reflects the structure of the pattern being matched).
+
 -- N.B.  The evaluation functions utilize both the compiled lpeg patterns that the 'match'
 -- function uses (when an engine runs) and also the AST that created those compiled lpeg
--- patterns.  The AST is needed in order to step through the evaluation process.
--- 
--- Therefore, these eval functions MUST BE SEMANTICALLY EQUIVALENT to their counterparts in the
--- compiler.  (In other words, the interpreter called 'eval' should have the same semantics as the
--- compiler.)  Toward that end, functions internal to the compiler are used liberally here.
+-- patterns.  The AST is needed in order to step through the evaluation process.  Therefore, these
+-- eval functions MUST BE SEMANTICALLY EQUIVALENT to their counterparts in the compiler.  (In
+-- other words, the interpreter called 'eval' should have the same semantics as the compiler.)
 
 local string = require "string"
-local environment = require "environment"	    -- TEMPORARY
+local environment = require "environment"
 local lookup = environment.lookup
 local boundary = environment.boundary
-
-local compile = require "compile"
-local compile_expression = compile.compile0.compile_expression
-local function compile_exp(ast, env)
-   local astlist = {ast}
-   local pat, msgs = compile_expression(astlist, astlist, "<no source>", env)
-   assert(type(msgs)=="table")
-   return pat, table.concat(msgs, '\n')
-end
-compile = nil					    -- ensuring we don't use anything else
-
+--local parse = require "parse"
+--local compile = require "compile"
+--local cinternals = compile.cinternals
 local common = require "common"
 local pattern = common.pattern
-local lpeg = require "lpeg"
+local list = require "list"
 
 local eval = {}
 
-function match_peg(peg, input, start)
---   print(string.format("*** in match_peg: %s, %s, %s", peg, input, start))
-   local results, nextpos = common.rmatch(common.match_node_wrap(peg, "eval"), input, start)
---   print(string.format("    results, nextpos: %s, %s", tostring(results), tostring(nextpos)))
-   if results then
-      local name, s, matchtext, subs, e = common.decode_match(results)
-      -- print(string.format("    name, s, matchtext, subs, e: %s, %d %s %d", 
-      -- 			  tostring(name), tonumber(s), tostring(matchtext), tostring(subs), tostring(e)))
-      assert(type(matchtext)=="string")
-      assert(type(e)=="number")
-      return matchtext, e
-   end
-   return false, 1
+function eval.match_peg(peg, input, start)
+   local results = { (lpeg.C(peg) * lpeg.Cp()):match(input, start) }
+   local matchtext, pos = results[1], results[#results]
+   if (not matchtext) then return false, start; end
+   assert(type(matchtext)=="string")
+   assert(type(pos)=="number")
+   return matchtext, pos
 end
-
 
 ---------------------------------------------------------------------------------------------------
 -- Reporting
@@ -58,47 +46,15 @@ end
 local delta = 3
 
 local function indent_(n)
-   return string.rep(" ", n)
-end
-
-local function step_(indent, step, ...)
-   local msg = string.format("%3d.", step[1])
-   step[1] = step[1] + 1;
-   msg = msg .. string.rep(".", indent-4)	    -- allow room for step #
-   for _,v in ipairs({...}) do
-      msg = msg .. v
-   end
-   return msg
+   return string.rep(" ", delta*n)
 end
 
 local eval_exp;					    -- forward reference
 
-local function report_(m, pos, a, input, start, indent, fail_output_only, step)
+local function new_report_(m, pos, a, input, start, indent, fail_output_only, step)
    start = start or 1
-   local maxlen = 60
-
-   if m then
-      local fmt = "Matched %q (against input %q"
-      if (start+maxlen) < #input then fmt = fmt .. " ..."; end
-      fmt = fmt .. ")\n"
-
-      return indent_(indent) .. string.format(fmt,
-					      input:sub(start,pos-1),
-					      input:sub(start, start+maxlen))
-   else
-      local fmt = "FAILED to match against input %q"
-      if (start+maxlen) < #input then fmt = fmt .. " ..."; end
-      fmt = fmt .. "\n"
-
-      return indent_(indent) .. string.format(fmt, input:sub(start, start+maxlen))
-   end
-end
-
-local function reveal_ast_indented(a, indent)
-   -- grammars are revealed across multiple lines, so we must replace newlines
-   -- in the value returned by 'reveal' with newline+indent
-   local s = writer.reveal_ast(a)
-   return s:gsub("\n", "\n"..string.rep(" ", indent))
+   if m then return {status='match', start=start, ['end']=pos}
+   else return {status='fail', start=start}; end
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -110,244 +66,211 @@ end
 -- If it matches and we're doing the full eval, we then descend into the definition of the node
 -- and try to match each piece.
 
-local function eval_ref(a, input, start, env, indent, fail_output_only, step, msg)
-   msg = msg .. indent_(indent) .. "REFERENCE: " .. writer.reveal_ast(a) .. "\n"
-   local pat = compile_exp(a, env)
+local function eval_ref(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   local pat = e.compiler.compile_expression(a, gmr, source, e._env)
    local name, pos, text, subs = common.decode_match(a)
-   local m, pos = match_peg(pat.peg, input, start) 
+   local m, pos = eval.match_peg(pat.peg, input, start) 
 
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+   local trace = {name="REFERENCE", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
 
    if not(m and fail_output_only) then
       -- descend into identifier's definition...
       if (not pat.ast) then
 	 -- built-in identifier with no ast
-	 msg = msg .. indent_(indent) .. "This identifier is a built-in RPL pattern\n"
+	 trace.explanation = {name="PRIMITIVE", expression=trace.expression, result=trace.result}
       else
-	 local pat = lookup(env, text)
+	 local pat = environment.lookup(e._env, text)
+	 -- TODO: what if we get an env or a function instead of a pat?
 	 assert(pat)
 	 local rhs = pat.ast
 	 if rhs.type=="capture" then rhs = rhs.subs[2]; end
-	 msg = msg .. indent_(indent) .. "Explanation (definition): " .. reveal_ast_indented(rhs, indent) .. "\n"
-	 local dm, dpos
-	 dm, dpos, msg = eval_exp(rhs, input, start, env, indent+delta,
-				  fail_output_only, step, msg)
+	 local dm, dpos, t
+	 dm, dpos, t = eval_exp(rhs, input, start, gmr, source, e, indent+delta,
+				  fail_output_only, step)
+	 trace.explanation = {t}
       end
    end
-   return m, pos, msg
+   return m, pos, trace
 end
 
-local function eval_sequence(a, input, start, env, indent, fail_output_only, step, msg)
-   msg = msg .. indent_(indent) .. "SEQUENCE: " .. writer.reveal_ast(a) .. "\n"
-   
-   local pat = compile_exp(a, env)
-   local m, pos = match_peg(pat.peg, input, start) 
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+local function eval_sequence(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   local pat = e.compiler.compile_expression(a, gmr, source, e._env)
+   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local trace = {name="SEQUENCE", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
 
    if not(m and fail_output_only) then
-      msg = msg .. indent_(indent) .. "Explanation:\n"
-
       local name, pos, text, subs = common.decode_match(a)
       -- sequences from the parser are always binary, i.e. there are exactly two subs.
       -- Regarding debugging... the failure of sub1 is fatal for a.
-      local m, pos
-      m, pos, msg =
-	 eval_exp(subs[1], input, start, env, indent+delta,
-		  fail_output_only, step, msg)
-
-      if not m then return false, 1, msg; end	    -- Found the match error, so done.
-
-      return eval_exp(subs[2], input, pos, env, indent+delta,
-		      fail_output_only, step, msg)
+      local m, pos, t
+      m, pos, t =
+	 eval_exp(subs[1], input, start, gmr, source, e, indent+delta,
+		  fail_output_only, step)
+      trace.explanation = {t}
+      if not m then return false, 1, trace; end	    -- Found the match error, so done.
+      m, pos, t = eval_exp(subs[2], input, pos, gmr, source, e, indent+delta,
+			   fail_output_only, step)
+      table.insert(trace.explanation, t)
+      return m, pos, trace
    end
-   return m, pos, msg
+   return m, pos, trace
 end
 
-local function eval_choice(a, input, start, env, indent, fail_output_only, step, msg)
-   msg = msg .. indent_(indent) .. "CHOICE: " .. writer.reveal_ast(a) .. "\n"
-   
-   local pat = compile_exp(a, env)
+local function eval_choice(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   local pat = e.compiler.compile_expression(a, gmr, source, e._env)
    local m, pos
-   m, pos = match_peg(pat.peg, input, start)
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
+   m, pos = eval.match_peg(pat.peg, input, start)
+   local trace = {name="CHOICE", expression=parse.reveal_ast(a), 
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
 
    if not(m and fail_output_only) then 
-      msg = msg .. indent_(indent) .. "Explanation:\n"
-
       -- The parser returns only binary choice tokens, i.e. there are exactly two subs.
       -- Regarding debugging...
       -- if sub1 and sub2 fail, then a fails.
       indent = indent + delta;
       local name, pos, text, subs = common.decode_match(a)
-      local m, pos
-      m, pos, msg = eval_exp(subs[1], input, start, env, indent,
-			     fail_output_only, step, msg)
+      local m, pos, t
+      m, pos, t = eval_exp(subs[1], input, start, gmr, source, e, indent,
+			       fail_output_only, step)
 
-      if m then
-	 -- First alternative succeeded
-	 return m, pos, msg
+      trace.explanation = {t}
+      if m then -- First alternative succeeded
+	 return m, pos, trace
       else
-	 msg = msg .. indent_(indent) .. "First option failed.  Proceeding to alternative.\n"
-	 m, pos, msg = eval_exp(subs[2], input, start, env, indent,
-				fail_output_only, step, msg)
-	 if m then
-	    -- Second alternative succeeded...
-	    return m, pos, msg;
+	 m, pos, t = eval_exp(subs[2], input, start, gmr, source, e, indent,
+			      fail_output_only, step)
+	 table.insert(trace.explanation, t)
+	 if m then -- Second alternative succeeded...
+	    return m, pos, trace;
 	 else
-	    return false, 1, msg;
+	    return false, 1, trace;
 	 end -- if m (second alternative)
       end -- if m (first alternative)
    end
 end
 
-local function eval_quantified_exp(a, input, start, env, indent, fail_output_only, step, msg)
-   local pat = compile_exp(a, env)
-   local qpeg, extra = pat.peg, pat.extra
-   assert(type(pat.extra)=="table", "Internal error in eval of quantified expression: " .. tostring(source))
-   local epeg, append_boundary, qname = extra.epeg, extra.append_boundary, extra.qname
-   local min, max = extra.min, extra.max
-   msg = msg .. step_(indent, step,
-		      "QUANTIFIED EXP (",
-		      (append_boundary and "tokenized/cooked): ") or "raw): ",
-		      writer.reveal_ast(a),
-		      "\n")
-   local m, pos = match_peg(qpeg, input, start) 
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
-
+local function eval_quantified_exp(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   if start==0 then start=1; end
+   local epeg, qpeg, append_boundary, qname, min, max = cinternals.process_quantified_exp(a, gmr, source, e._env)
+   local m, pos = eval.match_peg(qpeg, input, start) 
+   local trace = {name="QUANTIFIED EXP",
+		  expression=(append_boundary and "(tokenized/cooked): " or "(raw): ") .. parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
+   trace.bounds = {min=min, max=max, boundary=append_boundary}
    if (not m) or (not fail_output_only) then
-      local name, pos, text, subs = common.decode_match(a)
-      local revealed_ast = writer.reveal_ast(subs[1])
-      msg = msg .. indent_(indent) .. "Explanation (EXPRESSION): " .. revealed_ast
-            .. " must match a minimum of " .. min .. ((max and (" and maximum of " .. max)) or "")
-	    .. " time" .. ((((max and (max~=1)) or (not max and (min~=1))) and "s") or "");
-      if append_boundary then msg = msg .. " (with boundary in between)"; end
-      msg = msg .. "\n"
+   local _, _, _, subs = common.decode_match(a)
+   local revealed_ast = parse.reveal_ast(subs[1])
       local i = start
---      local indent = indent + delta
       local substep = 1
-      local mm, mpos = match_peg(epeg, input, i)
+      local mm, mpos = eval.match_peg(epeg, input, i)
       -- Look for the first occurrence of pattern
-      msg = msg .. indent_(indent) .. step_(0, {substep}, " ") ..
-            report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)
+      local explanation = {{name="BASE EXP", expression=revealed_ast,
+			    result=new_report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)}}
       i = mpos
       while mm do
 	 if max and (substep==max) then break; end
 	 substep = substep + 1
 	 -- Look for boundary
 	 if append_boundary then
-	    mm, mpos = match_peg(boundary, input, i)
-	    msg = msg .. indent_(indent) .. "     Boundary " ..
-               report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)
+	    mm, mpos = eval.match_peg(common.boundary, input, i)
+	    table.insert(explanation, {name="BASE EXP", expression=revealed_ast,
+				       result=new_report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)})
 	    if not mm then break; end -- fail
 	    i = mpos
 	 end
 	 -- Look for next occurrence of pattern
-	 mm, mpos = match_peg(epeg, input, i)
-	 msg = msg .. indent_(indent) .. step_(0, {substep}, " ") ..
-            report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)
+	 mm, mpos = eval.match_peg(epeg, input, i)
+	 table.insert(explanation, {name="BASE EXP", expression=revealed_ast,
+				    result=new_report_(mm, mpos, subs[1], input, i, 0, fail_output_only, step)})
 	 i = mpos
       end -- while
-   end
-
-   return m, pos, msg
+      trace.explanation = explanation
+   end -- if explanation needed
+   return m, pos, trace
 end
 
-local function eval_literal(a, input, start, env, indent, fail_output_only, step, msg)
-   msg = msg .. step_(indent, step, "LITERAL: ", writer.reveal_ast(a), "\n")
-   local pat = compile_exp(a, env)
+local function eval_literal(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   local pat = e.compiler.compile_expression(a)
    local name, pos, text, subs = common.decode_match(a)
-   local m, pos = match_peg(pat.peg, input, start)
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
-   return m, pos, msg
+   local m, pos = eval.match_peg(pat.peg, input, start)
+   local trace = {name="LITERAL", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
+   return m, pos, trace
 end
 
-local function eval_charset(a, input, start, env, indent, fail_output_only, step, msg)
+local function eval_charset(a, input, start, gmr, source, e, indent, fail_output_only, step)
    local name, pos, text, subs = common.decode_match(a)
-   msg = msg .. step_(indent, step,
-		      "CHARACTER SET: ",
-		      writer.reveal_ast(a),
-		      (name=="range" and " (a character range)") or (" (a set of " .. #subs .. " characters)"),
-		      "\n")
-   local pat = compile_exp(a, env)
-   local m, pos = match_peg(pat.peg, input, start) 
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
-   return m, pos, msg
+   local pat = e.compiler.compile_expression(a, gmr, source, e._env)
+   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local trace = {name="CHARACTER SET", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
+   return m, pos, trace
 end
 
-local function eval_charlist(a, input, start, env, indent, fail_output_only, step, msg)
+local function eval_charlist(a, input, start, gmr, source, e, indent, fail_output_only, step)
    local name, pos, text, subs = common.decode_match(a)
-   msg = msg .. step_(indent, step,
-		      "CHARACTER SET: ",
-		      writer.reveal_ast(a),
-		      " (a set of " .. #subs .. " characters)\n")
-   local pat = compile_exp(a, env)
-   local m, pos = match_peg(pat.peg, input, start) 
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
-   return m, pos, msg
+   local pat = e.compiler.compile_expression(a, gmr, source, e._env)
+   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local trace = {name="CHARACTER SET", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
+   return m, pos, trace
 end
 
-local function eval_range(a, input, start, env, indent, fail_output_only, step, msg)
+local function eval_range(a, input, start, gmr, source, e, indent, fail_output_only, step)
    local name, pos, text, subs = common.decode_match(a)
-   msg = msg .. step_(indent, step,
-		      "CHARACTER SET: ",
-		      writer.reveal_ast(a),
-		      " (a character range)\n")
-   local pat = compile_exp(a, env)
-   local m, pos = match_peg(pat.peg, input, start) 
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
-   return m, pos, msg
+   local pat = e.compiler.compile_expression(a, gmr, source, e._env)
+   local m, pos = eval.match_peg(pat.peg, input, start) 
+   local trace = {name="CHARACTER SET", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
+   return m, pos, trace
 end
 
-local function eval_named_charset(a, input, start, env, indent, fail_output_only, step, msg)
-   msg = msg .. step_(indent, step, "NAMED CHARSET: ", writer.reveal_ast(a), "\n")
-   local pat = compile_exp(a, env)
-   local m, pos = match_peg(pat.peg, input, start)
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
-   return m, pos, msg
+local function eval_named_charset(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   local pat = e.compiler.compile_expression(a, gmr, source, e._env)
+   local m, pos = eval.match_peg(pat.peg, input, start)
+   local trace = {name="NAMED CHARSET", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
+   return m, pos, trace
 end
 
-local function eval_predicate(a, input, start, env, indent, fail_output_only, step, msg)
-   msg = msg .. step_(indent, step, "PREDICATE: ", writer.reveal_ast(a), "\n")
-   
-   local pat = compile_exp(a, env)
-   local m, pos = match_peg(pat.peg, input, start)
-   msg = msg .. report_(m, pos, a, input, start, indent, fail_output_only, step)
-
+local function eval_predicate(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   local pat = e.compiler.compile_expression(a, gmr, source, e._env)
+   local m, pos = eval.match_peg(pat.peg, input, start)
+   local trace = {name="PREDICATE", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
    if not(m and fail_output_only) then
       -- descend into exp
       local name, pos, text, subs = common.decode_match(a)
-      msg = msg .. indent_(indent) .. "Explanation (EXPRESSION): " .. writer.reveal_ast(a) ..  "\n"
-      local dm, dpos
-      dm, dpos, msg = eval_exp(subs[2], input, start, env, indent+delta,
-				 fail_output_only, step, msg)
+      local explanation = { parse.reveal_ast(a) }
+      local dm, dpos, t
+      dm, dpos, t = eval_exp(subs[2], input, start, gmr, source, e, indent+delta,
+			     fail_output_only, step)
+      trace.explanation = {t}
    end
    -- We return the start position to indicate that the predicate did not consume any input. 
-   return m, start, msg
+   return m, start, trace
 end
 
-local function eval_grammar(a, input, start, env, indent, fail_output_only, step, msg)
-   msg = msg .. step_(indent, step, "GRAMMAR:\n") .. indent_(indent) .. reveal_ast_indented(a, indent) .. "\n"
-   -- need to convert it to a grammar expression because if we compile a grammar STATEMENT, it
-   -- will (re-)bind an identifier
-   local name, pos, text, subs = common.decode_match(a)
-   assert(name=="new_grammar", "Internal error: evaluation function given unexpected kind of grammar AST" .. name)
-   local b = {type="grammar_expression", pos=pos, text=text, subs=subs}	    -- TODO: should call syntax function for rewriting 
-   local pat = compile_exp(b, env)
-   local m, pos = match_peg(pat.peg, input, start)
-   msg = msg .. report_(m, pos, b, input, start, indent, fail_output_only, step)
+local function eval_grammar(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   local name, pat = e.compiler.compile_expression(a, gmr, source, e._env)
+   local m, pos = eval.match_peg(pat.peg, input, start)
+   local trace = {name="GRAMMAR", expression=parse.reveal_ast(a),
+		  result=new_report_(m, pos, a, input, start, indent, fail_output_only, step)}
    -- How to descend into the definition of a grammar?
-   return m, pos, msg
+   return m, pos, trace
 end
 
-local function eval_raw_exp(a, input, start, env, indent, fail_output_only, step, msg)
-   return eval_exp(a.subs[1], input, start, env, indent, fail_output_only, step, msg)
+local function eval_raw_exp(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   return eval_exp(a.subs[1], input, start, gmr, source, e, indent, fail_output_only, step)
 end
 
-local function eval_capture(a, input, start, env, indent, fail_output_only, step, msg)
-   return eval_exp(a.subs[2], input, start, env, indent, fail_output_only, step, msg)
+local function eval_capture(a, input, start, gmr, source, e, indent, fail_output_only, step)
+   return eval_exp(a.subs[2], input, start, gmr, source, e, indent, fail_output_only, step)
 end
 
-eval_exp = function(ast, input, start, env, indent, fail_output_only, step, msg)
+eval_exp = function(ast, input, start, gmr, source, e, indent, fail_output_only, step)
       local functions = {"eval_exp";
 			 raw_exp=eval_raw_exp;
 			 capture=eval_capture;
@@ -363,17 +286,83 @@ eval_exp = function(ast, input, start, env, indent, fail_output_only, step, msg)
 			 new_quantified_exp=eval_quantified_exp;
 			 new_grammar=eval_grammar;
 		   }
-   return common.walk_ast(ast, functions, input, start, env, indent, fail_output_only, step, msg)
+   return common.walk_ast(ast, functions, input, start, gmr, source, e, indent, fail_output_only, step)
 end
+
+function eval.trace_tostring(trace, indent, str)
+   indent = indent or 0
+   str = str or ""
+   local name, exp, result = trace.name, trace.expression, trace.result
+   str = str .. string.format("%s%s: %s\n", indent_(indent), name, exp)
+   if result then
+      if result.status=="match" then
+	 str = str .. string.format("%s%s from %d to %d (length=%d)\n",
+				    indent_(indent), result.status, result.start, result['end'],
+				    result['end']-result.start)
+      elseif result.status=="fail" then
+	 str = str .. string.format("%s%s at %d\n", indent_(indent), result.status, result.start)
+      else
+	 error("Expect match or fail.  Received: " .. tostring(result.status))
+      end
+   end
+   if name=="QUANTIFIED EXP" then
+      local bounds = trace.bounds
+      local max = bounds.max and tostring(bounds.max) or "unlimited"
+      str = str ..
+	 string.format(
+	 "%sThe base expression must repeat at least %d and at most %s times, with %s boundary between each repetition\n", 
+	 indent_(indent), bounds.min, max, bounds.boundary and "a" or "no")
+   end
+   if trace.explanation then
+      for _, e in ipairs(trace.explanation) do
+	 str = eval.trace_tostring(e, indent+1, str);
+      end
+   end
+   return str
+end
+
+local function flatten1(trace, NAME)
+   if not trace then return nil; end
+   assert(type(trace)=="table", "flatten1 called with: " .. tostring(trace));
+   local new = {}; for k,v in pairs(trace) do new[k]=v; end
+   if trace.name==NAME then
+      local c1, c2 = trace.explanation[1], trace.explanation[2]
+      if (not c2) or (c2.name~=NAME) then
+	 new.explanation = {flatten1(c1, NAME), flatten1(c2, NAME)}
+      else -- c2 is also NAME, so here is an opportunity to flatten
+	 new.explanation = {flatten1(c1, NAME)}
+	 local f = flatten1(c2, NAME)
+	 if f.explanation then
+	    for _, item in ipairs(f.explanation) do
+	       table.insert(new.explanation, item)
+	    end
+	 end
+      end
+      return new
+   else
+      if new.explanation then
+	 new.explanation = list.map(function(t) return flatten1(t, NAME) end, new.explanation)
+      end
+      return new
+   end
+end
+
+function eval.flatten_trace(trace)
+   return flatten1(flatten1(trace, "CHOICE"), "SEQUENCE")
+end
+
+-- function print_trace(trace)
+--    print(trace_tostring(trace))
+-- end
 
 ---------------------------------------------------------------------------------------------------
 -- Interface to eval capability
 ---------------------------------------------------------------------------------------------------
 
-function eval.eval(pat, input, start, env, fail_output_only)
+function eval.eval(pat, input, start, e, fail_output_only)
    -- if fail_output_only is true, then we are using "eval" to explain a syntax error, not to dump
    -- a full trace of the entire matching process
-   assert(type(input)=="string" and (not env or type(env)=="table"))
+   assert(type(input)=="string" and type(e)=="table") -- duck typing the engine
    start = start or 1
    local indent = 5				  -- need to leave room for the step number "%3d."
    local step = {1};
@@ -384,7 +373,8 @@ function eval.eval(pat, input, start, env, fail_output_only)
    -- sigh.  it is time to implement real closures.
 
    assert(pattern.is(pat), "Internal error: eval.eval was not passed a compiled pattern: " .. tostring(pat))
-   return eval_exp(pat.ast, input, start, env, indent, fail_output_only, step, "")
+   return eval_exp(pat.ast, input, start, gmr, source, e, indent, fail_output_only, step)
 end
+
 
 return eval

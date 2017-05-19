@@ -86,34 +86,4 @@ run('.match num.any "0x123"', results_num_any)
 
 
 
---run("common.word", nil, results_common_word)
-
--- ok, msg = pcall(run, "foo = common.word", nil, nil)
--- check(ok)
--- check(msg[1]:find("not an expression"))
-
--- ok, msg = pcall(run, "foo = common.word", true, nil)
--- check(ok)
--- check(msg[1]:find("not an expression"))
-
--- print("\nChecking that the command line expression can contain [[...]] per Issue #22")
--- cmd = rosie_cmd .. " patterns -r 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+'"
--- print(cmd)
--- results, status, code = util.os_execute_capture(cmd, nil)
--- check(results, "Expression on command line can contain [[.,.]]") -- command succeeded
--- check(code==0, "Return code is zero")
--- check(results[#results]:sub(-9):find("patterns")==1)
-
--- -- The last two output lines explain the test failures in our sample input file
--- local function split(s, sep)
---    sep = lpeg.P(sep)
---    local elem = lpeg.C((1 - sep)^0)
---    local p = lpeg.Ct(elem * (sep * elem)^0)
---    return lpeg.match(p, s)
--- end
--- lines = split(results[1], "\n")
--- check(lines[#lines]=="")
--- check(lines[#lines-1]:find("FAIL"))
--- check(lines[#lines-2]:find("FAIL"))
-
 return test.finish()
