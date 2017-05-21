@@ -25,7 +25,7 @@ function p.create(rosie)
    -- usage message is generated automatically
    parser:flag("--version", "Print rosie version")
    :action(function(args,_,exceptions)
-	      greeting()
+	      io.write(ROSIE_VERSION, "\n")
 	      os.exit()
 	   end)
    parser:flag("--verbose", "Output additional messages")
