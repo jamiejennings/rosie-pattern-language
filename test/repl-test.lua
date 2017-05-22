@@ -36,7 +36,7 @@ print("Found rosie executable: " .. rosie_cmd)
 
 function run(cmd, expectations)
    test.heading(cmd)
-   local cmd = "echo '" .. cmd .. "' | " .. rosie_cmd .. " --rpl 'import num' repl"
+   local cmd = "echo '" .. cmd .. "' | " .. rosie_cmd .. " --rpl 'import num' repl 2>/dev/null"
    print(cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
@@ -65,7 +65,7 @@ end
 
 results_num_any =
    {
-'Rosie v1-tranche-2',
+'Rosie v1-tranche-3',
 '{"data": "0x123", ',
 ' "end": 6.0, ',
 ' "pos": 1.0, ',

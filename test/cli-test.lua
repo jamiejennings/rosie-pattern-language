@@ -177,7 +177,7 @@ print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(results)
 check(code==0, "Return code is zero")
-check(results[#results]:find("All tests passed"))
+check(results[#results]:find("tests passed"))
 -- Failing tests
 cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-fail.rpl"
 print(cmd)
@@ -193,9 +193,10 @@ local function split(s, sep)
    return lpeg.match(p, s)
 end
 lines = split(results[1], "\n")
-check(lines[#lines]=="")
-check(lines[#lines-1]:find("FAIL"))
-check(lines[#lines-2]:find("FAIL"))
+check(lines[1]:find("FAIL"))
+check(lines[2]:find("FAIL"))
+check(lines[3]:find("2 tests failed out of"))
+check(lines[4]=="")
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Info command")

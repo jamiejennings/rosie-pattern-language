@@ -427,7 +427,7 @@ ok, msg = wapi.matchfile("num.any", "match", "thisfiledoesnotexist", "", "")
 check(not ok, "can't match against nonexistent file")
 check(msg:find("No such file or directory"))
 
-ok, msg = wapi.load("import date, time")
+ok, msg = wapi.load("import date, time, common")
 check(ok)
 
 macosx_log1 = [=[
@@ -515,7 +515,7 @@ if ok then
    check_output_file()
 end
 
-print("\n\n*** SKIPPING eval tests ***\n\n")
+print("\n\n** SKIPPING eval tests **\n\n")
 
 --[==[
 

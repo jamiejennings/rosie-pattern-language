@@ -121,7 +121,7 @@ local function make_compile_expression(expression_p, compile_ast)
 		end
 	     else -- lua error (a bug)
 		local st = debug.traceback()
-		error("Internal error (compiler): " .. tostring(results) .. '\n' .. st)
+		error("Internal error (compiler): " .. tostring(pat))
 	     end
 	  end
 end

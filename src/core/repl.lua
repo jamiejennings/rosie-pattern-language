@@ -176,11 +176,11 @@ function repl.repl(en)
 			assert(tname=="common.dqstring")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
 			input_text = common.unescape_string(input_text:sub(2, -2))
-			local ok, m, left = pcall(en.match, en, exp, input_text)
+			local ok, rplx = pcall(en.compile, en, exp)
 			if not ok then
-			   io.write(m, "\n") -- syntax and compile errors
+			   io.write(rplx, "\n") -- syntax and compile errors
 			else
-			--    if cname=="match" then
+			   local m, left = en:match(rplx, input_text)
 			--       if debug and (not m) then
 			-- 	 local match, leftover, trace = en:tracematch(exp, input_text)
 			-- 	 io.write(trace, "\n")
@@ -190,7 +190,7 @@ function repl.repl(en)
 			--       io.write(trace, "\n")
 			--    end
 			   print_match(m, left, (cname=="trace"))
-			end -- did the pcall to en.match succeed or not
+			end -- did exp compile
 		     end -- could not parse out the expression and input string from the repl input
 		  end -- if unable to parse argtext into: stuff "," quoted_string
 	       end -- if pat

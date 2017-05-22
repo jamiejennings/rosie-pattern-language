@@ -18,7 +18,7 @@ function p.set_encoder(rosie, en, name)
    en:output(encode_fcn)
 end
 
-function p.load_string(rosie, en, input)
+function p.load_string(en, input)
    local ok, results, messages = pcall(en.load, en, input)
    if not ok then
       if ROSIE_DEV then error(results)
@@ -26,6 +26,16 @@ function p.load_string(rosie, en, input)
    end
    return results, messages
 end
+
+function p.load_file(en, filename)
+   local ok, messages = pcall(en.loadfile, en, filename)
+   if not ok then
+      if ROSIE_DEV then error("Cannot load file: \n" .. messages)
+      else io.write("Cannot load file: \n", messages); os.exit(-1); end
+   end
+   return ok, messages
+end
+
 
 function p.setup_engine(en, args)
    -- (1a) Load whatever is specified in ~/.rosierc ???
@@ -60,6 +70,7 @@ function p.setup_engine(en, args)
       end
    end
    -- (2) Compile the expression
+   local compiled_pattern
    if args.pattern then
       local expression
       if args.fixed_strings then
@@ -78,6 +89,7 @@ function p.setup_engine(en, args)
 	 os.exit(-4)
       end
    end
+   return compiled_pattern			    -- could be nil
 end
 
 return p

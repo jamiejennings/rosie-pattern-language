@@ -85,27 +85,11 @@ local function greeting()
    io.write("Rosie " .. ROSIE_VERSION .. "\n")
 end
 
-local function load_string(en, input)
-   local ok, messages = pcall(en.load, en, input, "")
-   if not ok then
-      if ROSIE_DEV then error("Cannot load rpl: \n" .. messages)
-      else io.write("Cannot load rpl: \n", messages); os.exit(-1); end
-   end
-   return ok, messages
-end
-
-local function load_file(en, filename)
-   local ok, messages = pcall(en.loadfile, en, filename)
-   if not ok then
-      if ROSIE_DEV then error("Cannot load file: \n" .. messages)
-      else io.write("Cannot load file: \n", messages); os.exit(-1); end
-   end
-   return ok, messages
-end
-
 local function run(args)
    if args.verbose then ROSIE_VERBOSE = true; end
 
+   local en = CL_ENGINE
+   
    if not args.command then
       if ROSIE_DEV then greeting(); return
       else
@@ -130,10 +114,10 @@ local function run(args)
       --     get a fresh engine and load any rpl files or rpl strings
       --     load the file being tested
       --     call the test procedure
-      test.setup(CL_ENGINE)
+      test.setup(en)
       local total_failures, total_tests = 0, 0
       for _, fn in ipairs(args.filenames) do
-	 local failures, total = test.run(rosie, CL_ENGINE, args, fn)
+	 local failures, total = test.run(rosie, en, args, fn)
 	 total_failures = total_failures + failures
 	 total_tests = total_tests + total
       end
@@ -142,13 +126,13 @@ local function run(args)
 	    print("Total of " .. tostring(total_failures) ..
 	       " tests failed out of " .. tostring(total_tests) .. " attempted")
 	 else
-	    print("All tests passed")
+	    print("All " .. tostring(total_tests) .. " tests passed")
 	 end
       end
       os.exit((total_failures==0) and 0 or -1)
    end
    
-   cli_common.setup_engine(CL_ENGINE, args);
+   local compiled_pattern = cli_common.setup_engine(en, args);
 
    if args.command == "list" then
       if not args.verbose then greeting(); end
@@ -156,7 +140,7 @@ local function run(args)
       ui.print_env(env, args.filter)
       os.exit()
    elseif args.command == "repl" then
-      repl_mod = mod.import("repl", rosie_mod)
+      local repl_mod = mod.import("repl", rosie_mod)
       if not args.verbose then greeting(); end
       repl_mod.repl(en)
       os.exit()

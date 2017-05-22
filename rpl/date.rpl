@@ -74,8 +74,7 @@ day = {"3" [01]} /
       {"0"? [1-9]}
 month = {"1" [0-2]} /
 	{"0"? [1-9]}
-year = d{4,4} /
-       d{2,2}
+year = d{4,4}
 -- test day accepts "09", "1", "01", "22", "30", "31"
 -- test day rejects "", "100", "1111", "32", "0", "50"
 
@@ -93,7 +92,7 @@ slashed = { year "/" month "/" day }
 -- test slashed rejects "77899/01/01", "2010/15/03", "1999/12/32"
 
 std_US = month_name day ","? year?
--- test std_US accepts "April 1, 1900", "Jan 23 2017"
+-- test std_US accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
 
 any = dashed / slashed / std_US / alt / rfc2822
 
