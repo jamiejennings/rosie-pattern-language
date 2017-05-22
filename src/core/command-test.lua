@@ -7,16 +7,8 @@
 -- AUTHORS: Jamie A. Jennings, Kevin Zander
 
 local p = {}
-
--- FUTURE: find another place for this, which is also in cli.lua
-local function load_string(rosie, en, input)
-   local ok, results, messages = pcall(en.load, en, input)
-   if not ok then
-      if ROSIE_DEV then error(results)
-      else io.write("Cannot load rpl: \n", results); os.exit(-1); end
-   end
-   return results, messages
-end
+local cli_common = import("command-common")
+local io = import("io")
 
 local function startswith(str,sub)
   return string.sub(str,1,string.len(sub))==sub
@@ -42,63 +34,73 @@ local function find_test_lines(str)
   return num, lines
 end
 
-function p.setup_and_run(rosie, en, args)
-   local match = rosie.import("command-match")
+-- setup the engine that will parse the test lines in the rpl file
+function p.setup(en)
+   local test_patterns =
+      [==[
+	 testKeyword = "accepts" / "rejects"
+	 test_line = "-- test" identifier testKeyword quoted_string (ignore "," ignore quoted_string)*
+      ]==]
+   en:load("import rosie/rpl_1_1 as .")
+   en:load(test_patterns)
+end   
 
-   local f, msg = io.open(args.filename, 'r')
+
+function p.run(rosie, en, args, filename)
+   -- fresh engine for testing this file
+   local test_engine = rosie.engine.new()
+   -- set it up using whatever rpl strings or files were given on the command line
+   cli_common.setup_engine(test_engine, args)
+   -- load the rpl code we are going to test
+   test_engine:loadfile(filename, true)		    -- second arg true --> do not search
+   cli_common.set_encoder(rosie, test_engine, false)
+   -- read the tests out of the file and run each one
+   local f, msg = io.open(filename, 'r')
    if not f then error(msg); end
    local num_patterns, test_lines = find_test_lines(f:read('*a'))
    f:close()
-   if num_patterns > 0 then
-      local function test_accepts_exp(exp, q)
-	 local res, pos = en:match(exp, q)
-	 if pos ~= 0 then return false end
-	 return true
-      end
-      local function test_rejects_exp(exp, q)
-	 local res, pos = en:match(exp, q)
-	 if pos == 0 then return false end
-	 return true
-      end
-      local test_funcs = {test_rejects_exp=test_rejects_exp,test_accepts_exp=test_accepts_exp}
-      local test_patterns =
-	 [==[
-	    testKeyword = "accepts" / "rejects"
-	    test_line = "-- test" identifier testKeyword quoted_string (ignore "," ignore quoted_string)*
-         ]==]
-
-      en:load("import rosie/rpl_1_1 as .")
-      en:load(test_patterns)
-      match.set_encoder(rosie, en, false, rosie.encoders)
-      local failures = 0
-      local exp = "test_line"
-      for _,p in pairs(test_lines) do
-	 local m, left = en:match(exp, p)
-	 -- FIXME: need to test for failure to match
-	 local name = m.subs[1].text
-	 local testtype = m.subs[2].text
-	 local testfunc = test_funcs["test_" .. testtype .. "_exp"]
-	 local literals = 3 -- literals will start at subs offset 3
-	 -- if we get here we have at least one per test_line expression rule
-	 while literals <= #m.subs do
-	    local teststr = m.subs[literals].text
-	    teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
-	    if not testfunc(name, teststr) then
-	       print("FAIL: " .. name .. " did not " .. testtype:sub(1,-2) .. " " .. teststr)
-	       failures = failures + 1
-	    end
-	    literals = literals + 1
-	 end
-      end
-      if failures == 0 then
-	 print("All tests passed")
-      else
-	 os.exit(-1)
-      end
-   else
-      print("No tests found")
+   if num_patterns == 0 then
+      print(filename .. ": No tests found")
+      return 0, 0
    end
-   os.exit()
+   local function test_accepts_exp(exp, q)
+      local res, pos = test_engine:match(exp, q)
+      if pos ~= 0 then return false end
+      return true
+   end
+   local function test_rejects_exp(exp, q)
+      local res, pos = test_engine:match(exp, q)
+      if pos == 0 then return false end
+      return true
+   end
+   local test_funcs = {test_rejects_exp=test_rejects_exp,test_accepts_exp=test_accepts_exp}
+   local failures, total = 0, 0
+   local exp = "test_line"
+   for _,p in pairs(test_lines) do
+      local m, left = en:match(exp, p)
+      -- FIXME: need to test for failure to match
+      local name = m.subs[1].text
+      local testtype = m.subs[2].text
+      local testfunc = test_funcs["test_" .. testtype .. "_exp"]
+      local literals = 3 -- literals will start at subs offset 3
+      -- if we get here we have at least one per test_line expression rule
+      while literals <= #m.subs do
+	 total = total + 1
+	 local teststr = m.subs[literals].text
+	 teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
+	 if not testfunc(name, teststr) then
+	    print(filename .. ": FAIL: " .. name .. " did not " .. testtype:sub(1,-2) .. " " .. teststr)
+	    failures = failures + 1
+	 end
+	 literals = literals + 1
+      end
+   end
+   if failures == 0 then
+      print(filename .. ": All " .. tostring(total) .. " tests passed")
+   else
+      print(filename .. ": " .. tostring(failures) .. " tests failed out of " .. tostring(total) .. " attempted")
+   end
+   return failures, total
 end
 
 return p

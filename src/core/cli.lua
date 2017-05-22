@@ -50,6 +50,7 @@ ui = assert(rosie.import("ui"), "failed to open ui package")
 argparser = assert(rosie.import("command-parser"), "failed to load command-parser package")
 match = assert(rosie.import("command-match"), "failed to open command-match package")
 test = assert(rosie.import("command-test"), "failed to open command-test package")
+cli_common = assert(rosie.import("command-common"), "failed to open command-common package")
 
 parser = argparser.create(rosie)
 
@@ -102,59 +103,6 @@ local function load_file(en, filename)
    return ok, messages
 end
 
-local function setup_engine(args)
-   -- (1a) Load whatever is specified in ~/.rosierc ???
-
-
-   -- (1b) Load an rpl file
-   if args.rpls then
-      for _,filename in pairs(args.rpls) do
-	 if args.verbose then
-	    io.stdout:write("Compiling additional file ", filename, "\n")
-	 end
-	 -- nosearch is true so that files given on command line are not searched for
-	 local success, msg = pcall(CL_ENGINE.loadfile, CL_ENGINE, filename, true)
-	 if not success then
-	    io.stdout:write(msg, "\n")
-	    os.exit(-4)
-	 end
-      end
-   end
-
-   -- (1c) Load an rpl string from the command line
-   if args.statements then
-      for _,stm in pairs(args.statements) do
-	 if args.verbose then
-	    io.stdout:write(string.format("Compiling additional rpl code %q\n", stm))
-	 end
-	 local success, msg = load_string(CL_ENGINE, stm)
-	 if not success then
-	    io.stdout:write(msg, "\n")
-	    os.exit(-4)
-	 end
-      end
-   end
-   -- (2) Compile the expression
-   if args.pattern then
-      local expression
-      if args.fixed_strings then
-	 expression = '"' .. args.pattern:gsub('"', '\\"') .. '"' -- FUTURE: rosie.expr.literal(arg[2])
-      else
-	 expression = args.pattern
-      end
-      local flavor = (args.command=="grep") and "search" or "match"
-      local ok, msgs
-      ok, compiled_pattern, msgs = pcall(CL_ENGINE.compile, CL_ENGINE, expression, flavor)
-      if not ok then
-	 io.stdout:write(compiled_pattern, "\n")
-	 os.exit(-4)
-      elseif not compiled_pattern then
-	 io.stdout:write(table.concat(msgs, '\n'), '\n')
-	 os.exit(-4)
-      end
-   end
-end
-
 local function run(args)
    if args.verbose then ROSIE_VERBOSE = true; end
 
@@ -178,33 +126,43 @@ local function run(args)
 
    if args.command == "test" then
       -- lightweight pattern test framework does a custom setup:
-      -- first, set up the rosie CLI engine and automatically load the file being tested (after
-      -- loading all the other stuff per the other command line args and defaults)
-      if not args.rpls then
-	 args.rpls = { args.filename }
-      else
-	 table.insert(args.rpls, args.filename)
+      -- for each file being tested
+      --     get a fresh engine and load any rpl files or rpl strings
+      --     load the file being tested
+      --     call the test procedure
+      test.setup(CL_ENGINE)
+      local total_failures, total_tests = 0, 0
+      for _, fn in ipairs(args.filenames) do
+	 local failures, total = test.run(rosie, CL_ENGINE, args, fn)
+	 total_failures = total_failures + failures
+	 total_tests = total_tests + total
       end
-      setup_engine(args);
-      test.setup_and_run(rosie, CL_ENGINE, args)
-      os.exit()
+      if #args.filenames > 1 then
+	 if total_failures~=0 then
+	    print("Total of " .. tostring(total_failures) ..
+	       " tests failed out of " .. tostring(total_tests) .. " attempted")
+	 else
+	    print("All tests passed")
+	 end
+      end
+      os.exit((total_failures==0) and 0 or -1)
    end
    
-   setup_engine(args);
+   cli_common.setup_engine(CL_ENGINE, args);
 
    if args.command == "list" then
       if not args.verbose then greeting(); end
-      local env = CL_ENGINE:lookup()
+      local env = en:lookup()
       ui.print_env(env, args.filter)
       os.exit()
    elseif args.command == "repl" then
       repl_mod = mod.import("repl", rosie_mod)
       if not args.verbose then greeting(); end
-      repl_mod.repl(CL_ENGINE)
+      repl_mod.repl(en)
       os.exit()
    else
       for _,fn in ipairs(args.filename) do
-	 match.process_pattern_against_file(rosie, CL_ENGINE, args, compiled_pattern, fn)
+	 match.process_pattern_against_file(rosie, en, args, compiled_pattern, fn)
       end
    end -- if command is list or repl or other
 end -- function run

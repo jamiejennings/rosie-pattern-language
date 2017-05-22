@@ -28,11 +28,11 @@ mantissa = { [+-]? digit+ "." digit+ }  -- float with digits on either side of r
 -- test mantissa accepts "1.23", "+1.23", "-1.23"
 -- test mantissa rejects "12", "bob", "1."
 
-exponent = { [eE] [+-]? digit+ }
--- test exponent accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
--- test exponent rejects "e0.", "e0a", "e+-10", "Ef"
+exp = { [eE] [+-]? digit+ }
+-- test exp accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
+-- test exp rejects "e0.", "e0a", "e+-10", "Ef"
 
-float = { mantissa exponent? } 
+float = { mantissa exp? } 
 -- test float accepts "6.02e23", "3.00E08", "0.123", "-2.0", "-2.0e1", "0.456e-101"
 -- test float rejects "6.02F23", "3.00E--08", "123"
 -- test float accepts "-1.32", "6.02E23", "+0.314e1"

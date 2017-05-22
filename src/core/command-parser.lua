@@ -90,7 +90,8 @@ function p.create(rosie)
    -- test command
    local cmd_test = parser:command("test")
    :description("Execute pattern tests written within the target rpl file(s)")
-   cmd_test:argument("filename", "RPL filename")
+   cmd_test:argument("filenames", "RPL filenames")
+   :args("+")
    -- trace command
    local cmd_trace = parser:command("trace")
    :description("Match while tracing all steps (generates MUCH output)")

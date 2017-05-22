@@ -7,16 +7,7 @@
 -- AUTHOR: Jamie A. Jennings
 
 local match = {}
-
-function match.set_encoder(rosie, en, name)
-   local encode_fcn = rosie.encoders[name]
-   if encode_fcn==nil then
-      local msg = "invalid output encoder: " .. tostring(name)
-      if ROSIE_DEV then error(msg)
-      else io.write(msg, "\n"); os.exit(-1); end
-   end
-   en:output(encode_fcn)
-end
+local cli_common = import("command-common")
 
 -- FUTURE: use lua_filesystem equivalent instead of this:
 local function readable_file(fn)
@@ -56,7 +47,7 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    
    -- Set up what kind of encoding we want done on the output
    local default_encoder = (args.command=="grep") and "line" or "color"
-   match.set_encoder(rosie, en, args.encoder or default_encoder)
+   cli_common.set_encoder(rosie, en, args.encoder or default_encoder)
    
    local ok, msg = readable_file(infilename)
    if (args.verbose) or (#args.filename > 1) then
