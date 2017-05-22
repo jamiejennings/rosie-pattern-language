@@ -331,6 +331,26 @@ function common.modtableset(tbl, importpath, p, e)
 end
 
 ----------------------------------------------------------------------------------------
+-- Error types
+----------------------------------------------------------------------------------------
+
+common.cerror = recordtype.new(
+   "cerror",
+   {kind = recordtype.NIL,			    -- "error", "warning", "info"
+    ast = recordtype.NIL,
+    message = recordtype.NIL,
+    origin = "<no origin>",			    -- filled in later
+    text = "<no source>",			    -- "
+    line = 1,					    -- "
+    charpos = 1},				    -- "
+   function(ast, message)
+      if type(ast)~="table" or type(message)~="string" then
+	 error("Internal error: improper call to create cerror object")
+      end
+      return common.cerror.factory{ast=ast, message=message}
+   end)
+
+----------------------------------------------------------------------------------------
 -- Binding types: undeclared, pattern, pfunction, environment
 ----------------------------------------------------------------------------------------
 

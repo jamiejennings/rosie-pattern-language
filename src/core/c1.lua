@@ -23,7 +23,7 @@ function c1.process_package_decl(typ, pos, text, subs, fin)
 end
 
 function c1.compile_local(ast, gmr, source, env)
-   assert(not gmr, "rpl grammar allowed a local decl inside a grammar???")
+   assert(not gmr, "the rpl grammar allowed a local decl inside a grammar???")
    local typ, _, _, subs = decode_match(ast)
    assert(typ=="local_")
    local name, pos, text = decode_match(subs[1])

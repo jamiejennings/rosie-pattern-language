@@ -24,6 +24,10 @@ local c1 = require "c1"
 -- Launch a co-routine to compile an astlist
 ---------------------------------------------------------------------------------------------------
 
+-- compile(importpath or nil, astlist, modtable, env) --> success, packagename or nil, messages
+--   where success is boolean, packagename is a string if the astlist defined a module, and
+--   messages is a table of cerror records
+
 local function make_compile(compile_astlist)
    return function(importpath, astlist, modtable, env)
 	     assert(type(importpath)=="string" or importpath==nil)
@@ -56,19 +60,6 @@ end
 -- Coroutine body
 ----------------------------------------------------------------------------------------
 
--- local function make_compile_astlist(compile_ast)
---    return function(astlist, source, env)
--- 	     assert(type(astlist)=="table", "Compiler: first argument not a list of ast's: "..tostring(astlist))
--- 	     assert(type(source)=="string")
--- 	     local results, messages = {}, {}
--- 	     for i,a in ipairs(astlist) do
--- 		results[i], messages[i] = compile_ast(a, source, env)
--- 		if not messages[i] then messages[i] = false; end -- keep messages a proper list: no nils
--- 	     end
--- 	     return results, messages
--- 	  end
--- end
-
 -- N.B. make_compile_expression produces a compiler for expressions meant for top level matching.
 -- The patterns produced are guaranteed to capture something, and the top level capture will be
 -- named "*" UNLESS the expression is an identifier bound to a pattern that is not an alias.  In
@@ -91,16 +82,8 @@ local function make_compile_expression(expression_p, compile_ast)
 	     -- statements, followed by an expression, like scheme's 'begin' form.  If the grammar
 	     -- allowed semi-colons to end statements, this feature would be more usable as
 	     -- convenience for users.
+	     assert(#astlist==1)
 
-	     -- TODO: Do we need to check HERE that we have an expression?  We are now using
-	     -- parse_expression, which will succeed only for an expression.
-	     if (#astlist~=1) then
-		local msgs = {"Error: expression source did not produce a single pattern"}
-		for i, a in ipairs(astlist) do
-		   table.insert(msgs, "Pattern " .. i .. ": " .. writer.reveal_ast(a))
-		end
-		return false, nil, msgs
-	     end
 	     if not expression_p(astlist[1]) then return false, nil, {"Error: not an expression"}; end
 
 	     local c = coroutine.create(compile_ast)
@@ -184,7 +167,7 @@ end
 -- !!! version in which this feature appeared.  That way we can detect mislabeled `rpl x.y`
 -- !!! declarations and abort compilation.
 
--- TODO: Create a thread-level message queue when we create the compiler coroutine, so that
+-- Maybe: Create a thread-level message queue when we create the compiler coroutine, so that
 -- warnings and other messages can be enqueued there via a function call, and not by directly
 -- manipulating a table of strings.
 

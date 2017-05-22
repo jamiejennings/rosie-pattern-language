@@ -23,6 +23,7 @@ local writer = import "writer"
 local common = import "common"
 local decode_match = common.decode_match
 local pattern = common.pattern
+local cerror = common.cerror
 
 local environment = import "environment"	    -- TEMPORARY
 local boundary = environment.boundary
@@ -32,6 +33,8 @@ local bind = environment.bind
 ----------------------------------------------------------------------------------------
 -- Compile-time error reporting
 ----------------------------------------------------------------------------------------
+
+local foo = cerror.new({}, "foo")
 
 local function explain_invalid_charset_escape(a, source, char)
    local msg = "Compile error: invalid escape sequence in character set: \\" .. char
