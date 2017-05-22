@@ -42,46 +42,59 @@ package date
 local alias d = [:digit:]
 
 -- RFC3339 patterns
-year = d{4,4}
--- test year accepts "1960", "1999", "2010", "9999"
--- test year rejects "99", "00", "12345", "year"
+strict_year = d{4,4}
+-- test strict_year accepts "1960", "1999", "2010", "9999"
+-- test strict_year rejects "99", "00", "12345", "year"
 
-month = { {"0"? [1-9]} / {"1" [0-2]} }
--- test month accepts "01", "06", "10", "12", "1", "9"
--- test month rejects "00", "1", "13", "99"
+strict_month = { {"0" [1-9]} / {"1" [0-2]} }
+-- test strict_month accepts "01", "06", "10", "12"
+-- test strict_month rejects "00", "1", "13", "99"
 
-day = {  {"0"? [1-9]}		-- single digit dates
+strict_day = {  {"0" [1-9]}		-- single digit dates
             / {[12][0-9]}		-- most of the two digit dates
             / {"3" [01]} }		-- and the rest
--- test day accepts "01", "06", "10", "16", "20", "29", "31", "1", "9"
--- test day rejects "0", "00", "32", "99"
+-- test strict_day accepts "01", "06", "10", "16", "20", "29", "31"
+-- test strict_day rejects "0", "00", "32", "99"
 
-dashed = { year "-" month "-" day }
--- test dashed accepts "2017-04-28", "1999-10-31"
--- test dashed rejects "99-01-01", "2010-15-03", "1999-12-32"
-
-slashed = { year "/" month "/" day }
--- test slashed accepts "2017/04/28", "1999/10/31"
--- test slashed rejects "99/01/01", "2010/15/03", "1999/12/32"
+rfc2822 = { strict_year "-" strict_month "-" strict_day }
+-- test rfc2822 accepts "2017-04-28", "1999-10-31"
+-- test rfc2822 rejects "99-01-01", "2010-15-03", "1999-12-32"
 
 -- RFC2822 + alternatives
 day_shortname = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
-day_longname = "Monday" / "Tuesday" / "Wendesday" / "Thursday" / "Friday" / "Saturday" / "Sunday"
+day_longname = "Monstrict_day" / "Tuesstrict_day" / "Wendesstrict_day" / "Thursstrict_day" / "Fristrict_day" / "Saturstrict_day" / "Sunstrict_day"
 day_name = { day_shortname / day_longname }
 month_shortname = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
 month_longname = "January" / "February" / "March" / "April" / "May" / "June" / "July" / "August" / "September" / "October" / "November" / "December"
-month_name =  month_longname / month_shortname
+month_name = { month_longname / month_shortname }
 
-altday = d{1,2}
--- test altday accepts "0", "00", "1", "01", "50", "99"
--- test altday rejects "", "100", "1111"
-altdate = ( day_shortname "," )? altday month_shortname year
--- test altdate accepts "Fri, 28 Apr 2017", "Fri, 31 Dec 1999", "31 Dec 2001"
--- test altdate rejects "Fri 28, Apr 2010", "Tue, Feb 31st 2001", "Dec 31 2001"
+-- non-strict patterns for matching numeric date components:
+day = {"3" [01]} /
+      {[12] [0-9]} /
+      {"0"? [1-9]}
+month = {"1" [0-2]} /
+	{"0"? [1-9]}
+year = d{4,4} /
+       d{2,2}
+-- test day accepts "09", "1", "01", "22", "30", "31"
+-- test day rejects "", "100", "1111", "32", "0", "50"
 
+alt = ( day_name "," )? day month_name year
+-- test alt accepts "Fri, 28 Apr 2017", "Fri, 31 Dec 1999", "31 Dec 2001"
+-- test alt rejects "Dec 31 2001", "Monday, May 22, 2017"
+-- test alt rejects "Fri 28, Apr 2010", "Tue, Feb 31st 2001", 
 
-std_US = month_name day year?
+dashed = { year "-" month "-" day }
+-- test dashed accepts "2017-04-28", "1999-10-31"
+-- test dashed rejects "77899-01-01", "2010-15-03", "1999-12-32"
 
-any = dashed / slashed / std_US
+slashed = { year "/" month "/" day }
+-- test slashed accepts "2017/04/28", "1999/10/31"
+-- test slashed rejects "77899/01/01", "2010/15/03", "1999/12/32"
+
+std_US = month_name day ","? year?
+-- test std_US accepts "April 1, 1900", "Jan 23 2017"
+
+any = dashed / slashed / std_US / alt / rfc2822
 
 
