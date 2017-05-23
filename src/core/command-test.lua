@@ -39,8 +39,7 @@ end
 function p.setup(en)
    local test_patterns =
 		[==[
-			searchOrder = { "R"? { "BFS" / "DFS" } }
-			containsKeyword = "contains" identifier searchOrder?
+			containsKeyword = "contains" identifier
 			testKeyword = "accepts" / "rejects"
 			test_line = "-- test" identifier (testKeyword / containsKeyword) quoted_string (ignore "," ignore quoted_string)*
 		]==]
@@ -76,16 +75,13 @@ function p.run(rosie, en, args, filename)
       if pos == 0 then return false end
       return true
    end
-		local function test_contains_ident(exp, q, id, order)
-			local function searchForID_DFS(tbl, id, rev)
+		local function test_contains_ident(exp, q, id)
+			local function searchForID(tbl, id)
 				-- tbl MUST BE "subs" table from a match
 				local found = false
-				local last = #tbl
-				local start, stop, step = 1, #tbl, 1
-				if rev then start, stop, step = #tbl, 1, -1 end
-				for i = start, stop, step do
+				for i = 1, #tbl do
 					if tbl[i].subs ~= nil then
-						found = searchForID_DFS(tbl[i].subs, id)
+						found = searchForID(tbl[i].subs, id)
 						if found then break end
 					end
 					if tbl[i].type == id then
@@ -95,19 +91,8 @@ function p.run(rosie, en, args, filename)
 				end
 				return found
 			end
-			local function searchForID_BFS(tbl, id, rev)
-				-- TODO: write BFS algo
-				return searchForID_DFS(tbl, id, rev)
-			end
 			local res, pos = test_engine:match(exp, q)
-			local rev = order:len() == 4
-			local dfs = order:find("DFS")
-			-- if no order is given, defaults to BFS
-			if dfs ~= nil then
-				return searchForID_DFS(res.subs, id, rev)
-			else
-				return searchForID_BFS(res.subs, id, rev)
-			end
+			return searchForID(res.subs, id)
 		end
    local test_funcs = {rejects=test_rejects_exp,accepts=test_accepts_exp}
    local failures, total = 0, 0
@@ -121,16 +106,11 @@ function p.run(rosie, en, args, filename)
       if testType == "containsKeyword" then
 				-- test contains
 				local containedIdentifier = m.subs[2].subs[1].text
-				local searchOrder = "BFS"
-				if #m.subs[2].subs > 1 then
-					-- m.subs[2].subs[2].text = search order
-                    searchOrder = m.subs[2].subs[2].text
-				end
 				for i = literals, #m.subs do
 					total = total + 1
 					local teststr = m.subs[i].text
 					teststr = common.unescape_string(teststr)
-					if not test_contains_ident(testIdentifier, teststr, containedIdentifier, searchOrder) then
+					if not test_contains_ident(testIdentifier, teststr, containedIdentifier) then
 						print("FAIL: " .. testIdentifier .. " did not contain " .. containedIdentifier .. " from " .. teststr)
 						failures = failures + 1
 					end
