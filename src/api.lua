@@ -15,6 +15,7 @@ io = require "io"
 debug = require "debug"
 rosie = require "rosie"
 recordtype = rosie.import "recordtype"
+lpeg = rosie.import "lpeg"
 
 if ROSIE_DEV then
    -- This file is being loaded into a Rosie development environment, so rosie is available:

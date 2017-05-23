@@ -13,6 +13,7 @@ local string = require "string"
 local lpeg = require "lpeg"
 local common = require "common"
 local decode_match = common.decode_match
+local throw = common.throw_error
 
 function c1.process_package_decl(typ, pos, text, subs, fin)
    assert(typ=="package_decl")

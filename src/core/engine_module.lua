@@ -21,23 +21,24 @@
 -- against input data.  An engine is the primary abstraction for using Rosie
 -- programmatically in Lua.  (Recall that the REPL, CLI, and API are written in Lua.)
 --
+-- The engine functions never raise an error when properly called, unless there's an internal
+-- rosie bug of course.  The Rosie C API calls these functions properly, as does the CLI and
+-- REPL.  Interactive use of these functions by Lua programmers may trigger engine_error.
+-- 
 -- engine.new(optional_name) creates a new engine with only a "base" environment
 --   returns id which is a string;
---   never raises error (unless for internal rosie bug)
 -- e:name() returns the engine name (a string) or nil if not set
---   never raises error (unless for internal rosie bug)
--- e:id() returns the engine id
---   never raises error (unless for internal rosie bug)
--- 
+-- e:id() returns the engine id, a string that uniquely identifies the engine within the Lua state
+--   in which it was created.
+--
 -- e:load(rpl_string) compiles rpl_string in the current engine environment
---   the rpl_string has file semantics
---   returns messages where messages is a table of strings
---   raises error if rpl_string fails to compile
+--   the rpl_string has "file semantics", i.e. it can be a module.
+--   returns success code and a list of cerror objects
 -- 
 -- e:compile(expression, flavor) compiles the rpl expression
---   returns an rplx object and messages
---   raises error if expression fails to compile
---   API only: returns the (string) id of an rplx object with indefinite extent;
+--   returns an rplx object or nil, and a list of cerror objects
+--   API only: instead of the rplx object, returns the (string) id of an rplx object with
+--   indefinite extent; 
 --   The flavor argument, if nil or "match" compiles expression unmodified.  Otherwise:
 --     flavor=="search" compiles {{!expression .}* expression}+
 --     and more flavors can be added later, e.g.
@@ -45,27 +46,27 @@
 --   The flavor feature is a convenience function that is a stopgap until we have macros/functions 
 --
 -- r:match(input, optional_start) like e:match but r is a compiled rplx object
---   returns matches, leftover;
---   never raises an error (unless for internal rosie bug)
+--   returns match or nil, and leftover
 --
--- e:match(expression, input, optional_start, optional_flavor)
---   behaves like: r=e:compile(expression, optional_flavor); r:match(input, optional_start)
---   API only: expression can be an rplx id, in which case that compiled expression is used
---   returns matches, leftover;
---   raises error if expression fails to compile
+-- e:match(expression, input, optional_start, optional_flavor, optional_acc0, optional_acc1)
+--   behaves like: r=e:compile(expression, optional_flavor);
+--                 r:match(input, optional_start, optional_acc0, optional_acc1)
+--   optional_acc0 is an integer accumulator of total match time
+--   optional_acc1 is an integer accumulator of match time spent in the lpeg vm
+-- ???  API only: expression can be an rplx id, in which case that compiled expression is used
+--   returns match or nil, leftover;
 -- 
 -- e:tracematch(expression, input, optional_start, optional_flavor) like match, with tracing (was eval)
---   API only: expression can be an rplx id, in which case that compiled expression is used
---   returns matches, leftover, trace;
---   raises error if expression fails to compile
+-- ??? API only: expression can be an rplx id, in which case that compiled expression is used
+--   returns match or nil, leftover, trace (a json object or a string, depending on output encoding);
 -- 
 -- e:output(optional_formatter) sets or returns the formatter (a function)
 --   an engine calls formatter on each successful match result;
---   raises error if optional_formatter is not a function
+--
 -- e:lookup(optional_identifier) returns the definition of optional_identifier or the entire environment
---   never raises an error (unless for internal rosie bug)
+--
 -- e:clear(optional_identifier) erases the definition of optional_identifier or the entire environment
---   never raises an error (unless for internal rosie bug)
+-- 
 
 -- FUTURE:
 --
@@ -113,45 +114,48 @@ local engine_error				    -- forward reference
 -- refactoring) syntax module.
 
 local function compile_search(en, pattern_exp)
-   error("compile_search NOT REWRITTEN YET")
-   local parse_exp, env = en.compiler.parser.parse_expression, en._env
-   local env = environment.extend(env)		    -- new scope, which will be discarded
+   local parse = en.compiler.parser.parse_expression
+   local compile = en.compiler.compiler.compile_expression
+   local env = environment.extend(en._env)	    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
-   -- TODO: do something with leftover?
+   -- What to do with leftover?
    local astlist, orig_astlist, warnings, leftover = parse_exp(pattern_exp)
-   if not astlist then return nil, warnings, leftover; end
-   local pat, msgs = en.compiler.compile_expression(astlist, orig_astlist, pattern_exp, env)
-   if not pat then return nil, msgs; end
+   if not astlist then return false, warnings, leftover; end
+   local pat, msgs = compile(nil, astlist, en._modtable, env)
+   if not pat then return false, msgs; end
    local replacement = pat.ast
    -- Next, transform pat.ast
-   local astlist, orig_astlist = rpl_parser("{{!e .}* e}+")
+   local astlist, orig_astlist = parse("{{!e .}* e}+")
    assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
    local template = astlist[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   return en.compiler.compile_expression({grep_ast}, orig_astlist, "SEARCH(" .. pattern_exp .. ")", env)
+   return compile(nil, grep_ast, en._modtable, env)
 end
 
 local function compile_match(en, source)
    local parse = en.compiler.parser.parse_expression
-   local astlist, original_astlist, warnings = parse(source)
-   if not astlist then engine_error(table.concat(warnings, "\n")); end
-   return en.compiler.compile_expression(nil, astlist, en._modtable, en._env)
+   local compile = en.compiler.compile_expression
+   local astlist, original_astlist, messages, leftover = parse(source)
+   assert(type(messages)=="table")
+   if not astlist then return false, messages; end
+   local success, pat, messages = compile(nil, astlist, en._modtable, en._env)
+   return pat, messages
 end
 
 local function engine_compile(en, expression, flavor)
    flavor = flavor or "match"
    if type(expression)~="string" then engine_error(en, "Expression not a string: " .. tostring(expression)); end
    if type(flavor)~="string" then engine_error(en, "Flavor not a string: " .. tostring(flavor)); end
-   local ok, pat, msgs
+   local pat, msgs
    if flavor=="match" then
-      ok, pat, msgs = compile_match(en, expression)
+      pat, msgs = compile_match(en, expression)
    elseif flavor=="search" then
-      ok, pat, msgs = compile_search(en, expression)
+      pat, msgs = compile_search(en, expression)
    else
       engine_error(en, "Unknown flavor: " .. flavor)
    end
-   if not ok then return en:_error(table.concat(msgs, '\n')); end
+   if not pat then return false, msgs; end
    return rplx.new(en, pat), msgs
 end
 
@@ -176,7 +180,7 @@ local function _engine_match(e, pat, input, start, total_time_accum, lpegvm_time
              total_time_accum, 
              lpegvm_time_accum
    end
-   return false, 1, total_time_accum, lpegvm_time_accum;
+   return false, #input, total_time_accum, lpegvm_time_accum;
 end
 
 -- TODO: Maybe cache expressions?
@@ -191,7 +195,7 @@ local function make_matcher(processing_fcn)
 	     elseif type(expression)=="string" then -- expression has not been compiled
 		-- If we cache, look up expression in the cache here.
 		local r, msgs = e:compile(expression, flavor)
-		if not r then engine_error(e, table.concat(msgs, '\n')); end
+		if not r then return false, msgs; end
 		return processing_fcn(e, r._pattern, input, start, total_time_accum, lpegvm_time_accum)
 	     else
 		engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
@@ -228,42 +232,38 @@ local function load_input(e, target_env, input, importpath, modonly)
    assert(type(e.searchpath)=="string", "engine search path not a string")
    local messages = {}
    local parser = e.compiler.parser
-   local astlist, original_astlist, warnings, leftover
+   local astlist, original_astlist, leftover
    if type(input)=="string" then
       astlist, original_astlist, warnings, leftover = parser.parse_statements(input)
    elseif type(input)=="table" then
       astlist, original_astlist, warnings, leftover = input, input, {}, 0
    else
-      engine_error(e, "Error: input not a string: " .. tostring(input));
+      engine_error(e, "Error: input not a string or astlist: " .. tostring(input));
    end
+   assert(type(warnings)=="table")
    if not astlist then
-      engine_error(e, table.concat(warnings, '\n')) -- in this case, warnings contains errors
+      return false, nil, warnings		    -- modname is nil
    end
    -- load_dependencies has side-effects on e._modtable and target_env
    load_dependencies(e, astlist, target_env, messages, importpath)
    -- now we can compile the input
    local success, modname, messages = e.compiler.load(importpath, astlist, e._modtable, target_env)
+   assert(type(messages)=="table", "messages is: " .. tostring(messages))
+   table.move(messages, 1, #messages, #warnings+1, warnings)
    if not success then
-      engine_error(e, "package " .. (importpath or "<top level>") .. " failed to compile:\n" .. table.concat(messages, "\n"))
+      common.note(string.format("FAILED TO COMPILE %s", modname))
+      return false, modname, warnings
    end
    if not modname then
       if modonly then
-	 engine_error(e, (importpath or "<top level>") .. " is not a module (no package declaration found)")
+	 local msg = (importpath or "<top level>") .. " is not a module (no package declaration found)"
+	 return false, modname, msg --{cerror.new("error", astlist, msg)}
       else
 	 modname = "<top level>"		    -- for display purposes
       end
    end
-   if success then
-      assert(type(messages)=="table")
-      common.note(string.format("COMPILED %s", modname))
-      table.move(messages, 1, #messages, #warnings+1, warnings)
-      return modname, warnings
-   else
-      common.note(string.format("FAILED TO COMPILE %s", modname))
-      assert(type(messages)=="table", "messages is: " .. tostring(messages))
-      table.move(messages, 1, #messages, #warnings+1, warnings)
-      engine_error(e, table.concat(warnings, '\n'))
-   end
+   common.note(string.format("COMPILED %s", modname))
+   return true, modname, warnings
 end
 
 load_dependencies =
@@ -332,14 +332,9 @@ import_dependency =
 local function get_file_contents(e, filename, nosearch)
    if nosearch or util.absolutepath(filename) then
       local data, msg = util.readfile(filename)
-      if not data then engine_error(e, msg); end
-      return filename, data
+      return filename, data, msg		    -- data could be nil
    else
-      local actual_path, data = common.get_file(filename, e.searchpath, "")
-      if not actual_path then
-	 engine_error(e, "Could not find " .. filename .. " on search path")
-      end
-      return actual_path, data
+      return common.get_file(filename, e.searchpath, "")
    end
 end
 
@@ -347,9 +342,10 @@ local function load_file(e, filename, nosearch)
    if type(filename)~="string" then
       engine_error(e, "file name argument not a string: " .. tostring(filename))
    end
-   local actual_path, source = get_file_contents(e, filename, nosearch)
-   local modname, warnings = load_input(e, e._env, source, filename)
-   return modname, warnings, actual_path
+   local actual_path, source, msg = get_file_contents(e, filename, nosearch)
+   if not source then return false, nil, msg, actual_path; end
+   local success, modname, warnings = load_input(e, e._env, source, filename)
+   return success, modname, warnings, actual_path
 end
 
 ----------------------------------------------------------------------------------------

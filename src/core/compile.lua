@@ -10,8 +10,8 @@ local string = require "string"
 local coroutine = require "coroutine"
 local common = require "common"
 local pattern = common.pattern
+local cerror = common.cerror
 local lpeg = require "lpeg"
-local writer = require "writer"
 
 local environment = require "environment"
 local lookup = environment.lookup
@@ -45,7 +45,8 @@ local function make_compile(compile_astlist)
 		   return success, packagename, messages -- message may contain compiler warnings
 		else
 		   messages = packagename	    -- error message is second return value
-		   assert(type(messages)=="string", "messages is: " .. tostring(messages))
+--		   assert(type(messages)=="string", "messages is: " .. tostring(messages))
+		   assert(cerror.is(messages))
 		   return false, nil, {messages}
 		end
 	     else

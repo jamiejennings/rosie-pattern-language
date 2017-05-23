@@ -19,11 +19,10 @@ local P, V, C, S, R, Cmt, B =
 local locale = lpeg.locale()
 
 local util = import "util"
-local writer = import "writer"
 local common = import "common"
 local decode_match = common.decode_match
 local pattern = common.pattern
-local cerror = common.cerror
+local throw = common.throw_error
 
 local environment = import "environment"	    -- TEMPORARY
 local boundary = environment.boundary
@@ -34,12 +33,11 @@ local bind = environment.bind
 -- Compile-time error reporting
 ----------------------------------------------------------------------------------------
 
-local foo = cerror.new({}, "foo")
-
 local function explain_invalid_charset_escape(a, char)
-   local msg = "Compile error: invalid escape sequence in character set: \\" .. char
-   msg = msg .. '\nin expression: ' .. writer.reveal_ast(a)
-   coroutine.yield(false, msg)			    -- throw
+   local msg = "invalid escape sequence in character set: \\" .. char
+--   msg = msg .. '\nin expression: ' .. writer.reveal_ast(a)
+--   coroutine.yield(false, msg)			    -- throw
+   throw(msg, a)
 end
 
 local function explain_quantified_limitation(a, maybe_rule)
@@ -47,12 +45,14 @@ local function explain_quantified_limitation(a, maybe_rule)
    local name, errpos, text = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos("<no source>", errpos)
    local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
-   local msg = "Compile error: pattern with quantifier can match the empty string: " ..
-      rule_explanation .. "\n" .. writer.reveal_ast(a) .. "\n" ..
-      string.format("At line %d:\n", lnum) ..
-      string.format("%s\n", line) ..
-      string.rep(" ", pos) .. "^"
-   coroutine.yield(false, msg)			    -- throw
+   local msg = "pattern with quantifier can match the empty string: "
+      -- ..
+      -- rule_explanation .. "\n" .. writer.reveal_ast(a) .. "\n" ..
+      -- string.format("At line %d:\n", lnum) ..
+      -- string.format("%s\n", line) ..
+      -- string.rep(" ", pos) .. "^"
+--   coroutine.yield(false, msg)			    -- throw
+   throw(msg, a)
 end
 
 local function explain_repetition_error(a)
@@ -61,34 +61,40 @@ local function explain_repetition_error(a)
    local line, pos, lnum = util.extract_source_line_from_pos("<no source>", errpos)
    local min = tonumber(rep_args[1]) or 0
    local max = tonumber(rep_args[2])
-   local msg = "Compile error: integer quantifiers must be positive, and min <= max \n" ..
-      "Error is in expression: " .. writer.reveal(a) .. "\n" ..
-      string.format("At line %d:\n", lnum) ..
-      string.format("%s\n", line) ..
-      string.rep(" ", pos-1) .. "^"
-   coroutine.yield(false, msg)			    -- throw
+   local msg = "integer quantifiers must be positive, and min <= max" 
+   --    ..
+   --    "Error is in expression: " .. writer.reveal(a) .. "\n" ..
+   --    string.format("At line %d:\n", lnum) ..
+   --    string.format("%s\n", line) ..
+   --    string.rep(" ", pos-1) .. "^"
+   -- coroutine.yield(false, msg)			    -- throw
+   throw(msg, a)
 end
 
 local function explain_undefined_identifier(a)
    assert(a, "did not get ast in explain_undefined_identifier")
    local name, errpos, text = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos("no source", errpos)
-   local msg = "Compile error: reference to undefined identifier: " .. text .. "\n" ..
-      string.format("At line %d:\n", lnum) ..
-      string.format("%s\n", line) ..
-      string.rep(" ", pos-1) .. "^"
-   coroutine.yield(false, msg)				    -- throw
+   local msg = "reference to undefined identifier: " .. text 
+   --    .. "\n" ..
+   --    string.format("At line %d:\n", lnum) ..
+   --    string.format("%s\n", line) ..
+   --    string.rep(" ", pos-1) .. "^"
+   -- coroutine.yield(false, msg)				    -- throw
+   throw(msg, a)
 end
 
 local function explain_undefined_charset(a)
    assert(a, "did not get ast in explain_undefined_charset")
    local _, errpos, name, subs = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos("source", errpos)
-   local msg = "Compile error: named charset not defined: " .. name .. "\n" ..
-      string.format("At line %d:\n", lnum) ..
-      string.format("%s\n", line) ..
-      string.rep(" ", pos-1) .. "^"
-   coroutine.yield(false, msg)				    -- throw
+   local msg = "named charset not defined: " .. name
+   --    .. "\n" ..
+   --    string.format("At line %d:\n", lnum) ..
+   --    string.format("%s\n", line) ..
+   --    string.rep(" ", pos-1) .. "^"
+   -- coroutine.yield(false, msg)				    -- throw
+   throw(msg, a)
 end
 
 local function explain_unknown_quantifier(a)
@@ -96,11 +102,13 @@ local function explain_unknown_quantifier(a)
    local name, errpos, text, subs = decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos("source", errpos)
    local q = subs[2]				    -- IS THIS RIGHT?
-   local msg = "Compile error: unknown quantifier: " .. q .. "\n" ..
-      string.format("At line %d:\n", lnum) ..
-      string.format("%s\n", line) ..
-      string.rep(" ", pos-1) .. "^"
-   coroutine.yield(false, msg)				    -- throw
+   local msg = "unknown quantifier: " .. q 
+   --    .. "\n" ..
+   --    string.format("At line %d:\n", lnum) ..
+   --    string.format("%s\n", line) ..
+   --    string.rep(" ", pos-1) .. "^"
+   -- coroutine.yield(false, msg)				    -- throw
+   throw(msg, a)
 end
 
 local function explain_grammar_error(a, message)
@@ -109,13 +117,16 @@ local function explain_grammar_error(a, message)
    local line, pos, lnum = util.extract_source_line_from_pos("source", errpos)
    local maybe_rule = message:match("'%w'$")
    local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
-   local fmt = "Compile error: %s\n" .. writer.reveal_ast(a) --.. "\nAt line %d:\n%s\n" .. string.rep(" ", pos) .. "^"
+   local fmt = "%s\n"
+--      .. writer.reveal_ast(a) --.. "\nAt line %d:\n%s\n" .. string.rep(" ", pos) .. "^"
    -- Full set of args: expl, lnum, line, pos
    if message:find("may be left recursive") then
       local msg = string.format(fmt, message)
-      coroutine.yield(false, msg)		    -- throw
+--      coroutine.yield(false, msg)		    -- throw
+      throw(msg, a)
    else
-      coroutine.yield(false, "unexpected error raised by lpeg: " .. tostring(message))
+--      coroutine.yield(false, "unexpected error raised by lpeg: " .. tostring(message))
+      throw(msg, a)
    end
 end
 
@@ -406,7 +417,7 @@ end
 
 function c0.compile_syntax_error(a, gmr, env)
    assert(a, "did not get ast in compile_syntax_error")
-   error("Compiler called on source code with errors! " .. writer.reveal_exp(a))
+   throw("Compiler called on source code with errors! ", a)
 end
 
 function c0.compile_grammar_expression(a, gmr, env)
@@ -477,7 +488,7 @@ function c0.compile_grammar(a, gmr, env)
       return pat, msg
    else
       -- should never get here.  when compile_grammar_expression fails, it throws.
-      coroutine.yield(false, "compilation of grammar failed -- no additional information is available")
+      assert(false, "compilation of grammar failed -- no additional information is available")
    end
 end
 
@@ -543,9 +554,7 @@ end
 local function compile_rhs(a, gmr, env, iname)
    assert(type(a)=="table", "did not get ast in compile_rhs: " .. tostring(a))
    if not c0.expression_p(a) then
-      local msg = string.format('Compile error: expected an expression, but received %q',
-				writer.reveal_ast(a))
-      error(msg)
+      throw('expected an expression', a)
    end
    local pat = c0.compile_exp(a, gmr, env)
    local rhs_name = a.type

@@ -41,10 +41,14 @@ function common.get_file(filepath, searchpath, extension)
    local dirs = common.parse_path(searchpath)
    for _, dir in ipairs(dirs) do
       local fullpath = dir .. common.dirsep .. filepath .. extension
-      local contents = util.readfile(fullpath)
-      if contents then return fullpath, contents; end
+      local contents, msg = util.readfile(fullpath)
+      if contents then
+	 return fullpath, contents
+      else
+	 return fullpath, nil, msg
+      end
    end
-   return nil
+   return nil, nil, "file not found on search path"
 end
 
 
@@ -343,12 +347,20 @@ common.cerror = recordtype.new(
     text = "<no source>",			    -- "
     line = 1,					    -- "
     charpos = 1},				    -- "
-   function(ast, message)
+   function(kind, ast, message)
+      local valid = {error=true, warning=true, info=true}
       if type(ast)~="table" or type(message)~="string" then
 	 error("Internal error: improper call to create cerror object")
+      elseif not valid[kind] then
+	 error("Internal error: improper 'kind' of cerror object")
       end
-      return common.cerror.factory{ast=ast, message=message}
+      return common.cerror.factory{kind=kind, ast=ast, message=message}
    end)
+
+function common.throw_error(msg, ast)
+   coroutine.yield(false, common.cerror.new("error", ast, msg))
+end
+
 
 ----------------------------------------------------------------------------------------
 -- Binding types: undeclared, pattern, pfunction, environment
