@@ -87,7 +87,7 @@ local function make_compile_expression(expression_p, compile_ast)
 	     if not expression_p(astlist[1]) then return false, nil, {"Error: not an expression"}; end
 
 	     local c = coroutine.create(compile_ast)
-	     local no_lua_error, pat, message = coroutine.resume(c, astlist[1], "<no source>", env)
+	     local no_lua_error, pat, message = coroutine.resume(c, astlist[1], env)
 	     if no_lua_error then
 		if pat then
 		   if not pattern.is(pat) then

@@ -32,7 +32,7 @@ function c1.compile_local(ast, gmr, source, env)
    return pat
 end
 
-function c1.compile_ast(ast, source, env)
+function c1.compile_ast(ast, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
 		      local_ = c1.compile_local;
@@ -41,7 +41,7 @@ function c1.compile_ast(ast, source, env)
 		      exp=c0.compile_exp;
 		      default=c0.compile_exp;
 		   }
-   return common.walk_ast(ast, functions, false, source, env)
+   return common.walk_ast(ast, functions, false, env)
 end
 
 ----------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ function c1.load(importpath, astlist, modtable, env)
    end -- while skipping import_decls
    local results, messages = {}, {}
    repeat
-      results[i], message = c1.compile_ast(astlist[i], "(no source)", env)
+      results[i], message = c1.compile_ast(astlist[i], env)
       if message then table.insert(messages, message); end
       i=i+1
    until not astlist[i]
