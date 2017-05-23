@@ -20,6 +20,7 @@ termcolor = import("termcolor")
 test = import("test")
 json = require "cjson"
 
+test.dofile(ROSIE_HOME .. "/test/lib-test.lua")
 test.dofile(ROSIE_HOME .. "/test/api-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
   print("\n\n*** EVAL IS NOT BEING TESTED\n\n")
@@ -28,7 +29,7 @@ test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
 test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
 test.dofile(ROSIE_HOME .. "/test/repl-test.lua")
 
-passed = test.print_grand_total(results)
+passed = test.print_grand_total()
 
 -- When running Rosie interactively (i.e. development mode), do not exit.  Otherwise, these tests
 -- were launched from the command line, so we should exit with an informative status.
