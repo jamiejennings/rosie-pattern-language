@@ -85,7 +85,8 @@ function p.setup_engine(en, args)
 	 io.stdout:write(compiled_pattern, "\n")
 	 os.exit(-4)
       elseif not compiled_pattern then
-	 io.stdout:write(table.concat(msgs, '\n'), '\n')
+	 table.print(msgs); print()	  -- FIXME (TEMPORARY)
+--	 io.stdout:write(table.concat(msgs, '\n'), '\n')
 	 os.exit(-4)
       end
    end

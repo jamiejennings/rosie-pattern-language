@@ -176,9 +176,10 @@ function repl.repl(en)
 			assert(tname=="common.dqstring")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
 			input_text = common.unescape_string(input_text:sub(2, -2))
-			local ok, rplx = pcall(en.compile, en, exp)
-			if not ok then
-			   io.write(rplx, "\n") -- syntax and compile errors
+			local rplx, msgs = en:compile(exp)
+			if not rplx then
+			   table.print(msgs); print() -- FIXME (TEMPORARY)
+			   --io.write(rplx, "\n") -- syntax and compile errors
 			else
 			   local m, left = en:match(rplx, input_text)
 			--       if debug and (not m) then
@@ -200,8 +201,9 @@ function repl.repl(en)
 	       io.write("Repl: Unknown command (Type .help for help.)\n")
 	    end -- switch on command
 	 elseif name=="statements" then
-	    local ok, messages = pcall(en.load, en, text);
-	    io.write(messages, "\n")
+	    local ok, pkg, messages = en:load(text);
+	    table.print(messages)		    -- FIXME (TEMPORARY)
+--	    io.write(messages, "\n")
 	 else
 	    io.write("Repl: internal error (name was '" .. tostring(name) .. "')\n")
 	 end -- switch on type of input received
