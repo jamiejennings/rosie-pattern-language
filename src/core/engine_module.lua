@@ -120,15 +120,15 @@ local function compile_search(en, pattern_exp)
    local env = environment.extend(en._env)	    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
    -- What to do with leftover?
-   local astlist, orig_astlist, warnings, leftover = parse_exp(pattern_exp)
-   if not astlist then return false, warnings, leftover; end
-   local pat, msgs = compile(nil, astlist, en._modtable, env)
+   local ast, orig_ast, warnings, leftover = parse_exp(pattern_exp)
+   if not ast then return false, warnings, leftover; end
+   local pat, msgs = compile(nil, ast, en._modtable, env)
    if not pat then return false, msgs; end
    local replacement = pat.ast
    -- Next, transform pat.ast
-   local astlist, orig_astlist = parse("{{!e .}* e}+")
-   assert(type(astlist)=="table" and astlist[1] and (not astlist[2]))
-   local template = astlist[1]
+   local ast, orig_ast = parse("{{!e .}* e}+")
+   assert(type(ast)=="table" and ast.subs and ast.subs[1] and (not ast.subs[2]))
+   local template = ast.subs[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
    return compile(nil, grep_ast, en._modtable, env)
@@ -137,10 +137,10 @@ end
 local function compile_match(en, source)
    local parse = en.compiler.parser.parse_expression
    local compile = en.compiler.compile_expression
-   local astlist, original_astlist, messages, leftover = parse(source)
+   local ast, original_ast, messages, leftover = parse(source)
    assert(type(messages)=="table")
-   if not astlist then return false, messages; end
-   local success, pat, messages = compile(nil, astlist, en._modtable, en._env)
+   if not ast then return false, messages; end
+   local success, pat, messages = compile(nil, ast, en._modtable, en._env)
    return pat, messages
 end
 
@@ -233,25 +233,26 @@ local function load_input(e, target_env, input, importpath, modonly)
    assert(type(e.searchpath)=="string", "engine search path not a string")
    local messages = {}
    local parser = e.compiler.parser
-   local astlist, original_astlist, leftover
+   local ast, original_ast, leftover
    if type(input)=="string" then
-      astlist, original_astlist, warnings, leftover = parser.parse_statements(input)
+      ast, original_ast, warnings, leftover = parser.parse_statements(input)
    elseif type(input)=="table" then
-      astlist, original_astlist, warnings, leftover = input, input, {}, 0
+      ast, original_ast, warnings, leftover = input, input, {}, 0
    else
-      engine_error(e, "Error: input not a string or astlist: " .. tostring(input));
+      engine_error(e, "Error: input not a string or ast: " .. tostring(input));
    end
    assert(type(warnings)=="table")
-   if not astlist then
+   if not ast then
       return false, nil, {cerror.new("syntax", {}, table.concat(warnings, "\n"))}
    end
    table.move(warnings, 1, #warnings, #messages+1, messages)
+   assert(type(ast)=="table")
    -- load_dependencies has side-effects on e._modtable, target_env, and messages
-   if not load_dependencies(e, astlist, target_env, messages, importpath) then
+   if not load_dependencies(e, ast, target_env, messages, importpath) then
       return false, nil, messages
    end
    -- now we can compile the input
-   local success, modname, more_messages = e.compiler.load(importpath, astlist, e._modtable, target_env)
+   local success, modname, more_messages = e.compiler.load(importpath, ast, e._modtable, target_env)
    assert(type(more_messages)=="table", "messages is: " .. tostring(more_messages))
    table.move(more_messages, 1, #more_messages, #messages+1, messages)
    if not success then
@@ -260,7 +261,7 @@ local function load_input(e, target_env, input, importpath, modonly)
    end
    if modonly and (not modname) then
       local msg = (importpath or "<top level>") .. " is not a module (no package declaration found)"
-      table.insert(messages, cerror.new("error", astlist, msg))
+      table.insert(messages, cerror.new("error", ast, msg))
       return false, modname, msg, messages
    end
    common.note(string.format("COMPILED %s", modname or "<top level>"))
@@ -268,11 +269,11 @@ local function load_input(e, target_env, input, importpath, modonly)
 end
 
 load_dependencies =
-   function(e, astlist, target_env, messages, importpath)
-      local deps = e.compiler.parser.parse_deps(e.compiler.parser, astlist)
+   function(e, ast, target_env, messages, importpath)
+      local deps = e.compiler.parser.parse_deps(e.compiler.parser, ast)
       if not deps then return true; end
       for _, dep in ipairs(deps) do
-	 local ok, modname, new_messages = maybe_load_dependency(e, astlist, target_env, dep, importpath);
+	 local ok, modname, new_messages = maybe_load_dependency(e, ast, target_env, dep, importpath);
 	 table.move(new_messages, 1, #new_messages, #messages+1, messages)
 	 if not ok then return false; end
       end
@@ -283,7 +284,7 @@ end
       
 -- find and load any missing dependency
 maybe_load_dependency =
-   function(e, astlist, target_env, dep, importpath)
+   function(e, ast, target_env, dep, importpath)
       local messages = {}
       common.note("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
       local modname, modenv = e:modtableref(dep.importpath)
@@ -381,8 +382,9 @@ end
 
 local function parse_identifier(en, str)
    local m = en.compiler.parser.parse_expression(str)
-   if m and #m==1 then
-      m = m[1]
+   if m and m.subs and m.subs[1] then
+      assert(m.type=="rpl_expression")
+      m = m.subs[1]
       if m.type=="ref" then
 	 return m.text, nil
       elseif m.type=="extref" then

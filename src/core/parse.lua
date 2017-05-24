@@ -208,7 +208,9 @@ function parse.core_parse(source)
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
    if #errlist==0 then
-      return astlist, {}, leftover		    -- 2nd return value is empty table of messages
+      return common.create_match("core", 1, source, table.unpack(astlist)),
+             {},				    -- 2nd return value is empty table of messages
+	     leftover
    else
       assert(false, "Core parser reports syntax errors:\n" ..
 	     util.table_to_pretty_string(errlist) .. "\n")
@@ -216,13 +218,12 @@ function parse.core_parse(source)
 end
 
 function parse.core_parse_expression(source)
-   local astlist, warnings, leftover = parse.core_parse(source)
-   if not astlist then return nil, warnings, leftover; end -- warnings contains errors in this case
-   assert(type(astlist)=="table")
-   if not astlist[1] then return nil, "empty expression", 1
-   elseif astlist[2] then return nil, "not an expression", 1
-   else return astlist, warnings, leftover
-   end
+   local ast, errs, leftover = parse.core_parse(source)
+   if not ast then return nil, errs, leftover; end
+   assert(type(ast)=="table" and ast.type=="core")
+   if not (ast.subs and ast.subs[1]) then return nil, "empty expression", #source
+   elseif ast.subs and ast.subs[2] then return nil, "not an expression", #source
+   else return ast, errs, leftover; end
 end
       
 return parse

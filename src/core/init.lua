@@ -161,11 +161,11 @@ local function create_core_engine()
 
    local function make_parser_expander(parser)
       return function(source)
-		local astlist, msgs, leftover = parser(source)
-		if not astlist then
+		local ast, msgs, leftover = parser(source)
+		if not ast then
 		   return nil, nil, msgs, leftover
 		else
-		   return syntax.transform0(astlist), astlist, msgs, leftover
+		   return syntax.transform0(ast), ast, msgs, leftover
 		end
 	     end
    end
@@ -194,8 +194,9 @@ local function create_core_engine()
    -- Into the core engine, load the rpl 1.0 definition, which is written in rpl 0.0
    local rpl_1_0_filename = common.path(ROSIE_LIB, "rosie", "rpl_1_0.rpl")
    local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
+
    if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
-   CORE_ENGINE:load(rpl_1_0, "rosie/rpl_1_0.rpl")
+   local success, pkg, messages = CORE_ENGINE:load(rpl_1_0, "rosie/rpl_1_0.rpl")
 
    local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_statements', 'match')
    if not success then error("Error while initializing: could not compile 'rpl_statements' in "

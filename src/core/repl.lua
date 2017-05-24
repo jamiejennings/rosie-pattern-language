@@ -159,18 +159,19 @@ function repl.repl(en)
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
-		     local astlist, original_astlist = en.compiler.parser.parse_expression(exp_string)
-		     if not astlist then
-			if original_astlist then
-			   io.write(original_astlist, "\n") -- error message
-			else
-			   io.write("Syntax error\n")
-			end
+		     local ast, original_ast, errs = en.compiler.parser.parse_expression(exp_string)
+		     if not ast then
+			table.print(errs)	    -- FIXME (TEMPORARY)
+			io.write("\n")
+		     elseif not ast.subs then
+			io.write("Syntax error\n")  -- no other info???
 		     else
+			assert(type(ast)=="table")
 			-- parsing strips the quotes off when exp is only a literal string, but compiler
 			-- needs them there.  this is inelegant.  sigh
-			assert((type(astlist)=="table") and astlist[1])
-			local ename, epos, exp = common.decode_match(original_astlist[1])
+			assert(ast.subs and ast.subs[1])
+			assert(original_ast.subs and original_ast.subs[1])
+			local ename, epos, exp = common.decode_match(original_ast.subs[1])
 			if ename=="literal" then exp = '"'..exp..'"'; end
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			assert(tname=="common.dqstring")
@@ -182,14 +183,14 @@ function repl.repl(en)
 			   --io.write(rplx, "\n") -- syntax and compile errors
 			else
 			   local m, left = en:match(rplx, input_text)
-			--       if debug and (not m) then
-			-- 	 local match, leftover, trace = en:tracematch(exp, input_text)
-			-- 	 io.write(trace, "\n")
-			--       end
-			--    else
-			--       local match, leftover, trace = en:tracematch(exp, input_text)
-			--       io.write(trace, "\n")
-			--    end
+			   --       if debug and (not m) then
+			   -- 	 local match, leftover, trace = en:tracematch(exp, input_text)
+			   -- 	 io.write(trace, "\n")
+			   --       end
+			   --    else
+			   --       local match, leftover, trace = en:tracematch(exp, input_text)
+			   --       io.write(trace, "\n")
+			   --    end
 			   print_match(m, left, (cname=="trace"))
 			end -- did exp compile
 		     end -- could not parse out the expression and input string from the repl input

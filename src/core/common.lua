@@ -302,9 +302,9 @@ common.compiler =
 		  })
 
 -- parser operation:
---   parse source to produce original_astlist;
---   transform original_astlist as needed (e.g. syntax expand), producing astlist;
---   return astlist, original_astlist, table of errors, leftover count
+--   parse source to produce original_ast;
+--   transform original_ast as needed (e.g. syntax expand), producing ast;
+--   return ast, original_ast, table of errors, leftover count
 --   if any step fails, generate useful errors and return nil, nil, errors, leftover
 
 common.parser =

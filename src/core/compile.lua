@@ -21,23 +21,23 @@ local c0 = require "c0"
 local c1 = require "c1"
 
 ---------------------------------------------------------------------------------------------------
--- Launch a co-routine to compile an astlist
+-- Launch a co-routine to compile an ast
 ---------------------------------------------------------------------------------------------------
 
--- compile(importpath or nil, astlist, modtable, env) --> success, packagename or nil, messages
---   where success is boolean, packagename is a string if the astlist defined a module, and
+-- compile(importpath or nil, ast, modtable, env) --> success, packagename or nil, messages
+--   where success is boolean, packagename is a string if the ast defined a module, and
 --   messages is a table of cerror records
 
-local function make_compile(compile_astlist)
-   return function(importpath, astlist, modtable, env)
+local function make_compile(compile_ast)
+   return function(importpath, ast, modtable, env)
 	     assert(type(importpath)=="string" or importpath==nil)
-	     assert(type(astlist)=="table")
+	     assert(type(ast)=="table")
 	     assert(type(modtable)=="table")
 	     assert(environment.is(env))
-	     local c = coroutine.create(compile_astlist)
+	     local c = coroutine.create(compile_ast)
 	     -- may get a new env back 
 	     local no_lua_error, success, packagename, messages =
-		coroutine.resume(c, importpath, astlist, modtable, env)
+		coroutine.resume(c, importpath, ast, modtable, env)
 	     if no_lua_error then
 		if success then
 		   assert(type(packagename)=="string" or packagename==nil)
@@ -67,9 +67,10 @@ end
 -- that case, the top level capture will have the name of the identifier.
 
 local function make_compile_expression(expression_p, compile_ast)
-   return function(importpath, astlist, modtable, env)
+   return function(importpath, ast, modtable, env)
 	     assert(type(importpath)=="string" or importpath==nil, "importpath was: " .. tostring(importpath))
-	     assert(type(astlist)=="table", "astlist is: " .. tostring(astlist))
+	     assert(type(ast)=="table", "ast is: " .. tostring(ast))
+	     assert(ast.type=="rpl_expression" or ast.type=="core")
 	     assert(type(modtable)=="table")
 	     assert(environment.is(env))
 
@@ -79,10 +80,7 @@ local function make_compile_expression(expression_p, compile_ast)
 		if not env then return false, nil, {"Error: no loaded module " .. importpath}; end
 	     end
 	     
-	     -- We COULD allow more than one ast in astlist, in order to allow arbitrary
-	     -- statements, followed by an expression, like scheme's 'begin' form.  If the grammar
-	     -- allowed semi-colons to end statements, this feature would be more usable as
-	     -- convenience for users.
+	     local astlist = ast.subs
 	     assert(#astlist==1)
 
 	     if not expression_p(astlist[1]) then return false, nil, {"Error: not an expression"}; end
@@ -140,14 +138,14 @@ end
 --             match(source, input, encoder, importpath/nil) where source parses to an expression
 --                and importpath specifies an environment via the modtable (this is for pattern testing)
 --   Compiler  Load source into an environment (modules into their own fresh environment)
---             load(importpath/nil, source/astlist, modtable, env) --> packagename/nil, list of bindings created
+--             load(importpath/nil, source/ast, modtable, env) --> packagename/nil, list of bindings created
 --   Compiler  Import an already-loaded module into an environment
 --             import(importpath, prefix, env) --> success/failure
 --   Compiler  Compile an expression, producing a compiled expression object
---             compile_expression(source/astlist, importpath/nil) --> rplx object
+--             compile_expression(source/ast, importpath/nil) --> rplx object
 --                where importpath specifies an environment via the modtable (useful for testing)
 --   Parser    Calculate the dependencies for top-level or a module
---             parse_deps(source/astlist, modtable) --> list of dep where dep = {importpath, prefix}
+--             parse_deps(source/ast, modtable) --> list of dep where dep = {importpath, prefix}
 -- X Tester    USE ENGINE'S MATCH INTERFACE AND SUPPLY THE IMPORTPATH
 --             Run a lightweight pattern test for top-level code
 --             Create an engine.  Load the code.
@@ -161,7 +159,7 @@ end
 --             preparse(source) --> major, minor, nextpos, bom -OR- nil, nil, 1, bom
 --                where bom is nil, "UTF-8", "UTF-16BE", "UTF16-LE", "UTF-32BE", or "UTF-32LE"
 --   Parser    Extract a list of prefixes used in the given expressions or statements
---             prefixes_ast(astlist) --> list of packagenames
+--             prefixes_ast(ast) --> list of packagenames
 --             prefixes_source(source) --> list of packagenames
 
 -- !!! When we re-do the AST representation, we need a slot in each AST node record for the rpl

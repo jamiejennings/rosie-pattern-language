@@ -381,11 +381,11 @@ ok, msg = wapi.match()
 check(not ok)
 check(msg:find("not a string"))
 
-ok, success = wapi.load("import common, num")
+ok, success, pkg, msgs = wapi.load("import common, num")
 check(ok)
 check(success)
 
-ok, m, leftover = wapi.match("common.dotted_id", "x.y.z")
+ok, m, leftover, msgs = wapi.match("common.dotted_id", "x.y.z")
 check(ok)
 check(type(m)=="userdata")
 str = lpeg.getdata(m)

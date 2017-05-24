@@ -435,7 +435,15 @@ end
 
 function syntax.top_level_transform0(ast)
    local name = ast.type
-   if (name=="assignment_") or (name=="alias_") then
+   if name=="core" or
+      name=="rpl_statements" or
+      name=="rpl_expression" then		    -- this works for rpl 0.0 and 1.0
+      return
+      common.create_match(ast.type,
+			  ast.pos,
+			  ast.text,
+			  table.unpack(list.map(syntax.top_level_transform0, list.from(ast.subs or {}))))
+   elseif (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
    elseif (name=="grammar_") then
       local new_bindings = list.map(syntax.to_binding, list.from(ast.subs))
@@ -453,7 +461,13 @@ end
 
 function syntax.top_level_transform1(ast)
    local name = ast.type
-   if name=="statement" then
+   if name=="rpl_statements" or name=="rpl_expression" then
+      return
+      common.create_match(ast.type,
+			  ast.pos,
+			  ast.text,
+			  table.unpack(list.map(syntax.top_level_transform1, list.from(ast.subs or {}))))
+   elseif name=="statement" then
       local name = common.decode_match(ast.subs[1])
       assert(name=="alias_" or name=="assignment_" or name=="grammar_" or name=="local_",
 	  "unknown ast node type: " .. tostring(name))
@@ -515,10 +529,8 @@ syntax.replace_ref =
 			   true)
 
 local function make_transformer(top_level_transformer)
-   return function(astlist)
-	     local new_astlist = {}
-	     for i=1,#astlist do new_astlist[i] = top_level_transformer(astlist[i]); end
-	     return new_astlist, astlist, {}		    -- last value is table of warnings
+   return function(ast)
+	     return top_level_transformer(ast), ast
 	  end
 end
 

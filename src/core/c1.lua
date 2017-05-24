@@ -61,16 +61,17 @@ end
 -- be compiled and have an entry in modtable, else the compilation will fail.
 --
 -- importpath: a relative filesystem path to the source file, or nil
--- astlist: the already preparsed, parsed, and expanded input to be compiled
+-- ast: the already preparsed, parsed, and expanded input to be compiled
 -- modtable: the global module table (one per engine) because modules can be shared
 -- 
 -- return value are success, packagename/nil, table of messages
 
-function c1.load(importpath, astlist, modtable, env)
+function c1.load(importpath, ast, modtable, env)
    assert(type(importpath)=="string" or importpath==nil)
-   assert(type(astlist)=="table")
+   assert(type(ast)=="table" and (ast.subs==nil or type(ast.subs)=="table"))
    assert(type(modtable)=="table")
    assert(environment.is(env))
+   local astlist = ast.subs or {}
    local thispkg
    local i = 1
    if not astlist[i] then return true, nil, {cerror.new("warning", astlist, "Empty input")}; end

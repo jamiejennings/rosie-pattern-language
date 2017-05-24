@@ -42,21 +42,20 @@ local function explain_syntax_error(a, source)
    return msg
 end
 
-local function rosie_parse_without_error_check(rplx, str, pos, tokens)
-   pos = pos or 1
-   local results = {}
-   local tokens, leftover = rplx:match(str, pos)
-   local name, pos, text, subs = decode_match(tokens)
-   return subs or {}, leftover
-end
+-- local function rosie_parse_without_error_check(rplx, str, pos, tokens)
+--    pos = pos or 1
+--    local tokens, leftover = rplx:match(str, pos)
+--    local name, pos, text, subs = decode_match(tokens)
+--    return subs or {}, leftover
+-- end
 
 local function rosie_parse(rplx, str, pos, tokens)
-   local astlist, leftover = rosie_parse_without_error_check(rplx, str, pos, tokens)
+   local ast, leftover = rplx:match(str, pos)
    local errlist = {};
-   for _,a in ipairs(astlist) do
+   for _,a in ipairs(ast.subs or {}) do
       if parse.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   return astlist, errlist, leftover
+   return ast, errlist, leftover
 end
 
 function preparse(rplx_preparse, input)
@@ -65,15 +64,15 @@ function preparse(rplx_preparse, input)
    if type(input)=="string" then
       language_decl, leftover = rplx_preparse:match(input)
    elseif type(input)=="table" then
-      -- assume astlist provided, although it will be empty even if the original source was not, 
-      -- because the source could contain only comments
+      -- assume ast provided, although it will be empty even if the original source was not, 
+      -- because the source could contain only comments and/or whitespace
       if not input[1] then return nil, nil, 1; end
       if input[1].type=="language_decl" then
 	 language_decl = input[1]
 	 leftover = #input - language_decl.fin
       end
    else
-      assert(false, "preparse called with neither string nor astlist as input: " .. tostring(input))
+      assert(false, "preparse called with neither string nor ast as input: " .. tostring(input))
    end
    if language_decl then
       if parse.syntax_error_check(language_decl) then
@@ -134,8 +133,8 @@ function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_ex
 		pos = 1
 	     end
 	     -- input is compatible with what is supported, so continue parsing
-	     local original_astlist, errlist, leftover = rosie_parse(rplx_rpl, source, pos)
-	     local astlist = syntax_expand(original_astlist)
+	     local original_ast, errlist, leftover = rosie_parse(rplx_rpl, source, pos)
+	     local ast = syntax_expand(original_ast)
 	     -- if syntax errors, then generate readable explanations
 	     if #errlist~=0 then
 		local msgs = {}
@@ -146,12 +145,12 @@ function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_ex
 		return nil, nil, msgs, leftover
 	     else
 		-- successful parse
-		return astlist, original_astlist, {}, leftover
+		return ast, original_ast, {}, leftover
 	     end
 	  end -- parse and explain function
 end -- make_parse_and_explain
 
--- parse_deps takes input (source or astlist) and returns a table of dependencies calculated by
+-- parse_deps takes input (source or ast) and returns a table of dependencies calculated by
 -- processing any import statements.  the table contains entries with the keys: 
 -- importpath, prefix, env.
 -- Notes:
@@ -161,15 +160,16 @@ end -- make_parse_and_explain
 function parse_deps(parser, input)
    local maj, min, pos, err = parser.preparse(input)
    if not maj then return nil, err; end
-   local astlist, orig_astlist, messages
+   local ast, orig_ast, messages
    if type(input)=="string" then
-      astlist, orig_astlist, messages = parser.parse_statements(input)
-      if not astlist then return nil, messages; end
+      ast, orig_ast, messages = parser.parse_statements(input)
+      if not ast then return nil, messages; end
    elseif type(input)=="table" then
-      astlist, orig_astlist = input, input
+      ast, orig_ast = input, input
    else
-      error("argument not a string or astlist: " .. tostring(input))
+      error("argument not a string or ast: " .. tostring(input))
    end
+   local astlist = ast.subs or {}
    local i = 1
    if not astlist[i] then return nil, {"empty list of statements"}; end
    local typ, pos, text, specs, fin = decode_match(astlist[i])
