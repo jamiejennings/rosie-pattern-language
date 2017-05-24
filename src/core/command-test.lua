@@ -28,8 +28,8 @@ local function find_test_lines(str)
   local lines = {}
   for _,line in pairs(split(str, "\n")) do
      if startswith(line,'-- test') then
-	table.insert(lines, line)
-	num = num + 1
+        table.insert(lines, line)
+        num = num + 1
      end
   end
   return num, lines
@@ -54,7 +54,7 @@ function p.run(rosie, en, args, filename)
    -- set it up using whatever rpl strings or files were given on the command line
    cli_common.setup_engine(test_engine, args)
    -- load the rpl code we are going to test
-   test_engine:loadfile(filename, true)		    -- second arg true --> do not search
+   test_engine:loadfile(filename, true)             -- second arg true --> do not search
    cli_common.set_encoder(rosie, test_engine, false)
    -- read the tests out of the file and run each one
    local f, msg = io.open(filename, 'r')
@@ -67,74 +67,74 @@ function p.run(rosie, en, args, filename)
    end
    local function test_accepts_exp(exp, q)
       local res, pos = test_engine:match(exp, q)
-      if pos ~= 0 then return false end
+      if (not res) or (pos ~= 0) then return false end
       return true
    end
    local function test_rejects_exp(exp, q)
       local res, pos = test_engine:match(exp, q)
-      if pos == 0 then return false end
+      if res and (pos == 0) then return false end
       return true
    end
-		local function test_contains_ident(exp, q, id)
-                   local function searchForID(tbl, id)
-                      -- tbl MUST BE "subs" table from a match
-                      local found = false
-                      for i = 1, #tbl do
-                         if tbl[i].subs ~= nil then
-                            found = searchForID(tbl[i].subs, id)
-                            if found then break end
-                         end
-                         if tbl[i].type == id then
-                            found = true
-                            break
-                         end
-                      end
-                      return found
-                   end
-                   local res, pos = test_engine:match(exp, q)
-                   return searchForID(res.subs, id)
-		end
-                local test_funcs = {rejects=test_rejects_exp,accepts=test_accepts_exp}
-                local failures, total = 0, 0
-                local exp = "test_line"
-                for _,p in pairs(test_lines) do
-                   local m, left = en:match(exp, p)
-                   -- FIXME: need to test for failure to match
-                   local testIdentifier = m.subs[1].text
-                   local testType = m.subs[2].type
-                   local literals = 3 -- literals will start at subs offset 3
-                   if testType == "containsKeyword" then
-                      -- test contains
-                      local containedIdentifier = m.subs[2].subs[1].text
-                      for i = literals, #m.subs do
-                         total = total + 1
-                         local teststr = m.subs[i].text
-                         teststr = common.unescape_string(teststr)
-                         if not test_contains_ident(testIdentifier, teststr, containedIdentifier) then
-                            print(filename .. ": FAIL: " .. testIdentifier .. " did not contain " .. containedIdentifier .. " from " .. teststr)
-                            failures = failures + 1
-                         end
-                      end
-                   else
-                      -- test accepts/rejects
-                      for i = literals, #m.subs do
-                         total = total + 1
-                         local teststr = m.subs[i].text
-                         teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
-                         if not test_funcs[m.subs[2].text](testIdentifier, teststr) then
-                            if #teststr==0 then teststr = "<empty string>"; end -- for display purposes
-                            print(filename .. ": FAIL: " .. testIdentifier .. " did not " .. m.subs[2].text:sub(1,-2) .. " " .. teststr)
-                            failures = failures + 1
-                         end
-                      end
-                   end
-                end
-                if failures == 0 then
-                   print(filename .. ": All " .. tostring(total) .. " tests passed")
-                else
-                   print(filename .. ": " .. tostring(failures) .. " tests failed out of " .. tostring(total) .. " attempted")
-                end
-                return failures, total
-             end
+   local function test_contains_ident(exp, q, id)
+      local function searchForID(tbl, id)
+         -- tbl MUST BE "subs" table from a match
+         local found = false
+         for i = 1, #tbl do
+            if tbl[i].subs ~= nil then
+               found = searchForID(tbl[i].subs, id)
+               if found then break end
+            end
+            if tbl[i].type == id then
+               found = true
+               break
+            end
+         end
+         return found
+      end
+      local res, pos = test_engine:match(exp, q)
+      return searchForID(res.subs, id)
+   end
+   local test_funcs = {rejects=test_rejects_exp,accepts=test_accepts_exp}
+   local failures, total = 0, 0
+   local exp = "test_line"
+   for _,p in pairs(test_lines) do
+      local m, left = en:match(exp, p)
+      -- FIXME: need to test for failure to match
+      local testIdentifier = m.subs[1].text
+      local testType = m.subs[2].type
+      local literals = 3 -- literals will start at subs offset 3
+      if testType == "containsKeyword" then
+         -- test contains
+         local containedIdentifier = m.subs[2].subs[1].text
+         for i = literals, #m.subs do
+            total = total + 1
+            local teststr = m.subs[i].text
+            teststr = common.unescape_string(teststr)
+            if not test_contains_ident(testIdentifier, teststr, containedIdentifier) then
+               print(filename .. ": FAIL: " .. testIdentifier .. " did not contain " .. containedIdentifier .. " from " .. teststr)
+               failures = failures + 1
+            end
+         end
+      else
+         -- test accepts/rejects
+         for i = literals, #m.subs do
+            total = total + 1
+            local teststr = m.subs[i].text
+            teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
+            if not test_funcs[m.subs[2].text](testIdentifier, teststr) then
+               if #teststr==0 then teststr = "the empty string"; end -- for display purposes
+               print(filename .. ": FAIL: " .. testIdentifier .. " did not " .. m.subs[2].text:sub(1,-2) .. " " .. teststr)
+               failures = failures + 1
+            end
+         end
+      end
+   end
+   if failures == 0 then
+      print(filename .. ": All " .. tostring(total) .. " tests passed")
+   else
+      print(filename .. ": " .. tostring(failures) .. " tests failed out of " .. tostring(total) .. " attempted")
+   end
+   return failures, total
+end
 
 return p
