@@ -202,7 +202,7 @@ function repl.repl(en)
 	    end -- switch on command
 	 elseif name=="statements" then
 	    local ok, pkg, messages = en:load(text);
-	    table.print(messages)		    -- FIXME (TEMPORARY)
+	    table.print(messages, false)		    -- FIXME (TEMPORARY)
 --	    io.write(messages, "\n")
 	 else
 	    io.write("Repl: internal error (name was '" .. tostring(name) .. "')\n")

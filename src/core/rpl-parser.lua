@@ -17,14 +17,15 @@ local decode_match = common.decode_match
 ----------------------------------------------------------------------------------------
 
 local function explain_syntax_error(a, source)
-   local errast = parse.syntax_error_check(a)
-   assert(errast)
+   local err = parse.syntax_error_check(a)
+   assert(err)
    local name, pos, text, subs = common.decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
 
    local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
 
-   local err = parse.syntax_error_check(a)
+   msg = msg .. "While looking for " .. name .. "\n"
+
    local ename, errpos, etext, esubs = common.decode_match(err)
    msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
 
@@ -138,7 +139,7 @@ function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_ex
 	     -- if syntax errors, then generate readable explanations
 	     if #errlist~=0 then
 		local msgs = {}
-		table.insert(msgs, "Warning: syntax error reporting is limited at this time")
+		--table.insert(msgs, "Warning: syntax error reporting is limited at this time")
 		for _,e in ipairs(errlist) do
 		   table.insert(msgs, explain_syntax_error(e, source))
 		end

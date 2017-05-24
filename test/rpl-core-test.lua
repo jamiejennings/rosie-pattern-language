@@ -1458,7 +1458,7 @@ m = check_match("foo.float", "42.1", true)
 check(m and m.type=="foo.float" and m.subs)
 m = check_match("num.float", "42.1", true)	    -- and num still works
 check(m.type=="num.float" and m.subs)
-success, msg = e:match("float", "42.1")	    -- float is not a top level binding
+success, left, msg = e:match("float", "42.1")	    -- float is not a top level binding
 check(not success)
 check(type(msg)=="table" and msg[1])
 check(msg[1].message:find("undefined identifier"))

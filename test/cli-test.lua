@@ -145,7 +145,7 @@ run("import common, net", "common.word net.any", nil, results_word_network)
 
 ok, msg = pcall(run, "import common", "foo = common.word", nil, nil)
 check(ok)
-check(msg[1]:find("syntax error"))
+check(msg[1]:find("Syntax error"))
 
 --ok, msg = pcall(run, "import common", "foo = common.word", true, nil)
 --check(ok)
@@ -153,7 +153,7 @@ check(msg[1]:find("syntax error"))
 
 ok, msg = pcall(run, "import common", "/foo/", nil, nil)
 check(ok)
-check(msg[1]:find("syntax error"))
+check(msg[1]:find("Syntax error"))
 
 ok, ignore = pcall(run, "import common", '"Gold"', nil, nil)
 check(ok, [[testing for a shell quoting error in which rpl expressions containing double quotes

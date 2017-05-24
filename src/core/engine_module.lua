@@ -196,7 +196,7 @@ local function make_matcher(processing_fcn)
 	     elseif type(expression)=="string" then -- expression has not been compiled
 		-- If we cache, look up expression in the cache here.
 		local r, msgs = e:compile(expression, flavor)
-		if not r then return false, msgs; end
+		if not r then return false, #input, msgs; end
 		return processing_fcn(e, r._pattern, input, start, total_time_accum, lpegvm_time_accum)
 	     else
 		engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
