@@ -116,21 +116,26 @@ local engine_error				    -- forward reference
 
 local function compile_search(en, pattern_exp)
    local parse = en.compiler.parser.parse_expression
-   local compile = en.compiler.compiler.compile_expression
+   local compile = en.compiler.compile_expression
    local env = environment.extend(en._env)	    -- new scope, which will be discarded
    -- First, we compile the exp in order to give an accurate message if it fails
    -- What to do with leftover?
-   local ast, orig_ast, warnings, leftover = parse_exp(pattern_exp)
-   if not ast then return false, warnings, leftover; end
+   local ast, orig_ast, warnings, leftover = parse(pattern_exp)
+   if not ast and ast.subs then return false, warnings, leftover; end
    local pat, msgs = compile(nil, ast, en._modtable, env)
    if not pat then return false, msgs; end
-   local replacement = pat.ast
+   local replacement = ast.subs[1]
    -- Next, transform pat.ast
    local ast, orig_ast = parse("{{!e .}* e}+")
    assert(type(ast)=="table" and ast.subs and ast.subs[1] and (not ast.subs[2]))
+   assert(ast.type=="rpl_expression")
+   assert(ast.subs[1].type=="raw_exp", "type is: " .. ast.subs[1].type)
+   ast = ast.subs[1]
+   assert(ast.subs and ast.subs[1])
    local template = ast.subs[1]
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
+   grep_ast = common.create_match("rpl_expression", 1, "search:(" .. pattern_exp .. ")", grep_ast)
    return compile(nil, grep_ast, en._modtable, env)
 end
 
@@ -140,8 +145,7 @@ local function compile_match(en, source)
    local ast, original_ast, messages, leftover = parse(source)
    assert(type(messages)=="table")
    if not ast then return false, messages; end
-   local success, pat, messages = compile(nil, ast, en._modtable, en._env)
-   return pat, messages
+   return compile(nil, ast, en._modtable, en._env)
 end
 
 local function engine_compile(en, expression, flavor)

@@ -77,29 +77,29 @@ local function make_compile_expression(expression_p, compile_ast)
 	     local modname
 	     if importpath then
 		modname, env = common.modtableref(modtable, importpath)
-		if not env then return false, nil, {"Error: no loaded module " .. importpath}; end
+		if not env then return false, {"Error: no loaded module " .. importpath}; end
 	     end
 	     
 	     local astlist = ast.subs
 	     assert(#astlist==1)
 
-	     if not expression_p(astlist[1]) then return false, nil, {"Error: not an expression"}; end
+	     if not expression_p(astlist[1]) then return false, {"Error: not an expression"}; end
 
 	     local c = coroutine.create(compile_ast)
 	     local no_lua_error, pat, message = coroutine.resume(c, astlist[1], env)
 	     if no_lua_error then
 		if pat then
 		   if not pattern.is(pat) then
-		      return false, nil, {"Error: expression not a pattern: " .. tostring(pat)}
+		      return false, {"Error: expression not a pattern: " .. tostring(pat)}
 		   end
 		   local typ, pos, text, subs = common.decode_match(astlist[1])
 		   if (typ~="ref" and typ~="extref") or pat.alias then
 		      pat.peg = common.match_node_wrap(pat.peg, "*") -- anonymous expression
 		      pat.alias = false
 		   end
-		   return true, pat, {message}
+		   return pat, {message}
 		else -- compilation failed
-		   return false, nil, {message}
+		   return false, {message}
 		end
 	     else -- lua error (a bug)
 		local st = debug.traceback()

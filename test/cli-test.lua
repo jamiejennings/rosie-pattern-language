@@ -65,6 +65,7 @@ function run(import, expression, grep_flag, expectations)
    if import then import_option = " --rpl '" .. import .. "' "; end
    local cmd = rosie_cmd .. import_option ..
       (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
+--   cmd = cmd .. " 2>/dev/null"
    print(cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
@@ -137,19 +138,14 @@ results_common_number =
 -- FIXME: add basic.matchall back in when we have the equivalent pattern written for rpl 1.1
 --run("basic.matchall", nil, results_basic_matchall)
 
--- FIXME: re-enable the grep test cases
 run("import common", "common.word", nil, results_common_word)
---run("import common", "common.word", true, results_common_word_grep)
+run("import common", "common.word", true, results_common_word_grep)
 run("import common, net", "common.word net.any", nil, results_word_network)
---run("import common", "~common.number~", true, results_common_number)
+run("import num", "~num.any~", true, results_common_number)
 
 ok, msg = pcall(run, "import common", "foo = common.word", nil, nil)
 check(ok)
 check(msg[1]:find("Syntax error"))
-
---ok, msg = pcall(run, "import common", "foo = common.word", true, nil)
---check(ok)
---check(msg[1]:find("syntax error"))
 
 ok, msg = pcall(run, "import common", "/foo/", nil, nil)
 check(ok)

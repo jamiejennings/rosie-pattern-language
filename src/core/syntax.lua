@@ -77,7 +77,7 @@ function syntax.make_transformer(fcn, target_name, recursive)
       elseif (type(target_name)=="string") then return (name==target_name);
 	 -- Or a member of a list
       elseif (type(target_name)=="table") then return list.member(name, list.from(target_name))
-      else error("illegal target type: " .. name .. "is not a string or list")
+      else error("illegal target type: " .. name .. " is not a string or list")
       end
    end -- function target_match
       
