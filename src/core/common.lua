@@ -236,7 +236,6 @@ local function create_match(name, pos, capture, ...)
    return {type = name, s = pos, text = capture, subs = subs};
 end
 
---common.create_match = lpeg.r_create_match
 common.create_match = create_match
 
 assert(lpeg.rcap, "lpeg.rcap not defined: wrong version of lpeg???")
@@ -302,11 +301,11 @@ common.compiler =
 		    parser=false;
 		  })
 
--- parser contract:
+-- parser operation:
 --   parse source to produce original_astlist;
---   transform original_astlist as needed (e.g. syntax expand); 
---   return the result (astlist), original_astlist, table of messages, leftover count
---   if any step fails, generate useful error messages and return nil, nil, msgs, leftover
+--   transform original_astlist as needed (e.g. syntax expand), producing astlist;
+--   return astlist, original_astlist, table of errors, leftover count
+--   if any step fails, generate useful errors and return nil, nil, errors, leftover
 
 common.parser =
    recordtype.new("parser",
@@ -340,7 +339,7 @@ end
 
 common.cerror = recordtype.new(
    "cerror",
-   {kind = recordtype.NIL,			    -- "error", "warning", "info"
+   {kind = recordtype.NIL,			    -- e.g. "error" (see below)
     ast = recordtype.NIL,
     message = recordtype.NIL,
     origin = "<no origin>",			    -- filled in later
@@ -348,7 +347,7 @@ common.cerror = recordtype.new(
     line = 1,					    -- "
     charpos = 1},				    -- "
    function(kind, ast, message)
-      local valid = {error=true, warning=true, info=true}
+      local valid = {error=true, warning=true, info=true, syntax=true}
       if type(ast)~="table" or type(message)~="string" then
 	 error("Internal error: improper call to create cerror object")
       elseif not valid[kind] then

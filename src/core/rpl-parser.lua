@@ -12,6 +12,35 @@ local decode_match = common.decode_match
 -- Driver functions for RPL parser written in RPL
 ----------------------------------------------------------------------------------------
 
+----------------------------------------------------------------------------------------
+-- Syntax error reporting (default capability)
+----------------------------------------------------------------------------------------
+
+local function explain_syntax_error(a, source)
+   local errast = parse.syntax_error_check(a)
+   assert(errast)
+   local name, pos, text, subs = common.decode_match(a)
+   local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
+
+   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
+
+   local err = parse.syntax_error_check(a)
+   local ename, errpos, etext, esubs = common.decode_match(err)
+   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
+
+   if esubs then
+      -- We only examine the first sub for now, assuming there are no others.  A better syntax
+      -- error reporting technique is needed.
+      local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
+      if etname=="statement_prefix" then
+	 msg = msg .. "Found start of a new statement inside an expression.\n"
+      else
+	 msg = msg .. "No additional information is available.\n"
+      end
+   end -- if esubs
+   return msg
+end
+
 local function rosie_parse_without_error_check(rplx, str, pos, tokens)
    pos = pos or 1
    local results = {}
@@ -111,7 +140,7 @@ function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_ex
 		local msgs = {}
 		table.insert(msgs, "Warning: syntax error reporting is limited at this time")
 		for _,e in ipairs(errlist) do
-		   table.insert(msgs, parse.explain_syntax_error(e, source))
+		   table.insert(msgs, explain_syntax_error(e, source))
 		end
 		return nil, nil, msgs, leftover
 	     else

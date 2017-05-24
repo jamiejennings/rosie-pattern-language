@@ -140,11 +140,13 @@ ok, success, pkg, warning = wapi.load('foo = "a"')
 check(ok)
 check(success)
 check(type(pkg)=="string")
-check(pkg:find("top level"))
+pkg = json.decode(pkg)
+check(pkg == json.null)
 ok, success, pkg, warning = wapi.load('foo = "a"')
 check(ok, "assignment did not load, returned: " .. tostring(msg))
 check(success)
-check(pkg:find("top level"))
+pkg = json.decode(pkg)
+check(pkg == json.null)
 check(warning:find("reassignment to identifier"))
 ok, env_js = wapi.engine_lookup("null")
 check(ok)
@@ -193,10 +195,13 @@ for _, exp in ipairs{"[0-9]", "[abcdef123]", "[:alpha:]",
    end
 end
 
-ok, success, pkg, msg = wapi.load('-- comments and \n -- whitespace\t\n\n')
+ok, success, pkg, jsonmsgs = wapi.load('-- comments and \n -- whitespace\t\n\n')
 -- "an empty list of ast's is the result of parsing comments and whitespace"
 check(ok and success)
-check(type(msg)=="string" and msg:find("Empty input"))
+msgs = json.decode(jsonmsgs)
+check(type(msgs)=="table")
+check(type(msgs[1])=="table" and not msgs[2])
+check(msgs[1].message:find("Empty input"))
 
 g = [[grammar
   S = {"a" B} / {"b" A} / "" 

@@ -12,6 +12,7 @@ local c0 = require "c0"
 local string = require "string"
 local lpeg = require "lpeg"
 local common = require "common"
+local cerror = common.cerror
 local decode_match = common.decode_match
 local throw = common.throw_error
 
@@ -72,14 +73,14 @@ function c1.load(importpath, astlist, modtable, env)
    assert(environment.is(env))
    local thispkg
    local i = 1
-   if not astlist[i] then return true, nil, {"Empty input"}; end
+   if not astlist[i] then return true, nil, {cerror.new("warning", astlist, "Empty input")}; end
    local typ, pos, text, subs, fin = common.decode_match(astlist[i])
    assert(typ~="language_decl", "language declaration should be handled in preparse/parse")
    if typ=="package_decl" then
       thispkg = c1.process_package_decl(typ, pos, text, subs, fin)
       i=i+1;
       if not astlist[i] then
-	 return true, thispkg, {"Empty module (nothing after package declaration)"}
+	 return true, thispkg, {cerror.new("warning", astlist, "Empty module (nothing after package declaration)")}
       end
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end
@@ -88,13 +89,16 @@ function c1.load(importpath, astlist, modtable, env)
    -- Otherwise, if there is no package decl, then the code is compiled in the default, or
    -- "top level" environment.  
    if thispkg then
-      assert(not common.modtableref(modtable, importpath), "module " .. importpath .. " already compiled and loaded?")
+      assert(not common.modtableref(modtable, importpath),
+	     "module " .. importpath .. " already compiled and loaded?")
    end
    -- Dependencies must have been compiled and imported before we get here, so we can skip over
    -- the import declarations.
    while typ=="import_decl" do
       i=i+1
-      if not astlist[i] then return true, thispkg, {"Module consists only of import declarations"}; end
+      if not astlist[i] then
+	 return true, thispkg, {cerror.new("info", astlist, "Module consists only of import declarations")}
+      end
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end -- while skipping import_decls
    local results, messages = {}, {}

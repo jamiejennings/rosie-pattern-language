@@ -88,6 +88,7 @@ local io = require "io"
 local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local common = require "common"
+local cerror = common.cerror
 local rmatch = common.rmatch
 local environment = require "environment"
 local lookup = environment.lookup
@@ -183,7 +184,7 @@ local function _engine_match(e, pat, input, start, total_time_accum, lpegvm_time
    return false, #input, total_time_accum, lpegvm_time_accum;
 end
 
--- TODO: Maybe cache expressions?
+-- FUTURE: Maybe cache expressions?
 -- returns matches, leftover, total match time, total spent in lpeg vm
 local function make_matcher(processing_fcn)
    return function(e, expression, input, start, flavor, total_time_accum, lpegvm_time_accum)
@@ -224,7 +225,7 @@ local import_dependency				    -- forward reference
 --   * load dependencies that have not been loaded (into the modtable)
 --   * import the dependencies into the target environment
 --   * compile the input in the target environment
---   * return a possibly-empty table of messages, or throw an error if compilation fails.
+--   * return success code, modname or nil, table of messages (errors, warnings)
 
 local function load_input(e, target_env, input, importpath, modonly)
    assert(engine.is(e))
@@ -242,41 +243,42 @@ local function load_input(e, target_env, input, importpath, modonly)
    end
    assert(type(warnings)=="table")
    if not astlist then
-      return false, nil, warnings		    -- modname is nil
+      return false, nil, {cerror.new("syntax", {}, table.concat(warnings, "\n"))}
    end
-   -- load_dependencies has side-effects on e._modtable and target_env
-   load_dependencies(e, astlist, target_env, messages, importpath)
+   table.move(warnings, 1, #warnings, #messages+1, messages)
+   -- load_dependencies has side-effects on e._modtable, target_env, and messages
+   if not load_dependencies(e, astlist, target_env, messages, importpath) then
+      return false, nil, messages
+   end
    -- now we can compile the input
-   local success, modname, messages = e.compiler.load(importpath, astlist, e._modtable, target_env)
-   assert(type(messages)=="table", "messages is: " .. tostring(messages))
-   table.move(messages, 1, #messages, #warnings+1, warnings)
+   local success, modname, more_messages = e.compiler.load(importpath, astlist, e._modtable, target_env)
+   assert(type(more_messages)=="table", "messages is: " .. tostring(more_messages))
+   table.move(more_messages, 1, #more_messages, #messages+1, messages)
    if not success then
       common.note(string.format("FAILED TO COMPILE %s", modname))
-      return false, modname, warnings
+      return false, modname, messages
    end
-   if not modname then
-      if modonly then
-	 local msg = (importpath or "<top level>") .. " is not a module (no package declaration found)"
-	 return false, modname, msg --{cerror.new("error", astlist, msg)}
-      else
-	 modname = "<top level>"		    -- for display purposes
-      end
+   if modonly and (not modname) then
+      local msg = (importpath or "<top level>") .. " is not a module (no package declaration found)"
+      table.insert(messages, cerror.new("error", astlist, msg))
+      return false, modname, msg, messages
    end
-   common.note(string.format("COMPILED %s", modname))
-   return true, modname, warnings
+   common.note(string.format("COMPILED %s", modname or "<top level>"))
+   return true, modname, messages
 end
 
 load_dependencies =
    function(e, astlist, target_env, messages, importpath)
       local deps = e.compiler.parser.parse_deps(e.compiler.parser, astlist)
-      if not deps then return; end
+      if not deps then return true; end
       for _, dep in ipairs(deps) do
-	 local new_messages, modname
-	 modname, new_messages = maybe_load_dependency(e, astlist, target_env, dep, importpath);
+	 local ok, modname, new_messages = maybe_load_dependency(e, astlist, target_env, dep, importpath);
 	 table.move(new_messages, 1, #new_messages, #messages+1, messages)
+	 if not ok then return false; end
       end
       -- if all dependecies loaded ok, we can import them
       for _, dep in ipairs(deps) do import_dependency(e, target_env, dep); end
+      return true
 end
       
 -- find and load any missing dependency
@@ -297,10 +299,12 @@ maybe_load_dependency =
 	    target_env = environment.new()
 	    -- mutually recursive call to load_input, but now we can require that load_input
 	    -- accept only modules, not any file of rpl code.
-	    modname, messages = load_input(e, target_env, source, dep.importpath, true)
+	    local ok, modname, new_messages = load_input(e, target_env, source, dep.importpath, true)
+	    table.move(new_messages, 1, #new_messages, #messages+1, messages)
+	    if not ok then return false, modname, messages; end
 	 end -- if not fullpath
       end -- if dependency was not already loaded
-      return modname, messages
+      return true, modname, messages
    end
 
 import_dependency =

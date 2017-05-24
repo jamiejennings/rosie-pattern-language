@@ -61,7 +61,7 @@ check(rosie.engine.is(e))
 subheading("Setting up assignments")
 success, pkg, msg = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
 check(type(success)=="boolean")
-check(type(pkg)=="string")
+check(pkg==nil)
 check(type(msg)=="table")
 t = e:lookup("a")
 check(type(t)=="table")
@@ -1115,8 +1115,8 @@ for _, exp in ipairs{"[]]",
 end
 success, msg = e:compile("[:foobar:]")
 check(not success)
-table.print(msg)				    -- FIXME!
---check(msg:find("named charset not defined"))
+check(type(msg)=="table" and msg[1])
+check(msg[1].message:find("named charset not defined"))
 
 subheading("Named character sets")
 
@@ -1295,8 +1295,9 @@ end]]
 
 success, pkg, msg = e:load(g_syntax_error)
 check(not success)
-msg = table.concat(msg, "\n")
-check(msg:find("Syntax error"))
+check(type(msg)=="table" and msg[1])
+check(msg[1].kind=="syntax")
+check(msg[1].message:find("Syntax error"))
 
 g_left_recursion = [[grammar
   g1 = S ~
@@ -1306,10 +1307,9 @@ g_left_recursion = [[grammar
 end]]
 
 success, pkg, msg = e:load(g_left_recursion)
-print("***", success, pkg, msg)
 check(not success)
-table.print(msg)				    -- FIXME!
---check(msg:find("may be left recursive"))
+check(type(msg)=="table" and msg[1])
+check(msg[1].message:find("may be left recursive"))
 
 g_empty_string = [[grammar
   g1 = S ~
@@ -1320,8 +1320,8 @@ end]]
 
 ok, pkg, msg = e:load(g_empty_string)
 check(not ok)
-table.print(msg)				    -- FIXME!
---check(msg:find("can match the empty string"))
+check(type(msg)=="table" and msg[1])
+check(msg[1].message:find("can match the empty string"))
 
 
 heading("Invariants")
@@ -1459,10 +1459,9 @@ check(m and m.type=="foo.float" and m.subs)
 m = check_match("num.float", "42.1", true)	    -- and num still works
 check(m.type=="num.float" and m.subs)
 success, msg = e:match("float", "42.1")	    -- float is not a top level binding
-print("***", success, msg)
 check(not success)
-table.print(msg)				    -- FIXME!
---check(msg:find("undefined identifier"))
+check(type(msg)=="table" and msg[1])
+check(msg[1].message:find("undefined identifier"))
 
 check((e:load("import num as .")))
 

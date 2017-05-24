@@ -196,35 +196,9 @@ function parse.syntax_error_check(ast)
 end
 
 ----------------------------------------------------------------------------------------
--- Syntax error reporting (default capability)
+-- Parser for the Rosie core language, i.e. rpl 0.0
 ----------------------------------------------------------------------------------------
 
-function parse.explain_syntax_error(a, source)
-   local errast = parse.syntax_error_check(a)
-   assert(errast)
-   local name, pos, text, subs = common.decode_match(a)
-   local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
-
-   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
-
-   local err = parse.syntax_error_check(a)
-   local ename, errpos, etext, esubs = common.decode_match(err)
-   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
-
-   if esubs then
-      -- We only examine the first sub for now, assuming there are no others.  Must fix this
-      -- later, although a new syntax error reporting technique is on the TO-DO LIST.
-      local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
-      if etname=="statement_prefix" then
-	 msg = msg .. "Found start of a new statement inside an expression.\n"
-      else
-	 msg = msg .. "No additional information is available.\n"
-      end
-   end -- if esubs
-   return msg
-end
-
--- For parsing the Rosie core:
 function parse.core_parse(source)
    assert(type(source)=="string", "Core parser: source argument is not a string: "..tostring(source))
    local astlist, leftover = parse_without_error_check(source)
@@ -236,11 +210,8 @@ function parse.core_parse(source)
    if #errlist==0 then
       return astlist, {}, leftover		    -- 2nd return value is empty table of messages
    else
-      local msgs = {"Core parser reports syntax errors:"}
-      for _,e in ipairs(errlist) do
-	 table.insert(msgs, parse.explain_syntax_error(e, source))
-      end
-      return nil, msgs, leftover
+      assert(false, "Core parser reports syntax errors:\n" ..
+	     util.table_to_pretty_string(errlist) .. "\n")
    end
 end
 
