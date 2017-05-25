@@ -36,9 +36,10 @@ float = { mantissa exp? }
 -- test float accepts "6.02e23", "3.00E08", "0.123", "-2.0", "-2.0e1", "0.456e-101"
 -- test float rejects "6.02F23", "3.00E--08", "123"
 -- test float accepts "-1.32", "6.02E23", "+0.314e1"
--- test float rejects "0x01", "--2", "a", "-1", "+0"
--- test float contains mantissa "6.02e23"
--- test float contains exp "6.02e23"
+-- test float rejects "0x01", "--2", "a", "-1", "+0", "3e", "3.14e"
+-- test float includes mantissa "6.02e23"
+-- test float includes exp "6.02e23"
+-- test float excludes exp "3.1415"
 
 hex = hex_digit+ 		     --  use with care! will match words and decimal numbers
 -- test hex accepts "BEEF", "f4c3b00c"

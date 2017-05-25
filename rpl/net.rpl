@@ -43,7 +43,7 @@ ipv6 = ip_address_v6
 
 ip = ipv4 / ipv6
 -- the above tests validate ip
--- test ip contains ipv4 "1.2.3.4"
+-- test ip includes ipv4 "1.2.3.4"
 
 
 -- FQDNs

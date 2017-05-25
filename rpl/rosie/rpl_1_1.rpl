@@ -78,8 +78,15 @@ lookat = { [@] }
 alias predicate_symbol = { negation / lookat }
 	    
 grammar
-   alias exp = {ignore { syntax_error / choice / sequence / quantified_exp / plain_exp} }
+   alias exp = {ignore { syntax_error /
+	                 application /
+	                 choice /
+	                 sequence /
+	                 quantified_exp / 
+	                 plain_exp} }
    syntax_error = { stmnt_prefix rest_of_line }
+   application = { identifier ":" {quantified_exp / plain_exp / arglist} }
+   arglist = { ignore open exp { ignore "," exp }* close }
    choice = { {quantified_exp / plain_exp} ignore slash exp }
    sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }
    alias plain_exp = { ignore 
@@ -153,3 +160,8 @@ preparse = language_decl
 -- test import_decl accepts "import foo/bar as foo, \"/usr/local/baz\", /usr/bin/time"
 -- test import_decl accepts "import -f_o-o as foo, /usr/local/baz as ., /usr/bin/time"
 -- test import_decl accepts "import -f_o-o/bar as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
+
+-- test rpl_expression accepts "foo_1:x", "pkg.f:x", "f:\"hello\"", "f:!x", "f:x+", "f:(x y z)", "f:{x y z}"
+-- test rpl_expression accepts "f:(x, y)", "f:{a}", "f:{x, y}"
+-- test rpl_expression contains arglist "f:(x, y)"
+-- test rpl_expression rejects "f:", "pkg.f:"

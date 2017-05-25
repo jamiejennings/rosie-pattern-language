@@ -38,11 +38,12 @@ end
 -- setup the engine that will parse the test lines in the rpl file
 function p.setup(en)
    local test_patterns =
-		[==[
-			containsKeyword = "contains" identifier
-			testKeyword = "accepts" / "rejects"
-			test_line = "-- test" identifier (testKeyword / containsKeyword) quoted_string (ignore "," ignore quoted_string)*
-		]==]
+      [==[
+	 includesKeyword = ("includes" / "excludes")
+	 includesClause = includesKeyword identifier
+	 testKeyword = "accepts" / "rejects"
+	 test_line = "-- test" identifier (testKeyword / includesClause) quoted_string (ignore "," ignore quoted_string)*
+   ]==]
    en:load("import rosie/rpl_1_1 as .")
    en:load(test_patterns)
 end   
@@ -75,7 +76,8 @@ function p.run(rosie, en, args, filename)
       if res and (pos == 0) then return false end
       return true
    end
-   local function test_contains_ident(exp, q, id)
+   -- return values: true, false, nil (nil means failure to match)
+   local function test_includes_ident(exp, q, id)
       local function searchForID(tbl, id)
          -- tbl MUST BE "subs" table from a match
          local found = false
@@ -91,7 +93,9 @@ function p.run(rosie, en, args, filename)
          end
          return found
       end
-      local res, pos = test_engine:match(exp, q)
+      local res, leftover = test_engine:match(exp, q)
+      -- check for match error, which prevents testing containment
+      if (not res) or (leftover~=0) then return nil; end
       return searchForID(res.subs, id)
    end
    local test_funcs = {rejects=test_rejects_exp,accepts=test_accepts_exp}
@@ -99,23 +103,41 @@ function p.run(rosie, en, args, filename)
    local exp = "test_line"
    for _,p in pairs(test_lines) do
       local m, left = en:match(exp, p)
-      -- FIXME: need to test for failure to match
+      if not m then
+	 print(filename .. ": FAIL: invalid test syntax: " .. p)
+	 failures = failures + 1
+	 break
+      end
       local testIdentifier = m.subs[1].text
       local testType = m.subs[2].type
       local literals = 3 -- literals will start at subs offset 3
-      if testType == "containsKeyword" then
-         -- test contains
-         local containedIdentifier = m.subs[2].subs[1].text
+      if testType == "includesClause" then
+         -- test includes
+	 local t = m.subs[2]
+	 assert(t.subs and t.subs[1] and t.subs[1].type=="includesKeyword")
+	 local testing_excludes = (t.subs[1].text=="excludes")
+	 assert(t.subs[2] and t.subs[2].type=="identifier")
+         local containedIdentifier = t.subs[2].text
          for i = literals, #m.subs do
             total = total + 1
             local teststr = m.subs[i].text
             teststr = common.unescape_string(teststr)
-            if not test_contains_ident(testIdentifier, teststr, containedIdentifier) then
-               print(filename .. ": FAIL: " .. testIdentifier .. " did not contain " .. containedIdentifier .. " from " .. teststr)
+	    local includes = test_includes_ident(testIdentifier, teststr, containedIdentifier)
+	    local msg
+	    if includes==nil then
+	       msg = " did not accept " .. teststr ..
+		  " (blocked includes/excludes test of " .. containedIdentifier .. ")"
+	    elseif (not testing_excludes and not includes) then
+	       msg = " did not contain " .. containedIdentifier .. " with input " .. teststr
+	    elseif (testing_excludes and includes) then
+	       msg = " includes " .. containedIdentifier .. " with input " .. teststr
+	    end
+	    if msg then
+               print(filename .. ": FAIL: " .. testIdentifier .. msg)
                failures = failures + 1
             end
          end
-      else
+      elseif testType == "testKeyword" then
          -- test accepts/rejects
          for i = literals, #m.subs do
             total = total + 1
@@ -127,6 +149,8 @@ function p.run(rosie, en, args, filename)
                failures = failures + 1
             end
          end
+      else -- unknown test type
+	 assert(false, "parser for test expressions produced unexpected test type: " .. tostring(testType))
       end
    end
    if failures == 0 then
