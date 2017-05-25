@@ -23,6 +23,7 @@ json = require "cjson"
 test.dofile(ROSIE_HOME .. "/test/lib-test.lua")
 test.dofile(ROSIE_HOME .. "/test/api-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
+test.dofile(ROSIE_HOME .. "/test/rpl-appl-test.lua")
   print("\n\n*** EVAL IS NOT BEING TESTED\n\n")
   --test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
 test.dofile(ROSIE_HOME .. "/test/cli-test.lua")

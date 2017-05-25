@@ -36,68 +36,14 @@ function c1.compile_local(ast, gmr, source, env)
    return pat
 end
 
-local function apply_pfunction(pf, args, a)
-   local f = pf.primop
-   if f then
-      local ok, retval = pcall(f, table.unpack(args))
-      if not ok then
-	 throw("function call failed: " .. tostring(retval), a)
-      elseif not pattern.is(retval) then
-	 throw("function call did not produce a pattern: " .. tostring(retval), a)
-      else
-	 return retval
-      end -- if not ok
-   end
-   assert(false, "cannot apply non-primitive function!")
-end
-      
-local function compile_int(ast, gmr, env)
-   local i = tonumber(ast.text)
-   if not i then throw("invalid number: " .. text, ast); end
-   return i
-end
-
-local function compile_application(ast, gmr, env)
-   print("*** IN compile_application ***")
---   table.print(ast)
---   print("******************************")
-   assert(ast.subs and ast.subs[1] and ast.subs[2])
-   local fref = ast.subs[1]
-   assert(fref.type=="ref" or fref.type=="extref")
-   local args = ast.subs[2]
-   assert(args.type=="args")
-   assert(args.subs and args.subs[1])
-   for i, arg in ipairs(args.subs) do
-      assert(c1.expression_p(arg), "arg has type field = " .. tostring(arg.type))
-   end
-   local compiled_args = {}
-   for _, arg in ipairs(args.subs) do
-      local pat = c1.compile_exp(arg, gmr, env)  -- will throw
-      table.insert(compiled_args, pat)
-   end -- for each arg
-   local pf = c0.lookup(fref, gmr, env)
-   return apply_pfunction(pf, compiled_args, ast)	    -- lambda, not fexpr???
-end
-
-c1.compile_exp_functions = {}
-for k,v in pairs(c0.compile_exp_functions) do
-   c1.compile_exp_functions[k] = v
-end
-c1.compile_exp_functions.application = compile_application
-c1.compile_exp_functions.int = compile_int
-
-function c1.compile_exp(a, gmr, env)
-   return common.walk_ast(a, c1.compile_exp_functions, gmr, env)
-end
-
 function c1.compile_ast(ast, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
 		      local_ = c1.compile_local;
 		      binding=c0.compile_binding;
 		      new_grammar=c0.compile_grammar;
-		      exp=c1.compile_exp;
-		      default=c1.compile_exp;
+		      exp=c0.compile_exp;
+		      default=c0.compile_exp;
 		   }
    return common.walk_ast(ast, functions, false, env)
 end

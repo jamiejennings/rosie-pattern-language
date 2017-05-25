@@ -2,7 +2,7 @@
 ----
 ---- rpl-core-test.lua
 ----
----- (c) 2016, Jamie A. Jennings
+---- (c) 2016, 2017, Jamie A. Jennings
 ----
 
 -- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D

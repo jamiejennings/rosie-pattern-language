@@ -48,8 +48,8 @@ lpeg = assert(rosie.import("lpeg"), "failed to open lpeg package")
 
 ui = assert(rosie.import("ui"), "failed to open ui package")
 argparser = assert(rosie.import("command-parser"), "failed to load command-parser package")
-match = assert(rosie.import("command-match"), "failed to open command-match package")
-test = assert(rosie.import("command-test"), "failed to open command-test package")
+cli_match = assert(rosie.import("command-match"), "failed to open command-match package")
+cli_test = assert(rosie.import("command-test"), "failed to open command-test package")
 cli_common = assert(rosie.import("command-common"), "failed to open command-common package")
 
 parser = argparser.create(rosie)
@@ -114,10 +114,10 @@ local function run(args)
       --     get a fresh engine and load any rpl files or rpl strings
       --     load the file being tested
       --     call the test procedure
-      test.setup(en)
+      cli_test.setup(en)
       local total_failures, total_tests = 0, 0
       for _, fn in ipairs(args.filenames) do
-	 local failures, total = test.run(rosie, en, args, fn)
+	 local failures, total = cli_test.run(rosie, en, args, fn)
 	 total_failures = total_failures + failures
 	 total_tests = total_tests + total
       end
@@ -146,7 +146,7 @@ local function run(args)
       os.exit()
    else
       for _,fn in ipairs(args.filename) do
-	 match.process_pattern_against_file(rosie, en, args, compiled_pattern, fn)
+	 cli_match.process_pattern_against_file(rosie, en, args, compiled_pattern, fn)
       end
    end -- if command is list or repl or other
 end -- function run

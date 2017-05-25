@@ -45,7 +45,6 @@ local function make_compile(compile_ast)
 		   return success, packagename, messages -- message may contain compiler warnings
 		else
 		   messages = packagename	    -- error message is second return value
---		   assert(type(messages)=="string", "messages is: " .. tostring(messages))
 		   assert(cerror.is(messages))
 		   return false, nil, {messages}
 		end
@@ -179,7 +178,7 @@ local compile1 = make_compile(c1.load)
 return {compile0 = {compile = compile1,
 		    compile_expression=make_compile_expression(c0.expression_p, c1.compile_ast)},
 	compile1 = {compile = compile1,
-		    compile_expression=make_compile_expression(c1.expression_p, c1.compile_ast),
+		    compile_expression=make_compile_expression(c0.expression_p, c1.compile_ast),
 		    deps = deps,
 		 }
      }

@@ -531,26 +531,71 @@ function c0.compile_capture(a, gmr, env)
    return pat
 end
 
+local function apply_pfunction(pf, args, a)
+   local f = pf.primop
+   if f then
+      local ok, retval = pcall(f, table.unpack(args))
+      if not ok then
+	 throw("function call failed: " .. tostring(retval), a)
+      elseif not pattern.is(retval) then
+	 throw("function call did not produce a pattern: " .. tostring(retval), a)
+      else
+	 return retval
+      end -- if not ok
+   end
+   assert(false, "cannot apply non-primitive function!")
+end
+      
+local function compile_int(ast, gmr, env)
+   local i = tonumber(ast.text)
+   if not i then throw("invalid number: " .. text, ast); end
+   return i
+end
+
+local function compile_application(ast, gmr, env)
+--   print("*** IN compile_application ***")
+--   table.print(ast)
+--   print("******************************")
+   assert(ast.subs and ast.subs[1] and ast.subs[2])
+   local fref = ast.subs[1]
+   assert(fref.type=="ref" or fref.type=="extref")
+   local args = ast.subs[2]
+   assert(args.type=="args")
+   assert(args.subs and args.subs[1])
+   for i, arg in ipairs(args.subs) do
+      assert(c0.expression_p(arg), "arg has type field = " .. tostring(arg.type))
+   end
+   local compiled_args = {}
+   for _, arg in ipairs(args.subs) do
+      local pat = c0.compile_exp(arg, gmr, env)  -- will throw
+      table.insert(compiled_args, pat)
+   end -- for each arg
+   local pf = c0.lookup(fref, gmr, env)
+   return apply_pfunction(pf, compiled_args, ast)	    -- lambda, not fexpr???
+end
+
 c0.compile_exp_functions = {"compile_exp";
-				    capture=c0.compile_capture;	    
-				    ref=c0.compile_ref;
-			            extref=c0.compile_ref;
-				    predicate=c0.compile_predicate;
-				    raw_exp=c0.compile_raw_exp;
-				    choice=c0.compile_choice;
-				    sequence=c0.compile_sequence;
-				    literal=c0.compile_literal;
-				    literal0=c0.compile_literal0;
-				    named_charset=c0.compile_named_charset;
-				    named_charset0=c0.compile_named_charset;
-				    range=c0.compile_range_charset;
-				    charlist=c0.compile_charlist;
-				    charset=c0.compile_charset;        -- ONLY USED IN CORE
-				    new_quantified_exp=c0.compile_new_quantified_exp;
-				    syntax_error=c0.compile_syntax_error;
-				    grammar_expression=c0.compile_grammar_expression;
-			            fake_package=function(...) return nil; end;
-				 }
+			    capture=c0.compile_capture;	    
+			    ref=c0.compile_ref;
+			    extref=c0.compile_ref;
+			    predicate=c0.compile_predicate;
+			    raw_exp=c0.compile_raw_exp;
+			    choice=c0.compile_choice;
+			    sequence=c0.compile_sequence;
+			    literal=c0.compile_literal;
+			    literal0=c0.compile_literal0;
+			    named_charset=c0.compile_named_charset;
+			    named_charset0=c0.compile_named_charset;
+			    range=c0.compile_range_charset;
+			    charlist=c0.compile_charlist;
+			    charset=c0.compile_charset;	-- ONLY USED IN CORE
+			    new_quantified_exp=c0.compile_new_quantified_exp;
+			    syntax_error=c0.compile_syntax_error;
+			    grammar_expression=c0.compile_grammar_expression;
+			    application = compile_application; -- ONLY USED IN c1
+			    int = compile_int;		       -- ONLY USED IN c1
+			    fake_package=function(...) return nil; end;
+			 }
 
 function c0.compile_exp(a, gmr, env)
    return common.walk_ast(a, c0.compile_exp_functions, gmr, env)
