@@ -57,10 +57,11 @@ alias one_charset = { "[" { ":" named_charset ":]" } /
 		    }
 charset_exp = { "[" complement? ignore (one_charset ignore)+ "]" } / one_charset
 
-low =  [[:digit:]]*				    -- an int or nothing
-high = [[:digit:]]* 
+low =  [[0-9]]*				    -- an int or nothing
+high = [[0-9]]* 
 repetition = { "{" ignore low ignore "," ignore high ignore "}" }
 	          
+int = ignore [0-9]+
 
 alias quantifier = star / question / plus / repetition
 
@@ -85,8 +86,10 @@ grammar
 	                 quantified_exp / 
 	                 plain_exp} }
    syntax_error = { stmnt_prefix rest_of_line }
-   application = { identifier ":" {quantified_exp / plain_exp / arglist} }
-   arglist = { ignore open exp { ignore "," exp }* close }
+   application = { identifier ":" {quantified_exp / plain_exp / arglist / rawarglist} }
+   arglist = { ignore open int_or_exp { ignore "," int_or_exp }* close }
+   rawarglist = { ignore openraw int_or_exp { ignore "," int_or_exp }* closeraw }
+   alias int_or_exp = ignore int / exp
    choice = { {quantified_exp / plain_exp} ignore slash exp }
    sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }
    alias plain_exp = { ignore 
@@ -162,6 +165,8 @@ preparse = language_decl
 -- test import_decl accepts "import -f_o-o/bar as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
 
 -- test rpl_expression accepts "foo_1:x", "pkg.f:x", "f:\"hello\"", "f:!x", "f:x+", "f:(x y z)", "f:{x y z}"
--- test rpl_expression accepts "f:(x, y)", "f:{a}", "f:{x, y}"
--- test rpl_expression contains arglist "f:(x, y)"
+-- test rpl_expression accepts "f:(x, y)", "foo:{a, b}"
+-- test rpl_expression accepts "f:(a, 55)", "foo.bar:(1, 2, 3, a b c, d / e, {f}*)"
 -- test rpl_expression rejects "f:", "pkg.f:"
+-- test rpl_expression includes arglist "f:(x, y)"
+-- test rpl_expression excludes arglist "f:(x y)"
