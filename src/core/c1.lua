@@ -51,6 +51,12 @@ local function apply_pfunction(pf, args, a)
    assert(false, "cannot apply non-primitive function!")
 end
       
+local function compile_int(ast, gmr, env)
+   local i = tonumber(ast.text)
+   if not i then throw("invalid number: " .. text, ast); end
+   return i
+end
+
 local function compile_application(ast, gmr, env)
    print("*** IN compile_application ***")
 --   table.print(ast)
@@ -61,19 +67,16 @@ local function compile_application(ast, gmr, env)
    local args = ast.subs[2]
    assert(args.type=="args")
    assert(args.subs and args.subs[1])
-   for _, a in ipairs(args.subs) do
-      assert(c1.expression_p(a) or a.type=="int")
+   for i, arg in ipairs(args.subs) do
+      assert(c1.expression_p(arg), "arg has type field = " .. tostring(arg.type))
    end
    local compiled_args = {}
    for _, arg in ipairs(args.subs) do
-      if arg.type~="int" then
-	 local pat = c1.compile_exp(arg, gmr, env)  -- will throw
-	 assert(common.pattern.is(pat))		    -- REMOVE to enable first class functions
-	 table.insert(compiled_args, pat)
-      end					    -- TEMPORARILY SKIPPING INTS
+      local pat = c1.compile_exp(arg, gmr, env)  -- will throw
+      table.insert(compiled_args, pat)
    end -- for each arg
    local pf = c0.lookup(fref, gmr, env)
-   return apply_pfunction(pf, compiled_args, a)	    -- lambda, not fexpr?
+   return apply_pfunction(pf, compiled_args, ast)	    -- lambda, not fexpr???
 end
 
 c1.compile_exp_functions = {}
@@ -81,6 +84,7 @@ for k,v in pairs(c0.compile_exp_functions) do
    c1.compile_exp_functions[k] = v
 end
 c1.compile_exp_functions.application = compile_application
+c1.compile_exp_functions.int = compile_int
 
 function c1.compile_exp(a, gmr, env)
    return common.walk_ast(a, c1.compile_exp_functions, gmr, env)
@@ -100,7 +104,9 @@ end
 
 function c1.expression_p(ast)
    local name, pos, text, subs = decode_match(ast)
-   return not (not (name=="application" or c0.compile_exp_functions[name]))
+   return not (not (name=="application" or
+		    name=="int" or
+		    c0.compile_exp_functions[name]))
 end
 
 ----------------------------------------------------------------------------------------

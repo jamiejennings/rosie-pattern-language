@@ -464,7 +464,11 @@ local function expand_cooked_arg(ast)
 end
    
 local function expand_raw_arg(ast)
-   return syntax.expand_rhs(ast, "raw")
+   if ast.type~="int" then
+      return syntax.expand_rhs(ast, "raw")
+   else
+      return ast
+   end
 end
 
 local function transform_application(ast)
