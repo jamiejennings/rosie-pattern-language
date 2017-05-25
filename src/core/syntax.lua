@@ -459,6 +459,39 @@ function syntax.top_level_transform0(ast)
    end
 end
 
+local function expand_cooked_arg(ast)
+   return syntax.expand_rhs(ast, "cooked")
+end
+   
+local function expand_raw_arg(ast)
+   return syntax.expand_rhs(ast, "raw")
+end
+
+local function transform_application(ast)
+   assert(ast.subs and ast.subs[1] and ast.subs[2])
+   local ref = syntax.id_to_ref(ast.subs[1])
+   local args = {}
+   local a = ast.subs[2]
+   if a.type=="arg" then
+      assert(a.subs and a.subs[1] and syntax.expression_p(a.subs[1]))
+      args = { expand_raw_arg(a.subs[1]) }
+   elseif a.type=="arglist" then
+      args = list.map(expand_cooked_arg, a.subs)
+   elseif a.type=="rawarglist" then
+      args = list.map(expand_raw_arg, a.subs)
+   else
+      error("syntax transform_application received unexpected arg list: " .. a.type)
+   end
+   return common.create_match(ast.type,
+			      ast.pos,
+			      ast.text,
+			      ref,
+			      common.create_match("args",
+						  a.pos,
+						  a.text,
+						  table.unpack(args)))
+end
+
 function syntax.top_level_transform1(ast)
    local name = ast.type
    if name=="rpl_statements" or name=="rpl_expression" then
@@ -493,6 +526,8 @@ function syntax.top_level_transform1(ast)
       return ast				    -- errors will be culled out later
    elseif (name=="package_decl") or (name=="language_decl") or (name=="import_decl") then
       return ast				    -- no transformation needed
+   elseif (name=="application") then
+      return transform_application(ast)
    else
       return syntax.expand_rhs(ast, ast.type)
    end

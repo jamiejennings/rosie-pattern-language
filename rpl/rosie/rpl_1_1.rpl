@@ -86,9 +86,10 @@ grammar
 	                 quantified_exp / 
 	                 plain_exp} }
    syntax_error = { stmnt_prefix rest_of_line }
-   application = { identifier ":" {quantified_exp / plain_exp / arglist / rawarglist} }
+   application = { identifier ":" } ignore (arg / arglist / rawarglist )
    arglist = { ignore open int_or_exp { ignore "," int_or_exp }* close }
    rawarglist = { ignore openraw int_or_exp { ignore "," int_or_exp }* closeraw }
+   arg = quantified_exp / plain_exp / int
    alias int_or_exp = ignore int / exp
    choice = { {quantified_exp / plain_exp} ignore slash exp }
    sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }
@@ -167,6 +168,12 @@ preparse = language_decl
 -- test rpl_expression accepts "foo_1:x", "pkg.f:x", "f:\"hello\"", "f:!x", "f:x+", "f:(x y z)", "f:{x y z}"
 -- test rpl_expression accepts "f:(x, y)", "foo:{a, b}"
 -- test rpl_expression accepts "f:(a, 55)", "foo.bar:(1, 2, 3, a b c, d / e, {f}*)"
--- test rpl_expression rejects "f:", "pkg.f:"
--- test rpl_expression includes arglist "f:(x, y)"
+-- test rpl_expression rejects "f:", "pkg.f:", "f:{a / b, 3}+"
+-- test rpl_expression includes arglist "f:(x, y)", "f:(3)"
 -- test rpl_expression excludes arglist "f:(x y)"
+-- test rpl_expression includes arg "f:(x)", f:(x y)", "f:x", "f:5", "f:{x y}", "f:{x}",
+-- test rpl_expression includes arg "f:{a / b}+", "f:{(a)}", "f:{[:set:]}"
+-- test rpl_expression includes rawarglist "f:{5}", "f:{7, x, a / b / c+}", "f:{(a),b}", "f:{[:set:]{1,2},\"hi\"}"
+
+
+

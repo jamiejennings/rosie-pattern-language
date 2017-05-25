@@ -170,7 +170,6 @@ end
 -- warnings and other messages can be enqueued there via a function call, and not by directly
 -- manipulating a table of strings.
 
-
 ----------------------------------------------------------------------------------------
 -- Top-level interface to compilers
 ----------------------------------------------------------------------------------------
@@ -180,9 +179,7 @@ local compile1 = make_compile(c1.load)
 return {compile0 = {compile = compile1,
 		    compile_expression=make_compile_expression(c0.expression_p, c1.compile_ast)},
 	compile1 = {compile = compile1,
-		    compile_expression=make_compile_expression(c0.expression_p, c1.compile_ast),
+		    compile_expression=make_compile_expression(c1.expression_p, c1.compile_ast),
 		    deps = deps,
---		    compile_module=c1.compile_module, -- remove?
---		    read_module=c1.read_module	    -- TODO: factor into find_module and read_module?
 		 }
      }

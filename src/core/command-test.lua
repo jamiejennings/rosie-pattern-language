@@ -128,9 +128,9 @@ function p.run(rosie, en, args, filename)
 	       msg = " did not accept " .. teststr ..
 		  " (blocked includes/excludes test of " .. containedIdentifier .. ")"
 	    elseif (not testing_excludes and not includes) then
-	       msg = " did not contain " .. containedIdentifier .. " with input " .. teststr
+	       msg = " did not include " .. containedIdentifier .. " with input " .. teststr
 	    elseif (testing_excludes and includes) then
-	       msg = " includes " .. containedIdentifier .. " with input " .. teststr
+	       msg = " did not exclude " .. containedIdentifier .. " with input " .. teststr
 	    end
 	    if msg then
                print(filename .. ": FAIL: " .. testIdentifier .. msg)

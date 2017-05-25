@@ -34,16 +34,56 @@ function c1.compile_local(ast, gmr, source, env)
    return pat
 end
 
+local function compile_application(ast, gmr, env)
+   print("*** IN compile_application ***")
+   table.print(ast)
+   print("******************************")
+   assert(ast.subs and ast.subs[1] and ast.subs[2])
+   local fref = ast.subs[1]
+   assert(fref.type=="ref" or fref.type=="extref")
+   local args = ast.subs[2]
+   assert(args.type=="args")
+   assert(args.subs and args.subs[1])
+   for _, a in ipairs(args.subs) do
+      assert(c1.expression_p(a) or a.type=="int")
+   end
+   local compiled_args = {}
+   for _, arg in ipairs(args.subs) do
+      if arg.type~="int" then
+	 local pat = c1.compile_exp(arg, gmr, env)	    -- will throw
+	 assert(common.pattern.is(pat))
+	 table.print(pat)
+	 table.insert(compiled_args, pat)
+      end					    -- TEMPORARILY SKIPPING INTS
+   end -- for each arg
+   return compiled_args[1]			    -- TEMPORARY
+end
+
+c1.compile_exp_functions = {}
+for k,v in pairs(c0.compile_exp_functions) do
+   c1.compile_exp_functions[k] = v
+end
+c1.compile_exp_functions.application = compile_application
+
+function c1.compile_exp(a, gmr, env)
+   return common.walk_ast(a, c1.compile_exp_functions, gmr, env)
+end
+
 function c1.compile_ast(ast, env)
    assert(type(ast)=="table", "Compiler: first argument not an ast: "..tostring(ast))
    local functions = {"compile_ast";
 		      local_ = c1.compile_local;
 		      binding=c0.compile_binding;
 		      new_grammar=c0.compile_grammar;
-		      exp=c0.compile_exp;
-		      default=c0.compile_exp;
+		      exp=c1.compile_exp;
+		      default=c1.compile_exp;
 		   }
    return common.walk_ast(ast, functions, false, env)
+end
+
+function c1.expression_p(ast)
+   local name, pos, text, subs = decode_match(ast)
+   return not (not (name=="application" or c0.compile_exp_functions[name]))
 end
 
 ----------------------------------------------------------------------------------------
