@@ -264,8 +264,7 @@ function c0.compile_literal(a, gmr, env)
    end
 end
 
-function c0.compile_ref(a, gmr, env)
-   assert(a, "did not get ast in compile_ref")
+function c0.lookup(a, gmr, env)
    local reftype, pos, name, subs = decode_match(a)
    local packagename, localname
    if reftype=="ref" then
@@ -277,12 +276,18 @@ function c0.compile_ref(a, gmr, env)
       local typ, pos, name = decode_match(subs[2])
       assert(typ=="localname")
       localname = name
-   else assert(false, "in compile_ref, got " .. reftyp)
+   else assert(false, "in c0.lookup, got " .. reftype)
    end
-   local pat, msg = lookup(env, localname, packagename)
-   if (not pat) then 
-      explain_undefined_identifier(a);
-   end -- throw
+   local value = lookup(env, localname, packagename)
+   if (not value) then explain_undefined_identifier(a); end
+   return value, packagename, localname
+end
+
+-- compile_ref expects the identifier to be bound to a pattern
+function c0.compile_ref(a, gmr, env)
+   assert(a, "did not get ast in compile_ref")
+   local reftype, pos, name, subs = decode_match(a)
+   local pat, packagename, localname = c0.lookup(a, gmr, env)
    assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat)) -- TODO: create explain_not_a_pattern
    local newpat = pattern.new{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
    if reftype=="extref" and (not pat.alias) then

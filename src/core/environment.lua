@@ -18,6 +18,7 @@ local environment = {}
 
 local common = require "common"
 local pattern = common.pattern
+local pfunction = common.pfunction
 local recordtype = require "recordtype"
 local lpeg = require "lpeg"
 local locale = lpeg.locale()
@@ -29,6 +30,26 @@ local locale = lpeg.locale()
 local b_id = common.boundary_identifier
 local dot_id = common.any_char_identifier
 local eol_id = common.end_of_input_identifier
+
+local function example_first(...)
+   io.write("*** example_first called with args: ")
+   local args = {...}
+   for _, arg in ipairs(args) do
+      io.write(tostring(arg), " ")
+   end
+   print()
+   return args[1]
+end
+
+local function example_last(...)
+   io.write("*** example_last called with args: ")
+   local args = {...}
+   for _, arg in ipairs(args) do
+      io.write(tostring(arg), " ")
+   end
+   print()
+   return args[#args]
+end
 
 ----------------------------------------------------------------------------------------
 -- Boundary for tokenization... this is going to be customizable, but hard-coded for now
@@ -51,6 +72,9 @@ local ENV =
     {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
      [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
+     ["find"] = pfunction.new{primop=pfunction_find};
+     ["last"] = pfunction.new{primop=example_last};
+     ["first"] = pfunction.new{primop=example_first};
   }
 	      
 setmetatable(ENV, {__tostring = function(env)

@@ -90,6 +90,7 @@ local recordtype = require "recordtype"
 local common = require "common"
 local cerror = common.cerror
 local rmatch = common.rmatch
+local pfunction = common.pfunction
 local environment = require "environment"
 local lookup = environment.lookup
 local bind = environment.bind
@@ -377,7 +378,8 @@ local function properties(name, obj)
       return {type=kind, color=color, binding=binding}
    elseif environment.is(obj) then
       return {type="package", color="", binding="<package>"}
---   elseif pfunction.is(obj) then...
+   elseif pfunction.is(obj) then
+      return {type="function", color="", binding="<function>"}
    else
       error("Internal error: unknown kind of object in environment, stored at " ..
 	    tostring(name) .. ": " .. tostring(obj))

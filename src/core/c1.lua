@@ -12,6 +12,8 @@ local c0 = require "c0"
 local string = require "string"
 local lpeg = require "lpeg"
 local common = require "common"
+local pattern = common.pattern
+local pfunction = common.pfunction
 local cerror = common.cerror
 local decode_match = common.decode_match
 local throw = common.throw_error
@@ -34,10 +36,25 @@ function c1.compile_local(ast, gmr, source, env)
    return pat
 end
 
+local function apply_pfunction(pf, args, a)
+   local f = pf.primop
+   if f then
+      local ok, retval = pcall(f, table.unpack(args))
+      if not ok then
+	 throw("function call failed: " .. tostring(retval), a)
+      elseif not pattern.is(retval) then
+	 throw("function call did not produce a pattern: " .. tostring(retval), a)
+      else
+	 return retval
+      end -- if not ok
+   end
+   assert(false, "cannot apply non-primitive function!")
+end
+      
 local function compile_application(ast, gmr, env)
    print("*** IN compile_application ***")
-   table.print(ast)
-   print("******************************")
+--   table.print(ast)
+--   print("******************************")
    assert(ast.subs and ast.subs[1] and ast.subs[2])
    local fref = ast.subs[1]
    assert(fref.type=="ref" or fref.type=="extref")
@@ -50,13 +67,13 @@ local function compile_application(ast, gmr, env)
    local compiled_args = {}
    for _, arg in ipairs(args.subs) do
       if arg.type~="int" then
-	 local pat = c1.compile_exp(arg, gmr, env)	    -- will throw
-	 assert(common.pattern.is(pat))
-	 table.print(pat)
+	 local pat = c1.compile_exp(arg, gmr, env)  -- will throw
+	 assert(common.pattern.is(pat))		    -- REMOVE to enable first class functions
 	 table.insert(compiled_args, pat)
       end					    -- TEMPORARILY SKIPPING INTS
    end -- for each arg
-   return compiled_args[1]			    -- TEMPORARY
+   local pf = c0.lookup(fref, gmr, env)
+   return apply_pfunction(pf, compiled_args, a)	    -- lambda, not fexpr?
 end
 
 c1.compile_exp_functions = {}

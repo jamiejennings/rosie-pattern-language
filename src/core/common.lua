@@ -369,7 +369,9 @@ common.undeclared =
    recordtype.new("undeclared", {})
 
 common.pfunction =
-   recordtype.new("pfunction", {})
+   recordtype.new("pfunction",
+		  { primop=recordtype.NIL;	    -- if primitive, holds a lua function
+		  })
 
 -- TODO: get rid of original_ast?
 
