@@ -363,7 +363,6 @@ end -- function run
 -- Do stuff
 ----------------------------------------------------------------------------------------
 
-io.stderr:write("Using custom gc configuration\n")
 collectgarbage("setpause", 190)			    -- JAJ Friday, May 26, 2017
 
 if (not arg[1]) then
