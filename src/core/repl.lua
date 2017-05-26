@@ -195,6 +195,7 @@ function repl(en)
 	 end -- switch on type of input received
       end
    end
+   collectgarbage()
    repl(en)
 end
 
