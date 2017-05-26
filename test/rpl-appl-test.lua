@@ -180,5 +180,8 @@ m, leftover = e:match(p, "b b")
 check(not m)
 
 
+subheading("Example function: find")
+
+
 
 return test.finish()

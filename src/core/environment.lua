@@ -31,13 +31,40 @@ local b_id = common.boundary_identifier
 local dot_id = common.any_char_identifier
 local eol_id = common.end_of_input_identifier
 
+local function pfunction_find(...)
+   local args = {...}
+   if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
+   local ast = args[1]
+   assert(ast.type=="rpl_expression")
+   -- First we make sure that the argument actually compiles
+--   local pat, msgs = compile(nil, ast, en._modtable, env)
+--   if not pat then return false, msgs; end
+   local replacement = ast.subs[1]
+   -- Next, transform pat.ast
+   local ast, orig_ast = parse("{{!e .}* e}+")
+
+   
+
+   assert(type(ast)=="table" and ast.subs and ast.subs[1] and (not ast.subs[2]))
+   assert(ast.type=="rpl_expression")
+   assert(ast.subs[1].type=="raw_exp", "type is: " .. ast.subs[1].type)
+   ast = ast.subs[1]
+   assert(ast.subs and ast.subs[1])
+   local template = ast.subs[1]
+   local grep_ast = syntax.replace_ref(template, "e", replacement)
+   assert(type(grep_ast)=="table", "syntax.replace_ref failed")
+   grep_ast = common.create_match("rpl_expression", 1, "search:(" .. pattern_exp .. ")", grep_ast)
+
+
+end   
+
 local function example_first(...)
    io.write("*** example_first called with args: ")
    local args = {...}
    for _, arg in ipairs(args) do
       io.write(tostring(arg), " ")
    end
-   print()
+   print("***")
    return args[1]
 end
 
@@ -47,7 +74,7 @@ local function example_last(...)
    for _, arg in ipairs(args) do
       io.write(tostring(arg), " ")
    end
-   print()
+   print("***")
    return args[#args]
 end
 
