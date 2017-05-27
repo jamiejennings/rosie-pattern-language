@@ -88,6 +88,7 @@ static int bootstrap (lua_State *L, struct rosieL_string *rosie_home) {
      memcpy(name, rosie_home->ptr, rosie_home->len);
      memcpy(name+(rosie_home->len), bootscript, strlen(bootscript)+1); /* +1 copies the NULL terminator */
      int status = luaL_loadfile(L, name);
+     free(name);
      if (status != LUA_OK) return status;
      status = lua_pcall(L, 0, LUA_MULTRET, 0);
      return status;
@@ -340,7 +341,7 @@ static struct rosieL_stringArray call_api(lua_State *L, char *api_name, int narg
 }
      
 void rosieL_finalize(void *L) {
-     lua_close(L);
+     if (L) lua_close(L);
 }
 
 #include "librosie_gen.c"

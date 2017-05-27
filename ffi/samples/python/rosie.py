@@ -110,7 +110,7 @@ class initialize():
         free(messages) #self.rosie.rosie.rosieL_free_stringArray(messages)
         code = retvals[0]
         if code != 'true':
-            raise # exception indicating that the call failed
+            raise RuntimeError(retvals[1]) # exception indicating that the call failed
         return retvals[1:]
 
 
@@ -125,13 +125,14 @@ class engine ():
         #     raise #"Exception indicating that rosie_home is not set"
         self.name = "anonymous"
         self.rosie = rosie_instance
+        self.id = None
         messages = self.rosie.rosie.rosieL_new_stringArray()
         self.engine = self.rosie.rosie.rosieL_initialize(to_cstr_ptr(self.rosie.rosie, self.rosie.rosie_home), messages)
         #printArray(messages, "initialize")
         retvals = self.rosie.get_retvals_from_ptr(messages)
         self.id = retvals[0]
         if self.engine == ffi.NULL:
-            raise #"Error initializing librosie.  Exiting..."
+            raise RuntimeError(retvals[1]) #"Error initializing librosie.  Exiting..."
         return
 
     def configure(self, config_string):
@@ -169,8 +170,9 @@ class engine ():
         return retvals
 
     def __del__(self):
-        print "Garbage collecting engine", self.id
-        self.rosie.rosie.rosieL_finalize(self.engine)
+        if self.id:
+            print "Garbage collecting engine", self.id
+            self.rosie.rosie.rosieL_finalize(self.engine)
 
 
     

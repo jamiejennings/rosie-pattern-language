@@ -16,15 +16,6 @@ ffi/samples/C/rtest
 ffi/samples/**/setvars
 ffi/samples/nodejs/node_modules/*
 
-src/c/repl/rosie
-src/c/librosie/node_modules/*
-src/c/librosie/go/src/ffi/libs/*
-src/c/librosie/go/src/hello/
-
-# These are symlinks within the repo:
-src/c/librosie/go/src/ffi/librosie.c
-src/c/librosie/go/src/ffi/librosie.h
-
 # These directories are created and populated by the build
 bin
 lib
