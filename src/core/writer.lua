@@ -342,4 +342,131 @@ function writer.reveal(astlist)
    return s
 end
 
+----------------------------------------------------------------------------------------
+-- sexp writer
+----------------------------------------------------------------------------------------
+
+local function write_charset_exp(exp)
+   local exps = list.from(exp.subs)
+   if exp.subs[1].type=="complement" then exps = list.cdr(exps); end
+   local char = "#'"
+   if exp.type=="named_charset" then char = ""; end
+   local exps_str = table.concat(list.map(function(a) return char .. a.text end, exps), " ")
+   local start = "(" .. exp.type .. " "
+   local finish = ")"
+   if exp.subs[1].type=="complement" then
+      start = "(complement " .. start
+      finish = ")" .. finish
+   end
+   return start .. exps_str .. finish
+end
+
+function write_quantified_exp(exp)
+   local e, q = exp.subs[1], exp.subs[2]
+   local qname, qpos, printable_q = common.decode_match(q)
+   assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
+   local exps = { write_exp(e) }
+   if qname=="repetition" then
+      table.insert(exps, 1, q.subs[2].text)	    -- max
+      table.insert(exps, 1, q.subs[1].text)	    -- min
+      table.insert(exps, 1, "(repeat")
+      table.insert(exps, ")")
+   else
+      table.insert(exps, 1, qname)
+   end
+   return "(" .. exp.type .. " " .. table.concat(exps, " ") .. ")"
+end
+   
+local function write_exp(exp)
+   if exp.type=="rpl_expression" then
+      return write_exp(exp.subs[1])
+   elseif exp.type=="capture" then
+      return "(capture " .. exp.subs[1].text .. " " .. write_exp(exp.subs[2]) .. ")"
+   elseif exp.type=="ref" then
+      return "(ref " .. exp.text .. ")"
+   elseif exp.type=="extref" then
+      return "(extref " .. exp.subs[1].text .. " " .. exp.subs[2].text .. ")"
+   elseif exp.type=="predicate" then
+      return "(predicate " .. exp.subs[1].text .. " " .. write_exp(exp.subs[2]) .. ")"
+   elseif exp.type=="group" then
+      return "(cook/group " .. write_exp(exp.subs[1]) .. ")"
+   elseif exp.type=="raw" then
+      return "(raw " .. write_exp(exp.subs[1]) .. ")"
+   elseif exp.type=="raw_exp" then
+      return "(raw/raw_exp " .. write_exp(exp.subs[1]) .. ")"
+   elseif exp.type=="cooked" then
+      return "(cook/cooked " .. write_exp(exp.subs[1]) .. ")"
+   elseif exp.type=="choice" then
+      return "(choice " .. write_exp(exp.subs[1]) .. " " .. write_exp(exp.subs[2]) .. ")"
+   elseif exp.type=="sequence" then
+      return "(sequence " .. write_exp(exp.subs[1]) .. " " .. write_exp(exp.subs[2]) .. ")"      
+   elseif exp.type=="identifier" then
+      return "(identifier " .. exp.text .. ")"
+   elseif exp.type=="literal" then
+      return "(literal \"" .. exp.text .. "\")"
+   elseif (exp.type=="named_charset" or 
+	   exp.type=="charset_exp" or
+	   exp.type=="charlist" or
+	   exp.type=="range") then
+      return write_charset_exp(exp)
+   elseif (exp.type=="quantified_exp" or
+	   exp.type=="new_quantified_exp" or
+	   exp.type=="cooked_quantified_exp" or
+	   exp.type=="raw_quantified_exp") then
+      return write_quantified_exp(exp)
+   elseif exp.type=="syntax_error" then
+      return "(syntax_error " .. exp.text .. tostring(exp.pos) .. ")"
+   else
+      error("Writer: unknown expression type: " .. exp.type)
+   end
+end
+
+local function write_binding(a)
+   local name, pos, text, subs = common.decode_match(a)
+   assert(subs[1].type=="identifier")
+   local id, e = subs[1], subs[2]
+   return "(bind/" ..  a.type .. " " .. id.text .. " " .. write_exp(e) .. ")"
+end
+
+local write_statement;
+
+local function write_grammar(a)
+   local name, pos, text, subs = common.decode_match(a)
+   assert(name=="grammar_" or name=="new_grammar")
+   assert(type(subs[1])=="table")
+   return "(" .. name .." " .. table.concat(list.map(write_statement, a.subs), " ") .. ")"
+end
+
+function write_statement(a)
+   if a.type=="binding" then
+      return write_binding(a)
+   elseif (a.type=="assignment_" or a.type=="alias_") then
+      return write_binding(a)
+   elseif (a.type=="grammar_" or a.type=="new_grammar") then
+      return write_grammar(a)
+   else
+      error("Writer: unknown statement type: " .. a.type)
+   end
+end
+
+local function write_statements(ast)
+   return table.concat(list.map(write_statement, ast.subs), "\n")
+end
+
+function writer.write(ast)
+   assert(type(ast)=="table", "Writer: first argument not an ast: "..tostring(ast))
+   assert(type(ast.type)=="string", "Writer: first argument not an ast: "..tostring(ast))
+   local functions = {"write_ast";
+		      binding=write_binding;
+		      assignment_=write_assignment;
+		      alias_=write_alias;
+		      grammar_=write_grammar;
+		      new_grammar=write_grammar;
+		      rpl_expression=write_exp;
+		      rpl_statements=write_statements;
+		   }
+   return common.walk_ast(ast, functions);
+end
+   
+
 return writer
