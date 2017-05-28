@@ -537,8 +537,8 @@ local function apply_pfunction(pf, args, a)
       local ok, retval = pcall(f, table.unpack(args))
       if not ok then
 	 throw("function call failed: " .. tostring(retval), a)
-      elseif type(retval)~="table" then		    -- TODO: run an ast verifier here
-	 throw("function call did not produce a compilable structure (AST): " .. tostring(retval), a)
+      elseif not pattern.is(retval) then
+	 throw("function call did not produce a pattern: " .. tostring(retval), a)
       else
 	 return retval
       end -- if not ok
@@ -565,15 +565,13 @@ local function compile_application(ast, gmr, env)
    for i, arg in ipairs(args.subs) do
       assert(c0.expression_p(arg), "arg has type field = " .. tostring(arg.type))
    end
+   local compiled_args = {}
+   for _, arg in ipairs(args.subs) do
+      local pat = c0.compile_exp(arg, gmr, env)	    -- will throw
+      table.insert(compiled_args, pat)
+   end -- for each arg
    local pf = c0.lookup(fref, gmr, env)
-   -- apply pfunction to unevaluated args, get new ast (pfunctions are really fexprs).
-   local retval = apply_pfunction(pf, args.subs, ast)
-
-   -- TODO: do NOT expand syntax before calling a c1 compiler.
-   -- TODO: 
-   -- TODO: run syntax expansion on retval.
-   
-   return c0.compile_exp(retval, gmr, env)
+   return apply_pfunction(pf, compiled_args, ast)   -- pfunctions are lambdas
 end
 
 c0.compile_exp_functions = {"compile_exp";

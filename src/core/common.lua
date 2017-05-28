@@ -362,8 +362,10 @@ end
 
 
 ----------------------------------------------------------------------------------------
--- Binding types: undeclared, pattern, pfunction, environment
+-- Binding types: undeclared, pattern, macro, pfunction, environment
 ----------------------------------------------------------------------------------------
+
+-- environment is defined in environment.lua
 
 common.undeclared =
    recordtype.new("undeclared", {})
@@ -371,6 +373,13 @@ common.undeclared =
 common.pfunction =
    recordtype.new("pfunction",
 		  { primop=recordtype.NIL;	    -- if primitive, holds a lua function
+		    exported=false;
+		  })
+
+common.macro =
+   recordtype.new("macro",
+		  { primop=recordtype.NIL;	    -- if primitive, holds a lua function
+		    exported=false;
 		  })
 
 -- TODO: get rid of original_ast?
