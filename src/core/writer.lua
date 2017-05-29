@@ -348,17 +348,28 @@ end
 
 local function write_charset_exp(exp)
    local exps = list.from(exp.subs)
-   if exp.subs[1].type=="complement" then exps = list.cdr(exps); end
-   local char = "#'"
-   if exp.type=="named_charset" then char = ""; end
-   local exps_str = table.concat(list.map(function(a) return char .. a.text end, exps), " ")
    local start = "(" .. exp.type .. " "
    local finish = ")"
-   if exp.subs[1].type=="complement" then
-      start = "(complement " .. start
-      finish = ")" .. finish
+   assert(exp.subs and exp.subs[1])
+   if (exp.type~="charset_combiner") and (exp.subs[1].type=="complement") then
+      exps = list.cdr(exps)
+      start = start .. "complement "
+      assert(exp.subs[2])
+   else
+      start = start .. "nocomplement "
    end
-   return start .. exps_str .. finish
+   if exp.type=="charset_exp" then
+      return start .. table.concat(list.map(write_charset_exp, exps), " ") .. finish
+   elseif exp.type=="charset_combiner" then
+      assert(exp.subs[2].type=="op")
+      start = "(" .. exp.subs[2].subs[1].type .. " "
+      return start .. write_charset_exp(exp.subs[1]) .. " " .. write_charset_exp(exp.subs[3]) .. finish
+   else
+      local char = "#'"
+      if exp.type=="named_charset" then char = ""; end
+      local exps_str = table.concat(list.map(function(a) return char .. a.text end, exps), " ")
+      return start .. exps_str .. finish
+   end
 end
 
 function write_quantified_exp(exp)
@@ -388,8 +399,8 @@ local function write_exp(exp)
       return "(extref " .. exp.subs[1].text .. " " .. exp.subs[2].text .. ")"
    elseif exp.type=="predicate" then
       return "(predicate " .. exp.subs[1].text .. " " .. write_exp(exp.subs[2]) .. ")"
-   elseif exp.type=="group" then
-      return "(cook/group " .. write_exp(exp.subs[1]) .. ")"
+--   elseif exp.type=="group" then
+--      return "(cook/group " .. write_exp(exp.subs[1]) .. ")"
    elseif exp.type=="raw" then
       return "(raw " .. write_exp(exp.subs[1]) .. ")"
    elseif exp.type=="raw_exp" then

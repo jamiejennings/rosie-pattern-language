@@ -318,6 +318,26 @@ syntax.cooked_to_raw =
 			   nil,
 			   false)
 
+local function remove_combiners(subs)
+   -- charset_exp always has one sub
+   assert(subs and subs[1])
+   local s = subs[1]
+   if s.type=="charset_combiner" then
+--      print("*** in remove_combiners, found combiner: "); table.print(subs, false)
+      assert(s.subs[2].type=="op")
+      if s.subs[2].subs[1].type=="union" then
+	 return list.append(remove_combiners({s.subs[1]}),
+			    remove_combiners({s.subs[3]}))
+      else
+	 error("Unimplemented character set operation: " .. s.subs[2].type)
+      end
+   elseif s.type=="charset_exp" then
+      return remove_combiners(s.subs)
+   else
+      return subs
+   end
+end
+      
 syntax.expand_charset_exp =
    syntax.make_transformer(function(ast)
 			      local name, pos, text, subs = common.decode_match(ast)
@@ -325,6 +345,9 @@ syntax.expand_charset_exp =
 			      local complement = (subs[1].type=="complement")
 			      if complement then subs=list.cdr(list.from(subs)); end
 			      assert(subs and subs[1])
+			      -- Currently, NO SUPPORT for charset operators other than adjacency
+			      subs = remove_combiners(subs)
+--			      print("*** after remove_combiners: "); table.print(subs, false)
 			      local exp 
 			      if subs[2] then
 				 exp = syntax.rebuild_choice(subs)

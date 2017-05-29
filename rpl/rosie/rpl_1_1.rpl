@@ -7,6 +7,16 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+-- TODO:
+-- (0) Enable charset operations (see 'op' below)
+-- (1) Add to rosie tests the parsing of the following extensions:
+--   repetition with a single parameter, e.g. e{5}
+--   optional semi-colons between statements, incl. empty statement
+--   nested charset_exps, e.g. [^[[[a-z]][^0-9]]] 
+--   set intersection, e.g. [[a-z]&&[xyz]]
+--   set difference, e.g. [[a-z]-[xyz]]
+-- (2) Add stubs to compiler for these exps, with informative error messages
+
 rpl 1.0
 
 package rpl_1_1
@@ -55,11 +65,26 @@ alias one_charset = { "[" { ":" named_charset ":]" } /
 		          { charlist "]" } /
 		          syntax_error
 		    }
-charset_exp = { "[" complement? ignore (one_charset ignore)+ "]" } / one_charset
+-- grammar
+--    charset_exp = { "[" complement? ignore {charset_exp ignore {op ignore}?}+ "]" } /
+-- 		 one_charset
+--    op = intersection / difference
+--    intersection = "&&"
+--    difference = "-"
+-- end
+grammar
+   charset_exp = { "[" complement? ignore charset_exp1 ignore "]" } / one_charset
+   alias charset_exp1 = charset_combiner / charset_exp 
+   charset_combiner = { ignore charset_exp ignore op ignore charset_exp1 }
+   op = intersection / difference / union
+   union = ""
+   intersection = "&&"
+   difference = "-"
+end
 
 low =  [[0-9]]*				    -- an int or nothing
 high = [[0-9]]* 
-repetition = { "{" ignore low ignore "," ignore high ignore "}" }
+repetition = { "{" ignore low ignore {"," ignore high ignore}? "}" }
 	          
 int = ignore [0-9]+
 
@@ -123,11 +148,11 @@ import_spec = ignore importpath ("as" (packagename / dot))?
 -- Top level patterns
 ----------------------------------------------------------------------------------------
 
-language_decl = ignore {"rpl" [:space:]} version_spec
-package_decl = ignore {"package" [:space:]} packagename
-import_decl = ignore {"import" [:space:]} import_spec ("," ignore import_spec)*
+language_decl = ignore {"rpl" [:space:]} version_spec [;]?
+package_decl = ignore {"package" [:space:]} packagename [;]?
+import_decl = ignore {"import" [:space:]} import_spec ("," ignore import_spec)* [;]?
 
-rpl_statements = (ignore package_decl / import_decl / stmnt / syntax_error)* ignore $
+rpl_statements = (ignore [;] / package_decl / import_decl / stmnt / syntax_error)* ignore $
 rpl_expression = exp / syntax_error
 
 preparse = language_decl
