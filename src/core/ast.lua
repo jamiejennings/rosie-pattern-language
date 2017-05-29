@@ -133,23 +133,58 @@ local function flatten(pt, pt_type)
 end
    
 local function convert_quantified_exp(pt)
-
+   local e, q = pt.subs[1], pt.subs[2]
+   local qname = q.type
+   assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
+   local min, max
+   if qname=="repetition" then
+      min = tonumber(q.subs[1].text)
+      if #q.subs==1 then
+	 max = min
+      else
+	 max = tonumber(q.subs[2].text)
+      end
+   elseif qname=="question" then
+      min = 0
+      max = 1
+   elseif qname=="plus" then
+      min = 1
+   elseif qname=="star" then
+      min = 0
+   else
+      error("Internal error: do not know how to convert quantifier " .. tostring(qname))
+   end
+   return ast.rep{min = min,
+		  max = max,
+		  exp = e,
+		  pos=pos, fin=fin}
 end
 
 local function convert_char_exp(pt)
    assert(pt.subs and pt.subs[1])
    local exps = list.from(pt.subs)
-   local comp = (exp.subs[1].type=="complement")
-   if comp then
+   local compflag = (exp.subs[1].type=="complement")
+   if compflaf then
       exps = list.cdr(exps)
       assert(exp.subs[2])
    end
    if exp.type=="charset_exp" then
-      return map(convert_char_exp, exps)
-   -- elseif exp.type=="op" then
-   --    if exp.subs[1].type=="intersection" then
-   -- 	 return ast.cexp_and(complement = comp,
-   -- 			     cexps = 
+      return ast.cset_or{complement = compflag, cexps = map(convert_char_exp, exps), pos=pos, fin=fin}
+   elseif exp.type=="charset_combiner" then
+      assert(exp.subs and exp.subs[1] and exp.subs[2] and exp.subs[3] and (not exp.subs[4]))
+      assert(exp.subs[2].type=="op" and exp.subs[2].subs and exp.subs[2].subs[1])
+      local left = exp.subs[1]
+      local op = exp.subs[2].subs[1].type
+      local right = exp.subs[3]
+      if op=="intersection" then
+	 return cexp_and{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}
+      elseif op=="difference" then
+	 return cexp_diff{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}
+      elseif op=="union" then
+	 return cexp_or{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}	 
+      else
+	 error("Internal error: do not know how to convert charset op " .. tostring(op))
+      end
    else
       local char = "#'"
       if exp.type=="named_charset" then char = ""; end

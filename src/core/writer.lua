@@ -346,6 +346,8 @@ end
 -- sexp writer
 ----------------------------------------------------------------------------------------
 
+local write_exp;
+
 local function write_charset_exp(exp)
    local exps = list.from(exp.subs)
    local start = "(" .. exp.type .. " "
@@ -378,8 +380,8 @@ function write_quantified_exp(exp)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
    local exps = { write_exp(e) }
    if qname=="repetition" then
-      table.insert(exps, 1, q.subs[2].text)	    -- max
-      table.insert(exps, 1, q.subs[1].text)	    -- min
+      table.insert(exps, 1, (q.subs[2] and q.subs[2].text) or q.subs[1].text) -- max
+      table.insert(exps, 1, q.subs[1].text)				      -- min
       table.insert(exps, 1, "(repeat")
       table.insert(exps, ")")
    else
@@ -388,7 +390,7 @@ function write_quantified_exp(exp)
    return "(" .. exp.type .. " " .. table.concat(exps, " ") .. ")"
 end
    
-local function write_exp(exp)
+function write_exp(exp)
    if exp.type=="rpl_expression" then
       return write_exp(exp.subs[1])
    elseif exp.type=="capture" then
