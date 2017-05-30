@@ -115,13 +115,14 @@ local function load_all()
    -- These MUST have a partial order so that dependencies can be loaded first
    recordtype = import("recordtype")
    list = import("list")
-   ast = import("ast")
    util = import("util")
    common = import("common")
    environment = import("environment")
    writer = import("writer")
    syntax = import("syntax")
    parse = import("parse")
+   rpl_parser = import("rpl-parser")
+   ast = import("ast")
    c0 = import("c0")
    c1 = import("c1")
    compile = import("compile")
@@ -218,11 +219,13 @@ end
 
 function create_rpl1_0_engine()
    -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
-   rpl_parser = import("rpl-parser")
    local supported_version = common.rpl_version.new(1, 0)
-   local preparser = make_preparser(ROSIE_PREPARSE, supported_version);
-   local parse_and_explain = make_parse_and_explain(preparser, supported_version, ROSIE_RPLX, syntax.transform0)
-   local parse_and_explain_exp = make_parse_and_explain(nil, nil, ROSIE_EXP_RPLX, syntax.transform0)
+   local preparser =
+      rpl_parser.make_preparser(ROSIE_PREPARSE, supported_version);
+   local parse_and_explain =
+      rpl_parser.make_parse_and_explain(preparser, supported_version, ROSIE_RPLX, syntax.transform0)
+   local parse_and_explain_exp =
+      rpl_parser.make_parse_and_explain(nil, nil, ROSIE_EXP_RPLX, syntax.transform0)
 
    parser1_0 =
       common.parser.new{ version = supported_version;
@@ -257,16 +260,19 @@ function create_rpl1_1_engine()
    RPL1_1_EXP_RPLX, messages = e:compile('rpl_expression')
    rpl_parser = import("rpl-parser")		    -- idempotent
    local supported_version = common.rpl_version.new(1, 1)
-   local preparser = make_preparser(ROSIE_PREPARSE, supported_version);
-   local parse_and_explain = make_parse_and_explain(preparser, supported_version, RPL1_1_RPLX, syntax.transform1)
-   local parse_and_explain_exp = make_parse_and_explain(nil, nil, RPL1_1_EXP_RPLX, syntax.transform1)
+   local preparser =
+      rpl_parser.make_preparser(ROSIE_PREPARSE, supported_version);
+   local parse_and_explain =
+      rpl_parser.make_parse_and_explain(preparser, supported_version, RPL1_1_RPLX, syntax.transform1)
+   local parse_and_explain_exp =
+      rpl_parser.make_parse_and_explain(nil, nil, RPL1_1_EXP_RPLX, syntax.transform1)
 
    parser1_1 =
       common.parser.new{ version = supported_version;
 			 preparse = preparser;
 			 parse_statements = parse_and_explain;
 			 parse_expression = parse_and_explain_exp;
-			 parse_deps = parse_deps;
+			 parse_deps = rpl_parser.parse_deps;
 			 prefixes = unsupported;	       -- FIXME
 		      }
    compiler1_1 =

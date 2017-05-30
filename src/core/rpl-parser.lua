@@ -6,11 +6,16 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
+local common = require "common"
 local decode_match = common.decode_match
+local util = require "util"
+local parse = require "parse"
 
 ----------------------------------------------------------------------------------------
 -- Driver functions for RPL parser written in RPL
 ----------------------------------------------------------------------------------------
+
+local rpl_parser = {}
 
 ----------------------------------------------------------------------------------------
 -- Syntax error reporting (default capability)
@@ -58,7 +63,7 @@ local function rosie_parse(rplx, str, pos, tokens)
    return ast, errlist, leftover
 end
 
-function preparse(rplx_preparse, input)
+function rpl_parser.preparse(rplx_preparse, input)
    local major, minor
    local language_decl, leftover
    if type(input)=="string" then
@@ -92,12 +97,12 @@ local function vstr(maj, min)
    return tostring(maj) .. "." .. tostring(min)
 end
 
-function make_preparser(rplx_preparse, supported_version)
+function rpl_parser.make_preparser(rplx_preparse, supported_version)
    local incompatible = function(major, minor, supported)
 			   return (major > supported.major) or (major==supported.major and minor > supported.minor)
 			end
    return function(source)
-	     local major, minor, pos = preparse(rplx_preparse, source)
+	     local major, minor, pos = rpl_parser.preparse(rplx_preparse, source)
 	     if major then
 		common.note("-> Parser noted rpl version declaration ", vstr(major, minor))		
 		if incompatible(major, minor, supported_version) then
@@ -119,7 +124,7 @@ function make_preparser(rplx_preparse, supported_version)
 	  end -- preparser function
 end -- make_preparser
 
-function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_expand)
+function rpl_parser.make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_expand)
    return function(source)
 	     local maj, min, pos, err
 	     assert(type(source)=="string",
@@ -150,6 +155,29 @@ function make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_ex
 	  end -- parse and explain function
 end -- make_parse_and_explain
 
+-- expand_import_decl takes a single import decl parse node and expands it into a list of as many
+-- individual import declarations as it contains.  The individual declarations are added to the
+-- results table (i.e. that argument is side-effected).
+function rpl_parser.expand_import_decl(decl_parse_node, results)
+   local typ, pos, text, specs, fin = decode_match(decl_parse_node)
+   assert(typ=="import_decl")
+   assert(type(results)=="table")
+   for _,spec in ipairs(specs) do
+      local importpath, prefix
+      local typ, pos, text, subs, fin = decode_match(spec)
+      assert(subs and subs[1], "missing package name to import?")
+      local typ, pos, importpath = decode_match(subs[1])
+      importpath = common.dequote(importpath)
+      common.note("*\t", "import |", importpath, "|")
+      if subs[2] then
+	 typ, pos, prefix = decode_match(subs[2])
+	 assert(typ=="packagename" or typ=="dot")
+	 common.note("\t  as ", prefix)
+      end
+      table.insert(results, {importpath=importpath, prefix=prefix})
+   end -- for each importspec in the import_decl
+end
+
 -- parse_deps takes input (source or ast) and returns a table of dependencies calculated by
 -- processing any import statements.  the table contains entries with the keys: 
 -- importpath, prefix, env.
@@ -157,7 +185,7 @@ end -- make_parse_and_explain
 -- (1) env is assigned during compilation, to hold the module environment
 -- (2) prefix is filled in here iff there is an "as" clause in the import statment,
 --     else it will be filled in later with the package name from the module source
-function parse_deps(parser, input)
+function rpl_parser.parse_deps(parser, input)
    local maj, min, pos, err = parser.preparse(input)
    if not maj then return nil, err; end
    local ast, orig_ast, messages
@@ -177,31 +205,14 @@ function parse_deps(parser, input)
    if typ=="package_decl" then
       -- skip the package decl, if any
       i=i+1;
-      typ, pos, text, specs, fin = decode_match(astlist[i])
    end
    local deps = {}
-   while typ=="import_decl" do
-      for _,spec in ipairs(specs) do
-	 local importpath, prefix
-	 local typ, pos, text, subs, fin = decode_match(spec)
-	 assert(subs and subs[1], "missing package name to import?")
-	 local typ, pos, importpath = decode_match(subs[1])
-	 importpath = common.dequote(importpath)
-	 common.note("*\t", "import |", importpath, "|")
-	 if subs[2] then
-	    typ, pos, prefix = decode_match(subs[2])
-	    assert(typ=="packagename" or typ=="dot")
-	    common.note("\t  as ", prefix)
---	 else
---	    _, prefix = util.split_path(importpath, "/")
-	 end
-	 table.insert(deps, {importpath=importpath, prefix=prefix})
-      end -- for each importspec in the import_decl
+   while astlist[i] and astlist[i].type=="import_decl" do
+      rpl_parser.expand_import_decl(astlist[i], deps)
       i=i+1;
-      if not astlist[i] then break; end
-      typ, pos, text, specs, fin = common.decode_match(astlist[i])
    end
    return deps
 end
    
 
+return rpl_parser

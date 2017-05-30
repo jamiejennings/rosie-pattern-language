@@ -114,6 +114,23 @@ check(ok)
 ok, msg = pcall(e.load, e, 'alias alias_to_uses_a = uses_a')
 check(ok)
 
+subheading("Checking for required parse failures")
+ok = e:compile(".")
+check(ok)
+ok = e:compile("..")
+check(ok)
+ok = e:compile(".~")
+check(ok)
+ok = e:compile("a.")
+check(not ok)
+ok = e:compile(".a")
+check(not ok)
+ok = e:compile("a.*")
+check(not ok)
+ok = e:compile("a .*")
+check(ok)
+ok = e:compile("a.b.c")
+check(not ok)
 
 subheading("Testing re-assignments")
 
@@ -207,11 +224,11 @@ heading("Sequences")
 ----------------------------------------------------------------------------------------
 subheading("With built-ins and literals")
 check_match('.*', " Hello\n", true)
-check_match('...', "Hello", false)
-check_match('...', "H e llo", true, 2)
-check_match('(...)', "H e llo", true, 2)
-check_match('(...)', "H e l lo", true, 3)
-check_match('{...}', "H e llo", true, 4, "H e")
+check_match('. . .', "Hello", false)
+check_match('. . .', "H e llo", true, 2)
+check_match('(. . .)', "H e llo", true, 2)
+check_match('(. . .)', "H e l lo", true, 3)
+check_match('{. . .}', "H e llo", true, 4, "H e")
 check_match('.*.', "Hello", false)
 check_match('"hi" "there"', "hi there", true)
 check_match('("hi" "there")', "hi there", true)
@@ -304,8 +321,8 @@ check_match('{@a}', "axyz", true, 4, "")
 check_match('{@a}', "xyz", false, 4, "")
 check_match('@(a)', "axyz", true, 4, "")	    -- ???
 check_match('(@(a))', "axyz", true, 4, "")	    -- ???
-check_match('@{a~}', "a.xyz", true, 5, "")
-check_match('(@(a~))', "a.xyz", true, 5, "")	    -- ???
+check_match('@{a ~}', "a.xyz", true, 5, "")
+check_match('(@(a ~))', "a.xyz", true, 5, "")	    -- ???
 
 ----------------------------------------------------------------------------------------
 heading("Negative look-ahead")
@@ -324,8 +341,8 @@ check_match('(!a)', "axyz", false, 4, "")
 check_match('{!a}', "axyz", false, 4, "")
 check_match('!(a)', "axyz", false, 4, "")	    -- ???
 check_match('(!(a))', "axyz", false, 4, "")	    -- ???
-check_match('!{a~}', "axyz", true, 4, "")
-check_match('!(a~)', "axyz", true, 4, "")	    -- ???
+check_match('!{a ~}', "axyz", true, 4, "")
+check_match('!(a ~)', "axyz", true, 4, "")	    -- ???
 
 
 
@@ -512,9 +529,9 @@ check_match('{(token)*}', 'The quick, brown fox.\nSentence fragment!!  ', true, 
 check_match('(token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 44, "")
 check_match('{(token)*}', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 44, "")
 check_match('~(token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 2)
-check_match('(~token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 2)
-check_match('(~token~)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
-check_match('{~token~}*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
+check_match('(~ token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 2)
+check_match('(~ token ~)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
+check_match('{~ token ~}*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
 
 subheading("Boundary idempotence")
 check_match('~~~~~~', '     V', true, 1, "     ")
@@ -1234,9 +1251,9 @@ check_match('g1', "abb", false)
 check_match('g1', "a", true, 1)
 check_match('g1', "a#", true, 2)
 
-check_match('g1$', "x", false)
-check_match('g1$', "a", false)
-check_match('g1$', "aabb", true)
+check_match('g1 $', "x", false)
+check_match('g1 $', "a", false)
+check_match('g1 $', "aabb", true)
 
 set_expression('g1')
 match, leftover = e:match('g1', "baab!")
@@ -1511,7 +1528,7 @@ function check_bc(exp)
    check_match(exp, "b c", true)
    check_match(exp, "b c!", true, 1)
    check_match(exp, "b cx", true, 1)
-   check_match(exp.."~", "b cx", false)
+   check_match(exp.." ~", "b cx", false)
    check_match(exp, "xb cx", false)
 end
 

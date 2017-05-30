@@ -10,6 +10,7 @@ local recordtype = require "recordtype"
 local NIL = recordtype.NIL
 local list = require "list"
 map = list.map; apply = list.apply; append = list.append;
+local rpl_parser = require "rpl-parser"
 
 local ast = {}
 
@@ -19,13 +20,15 @@ ast.exp = recordtype.new("exp",
 			  fin = NIL;})
 
 ast.block = recordtype.new("block",
-			   {stmnts = {};
+			   {stmts = {};
 			    pos = NIL;
 			    fin = NIL;})
 
 ast.bind = recordtype.new("bind",
-			  {id = NIL;
+			  {ref = NIL;
 			   exp = NIL;
+			   is_alias = false;
+			   is_local = false;
 			   pos = NIL;
 			   fin = NIL;})
 
@@ -117,9 +120,27 @@ ast.cs_range = recordtype.new("cs_range",	    -- [a-z]
 			       pos = NIL;
 			       fin = NIL;})
 
-ast.cap = recordtype.new("cap",
-			 {name = NIL;
-			  exp = NIL;})
+-- ast.cap = recordtype.new("cap",
+-- 			 {name = NIL;
+-- 			  exp = NIL;})
+
+ast.pdecl = recordtype.new("pdecl",
+			   {name = NIL;
+			    pos = NIL;
+			    fin = NIL;})
+
+ast.idecl = recordtype.new("idecl",
+			   {importpath = NIL;
+			    prefix = NIL;
+			    pos = NIL;
+			    fin = NIL;})
+
+ast.ideclist = recordtype.new("ideclist",
+			      {imports = {};
+			       pos = NIL;
+			       fin = NIL;})
+			    
+local convert_exp;
 
 local function flatten(pt, pt_type)
    local function flatten(pt)
@@ -154,62 +175,82 @@ local function convert_quantified_exp(pt)
    else
       error("Internal error: do not know how to convert quantifier " .. tostring(qname))
    end
-   return ast.rep{min = min,
-		  max = max,
-		  exp = e,
-		  pos=pos, fin=fin}
+   return ast.rep.new{min = min,
+		      max = max,
+		      exp = convert_exp(e),
+		      pos=pos, fin=fin}
+end
+
+local function primitive_charset(pt)
+   return (pt.type=="named_charset" or
+	   pt.type=="charlist" or
+	   pt.type=="range")
 end
 
 local function convert_char_exp(pt)
    assert(pt.subs and pt.subs[1])
    local exps = list.from(pt.subs)
-   local compflag = (exp.subs[1].type=="complement")
-   if compflaf then
+   local compflag = (pt.subs[1].type=="complement")
+   if compflag then
       exps = list.cdr(exps)
-      assert(exp.subs[2])
+      assert(pt.subs[2])
    end
-   if exp.type=="charset_exp" then
-      return ast.cset_or{complement = compflag, cexps = map(convert_char_exp, exps), pos=pos, fin=fin}
-   elseif exp.type=="charset_combiner" then
-      assert(exp.subs and exp.subs[1] and exp.subs[2] and exp.subs[3] and (not exp.subs[4]))
-      assert(exp.subs[2].type=="op" and exp.subs[2].subs and exp.subs[2].subs[1])
-      local left = exp.subs[1]
-      local op = exp.subs[2].subs[1].type
-      local right = exp.subs[3]
+   if pt.type=="charset_exp" then
+      assert(exps[1])
+      if primitive_charset(exps[1]) then
+	 assert(not compflag)			    -- grammar does not allow this
+	 return convert_char_exp(exps[1])
+      else
+	 return ast.cexp_or.new{complement = compflag,
+				cexps = map(convert_char_exp, exps), 
+				pos=pos, fin=fin}
+      end
+   elseif pt.type=="charset_combiner" then
+      assert(pt.subs and pt.subs[1] and pt.subs[2] and pt.subs[3] and (not pt.subs[4]))
+      assert(pt.subs[2].type=="op" and pt.subs[2].subs and pt.subs[2].subs[1])
+      local left = pt.subs[1]
+      local op = pt.subs[2].subs[1].type
+      local right = pt.subs[3]
       if op=="intersection" then
-	 return cexp_and{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}
+	 return ast.cexp_and.new{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}
       elseif op=="difference" then
-	 return cexp_diff{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}
+	 return ast.cexp_diff.new{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}
       elseif op=="union" then
-	 return cexp_or{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}	 
+	 return ast.cexp_or.new{cexps = {convert_char_exp(left), convert_char_exp(right)}, pos=pos, fin=fin}	 
       else
 	 error("Internal error: do not know how to convert charset op " .. tostring(op))
       end
-   else
-      local char = "#'"
-      if exp.type=="named_charset" then char = ""; end
-      local exps_str = table.concat(list.map(function(a) return char .. a.text end, exps), " ")
-      return start .. exps_str .. finish
+   elseif pt.type=="named_charset" then
+      return ast.cs_named.new{name = exps[1].text, complement = compflag, pos=pos, fin=fin}
+   elseif pt.type=="charlist" then
+      return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
+			     complement = compflag,
+			     pos=pos, fin=fin}
+   elseif pt.type=="range" then
+      return ast.cs_range.new{first = exps[1].text,
+			      last = exps[2].text,
+			      complement = compflag,
+			      pos=pos, fin=fin}
    end
 end
 
-local function convert_exp(pt)
+function convert_exp(pt)
    if pt.type=="capture" then
-      return ast.cap{name = pt.subs[1].text, exp =pt.subs[2], pos=pos, fin=fin}
+      return ast.cap.new{name = pt.subs[1].text, exp = convert_exp(pt.subs[2]), pos=pos, fin=fin}
 --   elseif pt.type=="ref" then
---      return ast.ref{localname = pt.text, packagename = NIL, pos=pos, fin=fin}
+--      return ast.ref.new{localname = pt.text, packagename = NIL, pos=pos, fin=fin}
 --   elseif pt.type=="extref" then
---      return ast.ref{localname = pt.text, packagename = pt.subs[2].text, pos=pos, fin=fin}
+--      return ast.ref.new{localname = pt.text, packagename = pt.subs[2].text, pos=pos, fin=fin}
    elseif pt.type=="predicate" then
-      return ast.pred{type = pt.subs[1].text, exp = pt.subs[2], pos=pos, fin=fin}
+      return ast.pred.new{type = pt.subs[1].text, exp = convert_exp(pt.subs[2]), pos=pos, fin=fin}
    elseif pt.type=="cooked" then
-      return ast.cook{exp = pt.subs[1], pos=pos, fin=fin}
+      return ast.cook.new{exp = convert_exp(pt.subs[1]), pos=pos, fin=fin}
    elseif pt.type=="raw" then
-      return ast.raw{exp = pt.subs[1], pos=pos, fin=fin}
+      return ast.raw.new{exp = convert_exp(pt.subs[1]), pos=pos, fin=fin}
    elseif pt.type=="choice" then
-      return ast.choice{exps = flatten(pt.subs, "choice"), pos=pos, fin=fin}
+      return ast.choice.new{exps = map(convert_exp, flatten(pt, "choice")), pos=pos, fin=fin}
    elseif pt.type=="sequence" then
-      return ast.seq{exps = flatten(pt.subs, "sequence"), pos=pos, fin=fin}
+      return ast.seq.new{exps = map(convert_exp, flatten(pt, "sequence")), pos=pos, fin=fin}
    elseif pt.type=="identifier" then
       assert(pt.subs and pt.subs[1])
       local localname, packagename
@@ -221,11 +262,11 @@ local function convert_exp(pt)
 	 packagename = pt.subs[1].text
 	 localname = pt.subs[2].text
       end
-      return ast.ref{localname = localname, packagename = packagename, pos=pos, fin=fin}
+      return ast.ref.new{localname = localname, packagename = packagename, pos=pos, fin=fin}
    elseif pt.type=="literal" then
-      return ast.lit{value = pt.text, pos=pos, fin=fin}
+      return ast.lit.new{value = pt.text, pos=pos, fin=fin}
    elseif pt.type=="charset_exp" then
-      return convert_charset(pt)
+      return convert_char_exp(pt)
    elseif pt.type=="quantified_exp" then
       return convert_quantified_exp(pt)
    else
@@ -233,11 +274,44 @@ local function convert_exp(pt)
    end
 end
 
+local function convert_stmt(pt)
+   if pt.type=="assignment_" then
+      assert(pt.subs and pt.subs[1] and pt.subs[2])
+      return ast.bind.new{ref = convert_exp(pt.subs[1]),
+			  exp = convert_exp(pt.subs[2]),
+			  is_alias = false,
+			  is_local = false,
+			  pos=pos, fin=fin}
+   elseif pt.type=="alias_" then
+      return ast.bind.new{ref = convert_exp(pt.subs[1]),
+			  exp = convert_exp(pt.subs[2]),
+			  is_alias = true,
+			  is_local = false,
+			  pos=pos, fin=fin}
+   elseif pt.type=="local_" then
+      local b = convert_stmt(pt.subs[1])
+      b.is_local = true
+      return b
+   elseif pt.type=="package_decl" then
+      return ast.pdecl.new{name=pt.text, pos=pos, fin=fin}
+   elseif pt.type=="import_decl" then
+      local deps = {}
+      rpl_parser.expand_import_decl(pt, deps)
+      local function to_idecl(dep)
+	 return ast.idecl.new{importpath = decl.importpath,
+			      prefix = decl.prefix}
+      end
+      return ast.ideclist.new{imports = map(to_idecl, deps), pos=pos, fin=fin}
+   else
+      error("Internal error: do not know how to convert " .. tostring(pt.type))
+   end
+end
+
 local function convert(pt)
    if pt.type=="rpl_expression" then
-      return ast.exp{exp = convert_exp(pt.subs[1]), pos=pos, fin=fin}
+      return ast.exp.new{exp = convert_exp(pt.subs[1]), pos=pos, fin=fin}
    elseif pt.type=="rpl_statements" then
-      return ast.block{stmts = map(convert_stmt, pt.subs), pos=pos, fin=fin}
+      return ast.block.new{stmts = map(convert_stmt, pt.subs or {}), pos=pos, fin=fin}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end

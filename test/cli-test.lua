@@ -141,7 +141,7 @@ results_common_number =
 run("import common", "common.word", nil, results_common_word)
 run("import common", "common.word", true, results_common_word_grep)
 run("import common, net", "common.word net.any", nil, results_word_network)
-run("import num", "~num.any~", true, results_common_number)
+run("import num", "~ num.any ~", true, results_common_number)
 
 ok, msg = pcall(run, "import common", "foo = common.word", nil, nil)
 check(ok)

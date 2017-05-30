@@ -8,7 +8,6 @@
 ---- AUTHOR: Jamie A. Jennings
 
 -- TODO:
--- (0) Enable charset operations (see 'op' below)
 -- (1) Add to rosie tests the parsing of the following extensions:
 --   repetition with a single parameter, e.g. e{5}
 --   optional semi-colons between statements, incl. empty statement
@@ -16,6 +15,15 @@
 --   set intersection, e.g. [[a-z]&&[xyz]]
 --   set difference, e.g. [[a-z]-[xyz]]
 -- (2) Add stubs to compiler for these exps, with informative error messages
+--
+-- DONE:
+-- + x.y.z is a parse error. Else the second "." would parse as dot
+-- + .y.z is a parse error.  Else the first "." would parse as dot
+-- + Sequences of the one-char identifiers need no whitespace separating them:
+--    ... is NOT a parse error.
+--    .~ is NOT a parse error.
+--    .$ is NOT a parse error.  
+
 
 rpl 1.0
 
@@ -29,12 +37,11 @@ alias ignore = { { [[:space:]] / comment }* }
 alias id_char = { [[:alnum:]] / [_] }
 alias id = { [[:alpha:]] id_char* }
 
-localname = id 
-          / [.]		 -- a single dot
-	  / [$]		 -- a single dollar sign
-	  / [~]		 -- a single tilde
+alias id_symbol = [.$~]
+
+localname = {id_symbol !id} / {id !id_symbol}
 packagename = id
-identifier = { {packagename "."}? localname }
+identifier = { {packagename [.]}? localname }
 
 alias dquote = { [\"] }
 alias esc =    { [\\] }
