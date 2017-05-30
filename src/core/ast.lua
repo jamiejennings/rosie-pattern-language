@@ -298,8 +298,8 @@ local function convert_stmt(pt)
       local deps = {}
       rpl_parser.expand_import_decl(pt, deps)
       local function to_idecl(dep)
-	 return ast.idecl.new{importpath = decl.importpath,
-			      prefix = decl.prefix}
+	 return ast.idecl.new{importpath = dep.importpath,
+			      prefix = dep.prefix}
       end
       return ast.ideclist.new{imports = map(to_idecl, deps), pos=pos, fin=fin}
    else

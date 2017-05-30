@@ -133,7 +133,6 @@ local function load_all()
 
    engine = engine_module.engine
 
---   process_input_file = import("process_input_file")
    process_rpl_file = import("process_rpl_file")
 
 end
