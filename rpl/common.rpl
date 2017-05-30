@@ -32,9 +32,9 @@ maybe_id = { [:upper:] ![:lower:] [[:upper:][:digit:][-_]]* }
 -- e.g. "".
 
 local alias dquote = "\""			      -- "
-local alias escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\"" -- \" or \"\" or "" 
+local alias escaped_dquote = "\\\"" / "\"\""	      -- \" or "" 
 local alias squote = "'"			      -- '
-local alias escaped_squote = "\\'" / "\\'\\'" / "''"      -- \' or \'\' or ''
+local alias escaped_squote = "\\'" / "''"	      -- \' or ''
 
 dqstring = {dquote {escaped_dquote / {!dquote .}}* dquote}
 sqstring = {squote {escaped_squote / {!squote .}}* squote}

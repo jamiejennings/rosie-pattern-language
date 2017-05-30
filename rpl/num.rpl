@@ -50,6 +50,6 @@ denoted_hex = { "0x" hex }
 -- test denoted_hex rejects "BEEF", "0x2o"
 
 -- N.B. signed_number matches the JSON spec for numbers
-alias signed_number = (float / int)
+signed_number = (float / int)
 any =  (denoted_hex /  float / int / hex)
 -- test any accepts "0", "01", "-1", "-1.0", "+1", "+0", "+0.0", "-0.3e+1", "+1.1E-1", "0x1a", "face"

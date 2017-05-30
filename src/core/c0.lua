@@ -288,7 +288,9 @@ function c0.compile_ref(a, gmr, env)
    assert(a, "did not get ast in compile_ref")
    local reftype, pos, name, subs = decode_match(a)
    local pat, packagename, localname = c0.lookup(a, gmr, env)
-   assert(pattern.is(pat), "Did not get a pattern: "..tostring(pat)) -- TODO: create explain_not_a_pattern
+   if not(pattern.is(pat)) then
+      throw("expected a pattern, but " .. a.text .. " is bound to " .. tostring(pat), a)
+   end
    local newpat = pattern.new{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
    if reftype=="extref" and (not pat.alias) then
       -- pat was wrapped with only a local name when its module was compiled.  need to rewrap
