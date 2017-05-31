@@ -38,6 +38,9 @@ p = e:lookup("mod1.S")
 check(p)
 check(p.type=="pattern")
 
+p = e:lookup("mod1.A")
+check(not p)					    -- A is a local grammar
+
 ok, m, left, t0, t1, msgs = e:match("mod1.S", "ababab")
 check(ok)
 check(m)
@@ -59,7 +62,7 @@ check(type(msgs)=="table")
 ok, _, msgs = e:load("import mod2")
 check(ok)
 p = e:lookup("mod2.x")
-check(not p)
+check(not p)					    -- x is declared local
 p = e:lookup("mod2.y")
 check(p)
 

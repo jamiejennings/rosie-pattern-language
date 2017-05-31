@@ -55,7 +55,11 @@ function p.run(rosie, en, args, filename)
    -- set it up using whatever rpl strings or files were given on the command line
    cli_common.setup_engine(test_engine, args)
    -- load the rpl code we are going to test
-   test_engine:loadfile(filename, true)             -- second arg true --> do not search
+   local ok, _, msgs = test_engine:loadfile(filename, true) -- second arg true --> do not search
+   if not ok then
+      io.write("Error: rpl file did not compile\n", util.table_to_pretty_string(msgs), "\n")
+      return 0, 0
+   end
    cli_common.set_encoder(rosie, test_engine, false)
    -- read the tests out of the file and run each one
    local f, msg = io.open(filename, 'r')
