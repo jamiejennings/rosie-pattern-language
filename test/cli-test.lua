@@ -161,7 +161,7 @@ print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(results, "Expression on command line can contain [[.,.]]") -- command succeeded
 check(code==0, "Return code is zero")
-check(results[#results]:sub(-9):find("patterns")==1)
+check(results[#results]:find("names\n"))
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Test command")

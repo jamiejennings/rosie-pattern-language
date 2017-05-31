@@ -19,12 +19,16 @@ function p.set_encoder(rosie, en, name)
 end
 
 function p.load_string(en, input)
-   local ok, results, messages = pcall(en.load, en, input)
+   local ok, pkgname, messages = en:load(input)
    if not ok then
       if ROSIE_DEV then error(results)
-      else io.write("Cannot load rpl: \n", results); os.exit(-1); end
+	 -- TODO: change the tostring below to call an error printing procedure
+      else
+	 io.write("Cannot load rpl: \n", util.table_to_pretty_string(messages, false).."\n")
+	 os.exit(-1)
+      end
    end
-   return results, messages
+   return ok, messages
 end
 
 function p.load_file(en, filename)

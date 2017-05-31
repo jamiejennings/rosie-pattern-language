@@ -372,14 +372,17 @@ end
 -- FUTURE: Update this to make a use general pretty printer for the contents of the environment.
 local function properties(name, obj)
    if common.pattern.is(obj) then
-      local kind = (obj.alias and "alias") or "definition"
+      local kind = "pattern"
+      local capture = (not obj.alias)
       local color = (co and co.colormap and co.colormap[item]) or ""
       local binding = reconstitute_pattern_definition(name, obj)
-      return {type=kind, color=color, binding=binding}
+      return {type=kind, capture=capture, color=color, binding=binding}
    elseif environment.is(obj) then
-      return {type="package", color="", binding="<package>"}
+      return {type="package", color="", binding="<not printable>"}
    elseif pfunction.is(obj) then
-      return {type="function", color="", binding="<function>"}
+      return {type="function", color="", binding="<not printable>"}
+   elseif macro.is(obj) then
+      return {type="macro", color="", binding="<not printable>"}
    else
       error("Internal error: unknown kind of object in environment, stored at " ..
 	    tostring(name) .. ": " .. tostring(obj))

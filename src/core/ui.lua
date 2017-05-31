@@ -27,20 +27,21 @@ function ui.print_env(flat_env, filter, skip_header, total)
    local filter = filter and string.lower(filter) or nil
    local filter_total = 0
 
-   local fmt = "%-30s %-15s %-8s"
+   local fmt = "%-30s %-4s %-10s %-8s"
 
    if not skip_header then
       print();
-      print(string.format(fmt, "Pattern", "Type", "Color"))
-      print("------------------------------ --------------- --------")
+      print(string.format(fmt, "Name", "Cap?", "Type", "Color"))
+      print("------------------------------ ---- ---------- --------")
    end
-   local kind, color
+   local kind, color, cap
    local s, e
    for _,v in ipairs(pattern_list) do
       if filter then s, e = string.find(string.lower(tostring(v)), filter); end
       if (not filter) or s then
 	 color = co.colormap[v] or ""
-	 print(string.format(fmt, v, flat_env[v].type, color))
+	 cap = (flat_env[v].capture and "Yes" or "")
+	 print(string.format(fmt, v, cap, flat_env[v].type, color))
 	 filter_total = filter_total + 1
       end
    end
@@ -49,8 +50,8 @@ function ui.print_env(flat_env, filter, skip_header, total)
    end
    if not skip_header then
       print()
-      if filter then print(filter_total .. " / " .. total .. " patterns")
-      else print(total .. " patterns"); end
+      if filter then print(filter_total .. " / " .. total .. " names shown")
+      else print(total .. " names"); end
    end
 end
 
