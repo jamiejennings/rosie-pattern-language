@@ -32,7 +32,7 @@ ok, _, msgs = e:load("import mod1")
 check(ok)
 m = e:lookup("mod1")
 check(m)
-check(m.type=="package")
+check(m and m.type=="package")
 
 p = e:lookup("mod1.S")
 check(p)

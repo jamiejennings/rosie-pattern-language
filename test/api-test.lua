@@ -521,6 +521,7 @@ end
 clear_output_and_error_files()
 io.write("\nTesting output to stderr:\n")
 ok, c_in, c_out, c_err = wapi.matchfile(macosx_log1, "match", ROSIE_HOME.."/test/test-input", "/tmp/out", "")
+
 io.write("\nEnd of output to stderr\n")
 check(ok)
 c_in = tonumber(c_in); c_out = tonumber(c_out); c_err = tonumber(c_err);

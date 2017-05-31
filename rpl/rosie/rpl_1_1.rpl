@@ -72,13 +72,6 @@ alias one_charset = { "[" { ":" named_charset ":]" } /
 		          { charlist "]" } /
 		          syntax_error
 		    }
--- grammar
---    charset_exp = { "[" complement? ignore {charset_exp ignore {op ignore}?}+ "]" } /
--- 		 one_charset
---    op = intersection / difference
---    intersection = "&&"
---    difference = "-"
--- end
 grammar
    charset_exp = { "[" complement? ignore charset_exp1 ignore "]" } / one_charset
    alias charset_exp1 = charset_combiner / charset_exp 
