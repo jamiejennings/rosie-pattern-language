@@ -26,7 +26,7 @@ end
 local function reveal_ref(a)
    assert(a, "did not get ast in reveal_ref")
    local name, pos, text = common.decode_match(a)
-   if name=="ref" then return text
+   if name=="ref" or name=="extref" then return text
    else error("Unknown ref type in reveal_ref: " .. tostring(name))
    end
 end
@@ -292,6 +292,7 @@ writer.reveal_exp = function(a)
    local functions = {"reveal_exp";
 		      capture=reveal_capture;
 		      ref=reveal_ref;
+		      extref=reveal_ref;
 		      predicate=reveal_predicate;
 		      group=reveal_group;
 		      raw=reveal_group;

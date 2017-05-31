@@ -283,7 +283,6 @@ function c0.lookup(a, gmr, env)
    return value, packagename, localname
 end
 
--- compile_ref expects the identifier to be bound to a pattern
 function c0.compile_ref(a, gmr, env)
    assert(a, "did not get ast in compile_ref")
    local reftype, pos, name, subs = decode_match(a)
@@ -295,8 +294,11 @@ function c0.compile_ref(a, gmr, env)
    if reftype=="extref" and (not pat.alias) then
       -- pat was wrapped with only a local name when its module was compiled.  need to rewrap
       -- using packagename as the prefix, since this is how the current code refers to this value.
+      assert(pat.uncap)
       newpat.peg = common.match_node_wrap(pat.uncap, packagename .. "." .. localname)
    end
+   -- assert(newpat.alias or newpat.uncap, ("packagename=" .. tostring(packagename) ..
+   -- 				      " localname=" .. tostring(localname)))
    return newpat
 end
 
@@ -438,8 +440,6 @@ function c0.compile_grammar_expression(a, gmr, env)
    local fname, fpos, ftext = decode_match(first)
    assert(fname=="binding")
 
-   local rule, id_node, id, exp_node
-   
    -- first pass: collect rule names as V() refs into a new env
    for i = 1, #subs do			    -- for each rule
       local rule = subs[i]
@@ -460,14 +460,14 @@ function c0.compile_grammar_expression(a, gmr, env)
    local pats = {}
    local start
    for i = 1, #subs do			    -- for each rule
-      rule = subs[i]
+      local rule = subs[i]
       assert(rule, "not getting rule in compile_grammar_expression")
       local rname, rpos, rtext, rsubs = decode_match(rule)
-      id_node = rsubs[1]			    -- identifier clause
+      local id_node = rsubs[1]			    -- identifier clause
       assert(id_node, "not getting id_node in compile_grammar_expression")
       local iname, ipos, id, isubs = decode_match(id_node)
       if not start then start=id; end		    -- first rule is start rule
-      exp_node = rsubs[2]			    -- expression clause
+      local exp_node = rsubs[2]			    -- expression clause
       assert(exp_node, "not getting exp_node in compile_grammar_expression")
       pats[id] = c0.compile_exp(exp_node, true, gtable) -- gmr flag is true 
    end -- for
@@ -476,13 +476,25 @@ function c0.compile_grammar_expression(a, gmr, env)
    local t = {}
    for id, pat in pairs(pats) do t[id] = pat.peg; end
    t[1] = start					    -- first rule is start rule
+   local uncap_peg
    local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
    if success then
-      return pattern.new{name="grammar", peg=peg_or_msg, ast=a, alias=lookup(gtable,t[1]).alias}, start
-   else -- failed
-      assert(type(peg_or_msg)=="string", "Internal error (compiler) while reporting an error in a grammar")
-      explain_grammar_error(a, peg_or_msg)
-   end
+      local aliasflag = lookup(gtable, t[1]).alias
+      if not aliasflag then
+	 assert(pats[start].uncap)
+	 t[start] = pats[start].uncap
+	 success, uncap_peg = pcall(P, t)
+      end
+      if success then
+	 return pattern.new{name="grammar",
+			    peg=peg_or_msg,
+			    uncap=(alias_flag and nil) or uncap_peg,
+			    ast=a,
+			    alias=aliasflag}, start
+      end
+   end -- else one of the pcalls failed
+   assert(type(peg_or_msg)=="string", "Internal error (compiler) while reporting an error in a grammar")
+   explain_grammar_error(a, peg_or_msg)
 end
 
 function c0.compile_grammar(a, gmr, env)
@@ -524,7 +536,7 @@ function c0.compile_capture(a, gmr, env)
    pat.name = cap_name
    if pat.uncap then
       -- In this case, we are capturing a reference that is itself a capture.  So what we want to
-      -- do is a re-capture, i.e. ignore the existing capture.
+      -- do is a re-capture, i.e. ignore the existing capture name.
       pat.peg = common.match_node_wrap(pat.uncap, reftext)
    else
       pat.uncap = pat.peg
