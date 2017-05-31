@@ -67,20 +67,23 @@ t = e:lookup("a")
 check(type(t)=="table")
 
 set_expression('a')
-match, leftover = e:match('a', "a")
+ok, match, leftover = e:match('a', "a")
+check(ok)
 check(type(match)=="table")
 check(type(leftover)=="number")
 check(leftover==0)
 check(match.type=="a", "the match of an identifier is named for the identifier")
 
 set_expression('(a)')
-match, leftover = e:match('(a)', "a")
+ok, match, leftover = e:match('(a)', "a")
+check(ok)
 check(match.type=="a", "the match of an expression is usually anonymous, but cooking an identifier is redundant")
 subs = match.subs
 check(not subs)
 
 set_expression('{a}')
-match, leftover = e:match('{a}', "a")
+ok, match, leftover = e:match('{a}', "a")
+check(ok)
 check(match.type=="*", "the match of an expression is anonymous")
 subs = match.subs
 check(subs)
@@ -188,7 +191,8 @@ heading("Literals")
 subheading("Built-ins")
 
 set_expression('.')
-match, leftover = e:match('.', "a")
+ok, match, leftover = e:match('.', "a")
+check(ok)
 check(match.type=="*", "the match of an alias is anonymous")
 
 check_match(".", "a", true)
@@ -1256,7 +1260,8 @@ check_match('g1 $', "a", false)
 check_match('g1 $', "aabb", true)
 
 set_expression('g1')
-match, leftover = e:match('g1', "baab!")
+ok, match, leftover = e:match('g1', "baab!")
+check(ok)
 check(match.type=='g1', "the match of a grammar is named for the identifier bound to the grammar")
 check(leftover==1, "one char left over for this match")
 function collect_names(ast)
@@ -1475,10 +1480,10 @@ m = check_match("foo.float", "42.1", true)
 check(m and m.type=="foo.float" and m.subs)
 m = check_match("num.float", "42.1", true)	    -- and num still works
 check(m.type=="num.float" and m.subs)
-success, left, msg = e:match("float", "42.1")	    -- float is not a top level binding
-check(not success)
-check(type(msg)=="table" and msg[1])
-check(msg[1].message:find("undefined identifier"))
+ok, m, left, msg = e:match("float", "42.1")	    -- float is not a top level binding
+check(not ok)
+check(type(m)=="table" and m[1])
+check(m[1].message:find("undefined identifier"))
 
 check((e:load("import num as .")))
 

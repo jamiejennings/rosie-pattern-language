@@ -377,15 +377,16 @@ io.write("  ** NEED RPLX TESTS! **  ")
 heading("Match, eval using rpl expressions")
 ----------------------------------------------------------------------------------------
 
-ok, msg = wapi.match()
-check(not ok)
-check(msg:find("not a string"))
+pcallok, ok, msg = wapi.match()
+check(not pcallok)
+check(ok:find("not a string"))
 
 ok, success, pkg, msgs = wapi.load("import common, num")
 check(ok)
 check(success)
 
-ok, m, leftover, msgs = wapi.match("common.dotted_id", "x.y.z")
+pcallok, ok, m, leftover, msgs = wapi.match("common.dotted_id", "x.y.z")
+check(pcallok)
 check(ok)
 check(type(m)=="userdata")
 str = lpeg.getdata(m)
@@ -398,12 +399,14 @@ check(match.data=="x.y.z")
 check(match.subs[2].data=="y")
 
 subheading("match")
-ok, results, left = wapi.match("num.any", "x.y.z")
+pcallok, ok, results, left = wapi.match("num.any", "x.y.z")
+check(pcallok)
 check(ok)
 check(results==false)
 check(left=="5")
 
-ok, jsmatch, left = wapi.match('"☯"+~', "☯☯☯"..string.char(10))    -- newline is escaped in json encoding
+pcallok, ok, jsmatch, left = wapi.match('"☯"+~', "☯☯☯"..string.char(10))    -- newline is escaped in json encoding
+check(pcallok)
 check(ok)
 check(type(jsmatch)=="userdata")
 jsmatch = lpeg.getdata(jsmatch)

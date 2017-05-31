@@ -47,13 +47,6 @@ local function explain_syntax_error(a, source)
    return msg
 end
 
--- local function rosie_parse_without_error_check(rplx, str, pos, tokens)
---    pos = pos or 1
---    local tokens, leftover = rplx:match(str, pos)
---    local name, pos, text, subs = decode_match(tokens)
---    return subs or {}, leftover
--- end
-
 local function rosie_parse(rplx, str, pos, tokens)
    local ast, leftover = rplx:match(str, pos)
    local errlist = {};

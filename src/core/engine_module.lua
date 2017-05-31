@@ -54,7 +54,8 @@
 --   optional_acc0 is an integer accumulator of total match time
 --   optional_acc1 is an integer accumulator of match time spent in the lpeg vm
 -- ???  API only: expression can be an rplx id, in which case that compiled expression is used
---   returns match or nil, leftover;
+--   returns ok, match or nil, leftover, time
+--      where ok means "successful compile", and if not ok then match is a table of messages
 -- 
 -- e:tracematch(expression, input, optional_start, optional_flavor) like match, with tracing (was eval)
 -- ??? API only: expression can be an rplx id, in which case that compiled expression is used
@@ -76,8 +77,6 @@
 -- e:tracesearch(identifier, input, optional_start) like search, but generates a trace output (was eval)
 --
 -- e:stats() returns number of patterns bound, some measure of env size (via lua collectgarbage), more...
---
--- e:match and e:search return a third argument which is the (user) cpu time that it took to match/search
 
 
 local engine_module = {}
@@ -165,8 +164,8 @@ local function engine_compile(en, expression, flavor)
    return rplx.new(en, pat), msgs
 end
 
--- N.B. This code is essentially duplicated (for speed, to avoid a function call) in process_input_file.lua
--- There's still room for optimizations, e.g.
+-- N.B. The _engine_match code is essentially duplicated (for speed, to avoid a function call) in
+-- process_input_file (below).  There's still room for optimizations, e.g.
 --   Create a closure over the encode function to avoid looking it up in e.
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
@@ -186,6 +185,7 @@ local function _engine_match(e, pat, input, start, total_time_accum, lpegvm_time
              total_time_accum, 
              lpegvm_time_accum
    end
+   -- return: no match, leftover chars, t0, t1
    return false, #input, total_time_accum, lpegvm_time_accum;
 end
 
@@ -197,12 +197,12 @@ local function make_matcher(processing_fcn)
 	     if start and type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
 	     if flavor and type(flavor)~="string" then engine_error(e, "Flavor not a string: " .. tostring(flavor)); end
 	     if rplx.is(expression) then
-		return processing_fcn(e, expression._pattern, input, start, total_time_accum, lpegvm_time_accum)
+		return true, processing_fcn(e, expression._pattern, input, start, total_time_accum, lpegvm_time_accum)
 	     elseif type(expression)=="string" then -- expression has not been compiled
 		-- If we cache, look up expression in the cache here.
 		local r, msgs = e:compile(expression, flavor)
-		if not r then return false, #input, msgs; end
-		return processing_fcn(e, r._pattern, input, start, total_time_accum, lpegvm_time_accum)
+		if not r then return false, msgs; end
+		return true, processing_fcn(e, r._pattern, input, start, total_time_accum, lpegvm_time_accum)
 	     else
 		engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
 	     end

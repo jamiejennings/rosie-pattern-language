@@ -67,13 +67,15 @@ function p.run(rosie, en, args, filename)
       return 0, 0
    end
    local function test_accepts_exp(exp, q)
-      local res, pos = test_engine:match(exp, q)
-      if (not res) or (pos ~= 0) then return false end
+      local ok, res, pos = test_engine:match(exp, q)
+      if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
+      if (not ok) or (not res) or (pos ~= 0) then return false end
       return true
    end
    local function test_rejects_exp(exp, q)
-      local res, pos = test_engine:match(exp, q)
-      if res and (pos == 0) then return false end
+      local ok, res, pos = test_engine:match(exp, q)
+      if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
+      if (not ok) or (res and (pos == 0)) then return false end
       return true
    end
    -- return values: true, false, nil (nil means failure to match)
@@ -93,16 +95,18 @@ function p.run(rosie, en, args, filename)
          end
          return found
       end
-      local res, leftover = test_engine:match(exp, q)
+      local ok, res, leftover = test_engine:match(exp, q)
+      if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
       -- check for match error, which prevents testing containment
-      if (not res) or (leftover~=0) then return nil; end
+      if (not ok) or (not res) or (leftover~=0) then return nil; end
       return searchForID(res.subs, id)
    end
    local test_funcs = {rejects=test_rejects_exp,accepts=test_accepts_exp}
    local failures, total = 0, 0
-   local exp = "test_line"
+   local test_rplx, msg = en:compile("test_line")
+   assert(test_rplx, "internal error: test_line failed to compile")
    for _,p in pairs(test_lines) do
-      local m, left = en:match(exp, p)
+      local m, left = test_rplx:match(p)
       if not m then
 	 print(filename .. ": FAIL: invalid test syntax: " .. p)
 	 failures = failures + 1

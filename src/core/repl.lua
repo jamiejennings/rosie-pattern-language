@@ -45,6 +45,10 @@ local repl_engine = rosie.engine.new("repl")
 repl.repl_engine = repl_engine
 repl_engine:load("import rosie/rpl_1_1 as rpl, common")
 repl_engine:load(repl_patterns)
+input_rplx = repl_engine:compile("input")
+assert(input_rplx, "internal error: input_rplx failed to compile")
+pargs_rplx = repl_engine:compile("parsed_args")
+assert(pargs_rplx, "internal error: pargs_rplx failed to compile")
 local parse_and_explain = repl_engine.compiler.parser
 
 local repl_prompt = "Rosie> "
@@ -75,7 +79,7 @@ function repl.repl(en)
    local s = readline.readline(repl_prompt)
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
-      local m, left = repl_engine:match("input", s)
+      local m, left = input_rplx:match(s)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
       else
@@ -149,7 +153,7 @@ function repl.repl(en)
 	       else
 		  local ename, epos, argtext = common.decode_match(csubs[1])
 		  assert(ename=="args")
-		  local m, msg = repl_engine:match("parsed_args", argtext)
+		  local m, msg = pargs_rplx:match(argtext)
 		  assert(m.type=="parsed_args")
 		  local msubs = m and m.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
@@ -182,7 +186,7 @@ function repl.repl(en)
 			   table.print(msgs); print() -- FIXME (TEMPORARY)
 			   --io.write(rplx, "\n") -- syntax and compile errors
 			else
-			   local m, left = en:match(rplx, input_text)
+			   local m, left = rplx:match(input_text)
 			   --       if debug and (not m) then
 			   -- 	 local match, leftover, trace = en:tracematch(exp, input_text)
 			   -- 	 io.write(trace, "\n")
