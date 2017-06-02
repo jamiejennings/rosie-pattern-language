@@ -1,0 +1,19 @@
+package mod1
+
+local grammar
+   A = {"a" A} / "a"
+end
+-- test A accepts "a", "aaaaaa"
+-- test A rejects "", "b"
+
+grammar
+  S = {"a" B} / {"b" A} / "" 
+  A = {"a" S} / {"b" A A}
+  B = {"b" S} / {"a" B B}
+end
+
+-- S matches strings containing equal numbers of a's and b's
+-- test S accepts "", "ab", "ba", "abab", "baab"
+-- test S rejects "a", "b", "baa"
+
+

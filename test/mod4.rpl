@@ -1,0 +1,8 @@
+-- This module will fail to load
+package !@#
+
+local x = "hello"
+y = "world"
+
+
+
