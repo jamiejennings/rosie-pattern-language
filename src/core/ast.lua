@@ -14,10 +14,10 @@ local rpl_parser = require "rpl-parser"
 
 local ast = {}
 
-ast.exp = recordtype.new("exp",
-			 {exp = NIL;
-			  s = NIL;
-			  e = NIL;})
+-- ast.exp = recordtype.new("exp",
+-- 			 {exp = NIL;
+-- 			  s = NIL;
+-- 			  e = NIL;})
 
 ast.block = recordtype.new("block",
 			   {stmts = {};
@@ -122,9 +122,11 @@ ast.cs_range = recordtype.new("cs_range",	    -- [a-z]
 			       s = NIL;
 			       e = NIL;})
 
--- ast.cap = recordtype.new("cap",
--- 			 {name = NIL;
--- 			  exp = NIL;})
+ast.app = recordtype.new("app",
+			 {name = NIL;
+			  kind = NIL;		    -- macro or function
+			  fn = NIL;		    -- actual macro/function to apply
+			  arglist = {};})
 
 ast.pdecl = recordtype.new("pdecl",
 			   {name = NIL;
