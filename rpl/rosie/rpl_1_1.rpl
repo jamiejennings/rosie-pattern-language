@@ -135,9 +135,10 @@ grammar
    assignment_ = identifier ignore "=" exp 
 end
 
-importpath = quoted_string		  -- double quoted, interpreted, pattern name is "literal"
-             / { id {"/" id}* }		  -- quotes not needed when each path segment is an id
---              / {[[:alnum:]]/[_-//]}+	  -- whitespace terminated, uninterpreted
+ipathchar = [:alnum:] / [_-]
+importpath = quoted_string		        -- double quoted, interpreted, pattern name is "literal"
+             / { ipathchar+ {[/] ipathchar+}* } -- limited chars, slash as separator
+--             / { id {"/" id}* }		  -- quotes not needed when each path segment is an id
 
 
 major = [0-9]{1,2}
