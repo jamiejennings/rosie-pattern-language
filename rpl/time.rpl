@@ -65,7 +65,7 @@ partial = { hour ":" minute ":" second secfrac? }
 -- test partial accepts "00:00:00", "00:00:00.00000", "10:30:02.125", "23:59:60"
 -- test partial rejects "", "24:10:10", "17:28:33.0r"
 
-full = { partial offset }
+rfc3339 = { partial offset }
 -- the above tests should handle this
 
 -- RFC2822 (Alternative patterns, less exact than RFC3339)

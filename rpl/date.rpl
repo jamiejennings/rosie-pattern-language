@@ -37,8 +37,6 @@ package date
 -- T and Z may be lowercase.
 -- The "T" separator in the date-time rule can be a space instead.
 
---import core (for digit)
--- local until import
 local alias d = [:digit:]
 
 -- RFC3339 patterns
@@ -56,9 +54,9 @@ strict_day = {  {"0" [1-9]}		-- single digit dates
 -- test strict_day accepts "01", "06", "10", "16", "20", "29", "31"
 -- test strict_day rejects "0", "00", "32", "99"
 
-rfc2822 = { strict_year "-" strict_month "-" strict_day }
--- test rfc2822 accepts "2017-04-28", "1999-10-31"
--- test rfc2822 rejects "99-01-01", "2010-15-03", "1999-12-32"
+rfc3339 = { strict_year "-" strict_month "-" strict_day }
+-- test rfc3339 accepts "2017-04-28", "1999-10-31"
+-- test rfc3339 rejects "99-01-01", "2010-15-03", "1999-12-32"
 
 -- RFC2822 + alternatives
 day_shortname = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
@@ -94,6 +92,6 @@ slashed = { year "/" month "/" day }
 std_US = month_name day ","? year?
 -- test std_US accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
 
-any = dashed / slashed / std_US / alt / rfc2822
+any = dashed / slashed / std_US / alt / rfc3339
 
 
