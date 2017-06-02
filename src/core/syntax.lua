@@ -456,6 +456,13 @@ function syntax.expression_p(ast)
 	   (name=="predicate"))
 end
 
+-- top_level_transform0:
+-- 
+-- 'assignment_', 'alias_' --> 'binding' (core, 0, 1)
+-- 'grammar_' --> new_grammar (core, 0, 1)
+-- also accepts: 'syntax_error' (core, 0, 1)
+-- else --> expand_rhs which does many things (see below)
+
 function syntax.top_level_transform0(ast)
    local name = ast.type
    if name=="core" or
@@ -519,6 +526,22 @@ local function transform_application(ast)
 						  table.unpack(args)))
 end
 
+-- top_level_transform1:
+-- 
+-- 'assignment_', 'alias_' --> 'binding' (core, 0, 1)
+-- 'grammar_' --> new_grammar (core, 0, 1)
+-- also accepts: 'syntax_error', 'rpl_statements', 'rpl_expression', 'package_decl' (0, 1)
+-- also accepts: 'import_decl', 'application' (1)
+-- else --> expand_rhs which:
+--          (1) expands cooked exps and wraps in 'raw_exp'
+--          (2) 'identifier' --> 'ref'
+--          (3) 'quantified_exp' --> 'new_quantified_exp'
+
+-- FIXED:
+-- 'statement' stripped off (0, so UNUSED!)
+-- 'expression' stripped off (core, so UNUSED!)
+-- also accepts: 'language_decl' (UNUSED!)
+
 function syntax.top_level_transform1(ast)
    local name = ast.type
    if name=="rpl_statements" or name=="rpl_expression" then
@@ -527,16 +550,16 @@ function syntax.top_level_transform1(ast)
 			  ast.pos,
 			  ast.text,
 			  table.unpack(list.map(syntax.top_level_transform1, list.from(ast.subs or {}))))
-   elseif name=="statement" then
-      local name = common.decode_match(ast.subs[1])
-      assert(name=="alias_" or name=="assignment_" or name=="grammar_" or name=="local_",
-	  "unknown ast node type: " .. tostring(name))
-      -- strip off the 'statement' wrapper
-      return syntax.top_level_transform1(ast.subs[1])
-   elseif name=="expression" then
-      local name = common.decode_match(ast.subs[1])
-      -- strip off the 'expression' wrapper
-      return syntax.top_level_transform1(ast.subs[1])
+   -- elseif name=="statement" then
+   --    local name = common.decode_match(ast.subs[1])
+   --    assert(name=="alias_" or name=="assignment_" or name=="grammar_" or name=="local_",
+   -- 	  "unknown ast node type: " .. tostring(name))
+   --    -- strip off the 'statement' wrapper
+   --    return syntax.top_level_transform1(ast.subs[1])
+--   elseif name=="expression" then
+--      local name = common.decode_match(ast.subs[1])
+--      -- strip off the 'expression' wrapper
+--      return syntax.top_level_transform1(ast.subs[1])
    elseif (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
    elseif (name=="grammar_") then
@@ -551,7 +574,7 @@ function syntax.top_level_transform1(ast)
       return syntax.generate("local_", new)
    elseif (name=="syntax_error") then
       return ast				    -- errors will be culled out later
-   elseif (name=="package_decl") or (name=="language_decl") or (name=="import_decl") then
+   elseif (name=="package_decl") or (name=="import_decl") then -- or (name=="language_decl")
       return ast				    -- no transformation needed
    elseif (name=="application") then
       return transform_application(ast)

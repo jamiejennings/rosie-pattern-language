@@ -136,7 +136,9 @@ grammar
 end
 
 importpath = quoted_string		  -- double quoted, interpreted, pattern name is "literal"
-              / {[[:alnum:]]/[_-//]}+	  -- whitespace terminated, uninterpreted
+             / { id {"/" id}* }		  -- quotes not needed when each path segment is an id
+--              / {[[:alnum:]]/[_-//]}+	  -- whitespace terminated, uninterpreted
+
 
 major = [0-9]{1,2}
 minor = major
