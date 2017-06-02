@@ -179,8 +179,8 @@ end
 ----------------------------------------------------------------------------------------
 
 function common.note(...)
-   for _, item in ipairs{...} do io.stderr:write(item); end
-   io.stderr:write("\n")
+--   for _, item in ipairs{...} do io.stderr:write(item); end
+--   io.stderr:write("\n")
 end
 
 function common.warn(str, ...) common.note("Warning: ", str, ..., "\n"); end
