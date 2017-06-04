@@ -533,9 +533,9 @@ end
 -- also accepts: 'syntax_error', 'rpl_statements', 'rpl_expression', 'package_decl' (0, 1)
 -- also accepts: 'import_decl', 'application' (1)
 -- else --> expand_rhs which:
---          (1) expands cooked exps and wraps in 'raw_exp'
---          (2) 'identifier' --> 'ref'
---          (3) 'quantified_exp' --> 'new_quantified_exp'
+--          (1) expands cooked exps and wraps in 'raw_exp' (core, 0, 1)
+--          (2) 'identifier' --> 'ref'                     (core, 0, 1)
+--          (3) 'quantified_exp' --> 'new_quantified_exp'  (core, 0, 1)
 
 -- FIXED:
 -- 'statement' stripped off (0, so UNUSED!)

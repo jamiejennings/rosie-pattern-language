@@ -432,7 +432,7 @@ end
 function c0.compile_grammar_expression(a, gmr, env)
    assert(a, "did not get ast in compile_grammar_expression")
    local name, pos, text, subs = decode_match(a)
-   assert(name=="grammar_" or name=="new_grammar" or name=="grammar_expression")
+   assert(name=="new_grammar") -- or name=="grammar_" or name=="grammar_expression")
    assert(type(subs[1])=="table")
    local gtable = environment.extend(env)
    local first = subs[1]			    -- first rule in grammar
@@ -605,7 +605,7 @@ c0.compile_exp_functions = {"compile_exp";
 			    charset=c0.compile_charset;	-- ONLY USED IN CORE
 			    new_quantified_exp=c0.compile_new_quantified_exp;
 			    syntax_error=c0.compile_syntax_error;
-			    grammar_expression=c0.compile_grammar_expression;
+			    --grammar_expression=c0.compile_grammar_expression;
 			    application = compile_application; -- ONLY USED IN c1
 			    int = compile_int;		       -- ONLY USED IN c1
 			    fake_package=function(...) return nil; end;

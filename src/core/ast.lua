@@ -34,8 +34,6 @@ ast.bind = recordtype.new("bind",
 
 ast.grammar = recordtype.new("grammar",
 			     {rules = {};
-			      is_alias = false;
-			      is_local = false;
 			      s = NIL;
 			      e = NIL;})
 
@@ -299,10 +297,14 @@ local function convert_stmt(pt)
    elseif pt.type=="grammar_" then
       local rules = map(convert_stmt, pt.subs)
       assert(rules and rules[1])
-      return ast.grammar.new{rules = rules,
-			  is_alias = rules[1].is_alias,
-			  is_local = false,
-			  s=s, e=e}
+      local aliasflag = rules[1].is_alias
+      local boundref = rules[1].ref
+      local gexp = ast.grammar.new{rules = rules,
+				   s=s, e=e}
+      return ast.bind.new{ref = boundref,
+			  exp = gexp,
+			  is_alias = aliasflag,
+			  is_local = false}
    elseif pt.type=="local_" then
       local b = convert_stmt(pt.subs[1])
       b.is_local = true
