@@ -136,6 +136,7 @@ function syntax.rebuild_choice(choices)
    if #choices==2 then
       return syntax.generate("choice", choices[1], choices[2])
    else
+      assert(#choices > 2)
       return syntax.generate("choice", choices[1], syntax.rebuild_choice(list.cdr(list.from(choices))))
    end
 end
@@ -318,41 +319,51 @@ syntax.cooked_to_raw =
 			   nil,
 			   false)
 
-local function remove_combiners(subs)
-   -- charset_exp always has one sub
+local function process_charset_union(subs)
    assert(subs and subs[1])
-   local s = subs[1]
-   if s.type=="charset_combiner" then
---      print("*** in remove_combiners, found combiner: "); table.print(subs, false)
-      assert(s.subs[2].type=="op")
-      if s.subs[2].subs[1].type=="union" then
-	 return list.append(remove_combiners({s.subs[1]}),
-			    remove_combiners({s.subs[3]}))
-      else
-	 error("Unimplemented character set operation: " .. s.subs[2].type)
-      end
-   elseif s.type=="charset_exp" then
-      return remove_combiners(s.subs)
+   local left = subs[1]
+   -- base case: a single expression
+   if not subs[2] then return list.new(syntax.expand_charset_exp(subs[1])); end
+   local op = subs[2]
+   assert(op and op.type=="op")
+   assert(subs[3])
+   if op.subs[1].type=="union" then
+      return list.append(process_charset_union(list.new(left)),
+			 process_charset_union(list.cdr(list.cdr(subs))))
    else
-      return subs
+      error("Unimplemented character set operation: " .. op.subs[1].type)
    end
 end
       
+local function primitive_charset(pt)
+   return (pt.type=="named_charset" or
+	   pt.type=="charlist" or
+	   pt.type=="range")
+end
+
 syntax.expand_charset_exp =
    syntax.make_transformer(function(ast)
+			      local complement, exp
 			      local name, pos, text, subs = common.decode_match(ast)
-			      assert(subs and subs[1])
-			      local complement = (subs[1].type=="complement")
-			      if complement then subs=list.cdr(list.from(subs)); end
-			      assert(subs and subs[1])
-			      -- Currently, NO SUPPORT for charset operators other than adjacency
-			      subs = remove_combiners(subs)
---			      print("*** after remove_combiners: "); table.print(subs, false)
-			      local exp 
-			      if subs[2] then
-				 exp = syntax.rebuild_choice(subs)
-			      else
+			      -- charset_exp always has one sub: compound or simple
+			      assert(subs and subs[1] and (not subs[2]))
+			      if primitive_charset(subs[1]) then
 				 exp = subs[1]
+			      elseif subs[1].type=="compound_charset" then
+				 local ccsubs = list.from(subs[1].subs)
+				 assert(ccsubs and ccsubs[1]) -- compound charset cannot be empty
+				 complement = (ccsubs[1].type=="complement")
+				 if complement then ccsubs = list.cdr(ccsubs); end
+				 if #ccsubs > 1 then
+				    ccsubs = process_charset_union(ccsubs)
+				    exp = syntax.rebuild_choice(ccsubs)
+				 else
+				    exp = list.car(ccsubs)
+				 end
+			      elseif subs[1].type=="syntax_error" then
+				 return ast
+			      else
+				 assert(false, "unexpected type of charset_exp: " .. subs[1].type)
 			      end
 			      if complement then
 			      	 exp = syntax.generate("sequence",

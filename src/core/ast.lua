@@ -14,17 +14,12 @@ local rpl_parser = require "rpl-parser"
 
 local ast = {}
 
--- ast.exp = recordtype.new("exp",
--- 			 {exp = NIL;
--- 			  s = NIL;
--- 			  e = NIL;})
-
 ast.block = recordtype.new("block",
 			   {stmts = {};
 			    s = NIL;
 			    e = NIL;})
 
-ast.bind = recordtype.new("bind",
+ast.binding = recordtype.new("binding",
 			  {ref = NIL;
 			   exp = NIL;
 			   is_alias = false;
@@ -32,6 +27,8 @@ ast.bind = recordtype.new("bind",
 			   s = NIL;
 			   e = NIL;})
 
+-- A grammar is an expression in the ast, despite the fact that in the concrete grammar for rpl
+-- 1.1, the keyword 'grammar' introduces a binding of a name to a 'grammar expression'.
 ast.grammar = recordtype.new("grammar",
 			     {rules = {};
 			      s = NIL;
@@ -66,7 +63,7 @@ ast.rep = recordtype.new("rep",
 			  s = NIL;
 			  e = NIL;})
 
-ast.cook = recordtype.new("cook",
+ast.cooked = recordtype.new("cooked",
 			  {exp = NIL;
 			   s = NIL;
 			   e = NIL;})
@@ -82,24 +79,11 @@ ast.lit = recordtype.new("lit",			    -- interpolated string literals
 			  s = NIL;
 			  e = NIL;})
 
-ast.cexp_or = recordtype.new("cexp_or",		    -- [ [exp1] ... ]
-			     {complement = false;
-			      cexps = {};
-			      s = NIL;
-			      e = NIL;})
-
-ast.cexp_and = recordtype.new("cexp_and",	    -- [ [exp1]&&[exp2]&& ... ]
-			      {complement = false;
-			       cexps = {};
-			       s = NIL;
-			       e = NIL;})
-
-ast.cexp_diff = recordtype.new("cexp_diff",	    -- [ [first]-[second] ]
-			       {complement = false;
-				first = NIL;
-				second = NIL;
-				s = NIL;
-				e = NIL;})
+ast.cexp = recordtype.new("cexp",		    -- [ [exp1] ... ]
+			  {complement = false;
+			   cexp = {};
+			   s = NIL;
+			   e = NIL;})
 
 ast.cs_named = recordtype.new("cs_named",	    -- [:name:]
 			      {complement = false;
@@ -119,6 +103,22 @@ ast.cs_range = recordtype.new("cs_range",	    -- [a-z]
 			       last = NIL;
 			       s = NIL;
 			       e = NIL;})
+
+ast.cexp_union = recordtype.new("cexp_union",	    -- [ [exp1] ... ]
+				{cexps = {};
+				 s = NIL;
+				 e = NIL;})
+
+ast.cexp_intersection = recordtype.new("cexp_intersection", -- [ [exp1]&&[exp2]&& ... ]
+				       {cexps = {};
+					s = NIL;
+					e = NIL;})
+
+ast.cexp_difference = recordtype.new("cexp_difference",	-- [ [first]-[second] ]
+				     {first = NIL;
+				      second = NIL;
+				      s = NIL;
+				      e = NIL;})
 
 ast.app = recordtype.new("app",
 			 {name = NIL;
@@ -144,6 +144,12 @@ ast.ideclist = recordtype.new("ideclist",
 			    
 local convert_exp;
 
+local function simple_charset_p(a)
+   return (ast.cs_named.is(a) or
+	   ast.cs_list.is(a) or
+	   ast.cs_range.is(a))
+end
+
 local function flatten(pt, pt_type)
    local function flatten(pt)
       if pt.type == pt_type then
@@ -154,7 +160,38 @@ local function flatten(pt, pt_type)
    end
    return flatten(pt)
 end
-   
+
+local function flatten_cexp_in_place(a, target_type)
+   local function lift(exps)
+--      print("*** lifting: "); for i,v in ipairs(exps) do io.write(tostring(v), " "); end; io.write("\n")
+      if list.null(exps) then return list.from({}); end
+      local first = exps[1]
+      local lift1
+      if target_type.is(first) then
+	 local subs = list.from(first.cexps)
+	 lift1 = lift(subs)
+      else
+	 flatten_cexp_in_place(first, target_type)
+	 lift1 = list.new(first)
+      end
+      return append(lift1, lift(list.cdr(exps)))
+   end
+   if target_type.is(a) then
+      local exps = list.from(a.cexps)
+      a.cexps = lift(exps)
+   elseif ast.cexp_intersection.is(a) or ast.cexp_union.is(a) then
+      list.foreach(function(exp) flatten_cexp_in_place(exp, target_type) end, a.cexps)
+   elseif ast.cexp.is(a) then
+      flatten_cexp_in_place(a.cexp, target_type)
+   elseif ast.cexp_difference.is(a) then
+      flatten_cexp_in_place(a.first, target_type)
+      flatten_cexp_in_place(a.second, target_type)
+   else
+      -- else we have a "simple" cexp, which has no cexps inside it
+      assert(simple_charset_p(a))
+   end
+end
+
 local function convert_quantified_exp(pt)
    local s, e = pt.s, pt.e
    local e, q = pt.subs[1], pt.subs[2]
@@ -184,14 +221,31 @@ local function convert_quantified_exp(pt)
 		      s=s, e=e}
 end
 
-local function primitive_charset(pt)
-   return (pt.type=="named_charset" or
-	   pt.type=="charlist" or
-	   pt.type=="range")
+local convert_char_exp;
+
+local function infix_to_prefix(exps)
+   -- exps := exp (op exp)*
+   local rest = list.from(exps)
+   local first = rest[1]
+   local op = rest[2]
+   if not op then return convert_char_exp(first); end
+   local optype = op.subs[1].type
+   assert(optype)
+   rest = list.cdr(list.cdr(rest))
+   if optype=="intersection" then
+      return ast.cexp_intersection.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
+   elseif optype=="difference" then
+      return ast.cexp_difference.new{first = convert_char_exp(first), second = infix_to_prefix(rest), s=s, e=e}
+   elseif optype=="union" then
+      return ast.cexp_union.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
+   else
+      error("Internal error: do not know how to convert charset op " .. tostring(optype))
+   end
 end
 
-local function convert_char_exp(pt)
+function convert_char_exp(pt)
    assert(pt.subs and pt.subs[1])
+   local pt = pt.subs[1]
    local s, e = pt.s, pt.e
    local exps = list.from(pt.subs)
    local compflag = (pt.subs[1].type=="complement")
@@ -199,32 +253,7 @@ local function convert_char_exp(pt)
       exps = list.cdr(exps)
       assert(pt.subs[2])
    end
-   if pt.type=="charset_exp" then
-      assert(exps[1])
-      if primitive_charset(exps[1]) then
-	 assert(not compflag)			    -- grammar does not allow this
-	 return convert_char_exp(exps[1])
-      else
-	 return ast.cexp_or.new{complement = compflag,
-				cexps = map(convert_char_exp, exps), 
-				s=s, e=e}
-      end
-   elseif pt.type=="charset_combiner" then
-      assert(pt.subs and pt.subs[1] and pt.subs[2] and pt.subs[3] and (not pt.subs[4]))
-      assert(pt.subs[2].type=="op" and pt.subs[2].subs and pt.subs[2].subs[1])
-      local left = pt.subs[1]
-      local op = pt.subs[2].subs[1].type
-      local right = pt.subs[3]
-      if op=="intersection" then
-	 return ast.cexp_and.new{cexps = {convert_char_exp(left), convert_char_exp(right)}, s=s, e=e}
-      elseif op=="difference" then
-	 return ast.cexp_diff.new{cexps = {convert_char_exp(left), convert_char_exp(right)}, s=s, e=e}
-      elseif op=="union" then
-	 return ast.cexp_or.new{cexps = {convert_char_exp(left), convert_char_exp(right)}, s=s, e=e}	 
-      else
-	 error("Internal error: do not know how to convert charset op " .. tostring(op))
-      end
-   elseif pt.type=="named_charset" then
+   if pt.type=="named_charset" then
       return ast.cs_named.new{name = exps[1].text, complement = compflag, s=s, e=e}
    elseif pt.type=="charlist" then
       return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
@@ -235,6 +264,16 @@ local function convert_char_exp(pt)
 			      last = exps[2].text,
 			      complement = compflag,
 			      s=s, e=e}
+   elseif pt.type=="compound_charset" then
+      assert(exps[1])
+      local prefix_cexp = infix_to_prefix(exps)
+      flatten_cexp_in_place(prefix_cexp, ast.cexp_intersection)
+      flatten_cexp_in_place(prefix_cexp, ast.cexp_union)
+      return ast.cexp.new{cexp = prefix_cexp,
+			  complement = compflag,
+			  s=s, e=e}
+   else
+      error("Internal error: do not know how to convert charset exp type: " .. tostring(pt.type))
    end
 end
 
@@ -242,14 +281,10 @@ function convert_exp(pt)
    local s, e = pt.s, pt.e
    if pt.type=="capture" then
       return ast.cap.new{name = pt.subs[1].text, exp = convert_exp(pt.subs[2]), s=s, e=e}
---   elseif pt.type=="ref" then
---      return ast.ref.new{localname = pt.text, packagename = NIL, s=s, e=e}
---   elseif pt.type=="extref" then
---      return ast.ref.new{localname = pt.text, packagename = pt.subs[2].text, s=s, e=e}
    elseif pt.type=="predicate" then
       return ast.pred.new{type = pt.subs[1].text, exp = convert_exp(pt.subs[2]), s=s, e=e}
    elseif pt.type=="cooked" then
-      return ast.cook.new{exp = convert_exp(pt.subs[1]), s=s, e=e}
+      return ast.cooked.new{exp = convert_exp(pt.subs[1]), s=s, e=e}
    elseif pt.type=="raw" then
       return ast.raw.new{exp = convert_exp(pt.subs[1]), s=s, e=e}
    elseif pt.type=="choice" then
@@ -283,13 +318,13 @@ local function convert_stmt(pt)
    local s, e = pt.s, pt.e
    if pt.type=="assignment_" then
       assert(pt.subs and pt.subs[1] and pt.subs[2])
-      return ast.bind.new{ref = convert_exp(pt.subs[1]),
+      return ast.binding.new{ref = convert_exp(pt.subs[1]),
 			  exp = convert_exp(pt.subs[2]),
 			  is_alias = false,
 			  is_local = false,
 			  s=s, e=e}
    elseif pt.type=="alias_" then
-      return ast.bind.new{ref = convert_exp(pt.subs[1]),
+      return ast.binding.new{ref = convert_exp(pt.subs[1]),
 			  exp = convert_exp(pt.subs[2]),
 			  is_alias = true,
 			  is_local = false,
@@ -301,7 +336,7 @@ local function convert_stmt(pt)
       local boundref = rules[1].ref
       local gexp = ast.grammar.new{rules = rules,
 				   s=s, e=e}
-      return ast.bind.new{ref = boundref,
+      return ast.binding.new{ref = boundref,
 			  exp = gexp,
 			  is_alias = aliasflag,
 			  is_local = false}
@@ -327,7 +362,8 @@ end
 local function convert(pt)
    local s, e = pt.s, pt.e
    if pt.type=="rpl_expression" then
-      return ast.exp.new{exp = convert_exp(pt.subs[1]), s=s, e=e}
+      assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
+      return convert_exp(pt.subs[1])
    elseif pt.type=="rpl_statements" then
       return ast.block.new{stmts = map(convert_stmt, pt.subs or {}), s=s, e=e}
    else

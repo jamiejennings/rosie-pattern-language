@@ -240,7 +240,8 @@ function c0.compile_new_quantified_exp(a, gmr, env)
 						      max=max} }
 end
 
--- rpl 1.0 parser produces literals that have the quotes in them
+-- rpl 1.0 parser produces literals that have a double quote mark in the first and last
+-- positions.  and in between, any character can be escaped with a backslash.
 function c0.compile_literal0(a, gmr, env)
    assert(a, "did not get ast in compile_literal0")
    local name, pos, text = decode_match(a)

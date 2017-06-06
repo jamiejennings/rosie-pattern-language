@@ -67,15 +67,15 @@ range = { complement? character [-] !"]" character }
 charlist = { complement? {!"]" character}+ }		    -- cannot be empty
 name = {!":" .}+
 named_charset = { complement? name } 
-alias one_charset = { "[" { ":" named_charset ":]" } /
+alias simple_charset = { "[" { ":" named_charset ":]" } /
 	                  { range "]" } /
 		          { charlist "]" } /
 		          syntax_error
 		    }
 grammar
-   charset_exp = { "[" complement? ignore charset_exp1 ignore "]" } / one_charset
-   alias charset_exp1 = charset_combiner / charset_exp 
-   charset_combiner = { ignore charset_exp ignore op ignore charset_exp1 }
+   charset_exp = compound_charset / simple_charset
+   compound_charset = { "[" complement? combination ignore "]" }
+   alias combination = { ignore charset_exp { ignore op ignore charset_exp }* }
    op = intersection / difference / union
    union = ""
    intersection = "&&"
@@ -135,10 +135,9 @@ grammar
    assignment_ = identifier ignore "=" exp 
 end
 
-ipathchar = [:alnum:] / [_-]
-importpath = quoted_string		        -- double quoted, interpreted, pattern name is "literal"
-             / { ipathchar+ {[/] ipathchar+}* } -- limited chars, slash as separator
---             / { id {"/" id}* }		  -- quotes not needed when each path segment is an id
+importpath = quoted_string		  -- double quoted, interpreted, pattern name is "literal"
+             / { id {"/" id}* }		  -- quotes not needed when each path segment is an id
+--              / {[[:alnum:]]/[_-//]}+	  -- whitespace terminated, uninterpreted
 
 
 major = [0-9]{1,2}
