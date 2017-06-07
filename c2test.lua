@@ -32,14 +32,35 @@ c.compile_block = function(...)
 
 messages = {}
 pkgtable = environment.make_module_table()
+env = environment.new()
 
-function go(importpath)
+function dump_state()
+   print("Pkgtable:")
+   for k,v in pairs(pkgtable) do print(k,v); end
+   print("Top level env:")
+   for k,v in env:bindings() do print(k,v); end
+   print()
+end
+
+function goimport(importpath)
    print("Loading " .. importpath)
    fullpath, src, errmsg = common.get_file(importpath, e.searchpath)
    if (not src) then error("go: failed to find import " .. importpath); end
-   loadpkg.source(c, pkgtable, e.searchpath, src, importpath, fullpath, messages)
-   for k,v in pairs(pkgtable) do print(k,v); end
+   loadpkg.source(c, pkgtable, env, e.searchpath, src, importpath, fullpath, messages)
+   dump_state()
 end
 
-go("num")
-go("net")
+function go(src)
+   print("Loading source: " .. src:sub(1,60))
+   loadpkg.source(c, pkgtable, env, e.searchpath, src, nil, nil, messages)
+   dump_state()
+end   
+
+
+goimport("num")
+goimport("net")
+
+go("import net, common as .")
+go("import common")
+
+

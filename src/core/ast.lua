@@ -351,7 +351,9 @@ local function convert_stmt(pt)
       b.is_local = true
       return b
    elseif pt.type=="package_decl" then
-      return ast.pdecl.new{name=pt.text, s=s, e=e}
+      assert(pt.subs and pt.subs[1])
+      local pname = pt.subs[1].text
+      return ast.pdecl.new{name=pname, s=s, e=e}
    elseif pt.type=="import_decl" then
       local deps = {}
       rpl_parser.expand_import_decl(pt, deps)
