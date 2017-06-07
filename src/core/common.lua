@@ -362,13 +362,15 @@ end
 
 
 ----------------------------------------------------------------------------------------
--- Binding types: undeclared, pattern, macro, pfunction, environment
+-- Binding types: novalue, pattern, macro, pfunction, environment
 ----------------------------------------------------------------------------------------
 
 -- environment is defined in environment.lua
 
-common.undeclared =
-   recordtype.new("undeclared", {})
+common.novalue =
+   recordtype.new("novalue",
+		  {exported=false;
+		})
 
 common.pfunction =
    recordtype.new("pfunction",

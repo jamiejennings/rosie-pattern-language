@@ -70,6 +70,7 @@ local load = {}
 local function validate_block(a)
    assert(ast.block.is(a))
    local stmts = a.stmts
+--   print("*** entering validate_block, seeing " .. tostring(#stmts) .. " statements")
    if not stmts[1] then
       return true, {cerror.new("warning", a, "Empty input")}
    elseif ast.pdecl.is(stmts[1]) then
@@ -89,6 +90,7 @@ local function validate_block(a)
 	 return false, {cerror.new("error", s, "Declarations must appear before assignments")}
       end
    end -- for
+--   print("*** exiting validate_block, with " .. tostring(#stmts) .. " statements")
    return true, {}
 end
 

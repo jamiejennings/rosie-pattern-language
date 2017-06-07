@@ -24,10 +24,21 @@ c.expand_block = function(a, env, messages)
    return true
 end
 
-c.compile_block = function(...)
-		      print("load: dummy compile_block called")
-		      return true
-		   end
+c.compile_block = function(a, pkgtable, pkgenv, messages)
+		     print("load: entering dummy compile_block, making novalue bindings")
+		     for _, b in ipairs(a.stmts) do
+			assert(ast.binding.is(b))
+			local ref = b.ref
+			local prefix = (ref.packagename and (ref.packagename .. ".") or "")
+			if environment.lookup(pkgenv, ref.localname) then
+			   print("      rebinding " .. prefix .. ref.localname)
+			else
+			   print("      creating novalue binding for " .. prefix .. ref.localname)
+			end
+			environment.bind(pkgenv, ref.localname, common.novalue.new{exported=true})
+		     end -- for
+		     return true
+		  end
 
 
 messages = {}
@@ -36,8 +47,10 @@ env = environment.new()
 
 function dump_state()
    print("Pkgtable:")
+   print("---------")
    for k,v in pairs(pkgtable) do print(k,v); end
    print("Top level env:")
+   print("--------------")
    for k,v in env:bindings() do print(k,v); end
    print()
 end
@@ -60,7 +73,8 @@ end
 goimport("num")
 goimport("net")
 
-go("import net, common as .")
 go("import common")
+go("import common as foo")
+go("import net, common as .")
 
 
