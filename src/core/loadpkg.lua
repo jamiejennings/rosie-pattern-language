@@ -53,18 +53,11 @@
 --   2. Remove cooked groups by interleaving references to the boundary identifier, ~.
 
 local ast = require "ast"
-local engine_module = require "engine_module"
-local engine = engine_module.engine
 local environment = require "environment"
+local lookup = environment.lookup
+local bind = environment.bind
 local common = require "common"
-
---local c2 = require "c2"
-c2 = {}
-c2.compile_block = function(...)
-		      print("load: dummy compile_block called")
-		      return true
-		   end
-
+local cerror = common.cerror
 
 local load = {}
 
@@ -88,7 +81,9 @@ local function validate_block(a)
    elseif not ast.ideclist.is(stmts[1]) then
       return true, {cerror.new("info", a, "Module consists only of import declarations")}
    end
-   a.ideclist = table.remove(stmts, 1)
+   if ast.ideclist.is(stmts[1]) then
+      a.ideclist = table.remove(stmts, 1)
+   end
    for _, s in ipairs(stmts) do
       if not ast.binding.is(s) then
 	 return false, {cerror.new("error", s, "Declarations must appear before assignments")}
@@ -97,12 +92,11 @@ local function validate_block(a)
    return true, {}
 end
 
-local function parse(e, src, messages)
-   assert(engine.is(e))
-   assert(type(src)=="string")
+local function parse(parse_block, src, messages)
+   assert(type(parse_block)=="function")
+   assert(type(src)=="string", "src is " .. tostring(src))
    assert(type(messages)=="table")
-   local parser = e.compiler.parser
-   local pt, original_pt, warnings, leftover = parser.parse_statements(src)
+   local pt, warnings, leftover = parse_block(src)
    assert(type(warnings)=="table")
    if not pt then
       table.insert(messages, cerror.new("syntax", {}, table.concat(warnings, "\n")))
@@ -110,15 +104,16 @@ local function parse(e, src, messages)
    end
    table.move(warnings, 1, #warnings, #messages+1, messages)
    assert(type(pt)=="table")
+   assert(pt.type=="rpl_statements", util.table_to_pretty_string(pt, false))
    return ast.from_parse_tree(pt)
 end
    
--- Returns pkgname, pkgenv
-local function compile(e, a, pkgenv, messages)
-   -- we call the compiler with the import declarations already processed, and the imported
+-- Returns pkgname (from inside the module source code), pkgenv
+local function compile(compiler, pkgtable, a, pkgenv, messages)
+   -- We call the compiler with the import declarations already processed, and the imported
    -- bindings accessible in pkgenv
    local pkgname = a.pdecl and a.pdecl.name
-   if not c2.compile_block(a, e._pkgtable, pkgenv, messages) then
+   if not compiler.compile_block(a, pkgtable, pkgenv, messages) then
       common.note(string.format("load: FAILED TO COMPILE %s", pkgname or "<top level>"))
       return false
    end
@@ -131,59 +126,84 @@ local function compile(e, a, pkgenv, messages)
    return pkgname, pkgenv
 end
 
-local function expand(e, a, env, messages)
-   -- ... TODO ...
-   print("load: dummy expand function called")
-   return true
-end
-
-function load.module(e, src, importpath, fullpath, messages)
+function load.source(compiler, pkgtable, searchpath, src, importpath, fullpath, messages)
    local pkgenv = environment.new()
-   local a = parse(e, src, messages)
+   local a = parse(compiler.parse_block, src, messages)
    if not a then return false; end
    a.importpath = importpath
    a.filename = fullpath
    if not validate_block(a) then return false; end
    -- Via side effects, a.pdecl and a.ideclist are now filled in.
    -- With a mutually recursive call to load.imports, we can load the dependencies in a.ideclist. 
-   if not load.imports(e, importpath, a.ideclist, pkgenv, messages) then return false; end
-   if not expand(e, a, pkgenv, messages) then return false; end
-   return compile(e, a, pkgenv, messages) 
+   if not load.imports(compiler, pkgtable, searchpath, importpath, a.ideclist, pkgenv, messages) then return false; end
+   if not compiler.expand_block(a, pkgenv, messages) then return false; end
+   if not compile(compiler, pkgtable, a, pkgenv, messages) then return false; end
+   if importpath and a.pdecl and a.pdecl.name then
+      common.pkgtableset(pkgtable, importpath, a.pdecl.name, pkgenv)
+   end
+   return true
 end
 
-local function import_from_source(e, importpath, decl, messages)
-   local fullpath, source = common.get_file(decl.importpath, e.searchpath)
-   if not fullpath then
+local function import_from_source(compiler, pkgtable, searchpath, importpath, decl, messages)
+   local fullpath, src, msg = common.get_file(decl.importpath, searchpath)
+   if not src then
       local err = ("load: cannot find module source for '" .. decl.importpath ..
-		   "' needed by module '" .. (importpath or "<top level>") .. "'")
+		   "' needed by module '" .. (importpath or "<top level>") .. "': "
+		   .. msg)
       table.insert(messages, cerror.new("error", decl, err))
       return false
    end
    common.note("load: loading ", decl.importpath, " from ", fullpath)
-   return load.module(e, src, importpath, fullpath, messages)
+   return load.source(compiler, pkgtable, searchpath, src, importpath, fullpath, messages)
 end
 
-local function import(e, importpath, decl, messages)
-   assert(type(decl.importpath)=="string")
-   -- First, look in the engine's pkgtable to see if this pkg has been loaded already
-   local pkgname, pkgenv = e:pkgtableref(decl.importpath)
+local function import(compiler, pkgtable, searchpath, importpath, decl, messages)
+   -- First, look in the pkgtable to see if this pkg has been loaded already
+   local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
    if pkgname then return pkgname, pkgenv; end
    common.note("load: looking for ", decl.importpath)
    -- FUTURE: Next, look for a compiled version of the file to load
    -- ...
    -- Finally, look for a source file to compile and load
-   return import_from_source(e, importpath, decl, messages)
+   return import_from_source(compiler, pkgtable, searchpath, importpath, decl, messages)
+end
+
+local function create_import_binding(localname, pkgenv, target_env)
+   assert(type(localname)=="string")
+   assert(environment.is(pkgenv))
+   assert(environment.is(target_env))
+   if localname=="." then
+      -- import all exported bindings into the target environment
+      for name, obj in pkgenv:bindings() do
+	 if obj.exported then		    -- quack
+	    if lookup(target_env, name) then
+	       common.note("load: rebinding ", name)
+	    end
+	    bind(target_env, name, obj)
+	 end
+      end -- for each binding in the package
+   else
+      -- import the entire package under the desired localname
+      if lookup(target_env, localname) then
+	 common.note("load: rebinding ", localname)
+      end
+      bind(target_env, localname, pkgenv)
+      common.note("-> Binding package prefix: " .. localname)
+   end
 end
 
 -- 'load.imports' recursively loads each import in ideclist.
 -- Returns success; side-effects the messages argument.
-function load.imports(pkgtable, importpath, ideclist, target_env, messages)
-   assert(engine.is(e))
+function load.imports(compiler, pkgtable, searchpath, importpath, ideclist, target_env, messages)
+   assert(type(compiler)=="table")
+   assert(type(pkgtable)=="table")
+   assert(importpath==nil or type(importpath)=="string")
+   assert(ideclist==nil or ast.ideclist.is(ideclist), "ideclist is: "..tostring(ideclist))
    assert(environment.is(target_env))
-   assert(ast.ideclist.is(ideclist))
    assert(type(messages)=="table")
-   for _, decl in ipairs(ideclist.idecls) do
-      local pkgname, pkgenv = import(e, importpath, decl, messages)
+   idecls = ideclist and ideclist.idecls or {}
+   for _, decl in ipairs(idecls) do
+      local pkgname, pkgenv = import(compiler, pkgtable, searchpath, importpath, decl, messages)
       if not pkgname then
 	 common.note("FAILED to import from path " ..
 		     tostring(decl.importpath) ..
@@ -191,20 +211,16 @@ function load.imports(pkgtable, importpath, ideclist, target_env, messages)
 	 return false
       end
    end
+   -- With all imports loaded and registered in pkgtable, we can now create bindings in target_env
+   -- to make the exported bindings accessible.
+   for _, decl in ipairs(idecls) do
+      local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
+      local localname = decl.prefix or pkgname
+      assert(type(localname)=="string")
+      create_import_binding(localname, pkgenv, target_env)
+   end
    return true
 end
-
--- The load procedure compiles in a fresh environment (creating new bindings there) UNLESS
--- importpath is nil, which indicates "top level" loading into env.  Each dependency must already
--- be compiled and have an entry in pkgtable, else the compilation will fail.
---
--- importpath: a relative filesystem path to the source file, or nil
--- ast: the already preparsed, parsed, and expanded input to be compiled
--- pkgtable: the global package table (one per engine) because packages can be shared
--- 
-
-
-
 
 
 

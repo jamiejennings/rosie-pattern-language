@@ -10,9 +10,9 @@
 -- of environments that model nested scopes.  Currently, that nesting is used rarely.  Grammar
 -- compilation uses this.
 -- 
--- The root of an environment tree is the "base environment" for a module M.  For each other
--- module, X, that is open in M, there is a binding in M: X.prefix->X.env where X.prefix is the
--- prefix used for X in M, and X.env is the module environment for X.
+-- The root of an environment tree is the "base environment" for a package P.  For every other
+-- package, X, that is open in P, there is a binding in P: X.prefix->X.env where X.prefix is the
+-- prefix used for X in P, and X.env is the package environment for X.
 
 local environment = {}
 
@@ -115,7 +115,7 @@ setmetatable(ENV, {__tostring = function(env)
 
 
 
--- Each engine has a "global" module table that maps: importpath -> env
+-- Each engine has a "global" package table that maps: importpath -> env
 -- where env is the environment for the module, containing both local and exported bindings. 
 function environment.make_module_table()
    return setmetatable({}, {__tostring = function(env) return "<module_table>"; end;})
