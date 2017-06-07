@@ -59,7 +59,9 @@ end
 -- Coroutine body
 ----------------------------------------------------------------------------------------
 
--- the load procedure enforces the structure of an rpl module:
+-- Note: a 'package' is the run-time instantiation of an RPL 'module'.
+-- 
+-- The load procedure enforces the structure of an rpl module:
 --     rpl_module = language_decl? package_decl? import_decl* statement* ignore
 --
 -- We could parse a module using that rpl_module pattern, but we can give better
@@ -67,18 +69,18 @@ end
 --
 -- The load procedure compiles in a fresh environment (creating new bindings there) UNLESS
 -- importpath is nil, which indicates "top level" loading into env.  Each dependency must already
--- be compiled and have an entry in modtable, else the compilation will fail.
+-- be compiled and have an entry in pkgtable, else the compilation will fail.
 --
 -- importpath: a relative filesystem path to the source file, or nil
 -- ast: the already preparsed, parsed, and expanded input to be compiled
--- modtable: the global module table (one per engine) because modules can be shared
+-- pkgtable: the global package table (one per engine) because modules can be shared
 -- 
--- return value are success, packagename/nil, table of messages
+-- Return values are success, packagename/nil, table of messages
 
-function c1.load(importpath, ast, modtable, env)
+function c1.load(importpath, ast, pkgtable, env)
    assert(type(importpath)=="string" or importpath==nil)
    assert(type(ast)=="table" and (ast.subs==nil or type(ast.subs)=="table"))
-   assert(type(modtable)=="table")
+   assert(type(pkgtable)=="table")
    assert(environment.is(env))
    local astlist = ast.subs or {}
    local thispkg
@@ -95,11 +97,11 @@ function c1.load(importpath, ast, modtable, env)
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end
    -- If there is a package_decl, then this code is a module.  It gets its own fresh
-   -- environment, and it is registered (by its importpath) in the per-engine modtable.
+   -- environment, and it is registered (by its importpath) in the per-engine pkgtable.
    -- Otherwise, if there is no package decl, then the code is compiled in the default, or
    -- "top level" environment.  
    if thispkg then
-      assert(not common.modtableref(modtable, importpath),
+      assert(not common.pkgtableref(pkgtable, importpath),
 	     "module " .. importpath .. " already compiled and loaded?")
    end
    -- Dependencies must have been compiled and imported before we get here, so we can skip over
@@ -117,8 +119,8 @@ function c1.load(importpath, ast, modtable, env)
       if message then table.insert(messages, message); end
       i=i+1
    until not astlist[i]
-   -- success! save this env in the modtable, if we have an importpath.
-   if importpath and thispkg then common.modtableset(modtable, importpath, thispkg, env); end
+   -- success! save this env in the pkgtable, if we have an importpath.
+   if importpath and thispkg then common.pkgtableset(pkgtable, importpath, thispkg, env); end
    return true, thispkg, messages
 end
 

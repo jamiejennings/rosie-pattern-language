@@ -318,19 +318,19 @@ common.parser =
 		 })
 
 
-local modtabletype =
-   recordtype.new("modtable", {packagename=recordtype.NIL,
+local pkgtabletype =
+   recordtype.new("pkgtable", {packagename=recordtype.NIL,
 			       env=recordtype.NIL} )
 
-function common.modtableref(tbl, importpath)
+function common.pkgtableref(tbl, importpath)
    local entry = tbl[importpath]
    if entry then return entry.packagename, entry.env;
    else return nil; end
 end
 
-function common.modtableset(tbl, importpath, p, e)
+function common.pkgtableset(tbl, importpath, p, e)
    assert(p and e and type(importpath)=="string")
-   tbl[importpath] = modtabletype.new{packagename=p, env=e}
+   tbl[importpath] = pkgtabletype.new{packagename=p, env=e}
 end
 
 ----------------------------------------------------------------------------------------

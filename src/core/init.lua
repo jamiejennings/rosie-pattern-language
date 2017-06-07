@@ -126,9 +126,11 @@ local function load_all()
    c0 = import("c0")
    c1 = import("c1")
    compile = import("compile")
+   c2 = import("c2")
    color_output = import("color-output")
    eval = import("eval")
    engine_module = import("engine_module")
+   loadpkg = import("loadpkg")
    ui = import("ui")
 
    engine = engine_module.engine

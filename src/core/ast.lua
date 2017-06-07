@@ -16,6 +16,12 @@ local ast = {}
 
 ast.block = recordtype.new("block",
 			   {stmts = {};
+			    importpath = NIL;	    -- origin of this block from import stmt
+			                            -- or nil for top level
+			    filename = NIL;	    -- origin of this block from file system
+			                            -- or nil, e.g. for user input in CLI or REPL
+			    pdecl = NIL;	    -- filled in during expansion
+			    ideclist = NIL;	    -- filled in during expansion
 			    s = NIL;
 			    e = NIL;})
 
@@ -138,7 +144,7 @@ ast.idecl = recordtype.new("idecl",
 			    e = NIL;})
 
 ast.ideclist = recordtype.new("ideclist",
-			      {imports = {};
+			      {idecls = {};
 			       s = NIL;
 			       e = NIL;})
 			    
@@ -353,7 +359,7 @@ local function convert_stmt(pt)
 	 return ast.idecl.new{importpath = dep.importpath,
 			      prefix = dep.prefix}
       end
-      return ast.ideclist.new{imports = map(to_idecl, deps), s=s, e=e}
+      return ast.ideclist.new{idecls = map(to_idecl, deps), s=s, e=e}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end

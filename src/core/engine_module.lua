@@ -122,7 +122,7 @@ local function compile_search(en, pattern_exp)
    -- What to do with leftover?
    local ast, orig_ast, warnings, leftover = parse(pattern_exp)
    if not ast and ast.subs then return false, warnings, leftover; end
-   local pat, msgs = compile(nil, ast, en._modtable, env)
+   local pat, msgs = compile(nil, ast, en._pkgtable, env)
    if not pat then return false, msgs; end
    local replacement = ast.subs[1]
    -- Next, transform pat.ast
@@ -136,7 +136,7 @@ local function compile_search(en, pattern_exp)
    local grep_ast = syntax.replace_ref(template, "e", replacement)
    assert(type(grep_ast)=="table", "syntax.replace_ref failed")
    grep_ast = common.create_match("rpl_expression", 1, "search:(" .. pattern_exp .. ")", grep_ast)
-   return compile(nil, grep_ast, en._modtable, env)
+   return compile(nil, grep_ast, en._pkgtable, env)
 end
 
 local function compile_match(en, source)
@@ -145,7 +145,7 @@ local function compile_match(en, source)
    local ast, original_ast, messages, leftover = parse(source)
    assert(type(messages)=="table")
    if not ast then return false, messages; end
-   return compile(nil, ast, en._modtable, en._env)
+   return compile(nil, ast, en._pkgtable, en._env)
 end
 
 local function engine_compile(en, expression, flavor)
@@ -227,7 +227,7 @@ local import_dependency				    -- forward reference
 
 -- load a unit of rpl code (decls and statements) into an environment:
 --   * parse out the dependencies (import decls)
---   * load dependencies that have not been loaded (into the modtable)
+--   * load dependencies that have not been loaded (into the pkgtable)
 --   * import the dependencies into the target environment
 --   * compile the input in the target environment
 --   * return success code, modname or nil, table of messages (errors, warnings)
@@ -252,12 +252,12 @@ local function load_input(e, target_env, input, importpath, modonly)
    end
    table.move(warnings, 1, #warnings, #messages+1, messages)
    assert(type(ast)=="table")
-   -- load_dependencies has side-effects on e._modtable, target_env, and messages
+   -- load_dependencies has side-effects on e._pkgtable, target_env, and messages
    if not load_dependencies(e, ast, target_env, messages, importpath) then
       return false, nil, messages
    end
    -- now we can compile the input
-   local success, modname, more_messages = e.compiler.load(importpath, ast, e._modtable, target_env)
+   local success, modname, more_messages = e.compiler.load(importpath, ast, e._pkgtable, target_env)
    assert(type(more_messages)=="table", "messages is: " .. tostring(more_messages))
    table.move(more_messages, 1, #more_messages, #messages+1, messages)
    if not success then
@@ -292,7 +292,7 @@ maybe_load_dependency =
    function(e, ast, target_env, dep, importpath)
       local messages = {}
       common.note("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
-      local modname, modenv = e:modtableref(dep.importpath)
+      local modname, modenv = e:pkgtableref(dep.importpath)
       if not modname then
 	 common.note("Looking for ", dep.importpath, " required by ", (importpath or "<top level>"))
 	 local fullpath, source = common.get_file(dep.importpath, e.searchpath)
@@ -317,7 +317,7 @@ import_dependency =
    function(e, target_env, dep)
       assert(engine.is(e))
       assert(environment.is(target_env))
-      local modname, modenv = e:modtableref(dep.importpath)
+      local modname, modenv = e:pkgtableref(dep.importpath)
       if dep.prefix=="." then
 	 -- import all exported bindings into the current environment
 	 for name, obj in modenv:bindings() do
@@ -569,7 +569,7 @@ local function engine_create(name, compiler, searchpath)
 			   compiler=compiler,
 			   searchpath=searchpath,
 			   _env=environment.new(),
-			   _modtable=environment.make_module_table(),
+			   _pkgtable=environment.make_module_table(),
 			}
 end
 
@@ -583,16 +583,16 @@ local engine =
 		  {  name=function() return nil; end, -- for reference, debugging
 		     compiler=false,
 		     _env=false,
-		     _modtable=false,
+		     _pkgtable=false,
 		     _error=engine_error,
 
 		     id=recordtype.id,
 
-		     modtableref=function(self, path)
-				    return common.modtableref(self._modtable, path)
+		     pkgtableref=function(self, path)
+				    return common.pkgtableref(self._pkgtable, path)
 				 end,
-		     modtableset=function(self, path, p, e)
-				    common.modtableset(self._modtable, path, p, e)
+		     pkgtableset=function(self, path, p, e)
+				    common.pkgtableset(self._pkgtable, path, p, e)
 				 end,
 
 		     encode_function=false,	      -- false or nil ==> use default encoder
