@@ -46,7 +46,7 @@ ast.ref = recordtype.new("ref",
 			  s = NIL;
 			  e = NIL;})
 
-ast.seq = recordtype.new("seq",
+ast.sequence = recordtype.new("sequence",
 			 {exps = {};
 			  s = NIL;
 			  e = NIL;})
@@ -56,16 +56,17 @@ ast.choice = recordtype.new("choice",
 			     s = NIL;
 			     e = NIL;})
 
-ast.pred = recordtype.new("pred",
+ast.predicate = recordtype.new("predicate",
 			  {type = NIL;
 			   exp = NIL;
 			   s = NIL;
 			   e = NIL;})
 
-ast.rep = recordtype.new("rep",
+ast.repetition = recordtype.new("repetition",
 			 {min = NIL;
 			  max = NIL;
 			  exp = NIL;
+			  cooked = false;
 			  s = NIL;
 			  e = NIL;})
 
@@ -80,7 +81,7 @@ ast.raw = recordtype.new("raw",
 			  e = NIL;})
 
 
-ast.lit = recordtype.new("lit",			    -- interpolated string literals
+ast.literal = recordtype.new("literal",			    -- interpolated string literals
 			 {value = NIL;
 			  s = NIL;
 			  e = NIL;})
@@ -221,7 +222,7 @@ local function convert_quantified_exp(pt)
    else
       error("Internal error: do not know how to convert quantifier " .. tostring(qname))
    end
-   return ast.rep.new{min = min,
+   return ast.repetition.new{min = min,
 		      max = max,
 		      exp = convert_exp(e),
 		      s=s, e=e}
@@ -288,7 +289,7 @@ function convert_exp(pt)
    if pt.type=="capture" then
       return ast.cap.new{name = pt.subs[1].text, exp = convert_exp(pt.subs[2]), s=s, e=e}
    elseif pt.type=="predicate" then
-      return ast.pred.new{type = pt.subs[1].text, exp = convert_exp(pt.subs[2]), s=s, e=e}
+      return ast.predicate.new{type = pt.subs[1].text, exp = convert_exp(pt.subs[2]), s=s, e=e}
    elseif pt.type=="cooked" then
       return ast.cooked.new{exp = convert_exp(pt.subs[1]), s=s, e=e}
    elseif pt.type=="raw" then
@@ -296,7 +297,7 @@ function convert_exp(pt)
    elseif pt.type=="choice" then
       return ast.choice.new{exps = map(convert_exp, flatten(pt, "choice")), s=s, e=e}
    elseif pt.type=="sequence" then
-      return ast.seq.new{exps = map(convert_exp, flatten(pt, "sequence")), s=s, e=e}
+      return ast.sequence.new{exps = map(convert_exp, flatten(pt, "sequence")), s=s, e=e}
    elseif pt.type=="identifier" then
       assert(pt.subs and pt.subs[1])
       local localname, packagename
@@ -310,7 +311,7 @@ function convert_exp(pt)
       end
       return ast.ref.new{localname = localname, packagename = packagename, s=s, e=e}
    elseif pt.type=="literal" then
-      return ast.lit.new{value = pt.text, s=s, e=e}
+      return ast.literal.new{value = pt.text, s=s, e=e}
    elseif pt.type=="charset_exp" then
       return convert_char_exp(pt)
    elseif pt.type=="quantified_exp" then

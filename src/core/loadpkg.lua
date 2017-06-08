@@ -27,7 +27,7 @@
 --     - Each 'raw' reflects an explicit {...} construct in the source
 --     - A block contains a package decl (optional), import decls (optional), and zero or more
 --       bindings.
-
+-- 
 -- Syntax expansion is interleaved with package instantiation, because macros (both user-defined
 -- and built-in) are packaged in modules.  A package is the run-time instantiation of a module.
 --
@@ -35,8 +35,8 @@
 -- access to the module's exported bindings for use in subsequent compilation of other RPL code.
 -- (In the future, packages will be instantiated by reading a representation of the
 -- already-compiled module.)
-
--- Syntax expansion steps for a 'block':
+-- 
+-- Syntax expansion for a 'block' is the last step in processing an RPL block:
 --   1. Validate the block structure, e.g. declarations occur before bindings.
 --   2. If the block defines a package, create a fresh environment (else use top level) to be the
 --      current environment
@@ -44,13 +44,6 @@
 --      bind the resulting package name in the current environment
 --   4. Expand each binding in the block, in order of appearance
 
--- Syntax expansion steps for a 'binding':
---   1. Introduce explicit cooked groups where they are implied, e.g. rhs of assignments
---   2. Expand the expression on the right hand side
-
--- Syntax expansion steps for an expression:
---   1. Apply user-defined and built-in macro expansions
---   2. Remove cooked groups by interleaving references to the boundary identifier, ~.
 
 local ast = require "ast"
 local environment = require "environment"
