@@ -128,10 +128,23 @@ ast.cexp_difference = recordtype.new("cexp_difference",	-- [ [first]-[second] ]
 				      e = NIL;})
 
 ast.app = recordtype.new("app",
-			 {name = NIL;
+			 {ref = NIL;
 			  kind = NIL;		    -- macro or function
 			  fn = NIL;		    -- actual macro/function to apply
-			  arglist = {};})
+			  arglist = {};
+			  s = NIL;
+			  e = NIL;})
+
+ast.arglist = recordtype.new("arglist",
+			     {cooked = true;
+			      args = {};
+			      s = NIL;
+			      e = NIL;})
+
+ast.int = recordtype.new("int",
+			 {value = NIL;
+			  s = NIL;
+			  e = NIL;})
 
 ast.pdecl = recordtype.new("pdecl",
 			   {name = NIL;
@@ -149,6 +162,10 @@ ast.ideclist = recordtype.new("ideclist",
 			       s = NIL;
 			       e = NIL;})
 			    
+---------------------------------------------------------------------------------------------------
+-- Convert a parse tree into an ast
+---------------------------------------------------------------------------------------------------
+
 local convert_exp;
 
 local function simple_charset_p(a)
@@ -381,5 +398,84 @@ local function convert(pt)
 end
 
 ast.from_parse_tree = convert
+
+---------------------------------------------------------------------------------------------------
+-- Reconstruct valid RPL from an ast
+---------------------------------------------------------------------------------------------------
+
+function ast.tostring(a)
+   if ast.block.is(a) then
+      return ( ast.tostring(a.pdecl) .. "\n" ..
+	       ast.tostring(a.ideclist) ..
+	       table.concat(map(ast.tostring, a.stmts), "\n") )
+   elseif ast.pdecl.is(a) then
+      return "package " .. a.name .. "\n"
+   elseif ast.idecl.is(a) then
+      return "import " .. a.importpath .. (a.prefix and (" as " .. a.prefix) or "") .. "\n"
+   elseif ast.ideclist.is(a) then
+      return table.concat(map(ast.tostring, a.ideclist.idecls), "\n")
+   elseif ast.binding.is(a) then
+      return ( (a.is_local and "local" or "") ..
+	       (a.is_alias and "alias" or "") ..
+	       ast.tostring(a.ref) .. " = " .. ast.tostring(a.exp) )
+   elseif ast.grammar.is(a) then
+      return ( "grammar\n\t" ..
+	       table.concat(map(ast.tostring, rules), "\t") ..
+	       "end" )
+   elseif ast.ref.is(a) then
+      return ( (a.packagename and (a.packagename .. ".") or "") .. a.localname )
+   elseif ast.sequence.is(a) then
+      return table.concat(map(ast.tostring, a.exps), " ")
+   elseif ast.choice.is(a) then
+      local choices = map(ast.tostring, a.exps)
+      assert(#choices > 0, "empty choice ast?")
+      return table.concat(choices, " / ")
+   elseif ast.predicate.is(a) then
+      return a.type .. ast.tostring(a.exp)
+   elseif ast.repetition.is(a) then
+      local open = a.cooked and "(" or "{"
+      local close = a.cooked and ")" or "}"
+      local postfix
+      if (not a.max) then
+	 if a.min==0 then postfix = "*"
+	 elseif a.min==1 then postfix = "+"
+	 else postfix = "{" .. tostring(a.max) .. ",}"
+	 end
+      else
+	 postfix = "{" .. tostring(a.min) .. "," .. tostring(a.max) .. "}"
+      end
+      return open .. ast.tostring(a.exp) .. close
+   elseif ast.cooked.is(a) then
+      return "(" .. ast.tostring(a.exp) .. ")"
+   elseif ast.raw.is(a) then
+      return "{" .. ast.tostring(a.exp) .. "}"
+   elseif ast.literal.is(a) then
+      return common.unescape_string(a.value)
+   elseif ast.cexp.is(a) then
+      return "[" .. (a.complement and "^" or "") .. ast.tostring(a.exp) .. "]"
+   elseif ast.cs_named.is(a) then
+      return "[:" .. (a.complement and "^" or "") .. a.name .. ":]"
+   elseif ast.cs_list.is(a) then
+      return ( "[" ..
+	       (a.complement and "^" or "") ..
+	       table.concat(map(common.unescape_string, chars), "") ..
+	       "]" )
+   elseif ast.cs_range.is(a) then
+      return ( "[" .. (a.complement and "^" or "") ..
+	       common.unescape_string(a.first) .. "-" .. common.unescape_string(a.last) ..
+	       "]" )
+   elseif ast.cexp_union.is(a) then
+      return table.concat(map(ast.tostring(a.cexps)), " ")
+   elseif ast.cexp_intersection.is(a) then
+      return table.concat(map(ast.tostring(a.cexps)), "&&")
+   elseif ast.cexp_difference.is(a) then
+      return ast.tostring(a.first) .. "-" .. ast.tostring(a.second)
+--   elseif ast.app.is(a) then
+--      return ast.tostring(a.ref) .. ":" .. ast_tostring(arglist)
+   else
+      error("do not know how to print this ast: " .. tostring(a))
+   end
+end
+
 
 return ast
