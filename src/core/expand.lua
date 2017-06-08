@@ -42,6 +42,8 @@ end
 
 local boundary_ref = ast.ref.new{localname=common.boundary_identifier}
 
+local ambient_cook_exp
+
 local function ambient_raw_exp(ex)
    if ast.cooked.is(ex) then return ambient_cook_exp(ex.exp)
    elseif ast.raw.is(ex) then return ambient_raw_exp(ex.exp)
@@ -64,7 +66,7 @@ end
 -- The compiler does not know about cooked/raw expressions.  Both ast.cooked and ast.raw
 -- structures are removed here, where we implement the notion that the ambience is, by default,
 -- "cooked".
-local function ambient_cook_exp(ex)
+function ambient_cook_exp(ex)
    if ast.cooked.is(ex) then return ambient_cook_exp(ex.exp)
    elseif ast.raw.is(ex) then return ambient_raw_exp(ex.exp)
    elseif ast.predicate.is(ex) then
@@ -92,7 +94,7 @@ local function ambient_cook_exp(ex)
       -- the 'cooked' ast off the exp being repeated and treat what is inside the 'cooked' ast as
       -- if it were raw; if not explicitly cooked, then treat ex.exp it as if it is raw.
       local flag = ast.cooked.is(ex.exp)
-      local new = (flag and raw(ex.exp.exp)) or raw(ex.exp)
+      local new = (flag and ambient_raw_exp(ex.exp.exp)) or ambient_raw_exp(ex.exp)
       return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
    else
       -- There are no sub-expressions to process in the rest of the expression types, such as
@@ -113,12 +115,19 @@ end
 -- namespace for macros, functions, and other values, and (3) macro expansion requires a syntactic
 -- environment in which (at least) references to macros can be resolved.
 function expand.exp(ex, env, messages)
-   print("*** entered dummy expand.exp")
+   -- TODO
    return ex
 end
 
 function expand.stmts(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
+      assert(ast.binding.is(stmt))
+      local ref = stmt.ref
+      print("*** calling dummy expand.exp for " ..
+	    (ref.packagename and (ref.packagename .. ".") or "") ..
+	    ref.localname ..
+	    " = " ..
+	    tostring(stmt.exp))
       stmt.exp = expand.exp(stmt.exp, env, messages)
    end
 end
@@ -130,6 +139,7 @@ function expand.block(a, env, messages)
    ambient_cook(a.stmts)
    remove_cooked_raw(a.stmts)
    expand.stmts(a.stmts, env, messages)
+   return true
 end
 
 

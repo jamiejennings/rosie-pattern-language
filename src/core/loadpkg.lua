@@ -63,7 +63,6 @@ local load = {}
 local function validate_block(a)
    assert(ast.block.is(a))
    local stmts = a.stmts
---   print("*** entering validate_block, seeing " .. tostring(#stmts) .. " statements")
    if not stmts[1] then
       return true, {cerror.new("warning", a, "Empty input")}
    elseif ast.pdecl.is(stmts[1]) then
@@ -83,7 +82,6 @@ local function validate_block(a)
 	 return false, {cerror.new("error", s, "Declarations must appear before assignments")}
       end
    end -- for
---   print("*** exiting validate_block, with " .. tostring(#stmts) .. " statements")
    return true, {}
 end
 
@@ -210,7 +208,6 @@ end
 -- 'load.imports' recursively loads each import in ideclist.
 -- Returns success; side-effects the messages argument.
 function load.imports(compiler, pkgtable, top_level_env, searchpath, importpath, ideclist, target_env, messages)
-   print("*** Entering load.imports with importpath=" .. tostring(importpath))
    assert(type(compiler)=="table")
    assert(type(pkgtable)=="table")
    assert(environment.is(top_level_env))
@@ -222,10 +219,6 @@ function load.imports(compiler, pkgtable, top_level_env, searchpath, importpath,
    -- assert((importpath and (target_env~=top_level_env)) or
    --     ((not importpath) and (target_env==top_level_env)))
    local idecls = ideclist and ideclist.idecls or {}
-
-   print("*** idecls: "); table.print(idecls)
-
-
    if #idecls==0 then common.note("load: no imports to load"); end
    for _, decl in ipairs(idecls) do
       local pkgname, pkgenv = import(compiler, pkgtable, top_level_env, searchpath, decl.importpath, decl, messages)

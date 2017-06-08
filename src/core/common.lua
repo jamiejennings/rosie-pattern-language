@@ -9,6 +9,7 @@
 local lpeg = import "lpeg"
 local util = import "util"
 local recordtype = import "recordtype"
+local NIL = recordtype.NIL
 local math = import "math"
 local string = import "string"
 local table = import "table"
@@ -319,8 +320,8 @@ common.parser =
 
 
 local pkgtabletype =
-   recordtype.new("pkgtable", {packagename=recordtype.NIL,
-			       env=recordtype.NIL} )
+   recordtype.new("pkgtable", {packagename=NIL,
+			       env=NIL} )
 
 function common.pkgtableref(tbl, importpath)
    local entry = tbl[importpath]
@@ -339,9 +340,9 @@ end
 
 common.cerror = recordtype.new(
    "cerror",
-   {kind = recordtype.NIL,			    -- e.g. "error" (see below)
-    ast = recordtype.NIL,
-    message = recordtype.NIL,
+   {kind = NIL,					    -- e.g. "error" (see below)
+    ast = NIL,
+    message = NIL,
     origin = "<no origin>",			    -- filled in later
     text = "<no source>",			    -- "
     line = 1,					    -- "
@@ -370,17 +371,18 @@ end
 common.novalue =
    recordtype.new("novalue",
 		  {exported=false;
+		   ast=NIL;
 		})
 
 common.pfunction =
    recordtype.new("pfunction",
-		  { primop=recordtype.NIL;	    -- if primitive, holds a lua function
+		  { primop=NIL;	    -- if primitive, holds a lua function
 		    exported=false;
 		  })
 
 common.macro =
    recordtype.new("macro",
-		  { primop=recordtype.NIL;	    -- if primitive, holds a lua function
+		  { primop=NIL;	    -- if primitive, holds a lua function
 		    exported=false;
 		  })
 
@@ -388,8 +390,8 @@ common.macro =
 
 common.pattern = 
    recordtype.new("pattern",
-		  { name=recordtype.NIL; -- for reference, debugging
-		    peg=recordtype.NIL;	 -- lpeg pattern
+		  { name=NIL;            -- for reference, debugging
+		    peg=NIL;		 -- lpeg pattern
 		    exported=true;	 -- true when the binding to this pattern is exported
 		    uncap=false;	 -- peg without the top-level capture
 		    alias=false;	 -- is this an alias or not

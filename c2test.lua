@@ -1,16 +1,18 @@
 rosie = require "rosie"
 e = rosie.engine.new()
 
+list = rosie._env.list
 util = rosie._env.util
 common = rosie._env.common
 environment = rosie._env.environment
 ast = rosie._env.ast
 loadpkg = rosie._env.loadpkg
+expand = rosie._env.expand
 
 e:load("import rosie/rpl_1_1 as .")
 c = {}
 c.parse_block = function(src)
-		   print("load: entering parse_block")
+		   --print("load: entering parse_block")
 		   local maj, min, start = e.compiler.parser.preparse(src)
 		   if not maj then error("preparse failed"); end
 		   local ok, pt, leftover = e:match("rpl_statements", src, start)
@@ -18,11 +20,7 @@ c.parse_block = function(src)
 		   return pt, {}, leftover	    -- no warnings for now
 		 end
 
-c.expand_block = function(a, env, messages)
-   -- ... TODO ...
-   print("load: dummy expand_block function called with argument " .. tostring(a))
-   return true
-end
+c.expand_block = expand.block
 
 c.compile_block = function(a, pkgtable, pkgenv, messages)
 		     print("load: entering dummy compile_block, making novalue bindings")
@@ -35,7 +33,9 @@ c.compile_block = function(a, pkgtable, pkgenv, messages)
 			else
 			   print("      creating novalue binding for " .. prefix .. ref.localname)
 			end
-			environment.bind(pkgenv, ref.localname, common.novalue.new{exported=true})
+			environment.bind(pkgenv,
+					 ref.localname,
+					 common.novalue.new{exported=true, ast=b})
 		     end -- for
 		     return true
 		  end
@@ -45,13 +45,17 @@ messages = {}
 pkgtable = environment.make_module_table()
 env = environment.new()
 
+function printf(fmt, ...)
+   print(string.format(fmt, ...))
+end
+
 function dump_state()
-   print("Pkgtable:")
+   print("\nPkgtable:")
    print("---------")
-   for k,v in pairs(pkgtable) do print(k,v); end
-   print("Top level env:")
+   for k,v in pairs(pkgtable) do printf("%-10s %s", k, tostring(v)); end
+   print("\nTop level env:")
    print("--------------")
-   for k,v in env:bindings() do print(k,v); end
+   for k,v in env:bindings() do printf("%-10s %s", k, tostring(v)); end
    print()
 end
 
@@ -77,4 +81,69 @@ go("import common")
 go("import common as foo")
 go("import net, common as .")
 
+
+print("\n----- Start of cooked/raw tests -----\n")
+
+
+function test_seq(name, expectation)
+   local foo = environment.lookup(env, name)
+   assert(common.novalue.is(foo))
+   assert(ast.binding.is(foo.ast))
+   assert(ast.sequence.is(foo.ast.exp) or ast.choice.is(foo.ast.exp))
+   seq = list.map(function(ex)
+		     if ast.ref.is(ex) then return ex.localname
+		     elseif ast.predicate.is(ex) then return "predicate"
+		     else return tostring(ex)
+		     end
+		  end,
+		  foo.ast.exp.exps)
+   print(name, seq)
+   if list.equal(seq, list.from(expectation)) then
+      print("Correct")
+   else
+      error("WRONG RESULT!")
+   end
+end
+
+go('foo = a b c')
+test_seq("foo", {"a", "~", "b", "~", "c"})
+
+go('foo = {a b c}')
+test_seq("foo", {"a", "b", "c"})
+
+go('foo = ({a b c})')
+test_seq("foo", {"a", "b", "c"})
+
+go('foo = {({a b c})}')
+test_seq("foo", {"a", "b", "c"})
+
+go('foo = {(a b c)}')
+test_seq("foo", {"a", "~", "b", "~", "c"})
+
+go('foo = (!a b c)')
+test_seq("foo", {"predicate", "b", "~", "c"})
+
+go('foo = (!a b @c)')
+test_seq("foo", {"predicate", "b", "~", "predicate"})
+
+go('foo = (!a @b c)')
+test_seq("foo", {"predicate", "predicate", "c"})
+
+go('foo = (!a @b !c)')
+test_seq("foo", {"predicate", "predicate", "predicate"})
+
+go('foo = !a @b !c')
+test_seq("foo", {"predicate", "predicate", "predicate"})
+
+go('foo = {!a @b !c}')
+test_seq("foo", {"predicate", "predicate", "predicate"})
+
+go('foo = a / b / c')
+test_seq("foo", {"a", "b", "c"})
+
+go('foo = {a / b / c}')
+test_seq("foo", {"a", "b", "c"})
+
+go('foo = (a / b / c)')
+test_seq("foo", {"a", "b", "c"})
 
