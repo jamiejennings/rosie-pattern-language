@@ -286,7 +286,7 @@ eval_exp = function(ast, input, start, gmr, source, e, indent, fail_output_only,
 			 new_quantified_exp=eval_quantified_exp;
 			 new_grammar=eval_grammar;
 		   }
-   return common.walk_ast(ast, functions, input, start, gmr, source, e, indent, fail_output_only, step)
+   return common.walk_parse_tree(ast, functions, input, start, gmr, source, e, indent, fail_output_only, step)
 end
 
 function eval.trace_tostring(trace, indent, str)

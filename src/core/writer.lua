@@ -313,7 +313,7 @@ writer.reveal_exp = function(a)
 		      raw_quantified_exp=reveal_quantified_exp;
 		      syntax_error=writer.reveal_syntax_error;
 		   }
-   return common.walk_ast(a, functions);
+   return common.walk_parse_tree(a, functions);
 end
 
 function writer.reveal_ast(ast)
@@ -328,7 +328,7 @@ function writer.reveal_ast(ast)
 		      exp=writer.reveal_exp;
 		      default=writer.reveal_exp;
 		   }
-   return common.walk_ast(ast, functions);
+   return common.walk_parse_tree(ast, functions);
 end
    
 function writer.reveal(astlist)
@@ -479,7 +479,7 @@ function writer.write(ast)
 		      rpl_expression=write_exp;
 		      rpl_statements=write_statements;
 		   }
-   return common.walk_ast(ast, functions);
+   return common.walk_parse_tree(ast, functions);
 end
    
 

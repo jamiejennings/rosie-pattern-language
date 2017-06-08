@@ -192,7 +192,7 @@ function parse.syntax_error_check(ast)
 		      syntax_error=found_one;
 		      default=check_all_branches;   -- Monday, March 6, 2017
 		   }
-   return common.walk_ast(ast, functions)
+   return common.walk_parse_tree(ast, functions)
 end
 
 ----------------------------------------------------------------------------------------

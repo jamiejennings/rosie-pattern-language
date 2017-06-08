@@ -45,7 +45,7 @@ function c1.compile_ast(ast, env)
 		      exp=c0.compile_exp;
 		      default=c0.compile_exp;
 		   }
-   return common.walk_ast(ast, functions, false, env)
+   return common.walk_parse_tree(ast, functions, false, env)
 end
 
 function c1.expression_p(ast)

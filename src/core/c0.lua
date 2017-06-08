@@ -613,7 +613,7 @@ c0.compile_exp_functions = {"compile_exp";
 			 }
 
 function c0.compile_exp(a, gmr, env)
-   return common.walk_ast(a, c0.compile_exp_functions, gmr, env)
+   return common.walk_parse_tree(a, c0.compile_exp_functions, gmr, env)
 end
 
 local function compile_rhs(a, gmr, env, iname)
@@ -655,7 +655,7 @@ function c0.compile_ast(ast, env)
 		      exp=c0.compile_exp;
 		      default=c0.compile_exp;
 		   }
-   return common.walk_ast(ast, functions, false, env)
+   return common.walk_parse_tree(ast, functions, false, env)
 end
 
 return c0

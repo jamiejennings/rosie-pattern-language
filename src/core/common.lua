@@ -191,7 +191,7 @@ function common.warn(str, ...) common.note("Warning: ", str, ..., "\n"); end
 -- AST functions
 ----------------------------------------------------------------------------------------
 
--- Note: walk_ast is a function to traverse a parse tree.  One can call it with auxiliary
+-- Note: walk_parse_tree is a function to traverse a parse tree.  One can call it with auxiliary
 -- functions in order to do things like:
 -- (1) Reveal the contents of the tree, i.e. generate the program the way the parser saw it
 -- (2) Compile the program
@@ -200,19 +200,19 @@ function common.warn(str, ...) common.note("Warning: ", str, ..., "\n"); end
 --     the user invokes match again with debug turned on, and can then see how the matcher
 --     actually worked.  In this mode, each pattern is compiled just in time.
 
-function common.walk_ast(a, functions, ...)
-   assert(type(a)=="table", "walk_ast: first argument not an ast: "..tostring(a))
-   assert(type(a[1])~="table", "walk_ast first argument not an ast (maybe it's a list of ast's?): "..tostring(a))
+function common.walk_parse_tree(a, functions, ...)
+   assert(type(a)=="table", "walk_parse_tree: first argument not an ast: "..tostring(a))
+   assert(type(a[1])~="table", "walk_parse_tree first argument not an ast (maybe it's a list of ast's?): "..tostring(a))
    assert(type(functions)=="table")
    local name, pos, text, subs = common.decode_match(a)
    local f = functions[name]
    if not f then f = functions.default; end
    if not f then
       if functions[1] then			    -- name of caller for debugging
-	 error("walk_ast called by "..functions[1]
+	 error("walk_parse_tree called by "..functions[1]
 	       ..": missing function to handle ast node type: " .. tostring(name))
       else
-	 error("walk_ast: missing function to handle ast node type: " .. tostring(name))
+	 error("walk_parse_tree: missing function to handle ast node type: " .. tostring(name))
       end
    end
    return f(a, ...)
