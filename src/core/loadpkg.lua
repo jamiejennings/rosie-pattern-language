@@ -120,7 +120,6 @@ local function compile(compiler, pkgtable, a, pkgenv, messages)
 end
 
 function load.source(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
-   print("*** Entering load.source with importpath=" .. tostring(importpath))
    assert(type(compiler)=="table")
    assert(type(pkgtable)=="table")
    assert(environment.is(top_level_env))
@@ -137,6 +136,9 @@ function load.source(compiler, pkgtable, top_level_env, searchpath, src, importp
    a.importpath = importpath
    a.filename = fullpath
    if not validate_block(a) then return false; end
+
+   print("*** Block: "); print(ast.tostring(a)); print("*** end")
+
    -- Via side effects, a.pdecl and a.ideclist are now filled in.
    -- With a mutually recursive call to load.imports, we can load the dependencies in a.ideclist. 
    if not load.imports(compiler, pkgtable, top_level_env, searchpath, importpath, a.ideclist, env, messages) then return false; end

@@ -9,6 +9,10 @@ ast = rosie._env.ast
 loadpkg = rosie._env.loadpkg
 expand = rosie._env.expand
 
+-- global tables of intermediate results for examination during testing:
+parses = {}
+asts = {}
+
 e:load("import rosie/rpl_1_1 as .")
 c = {}
 c.parse_block = function(src)
@@ -17,6 +21,7 @@ c.parse_block = function(src)
 		   if not maj then error("preparse failed"); end
 		   local ok, pt, leftover = e:match("rpl_statements", src, start)
 		   -- TODO: syntax error check
+		   parses[src] = pt
 		   return pt, {}, leftover	    -- no warnings for now
 		 end
 
@@ -24,6 +29,7 @@ c.expand_block = expand.block
 
 c.compile_block = function(a, pkgtable, pkgenv, messages)
 		     print("load: entering dummy compile_block, making novalue bindings")
+		     asts[a.importpath or "nilimportpath"] = a
 		     for _, b in ipairs(a.stmts) do
 			assert(ast.binding.is(b))
 			local ref = b.ref

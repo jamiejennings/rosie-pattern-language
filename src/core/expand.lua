@@ -76,7 +76,7 @@ function ambient_cook_exp(ex)
    elseif ast.sequence.is(ex) then
       local exps = map(ambient_cook_exp, ex.exps)
       assert(#exps > 0, "received an empty sequence")
-      local new = {exps[1]}
+      local new = list.new(exps[1])
       for i = 2, #exps do
 	 if not ast.predicate.is(exps[i-1]) then
 	    -- boundary references inserted after any exp EXCEPT a predicate

@@ -405,18 +405,19 @@ ast.from_parse_tree = convert
 
 function ast.tostring(a)
    if ast.block.is(a) then
-      return ( ast.tostring(a.pdecl) .. "\n" ..
-	       ast.tostring(a.ideclist) ..
-	       table.concat(map(ast.tostring, a.stmts), "\n") )
+      return ( (a.pdecl and (ast.tostring(a.pdecl) .. "\n") or "") ..
+	       (a.ideclist and ast.tostring(a.ideclist) or "") ..
+	       "RAW: " ..
+	       table.concat(map(ast.tostring, a.stmts), "\nRAW: ") )
    elseif ast.pdecl.is(a) then
       return "package " .. a.name .. "\n"
    elseif ast.idecl.is(a) then
       return "import " .. a.importpath .. (a.prefix and (" as " .. a.prefix) or "") .. "\n"
    elseif ast.ideclist.is(a) then
-      return table.concat(map(ast.tostring, a.ideclist.idecls), "\n")
+      return table.concat(map(ast.tostring, a.idecls), "\n")
    elseif ast.binding.is(a) then
-      return ( (a.is_local and "local" or "") ..
-	       (a.is_alias and "alias" or "") ..
+      return ( (a.is_local and "local " or "") ..
+	       (a.is_alias and "alias " or "") ..
 	       ast.tostring(a.ref) .. " = " .. ast.tostring(a.exp) )
    elseif ast.grammar.is(a) then
       return ( "grammar\n\t" ..
@@ -425,11 +426,11 @@ function ast.tostring(a)
    elseif ast.ref.is(a) then
       return ( (a.packagename and (a.packagename .. ".") or "") .. a.localname )
    elseif ast.sequence.is(a) then
-      return table.concat(map(ast.tostring, a.exps), " ")
+      return "{" .. table.concat(map(ast.tostring, a.exps), " ") .. "}"
    elseif ast.choice.is(a) then
       local choices = map(ast.tostring, a.exps)
       assert(#choices > 0, "empty choice ast?")
-      return table.concat(choices, " / ")
+      return "{" .. table.concat(choices, " / ") .. "}"
    elseif ast.predicate.is(a) then
       return a.type .. ast.tostring(a.exp)
    elseif ast.repetition.is(a) then
@@ -441,31 +442,36 @@ function ast.tostring(a)
 	 elseif a.min==1 then postfix = "+"
 	 else postfix = "{" .. tostring(a.max) .. ",}"
 	 end
+      elseif a.min==0 then postfix = "?"
       else
 	 postfix = "{" .. tostring(a.min) .. "," .. tostring(a.max) .. "}"
       end
-      return open .. ast.tostring(a.exp) .. close
+      if not ast.sequence.is(a.exp) then
+	 open, close = "", ""
+      end
+      return open .. ast.tostring(a.exp) .. close .. postfix
    elseif ast.cooked.is(a) then
       return "(" .. ast.tostring(a.exp) .. ")"
    elseif ast.raw.is(a) then
       return "{" .. ast.tostring(a.exp) .. "}"
    elseif ast.literal.is(a) then
-      return common.unescape_string(a.value)
+      return '"' .. common.unescape_string(a.value) .. '"'
    elseif ast.cexp.is(a) then
-      return "[" .. (a.complement and "^" or "") .. ast.tostring(a.exp) .. "]"
+      return "[" .. (a.complement and "^" or "") .. ast.tostring(a.cexp) .. "]"
    elseif ast.cs_named.is(a) then
       return "[:" .. (a.complement and "^" or "") .. a.name .. ":]"
    elseif ast.cs_list.is(a) then
       return ( "[" ..
 	       (a.complement and "^" or "") ..
-	       table.concat(map(common.unescape_string, chars), "") ..
+	       --table.concat(map(common.unescape_string, a.chars), "") ..
+	       table.concat(a.chars, "") ..
 	       "]" )
    elseif ast.cs_range.is(a) then
       return ( "[" .. (a.complement and "^" or "") ..
 	       common.unescape_string(a.first) .. "-" .. common.unescape_string(a.last) ..
 	       "]" )
    elseif ast.cexp_union.is(a) then
-      return table.concat(map(ast.tostring(a.cexps)), " ")
+      return table.concat(map(ast.tostring, a.cexps), " ")
    elseif ast.cexp_intersection.is(a) then
       return table.concat(map(ast.tostring(a.cexps)), "&&")
    elseif ast.cexp_difference.is(a) then
