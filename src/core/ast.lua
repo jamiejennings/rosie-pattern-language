@@ -421,7 +421,7 @@ function ast.tostring(a)
 	       ast.tostring(a.ref) .. " = " .. ast.tostring(a.exp) )
    elseif ast.grammar.is(a) then
       return ( "grammar\n\t" ..
-	       table.concat(map(ast.tostring, rules), "\t") ..
+	       table.concat(map(ast.tostring, a.rules), "\t\n") ..
 	       "end" )
    elseif ast.ref.is(a) then
       return ( (a.packagename and (a.packagename .. ".") or "") .. a.localname )
@@ -434,8 +434,8 @@ function ast.tostring(a)
    elseif ast.predicate.is(a) then
       return a.type .. ast.tostring(a.exp)
    elseif ast.repetition.is(a) then
-      local open = a.cooked and "(" or "{"
-      local close = a.cooked and ")" or "}"
+--      local open = a.cooked and "(" or "{"
+--      local close = a.cooked and ")" or "}"
       local postfix
       if (not a.max) then
 	 if a.min==0 then postfix = "*"
@@ -446,16 +446,17 @@ function ast.tostring(a)
       else
 	 postfix = "{" .. tostring(a.min) .. "," .. tostring(a.max) .. "}"
       end
-      if not ast.sequence.is(a.exp) then
-	 open, close = "", ""
-      end
-      return open .. ast.tostring(a.exp) .. close .. postfix
+--      if not ast.sequence.is(a.exp) then
+--	 open, close = "", ""
+--      end
+--      return open .. ast.tostring(a.exp) .. close .. postfix
+      return ast.tostring(a.exp) .. postfix
    elseif ast.cooked.is(a) then
       return "(" .. ast.tostring(a.exp) .. ")"
    elseif ast.raw.is(a) then
       return "{" .. ast.tostring(a.exp) .. "}"
    elseif ast.literal.is(a) then
-      return '"' .. common.unescape_string(a.value) .. '"'
+      return '"' .. a.value .. '"'
    elseif ast.cexp.is(a) then
       return "[" .. (a.complement and "^" or "") .. ast.tostring(a.cexp) .. "]"
    elseif ast.cs_named.is(a) then

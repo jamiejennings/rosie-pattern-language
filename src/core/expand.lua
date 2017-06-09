@@ -87,7 +87,7 @@ function ambient_cook_exp(ex)
       return ast.sequence.new{exps=new, s=ex.s, e=ex.e}
    elseif ast.grammar.is(ex) then
       -- ambience has no effect on a grammar expression
-      return ast.grammar.new{rules=remove_cooked_raw(ex.rules), s=ex.s, e=ex.e}
+      return ast.grammar.new{rules=ambient_cook_exp(ex.rules), s=ex.s, e=ex.e}
    elseif ast.repetition.is(ex) then 
       -- ambience has no effect on a repetition, but the expression being repeated must be
       -- carefully transformed: if it explicitly cooked, then flag the repetition as cooked, strip

@@ -153,3 +153,7 @@ test_seq("foo", {"a", "b", "c"})
 go('foo = (a / b / c)')
 test_seq("foo", {"a", "b", "c"})
 
+goimport("json"); print(ast.tostring(asts.json), "\n")
+goimport("date"); print(ast.tostring(asts.date), "\n")
+goimport("time"); print(ast.tostring(asts.time), "\n")
+goimport("os"); print(ast.tostring(asts.os), "\n")
