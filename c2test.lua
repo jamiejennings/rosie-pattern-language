@@ -7,45 +7,18 @@ common = rosie._env.common
 environment = rosie._env.environment
 ast = rosie._env.ast
 loadpkg = rosie._env.loadpkg
-expand = rosie._env.expand
+--expand = rosie._env.expand
+c2 = rosie._env.c2
 
 -- global tables of intermediate results for examination during testing:
 parses = {}
 asts = {}
 
 e:load("import rosie/rpl_1_1 as .")
-c = {}
-c.parse_block = function(src)
-		   --print("load: entering parse_block")
-		   local maj, min, start = e.compiler.parser.preparse(src)
-		   if not maj then error("preparse failed"); end
-		   local ok, pt, leftover = e:match("rpl_statements", src, start)
-		   -- TODO: syntax error check
-		   parses[src] = pt
-		   return pt, {}, leftover	    -- no warnings for now
-		 end
 
-c.expand_block = expand.block
-
-c.compile_block = function(a, pkgtable, pkgenv, messages)
-		     print("load: entering dummy compile_block, making novalue bindings")
-		     asts[a.importpath or "nilimportpath"] = a
-		     for _, b in ipairs(a.stmts) do
-			assert(ast.binding.is(b))
-			local ref = b.ref
-			local prefix = (ref.packagename and (ref.packagename .. ".") or "")
-			if environment.lookup(pkgenv, ref.localname) then
-			   print("      rebinding " .. prefix .. ref.localname)
-			else
-			   print("      creating novalue binding for " .. prefix .. ref.localname)
-			end
-			environment.bind(pkgenv,
-					 ref.localname,
-					 common.novalue.new{exported=true, ast=b})
-		     end -- for
-		     return true
-		  end
-
+c = {parse_block = c2.make_parse_block(e),
+     expand_block = c2.expand_block,
+     compile_block = c2.compile_block}
 
 messages = {}
 pkgtable = environment.make_module_table()
@@ -61,7 +34,7 @@ function dump_state()
    for k,v in pairs(pkgtable) do printf("%-10s %s", k, tostring(v)); end
    print("\nTop level env:")
    print("--------------")
-   for k,v in env:bindings() do printf("%-10s %s", k, tostring(v)); end
+   for k,v in env:bindings() do printf("%-15s %s", k, tostring(v)); end
    print()
 end
 
@@ -153,7 +126,7 @@ test_seq("foo", {"a", "b", "c"})
 go('foo = (a / b / c)')
 test_seq("foo", {"a", "b", "c"})
 
-goimport("json"); print(ast.tostring(asts.json), "\n")
-goimport("date"); print(ast.tostring(asts.date), "\n")
-goimport("time"); print(ast.tostring(asts.time), "\n")
-goimport("os"); print(ast.tostring(asts.os), "\n")
+goimport("json"); print(ast.tostring(c2.asts.json), "\n")
+goimport("date"); print(ast.tostring(c2.asts.date), "\n")
+goimport("time"); print(ast.tostring(c2.asts.time), "\n")
+goimport("os"); print(ast.tostring(c2.asts.os), "\n")

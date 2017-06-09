@@ -86,7 +86,7 @@ ast.literal = recordtype.new("literal",			    -- interpolated string literals
 			  s = NIL;
 			  e = NIL;})
 
-ast.cexp = recordtype.new("cexp",		    -- [ [exp1] ... ]
+ast.cs_exp = recordtype.new("cs_exp",		    -- [ [exp1] ... ]
 			  {complement = false;
 			   cexp = {};
 			   s = NIL;
@@ -111,17 +111,17 @@ ast.cs_range = recordtype.new("cs_range",	    -- [a-z]
 			       s = NIL;
 			       e = NIL;})
 
-ast.cexp_union = recordtype.new("cexp_union",	    -- [ [exp1] ... ]
+ast.cs_union = recordtype.new("cs_union",	    -- [ [exp1] ... ]
 				{cexps = {};
 				 s = NIL;
 				 e = NIL;})
 
-ast.cexp_intersection = recordtype.new("cexp_intersection", -- [ [exp1]&&[exp2]&& ... ]
+ast.cs_intersection = recordtype.new("cs_intersection", -- [ [exp1]&&[exp2]&& ... ]
 				       {cexps = {};
 					s = NIL;
 					e = NIL;})
 
-ast.cexp_difference = recordtype.new("cexp_difference",	-- [ [first]-[second] ]
+ast.cs_difference = recordtype.new("cs_difference",	-- [ [first]-[second] ]
 				     {first = NIL;
 				      second = NIL;
 				      s = NIL;
@@ -203,11 +203,11 @@ local function flatten_cexp_in_place(a, target_type)
    if target_type.is(a) then
       local exps = list.from(a.cexps)
       a.cexps = lift(exps)
-   elseif ast.cexp_intersection.is(a) or ast.cexp_union.is(a) then
+   elseif ast.cs_intersection.is(a) or ast.cs_union.is(a) then
       list.foreach(function(exp) flatten_cexp_in_place(exp, target_type) end, a.cexps)
-   elseif ast.cexp.is(a) then
+   elseif ast.cs_exp.is(a) then
       flatten_cexp_in_place(a.cexp, target_type)
-   elseif ast.cexp_difference.is(a) then
+   elseif ast.cs_difference.is(a) then
       flatten_cexp_in_place(a.first, target_type)
       flatten_cexp_in_place(a.second, target_type)
    else
@@ -257,11 +257,11 @@ local function infix_to_prefix(exps)
    assert(optype)
    rest = list.cdr(list.cdr(rest))
    if optype=="intersection" then
-      return ast.cexp_intersection.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
+      return ast.cs_intersection.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
    elseif optype=="difference" then
-      return ast.cexp_difference.new{first = convert_char_exp(first), second = infix_to_prefix(rest), s=s, e=e}
+      return ast.cs_difference.new{first = convert_char_exp(first), second = infix_to_prefix(rest), s=s, e=e}
    elseif optype=="union" then
-      return ast.cexp_union.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
+      return ast.cs_union.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
    else
       error("Internal error: do not know how to convert charset op " .. tostring(optype))
    end
@@ -291,9 +291,9 @@ function convert_char_exp(pt)
    elseif pt.type=="compound_charset" then
       assert(exps[1])
       local prefix_cexp = infix_to_prefix(exps)
-      flatten_cexp_in_place(prefix_cexp, ast.cexp_intersection)
-      flatten_cexp_in_place(prefix_cexp, ast.cexp_union)
-      return ast.cexp.new{cexp = prefix_cexp,
+      flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
+      flatten_cexp_in_place(prefix_cexp, ast.cs_union)
+      return ast.cs_exp.new{cexp = prefix_cexp,
 			  complement = compflag,
 			  s=s, e=e}
    else
@@ -457,7 +457,7 @@ function ast.tostring(a)
       return "{" .. ast.tostring(a.exp) .. "}"
    elseif ast.literal.is(a) then
       return '"' .. a.value .. '"'
-   elseif ast.cexp.is(a) then
+   elseif ast.cs_exp.is(a) then
       return "[" .. (a.complement and "^" or "") .. ast.tostring(a.cexp) .. "]"
    elseif ast.cs_named.is(a) then
       return "[:" .. (a.complement and "^" or "") .. a.name .. ":]"
@@ -471,11 +471,11 @@ function ast.tostring(a)
       return ( "[" .. (a.complement and "^" or "") ..
 	       common.unescape_string(a.first) .. "-" .. common.unescape_string(a.last) ..
 	       "]" )
-   elseif ast.cexp_union.is(a) then
+   elseif ast.cs_union.is(a) then
       return table.concat(map(ast.tostring, a.cexps), " ")
-   elseif ast.cexp_intersection.is(a) then
+   elseif ast.cs_intersection.is(a) then
       return table.concat(map(ast.tostring(a.cexps)), "&&")
-   elseif ast.cexp_difference.is(a) then
+   elseif ast.cs_difference.is(a) then
       return ast.tostring(a.first) .. "-" .. ast.tostring(a.second)
 --   elseif ast.app.is(a) then
 --      return ast.tostring(a.ref) .. ":" .. ast_tostring(arglist)
