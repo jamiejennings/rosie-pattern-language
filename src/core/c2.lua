@@ -32,23 +32,19 @@ bind = environment.bind
 local expand = require "expand"
 
 -- TEMPORARY:
-c2.parses = {}
 c2.asts = {}
 
 
--- TODO: the hof with the engine parameter is TEMPORARY
-function c2.make_parse_block(e)
-   return function(src)
-	     --print("load: entering parse_block")
-	     local maj, min, start = e.compiler.parser.preparse(src)
-	     if not maj then error("preparse failed"); end
-	     local ok, pt, leftover = e:match("rpl_statements", src, start)
-	     -- TODO: syntax error check
+---------------------------------------------------------------------------------------------------
+-- Create parser
+---------------------------------------------------------------------------------------------------
 
-	     c2.parses[src] = pt		    -- TEMPORARY
-	     return pt, {}, leftover		    -- no warnings for now
-	  end
-end
+c2.make_parse_block = p2.make_parse_block
+c2.make_parse_expression = p2.make_parse_expression
+
+---------------------------------------------------------------------------------------------------
+-- Syntax expander
+---------------------------------------------------------------------------------------------------
 
 c2.expand_block = expand.block
 

@@ -114,7 +114,7 @@ end
 -- that (1) macro use looks syntactically like function application, (2) there is a single
 -- namespace for macros, functions, and other values, and (3) macro expansion requires a syntactic
 -- environment in which (at least) references to macros can be resolved.
-function expand.exp(ex, env, messages)
+function expand.expression(ex, env, messages)
    -- TODO
    return ex
 end
@@ -123,12 +123,12 @@ function expand.stmts(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
       assert(ast.binding.is(stmt))
       local ref = stmt.ref
-      print("*** calling dummy expand.exp for " ..
+      print("*** calling dummy expand.expression for " ..
 	    (ref.packagename and (ref.packagename .. ".") or "") ..
 	    ref.localname ..
 	    " = " ..
 	    tostring(stmt.exp))
-      stmt.exp = expand.exp(stmt.exp, env, messages)
+      stmt.exp = expand.expression(stmt.exp, env, messages)
    end
 end
 
@@ -136,6 +136,9 @@ function expand.block(a, env, messages)
    assert(ast.block.is(a))
    assert(environment.is(env))
    assert(type(messages)=="table")
+
+   -- TODO: Need a version of ambient_cook_exp and remove_cooked_raw that operate directly on expressions!
+
    ambient_cook(a.stmts)
    remove_cooked_raw(a.stmts)
    expand.stmts(a.stmts, env, messages)

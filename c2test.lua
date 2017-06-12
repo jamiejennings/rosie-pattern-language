@@ -7,7 +7,6 @@ common = rosie._env.common
 environment = rosie._env.environment
 ast = rosie._env.ast
 loadpkg = rosie._env.loadpkg
---expand = rosie._env.expand
 c2 = rosie._env.c2
 
 -- global tables of intermediate results for examination during testing:
@@ -15,8 +14,14 @@ parses = {}
 asts = {}
 
 e:load("import rosie/rpl_1_1 as .")
+RPLX_PREPARSE = e:compile("preparse")
+RPLX_STATEMENTS = e:compile("rpl_statements")
+RPLX_EXPRESSION = e:compile("rpl_expression")
 
-c = {parse_block = c2.make_parse_block(e),
+version = common.rpl_version.new(1, 1)
+
+c = {parse_block = c2.make_parse_block(RPLX_PREPARSE, RPLX_STATEMENTS, version),
+     parse_expression = c2.make_parse_expression(RPLX_EXPRESSION),
      expand_block = c2.expand_block,
      compile_block = c2.compile_block}
 
@@ -128,3 +133,8 @@ goimport("json"); print(ast.tostring(c2.asts.json), "\n")
 goimport("date"); print(ast.tostring(c2.asts.date), "\n")
 goimport("time"); print(ast.tostring(c2.asts.time), "\n")
 goimport("os"); print(ast.tostring(c2.asts.os), "\n")
+
+n = c2.compile_expression(c.expand_expression(c.parse_expression("net.any")), pkgtable, env, messages)
+print(n:match("1.2.3.4"))
+
+
