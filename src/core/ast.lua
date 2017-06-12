@@ -168,7 +168,7 @@ ast.ideclist = recordtype.new("ideclist",
 
 local convert_exp;
 
-local function simple_charset_p(a)
+function ast.simple_charset_p(a)
    return (ast.cs_named.is(a) or
 	   ast.cs_list.is(a) or
 	   ast.cs_range.is(a))
@@ -212,7 +212,7 @@ local function flatten_cexp_in_place(a, target_type)
       flatten_cexp_in_place(a.second, target_type)
    else
       -- else we have a "simple" cexp, which has no cexps inside it
-      assert(simple_charset_p(a))
+      assert(ast.simple_charset_p(a))
    end
 end
 
@@ -294,8 +294,8 @@ function convert_char_exp(pt)
       flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
       flatten_cexp_in_place(prefix_cexp, ast.cs_union)
       return ast.cs_exp.new{cexp = prefix_cexp,
-			  complement = compflag,
-			  s=s, e=e}
+			    complement = compflag,
+			    s=s, e=e}
    else
       error("Internal error: do not know how to convert charset exp type: " .. tostring(pt.type))
    end

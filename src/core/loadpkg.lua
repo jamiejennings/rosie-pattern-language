@@ -188,7 +188,8 @@ local function create_import_binding(localname, pkgenv, target_env)
    if localname=="." then
       -- import all exported bindings into the target environment
       for name, obj in pkgenv:bindings() do
-	 if obj.exported then		    -- quack
+	 assert(type(obj)=="table", name .. " bound to " .. tostring(obj))
+	 if obj.exported then			    -- quack
 	    if lookup(target_env, name) then
 	       common.note("load: rebinding ", name)
 	    else

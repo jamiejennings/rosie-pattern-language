@@ -357,6 +357,13 @@ common.cerror = recordtype.new(
       return common.cerror.factory{kind=kind, ast=ast, message=message}
    end)
 
+-- apply f to args until it returns or yields
+-- like pcall, return a success code in front of return values
+function common.apply_catch(f, ...)
+   local t = coroutine.create(f)
+   return coroutine.resume(t, ...)
+end
+
 function common.throw_error(msg, ast)
    coroutine.yield(false, common.cerror.new("error", ast, msg))
 end

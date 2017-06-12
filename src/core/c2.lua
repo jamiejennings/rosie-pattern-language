@@ -6,6 +6,10 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
+-- FUTURE:
+--   - Upon error in compile_expression, throw out to compile_block, where the identifier (lhs of
+--     binding) can be bound to the error.  Then we go on to try to compile other statements.
+-- 
 
 local c2 = {}
 
@@ -15,6 +19,8 @@ local P, V, C, S, R, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Cmt, lpeg.B
 
 local common = require "common"
+local throw = common.throw
+local apply_catch = common.apply_catch
 local novalue = common.novalue
 local pattern = common.pattern
 local throw = common.throw_error
@@ -50,6 +56,8 @@ c2.expand_block = expand.block
 -- Compile bindings and expressions
 ---------------------------------------------------------------------------------------------------
 
+local compile_expression;
+
 local function literal(a, pkgtable, env, messages)
    local str, offense = common.unescape_string(a.value)
    if not str then
@@ -60,71 +68,184 @@ end
 
 local function sequence(a, pkgtable, env, messages)
    assert(#a.exps > 0, "empty sequence?")
-   local peg = c2.compile_expression(a.exps[1], pkgtable, env, messages)
+   local peg = compile_expression(a.exps[1], pkgtable, env, messages).peg
    for i = 2, #a.exps do
-      peg = peg * c2.compile_expression(a.exps[i], pkgtable, env, messages)
+      peg = peg * compile_expression(a.exps[i], pkgtable, env, messages).peg
    end
    return pattern.new{name="sequence", peg=peg, ast=a}
 end
 
 local function choice(a, pkgtable, env, messages)
    assert(#a.exps > 0, "empty choice?")
-   local peg = c2.compile_expression(a.exps[1], pkgtable, env, messages)
+   local peg = compile_expression(a.exps[1], pkgtable, env, messages).peg
    for i = 2, #a.exps do
-      peg = peg + c2.compile_expression(a.exps[i], pkgtable, env, messages)
+      peg = peg + compile_expression(a.exps[i], pkgtable, env, messages).peg
    end
    return pattern.new{name="choice", peg=peg, ast=a}
 end
 
-local function cs_named(a, pkgtable, env, messages)
-   local pat = locale[a.name]
-   if not pat then
-      throw("unknown named charset: " .. a.name, a)
+local function predicate(a, pkgtable, env, messages)
+   local peg = compile_expression(a.exp, pkgtable, env, messages).peg
+   if a.type=="@" then
+      peg = #peg
+   elseif a.type=="!" then
+      peg = (- peg)
+   else
+      throw("invalid predicate type: " .. tostring(a.type), a)
    end
-   return pattern.new{name="cs_named", peg=((a.complement and 1-pat) or pat), ast=a}
+   return pattern.new{name="predicate", peg=peg, ast=a}
 end
 
+
+-- TODO: Change each "1" below to lookup(env, ".")
+
+
+local function cs_named(a, pkgtable, env, messages)
+   local peg = locale[a.name]
+   if not peg then
+      throw("unknown named charset: " .. a.name, a)
+   end
+   -- The posix character sets are ascii-only, so the "1-peg" below is ok.
+   return pattern.new{name="cs_named", peg=((a.complement and 1-peg) or peg), ast=a}
+end
+
+-- TODO: This impl works only for single byte chars!
 local function cs_range(a, pkgtable, env, messages)
    local c1, offense1 = common.unescape_charlist(a.first)
    local c2, offense2 = common.unescape_charlist(a.last)
-   if not c1 then
-      throw("invalid escape sequence in character set: \\" .. offense, a)
-   elseif not c2 then
-      throw("invalid escape sequence in character set: \\" .. offense, a)
+   if (not c1) or (not c2) then
+      throw("invalid escape sequence in character set: \\" ..
+	    (c1 and offense2) or offense1,
+	 a)
    end
    local peg = R(c1..c2)
    return pattern.new{name="cs_range", peg=(complement and (1-peg)) or peg, ast=a}
 end
 
+-- FUTURE optimization: All the single-byte chars can be put into one call to lpeg.S().
+-- FUTURE optimization: The multi-byte chars can be organized by common prefix. 
 function cs_list(a, pkgtable, env, messages)
    assert(#a.chars > 0, "empty character set list?")
-   local exps = "";
+   local alternatives
    for i, c in ipairs(a.chars) do
       local char, offense = common.unescape_charlist(c)
-      -- TODO: Convert to choice so that multi-byte characters are automatically ok
       if not char then
 	 throw("invalid escape sequence in character set: \\" .. offense, a)
       end
-      exps = exps .. char
+      if not alternatives then alternatives = P(char)
+      else alternatives = alternatives + P(char); end
    end -- for
-   return pattern.new{name="cs_list", peg=((a.complement and (1-S(exps))) or S(exps)), ast=a}
+   return pattern.new{name="cs_list",
+		      peg=(a.complement and (1-alternatives) or alternatives),
+		      ast=a}
 end
+
+local cexp;
 
 function cs_exp(a, pkgtable, env, messages)
-
-   --   !@# LEFT OFF HERE
-   --
-   --   Need to process the cs_list and the cs_union as a set of choices
-   -- 
-
-
+   if ast.cs_exp.is(a.cexp) then
+      if not a.complement then
+	 -- outer cs_exp does not affect semantics, so drop it
+	 return cs_exp(a.cexp)
+      else
+	 -- either: inner cs_exp does not affect semantics, so drop it,
+	 -- or: complement of a complement cancels out.
+	 local new = ast.cs_exp{complement=(not a.cexp.complement), cexp=a.cexp.cexp, s=a.s, e=e.s}
+	 return cs_exp(new, pkgtable, env, messages)
+      end
+   elseif ast.cs_union.is(a.cexp) then
+      assert(#a.cexp.cexps > 0, "empty character set union?")
+      local alternatives = compile_expression(a.cexp.cexps[1]).peg
+      for i = 2, #a.cexp.cexps do
+	 alternatives = alternatives + compile_expression(a.cexp.cexps[i]).peg
+      end
+      return pattern.new{name="cs_exp",
+			 peg=((a.complement and (1-alternatives)) or alternatives),
+			 ast=a}
+   elseif ast.cs_intersection.is(a.cexp) then
+      throw("character set intersection is not implemented", a)
+   elseif ast.cs_difference.is(a.cexp) then
+      throw("character set difference is not implemented", a)
+   elseif ast.simple_charset_p(a) then
+      local p = compile_expression(a, pkgtable, env, messages)
+      return pattern.new{name="cs_exp", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
+   else
+      assert(false, "unknown cexp inside cs_exp", a)
+   end
 end
 
+-- Can't just run peg:match("") because a lookahead expression will return nil (i.e. it will not
+-- match the empty string), even though it cannot be put into a loop (because it consumes no
+-- input).
+local function matches_empty(peg)
+   local ok, msg = pcall(function() return peg^1 end)
+   return (not ok) and msg:find("loop body may accept empty string")
+end
+
+local function repetition(a, pkgtable, env, messages)
+   local boundary_pattern, boundary
+   if a.cooked then
+      boundary_pattern = lookup(env, common.boundary_identifier)
+      if not pattern.is(boundary_pattern) then
+	 throw("a very unusual situation occurred in which the boundary identifier, " ..
+	       common.boundary_identifier, ", is not bound to a pattern", a)
+      end
+      boundary = boundary_pattern.peg
+      assert(boundary)
+   end -- if a.cooked
+   local epat = compile_expression(a.exp, pkgtable, env, messages)
+   local epeg = epat.peg
+   if matches_empty(epeg) then
+      throw("pattern being repeated can match the empty string", a)
+   end
+   local qpeg
+   local min, max, cooked = a.min, a.max, a.cooked
+   if (not min) then min = 0; end		    -- {,max}
+   if (not max) then
+      if min==1 then				    -- +
+	 if cooked then qpeg = (epeg * boundary)^1
+	 else qpeg = epeg^1; end
+      elseif min==0 then			    -- *
+	 if cooked then qpeg = (epeg * (boundary * epeg)^0)^-1
+	 else qpeg = epeg^0; end
+      else
+	 assert(type(min)=="number", "min not a number? " .. tostring(min))
+	 assert(min > 0)
+	 if cooked then qpeg = (epeg * (boundary * epeg)^(min-1))
+	 else qpeg = epeg^min; end		    -- {min,}
+      end -- switch on min
+   else -- have a max and a min value
+      if min > max then
+	 throw("invalid repetition (min must be greater than max)", a)
+      elseif (max < 1) then
+	 throw("invalid repetition (max must be greater than zero)", a)
+      elseif min < 0 then
+	 throw("invalid repetition (min must be greater than or equal to zero)", a)
+      end
+      -- Here's where things get interesting, because we must match at least min copies of
+      -- epeg, and at most max.
+      if min==0 then
+	 qpeg = ((cooked and (boundary * epeg)) or epeg)^(-max)
+      else
+	 assert(min > 0)
+	 qpeg = epeg
+	 for i=1, (min-1) do
+	    qpeg = qpeg * ((cooked and (boundary * epeg)) or epeg)
+	 end -- for
+	 if (min-max) < 0 then
+	    qpeg = qpeg * ((cooked and (boundary * epeg) or epeg)^(min-max))
+	 else
+	    assert(min==max)
+	 end
+      end -- switch on min
+   end
+   -- return peg being quantified, quantified peg, whether boundary was appended, quantifier name, min, max
+   return pattern.new{name="repetition", peg=qpeg, ast=a}
+end
 
 local function ref(a, pkgtable, env, messages)
    return pattern.new{name="TEMPORARY", peg=P(1), ast=a}
 end
-
 
 local dispatch = { [ast.literal] = literal,
 		   [ast.sequence] = sequence,
@@ -134,9 +255,11 @@ local dispatch = { [ast.literal] = literal,
 		   [ast.cs_named] = cs_named,
 		   [ast.cs_range] = cs_range,
 		   [ast.cs_list] = cs_list,
+		   [ast.repetition] = repetition,
+		   [ast.predicate] = predicate,
 		}
 
-function c2.compile_expression(a, pkgtable, env, messages)
+function compile_expression(a, pkgtable, env, messages)
    local compile = dispatch[parent(a)]
    if compile then
       return compile(a, pkgtable, env, messages)
@@ -145,6 +268,9 @@ function c2.compile_expression(a, pkgtable, env, messages)
    end
 end
 
+function c2.compile_expression(...)
+   return apply_catch(compile_expression, ...)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- Compile block
@@ -155,7 +281,8 @@ end
 function c2.compile_block(a, pkgtable, pkgenv, messages)
    print("load: entering dummy compile_block, making novalue bindings")
    c2.asts[a.importpath or "nilimportpath"] = a	    -- TEMPORARY
-
+   -- Step 1: For each lhs, bind the identifier to 'novalue'.
+   -- TODO: Ensure each lhs appears only once in a.stmts.
    for _, b in ipairs(a.stmts) do
       assert(ast.binding.is(b))
       local ref = b.ref
@@ -165,21 +292,32 @@ function c2.compile_block(a, pkgtable, pkgenv, messages)
       else
 	 print("      creating novalue binding for " .. ref.localname)
       end
-      environment.bind(pkgenv,
-		       ref.localname,
-		       novalue.new{exported=true, ast=b})
+      bind(pkgenv, ref.localname, novalue.new{exported=true, ast=b})
    end -- for
-
+   -- Step 2: Compile the rhs (expression) for each binding.  
+   -- TODO: If an exp depends on a 'novalue', return 'novalue'.
+   -- TODO: Repeat step 2 until either every lhs is bound to an actual value (or error), or an
+   --       entire pass through a.stmts fails to change any binding.
    for _, b in ipairs(a.stmts) do
       local ref, exp = b.ref, b.exp
-      local pat = c2.compile_expression(exp, pkgtable, pkgenv, messages)
+      local ok, pat = c2.compile_expression(exp, pkgtable, pkgenv, messages)
+      if not ok then
+	 error("caught a lua error!\n" ..
+	       tostring(pat).."\n"..
+	       table.tostring(messages))
+      end
       if pat then 
 	 print("*** actually compiled: " .. ref.localname)
+	 if type(pat)~="table" then
+	    print("    BUT DID NOT GET A PATTERN: " .. tostring(pat))
+	 end
 	 -- TODO: set alias flag
 	 -- TODO: wrap with capture when not an alias
 	 bind(pkgenv, ref.localname, pat)
       end
    end -- for
+
+   -- Step 3: 
 
    return true
 end

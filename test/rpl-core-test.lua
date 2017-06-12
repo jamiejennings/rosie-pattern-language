@@ -5,6 +5,13 @@
 ---- (c) 2016, 2017, Jamie A. Jennings
 ----
 
+-- TODO:
+-- test repetition where min > max
+-- test repetition where max==0
+-- 
+
+
+
 -- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
 assert(ROSIE_HOME, "ROSIE_HOME is not set?")
 assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")

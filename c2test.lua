@@ -66,16 +66,14 @@ print("\n----- Start of cooked/raw tests -----\n")
 
 function test_seq(name, expectation)
    local foo = environment.lookup(env, name)
-   assert(common.novalue.is(foo))
-   assert(ast.binding.is(foo.ast))
-   assert(ast.sequence.is(foo.ast.exp) or ast.choice.is(foo.ast.exp))
+   assert(ast.sequence.is(foo.ast) or ast.choice.is(foo.ast))
    seq = list.map(function(ex)
 		     if ast.ref.is(ex) then return ex.localname
 		     elseif ast.predicate.is(ex) then return "predicate"
 		     else return tostring(ex)
 		     end
 		  end,
-		  foo.ast.exp.exps)
+		  foo.ast.exps)
    print(name, seq)
    if list.equal(seq, list.from(expectation)) then
       print("Correct")
