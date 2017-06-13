@@ -137,9 +137,36 @@ goimport("time"); print(ast.tostring(c2.asts.time), "\n")
 goimport("os"); print(ast.tostring(c2.asts.os), "\n")
 
 print("--- Testing compile_expression ---")
-ok, n, msgs = c2.compile_expression(c2.expand_expression(c.parse_expression("net.any", messages)), pkgtable, env, messages)
-print(ok)
+
+n = c2.compile_expression(c2.expand_expression(c.parse_expression("net.any", messages)), env, messages)
+assert(n)
 table.print(decode(n.peg:rmatch("1.2.3.4")))
+print("match against 1.2.3.4 OK")
+
+m, leftover = n.peg:rmatch("aksdlaksdlsakd")
+assert(not m)
+assert(leftover==14)
+print("non-match against aksdlaksdlsakd OK")
+
+
+go('foo = net.any')
+n2 = c2.compile_expression(c2.expand_expression(c.parse_expression("foo", messages)), env, messages)
+assert(n2)
+table.print(decode(n2.peg:rmatch("1.2.3.4")))
+print("match against 1.2.3.4 OK")
+
+
+go('alias afoo = net.any')
+n3 = c2.compile_expression(c2.expand_expression(c.parse_expression("afoo", messages)), env, messages)
+assert(n3)
+table.print(decode(n3.peg:rmatch("1.2.3.4")))
+print("match against 1.2.3.4 OK")
+
+n4 = c2.compile_expression(c2.expand_expression(c.parse_expression("common.word afoo", messages)), env, messages)
+assert(n4)
+table.print(decode(n4.peg:rmatch("hello 1.2.3.4")))
+print("match against hello 1.2.3.4 OK")
+
 
 
 

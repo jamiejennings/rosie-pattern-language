@@ -1,6 +1,7 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- expand.lua    RPL macro expansion
+-- e2.lua    RPL macro expansion that goes with the p2 parser and the c2 compiler
+--           When you see "e2", read it as "expand", e.g. "e2.stmts" == "expand statements"
 --
 -- © Copyright IBM Corporation 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -19,7 +20,7 @@
 --   1. Apply user-defined and built-in macro expansions
 --   2. Remove cooked groups by interleaving references to the boundary identifier, ~.
 
-local expand = {}
+local e2 = {}
 
 local ast = require "ast"
 local list = require "list"
@@ -114,7 +115,7 @@ end
 -- that (1) macro use looks syntactically like function application, (2) there is a single
 -- namespace for macros, functions, and other values, and (3) macro expansion requires a syntactic
 -- environment in which (at least) references to macros can be resolved.
-function expand.expression(ex, env, messages)
+function e2.expression(ex, env, messages)
    local cooked = ambient_cook_exp(ex)
    if cooked then ex = cooked; end
    ex = remove_cooked_raw_from_exp(ex)
@@ -123,29 +124,26 @@ function expand.expression(ex, env, messages)
    return ex
 end
 
-function expand.stmts(stmts, env, messages)
+function e2.stmts(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
       assert(ast.binding.is(stmt))
       local ref = stmt.ref
-      print("*** calling dummy expand.expression for " ..
+      print("*** calling dummy e2.expression for " ..
 	    (ref.packagename and (ref.packagename .. ".") or "") ..
 	    ref.localname ..
 	    " = " ..
 	    tostring(stmt.exp))
-      stmt.exp = expand.expression(stmt.exp, env, messages)
+      stmt.exp = e2.expression(stmt.exp, env, messages)
    end
 end
 
-function expand.block(a, env, messages)
+function e2.block(a, env, messages)
    assert(ast.block.is(a))
    assert(environment.is(env))
    assert(type(messages)=="table")
-   expand.stmts(a.stmts, env, messages)
+   e2.stmts(a.stmts, env, messages)
    return true
 end
 
-
-
-
-return expand
+return e2
 
