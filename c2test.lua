@@ -8,6 +8,8 @@ environment = rosie._env.environment
 ast = rosie._env.ast
 loadpkg = rosie._env.loadpkg
 c2 = rosie._env.c2
+decode = rosie._env.lpeg.decode
+
 
 -- global tables of intermediate results for examination during testing:
 parses = {}
@@ -71,14 +73,14 @@ print("\n----- Start of cooked/raw tests -----\n")
 
 function test_seq(name, expectation)
    local foo = environment.lookup(env, name)
-   assert(ast.sequence.is(foo.ast) or ast.choice.is(foo.ast))
+   assert(ast.binding.is(foo.ast))
    seq = list.map(function(ex)
 		     if ast.ref.is(ex) then return ex.localname
 		     elseif ast.predicate.is(ex) then return "predicate"
 		     else return tostring(ex)
 		     end
 		  end,
-		  foo.ast.exps)
+		  foo.ast.exp.exps)
    print(name, seq)
    if list.equal(seq, list.from(expectation)) then
       print("Correct")
@@ -134,7 +136,10 @@ goimport("date"); print(ast.tostring(c2.asts.date), "\n")
 goimport("time"); print(ast.tostring(c2.asts.time), "\n")
 goimport("os"); print(ast.tostring(c2.asts.os), "\n")
 
-n = c2.compile_expression(c.expand_expression(c.parse_expression("net.any")), pkgtable, env, messages)
-print(n:match("1.2.3.4"))
+print("--- Testing compile_expression ---")
+ok, n, msgs = c2.compile_expression(c2.expand_expression(c.parse_expression("net.any", messages)), pkgtable, env, messages)
+print(ok)
+table.print(decode(n.peg:rmatch("1.2.3.4")))
+
 
 

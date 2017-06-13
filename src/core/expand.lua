@@ -32,31 +32,29 @@ local bind = environment.bind
 -- 'ambient_cook' wraps the rhs of bindings in an explicit 'cooked' ast unless the expression is
 -- already explicitly cooked or raw.  Each statement in the list is side-effected, replacing its
 -- 'exp' field.
-local function ambient_cook(stmts)
-   for _, stmt in ipairs(stmts) do
-      if not (ast.raw.is(stmt.exp) or ast.cooked.is(stmt.exp)) then
-	 stmt.exp = ast.cooked.new{exp=stmt.exp, s=0, e=0} -- s=stmt.exp.s, e=stmt.exp.e
-      end
-   end -- for
+local function ambient_cook_exp(ex)
+   if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
+      return ast.cooked.new{exp=ex, s=0, e=0}
+   end
 end
 
 local boundary_ref = ast.ref.new{localname=common.boundary_identifier}
 
-local ambient_cook_exp
+local remove_cooked_exp;
 
-local function ambient_raw_exp(ex)
-   if ast.cooked.is(ex) then return ambient_cook_exp(ex.exp)
-   elseif ast.raw.is(ex) then return ambient_raw_exp(ex.exp)
+local function remove_raw_exp(ex)
+   if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
+   elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
    elseif ast.sequence.is(ex) then
       -- do not introduce boundary references between the exps
-      return ast.sequence.new{exps=map(ambient_cook_exp, ex.exps), s=ex.s, e=ex.e}
+      return ast.sequence.new{exps=map(remove_cooked_exp, ex.exps), s=ex.s, e=ex.e}
    elseif ast.predicate.is(ex) or
           ast.choice.is(ex) or
           ast.grammar.is(ex) or
           ast.repetition.is(ex) then
       -- the explicit 'raw' construct has no effect on these exps, but they have sub-expressions
       -- that must be processed
-      return ambient_cook_exp(ex)
+      return remove_cooked_exp(ex)
    else
       -- finally, return expressions that do not have sub-expressions to process
       return ex
@@ -66,15 +64,15 @@ end
 -- The compiler does not know about cooked/raw expressions.  Both ast.cooked and ast.raw
 -- structures are removed here, where we implement the notion that the ambience is, by default,
 -- "cooked".
-function ambient_cook_exp(ex)
-   if ast.cooked.is(ex) then return ambient_cook_exp(ex.exp)
-   elseif ast.raw.is(ex) then return ambient_raw_exp(ex.exp)
+function remove_cooked_exp(ex)
+   if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
+   elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
    elseif ast.predicate.is(ex) then
-      return ast.predicate.new{type=ex.type, exp=ambient_cook_exp(ex.exp), s=ex.s, e=ex.e}
+      return ast.predicate.new{type=ex.type, exp=remove_cooked_exp(ex.exp), s=ex.s, e=ex.e}
    elseif ast.choice.is(ex) then
-      return ast.choice.new{exps=map(ambient_cook_exp, ex.exps), s=ex.s, e=ex.e}
+      return ast.choice.new{exps=map(remove_cooked_exp, ex.exps), s=ex.s, e=ex.e}
    elseif ast.sequence.is(ex) then
-      local exps = map(ambient_cook_exp, ex.exps)
+      local exps = map(remove_cooked_exp, ex.exps)
       assert(#exps > 0, "received an empty sequence")
       local new = list.new(exps[1])
       for i = 2, #exps do
@@ -87,14 +85,14 @@ function ambient_cook_exp(ex)
       return ast.sequence.new{exps=new, s=ex.s, e=ex.e}
    elseif ast.grammar.is(ex) then
       -- ambience has no effect on a grammar expression
-      return ast.grammar.new{rules=ambient_cook_exp(ex.rules), s=ex.s, e=ex.e}
+      return ast.grammar.new{rules=remove_cooked_exp(ex.rules), s=ex.s, e=ex.e}
    elseif ast.repetition.is(ex) then 
       -- ambience has no effect on a repetition, but the expression being repeated must be
       -- carefully transformed: if it explicitly cooked, then flag the repetition as cooked, strip
       -- the 'cooked' ast off the exp being repeated and treat what is inside the 'cooked' ast as
       -- if it were raw; if not explicitly cooked, then treat ex.exp it as if it is raw.
       local flag = ast.cooked.is(ex.exp)
-      local new = (flag and ambient_raw_exp(ex.exp.exp)) or ambient_raw_exp(ex.exp)
+      local new = (flag and remove_raw_exp(ex.exp.exp)) or remove_raw_exp(ex.exp)
       return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
    else
       -- There are no sub-expressions to process in the rest of the expression types, such as
@@ -103,9 +101,11 @@ function ambient_cook_exp(ex)
    end -- switch on kind of ex
 end
 
-local function remove_cooked_raw(stmts)
+local remove_cooked_raw_from_exp = remove_cooked_exp;
+
+local function remove_cooked_raw_from_stmts(stmts)
    for _, stmt in ipairs(stmts) do
-      stmt.exp = ambient_cook_exp(stmt.exp)
+      stmt.exp = remove_cooked_raw_from_exp(stmt.exp)
    end
 end
 
@@ -115,7 +115,11 @@ end
 -- namespace for macros, functions, and other values, and (3) macro expansion requires a syntactic
 -- environment in which (at least) references to macros can be resolved.
 function expand.expression(ex, env, messages)
-   -- TODO
+   local cooked = ambient_cook_exp(ex)
+   if cooked then ex = cooked; end
+   ex = remove_cooked_raw_from_exp(ex)
+   -- TODO: macro expansion goes here
+
    return ex
 end
 
@@ -136,11 +140,6 @@ function expand.block(a, env, messages)
    assert(ast.block.is(a))
    assert(environment.is(env))
    assert(type(messages)=="table")
-
-   -- TODO: Need a version of ambient_cook_exp and remove_cooked_raw that operate directly on expressions!
-
-   ambient_cook(a.stmts)
-   remove_cooked_raw(a.stmts)
    expand.stmts(a.stmts, env, messages)
    return true
 end

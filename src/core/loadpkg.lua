@@ -85,22 +85,6 @@ local function validate_block(a)
    return true, {}
 end
 
-local function parse(parse_block, src, messages)
-   assert(type(parse_block)=="function")
-   assert(type(src)=="string", "src is " .. tostring(src))
-   assert(type(messages)=="table")
-   local pt, warnings, leftover = parse_block(src)
-   assert(type(warnings)=="table")
-   if not pt then
-      table.insert(messages, cerror.new("syntax", {}, table.concat(warnings, "\n")))
-      return false
-   end
-   table.move(warnings, 1, #warnings, #messages+1, messages)
-   assert(type(pt)=="table")
-   assert(pt.type=="rpl_statements", util.table_to_pretty_string(pt, false))
-   return ast.from_parse_tree(pt)
-end
-   
 -- Returns pkgname (from inside the module source code), pkgenv
 local function compile(compiler, pkgtable, a, pkgenv, messages)
    -- We call the compiler with the import declarations already processed, and the imported
@@ -110,8 +94,8 @@ local function compile(compiler, pkgtable, a, pkgenv, messages)
       common.note(string.format("load: FAILED TO COMPILE %s", pkgname or "<top level>"))
       return false
    end
-   if (not pkgname) then
-      local msg = (a.importpath or "<top level>") .. " is not a module (no package declaration found)"
+   if a.importpath and (not pkgname) then
+      local msg = a.importpath .. " is not a module (no package declaration found)"
       table.insert(messages, cerror.new("error", a, msg))
       return false
    end
@@ -131,7 +115,7 @@ function load.source(compiler, pkgtable, top_level_env, searchpath, src, importp
    local env = (importpath and environment.new()) or top_level_env
    -- assert((importpath and (env~=top_level_env)) or
    --     ((not importpath) and (env==top_level_env)))
-   local a = parse(compiler.parse_block, src, messages)
+   local a = compiler.parse_block(src, messages)
    if not a then return false; end
    a.importpath = importpath
    a.filename = fullpath

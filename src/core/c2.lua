@@ -39,14 +39,39 @@ c2.asts = {}
 -- Create parser
 ---------------------------------------------------------------------------------------------------
 
-c2.make_parse_block = p2.make_parse_block
-c2.make_parse_expression = p2.make_parse_expression
+local function make_parser_from(parse_something, expected_pt_node)
+   return function(src, messages)
+	     assert(type(src)=="string", "src is " .. tostring(src))
+	     assert(type(messages)=="table")
+	     local pt, warnings, leftover = parse_something(src)
+	     assert(type(warnings)=="table")
+	     if not pt then
+		table.insert(messages, cerror.new("syntax", {}, table.concat(warnings, "\n")))
+		return false
+	     end
+	     table.move(warnings, 1, #warnings, #messages+1, messages)
+	     assert(type(pt)=="table")
+	     assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
+	     return ast.from_parse_tree(pt)
+	  end
+ end
+
+function c2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
+   local parse_block = p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
+   return make_parser_from(parse_block, "rpl_statements")
+end
+
+function c2.make_parse_expression(rplx_expression)
+   local parse_expression = p2.make_parse_expression(rplx_expression)
+   return make_parser_from(parse_expression, "rpl_expression")
+end
 
 ---------------------------------------------------------------------------------------------------
 -- Syntax expander
 ---------------------------------------------------------------------------------------------------
 
 c2.expand_block = expand.block
+c2.expand_expression = expand.expression
 
 ---------------------------------------------------------------------------------------------------
 -- Compile bindings and expressions
@@ -240,7 +265,21 @@ local function repetition(a, pkgtable, env, messages)
 end
 
 local function ref(a, pkgtable, env, messages)
-   return pattern.new{name="TEMPORARY", peg=P(1), ast=a}
+   local pat = lookup(env, a.localname, a.packagename)
+   if (not pat) then throw("unbound identifier", a); end
+   if not(pattern.is(pat)) then
+      local name = (a.packagename and (a.packagename .. ".") or "") .. a.localname
+      throw("type mismatch: expected a pattern, but " .. name .. " is bound to " .. tostring(pat), a)
+   end
+   local newpat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
+   if a.packagename and (not pat.alias) then
+      -- Here, pat was wrapped with only a local name when its module was compiled.  We need to
+      -- rewrap using the fully qualified name, because the code we are compiling now uses the
+      -- fully qualified name to refer to this value.
+      assert(pat.uncap)
+      newpat.peg = common.match_node_wrap(pat.uncap, a.packagename .. "." .. a.localname)
+   end
+   return newpat
 end
 
 local dispatch = { [ast.literal] = literal,
@@ -261,6 +300,7 @@ function compile_expression(a, pkgtable, env, messages)
       return compile(a, pkgtable, env, messages)
    else
       print("not compiling " .. tostring(a))
+      print("***"); table.print(a)
    end
 end
 
@@ -307,8 +347,18 @@ function c2.compile_block(a, pkgtable, pkgenv, messages)
 	 if type(pat)~="table" then
 	    print("    BUT DID NOT GET A PATTERN: " .. tostring(pat))
 	 end
-	 -- TODO: set alias flag
-	 -- TODO: wrap with capture when not an alias
+	 if (not b.is_alias) then
+	    if pat.uncap then
+	       -- We must have an assignment like 'p1 = p2' where p2 is not an alias.  RPL semantics
+	       -- are that p1 must capture the same as p2, but the output should be labeled p1.
+	       pat.peg = common.match_node_wrap(pat.uncap, ref.localname)
+	    else
+	       -- The binding b is a capture, and there is no pat.uncap
+	       pat.uncap = pat.peg
+	       pat.peg = common.match_node_wrap(pat.peg, ref.localname)
+	    end
+	 end
+	 pat.alias = b.is_alias
 	 bind(pkgenv, ref.localname, pat)
       end
    end -- for
