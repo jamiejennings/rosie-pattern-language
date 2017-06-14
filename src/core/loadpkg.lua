@@ -115,7 +115,7 @@ function load.source(compiler, pkgtable, top_level_env, searchpath, src, importp
    local env = (importpath and environment.new()) or top_level_env
    -- assert((importpath and (env~=top_level_env)) or
    --     ((not importpath) and (env==top_level_env)))
-   local a = compiler.parse_block(src, messages)
+   local a = compiler.parse_block(src, importpath, messages)
    if not a then return false; end
    a.importpath = importpath
    a.filename = fullpath

@@ -349,7 +349,7 @@ common.cerror = recordtype.new(
     charpos = 1},				    -- "
    function(kind, ast, message)
       local valid = {error=true, warning=true, info=true, syntax=true}
-      if type(ast)~="table" or type(message)~="string" then
+      if (not (ast==nil or type(ast)=="table")) or type(message)~="string" then
 	 error("Internal error: improper call to create cerror object")
       elseif not valid[kind] then
 	 error("Internal error: improper 'kind' of cerror object")

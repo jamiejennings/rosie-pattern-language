@@ -19,6 +19,7 @@ local P, V, C, S, R, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Cmt, lpeg.B
 
 local common = require "common"
+local cerror = common.cerror
 local throw = common.throw
 local apply_catch = common.apply_catch
 local novalue = common.novalue
@@ -40,13 +41,17 @@ c2.asts = {}
 ---------------------------------------------------------------------------------------------------
 
 local function make_parser_from(parse_something, expected_pt_node)
-   return function(src, messages)
+   return function(src, origin, messages)
 	     assert(type(src)=="string", "src is " .. tostring(src))
+	     assert(origin==nil or type(origin)=="string")
 	     assert(type(messages)=="table")
 	     local pt, warnings, leftover = parse_something(src)
 	     assert(type(warnings)=="table")
 	     if not pt then
-		table.insert(messages, cerror.new("syntax", {}, table.concat(warnings, "\n")))
+		local err = cerror.new("syntax", nil, table.concat(warnings, "\n"))
+		err.text = src
+		err.origin = origin
+		table.insert(messages, err)
 		return false
 	     end
 	     table.move(warnings, 1, #warnings, #messages+1, messages)
@@ -312,7 +317,10 @@ function c2.compile_expression(a, env, messages)
    local ok, pat = compile_expression(a, env, messages)
    if not ok then return nil; end
    if not pattern.is(pat) then
-      throw("type error: expression did not compile to a pattern, instead got " .. tostring(pat), a)
+      return cerror.new("error",
+			a,
+			"type error: expression did not compile to a pattern, instead got "
+			   .. tostring(pat))
    end
    local peg, name = pat.peg, pat.name
    if (not ast.ref.is(a)) or pat.alias then

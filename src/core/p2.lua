@@ -35,8 +35,6 @@ local function explain_syntax_error(a, source)
       local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
       if etname=="statement_prefix" then
 	 msg = msg .. "Found start of a new statement inside an expression.\n"
-      else
-	 msg = msg .. "No additional information is available.\n"
       end
    end -- if esubs
    return msg
@@ -108,7 +106,7 @@ end -- make_preparser
 
 p2.parses = {}					    -- TEMPORARY:
 
-local function find_syntax_errors(pt)
+local function find_syntax_errors(pt, source)
    -- First look for the syntax error tag(s) in the parse tree
    local errlist = {};
    for _,a in ipairs(pt.subs or {}) do
@@ -142,7 +140,7 @@ function p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
 
 	     p2.parses[src] = pt		    -- TEMPORARY
 
-	     local syntax_errors = find_syntax_errors(pt)
+	     local syntax_errors = find_syntax_errors(pt, src)
 	     if syntax_errors then return nil, syntax_errors, leftover; end
 	     -- Otherwise, we had a successful parse
 	     -- FUTURE: do a 'lint' pass to produce warnings, and return them in place of the
@@ -160,7 +158,7 @@ function p2.make_parse_expression(rplx_expression)
 
 	     p2.parses[src] = pt		    -- TEMPORARY
 
-	     local syntax_errors = find_syntax_errors(pt)
+	     local syntax_errors = find_syntax_errors(pt, src)
 	     if syntax_errors then return nil, syntax_errors, leftover; end
 	     -- FUTURE: do a 'lint' pass to produce warnings, and return them in place of the
 	     --         empty error list in the return values
