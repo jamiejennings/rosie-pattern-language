@@ -22,8 +22,9 @@ RPLX_EXPRESSION = e:compile("rpl_expression")
 
 version = common.rpl_version.new(1, 1)
 
+parse_expression = c2.make_parse_expression(RPLX_EXPRESSION)
+
 c = {parse_block = c2.make_parse_block(RPLX_PREPARSE, RPLX_STATEMENTS, version),
-     parse_expression = c2.make_parse_expression(RPLX_EXPRESSION),
      expand_block = c2.expand_block,
      compile_block = c2.compile_block}
 
@@ -138,7 +139,7 @@ goimport("os"); print(ast.tostring(c2.asts.os), "\n")
 
 print("--- Testing compile_expression ---")
 
-n = c2.compile_expression(c2.expand_expression(c.parse_expression("net.any", messages)), env, messages)
+n = c2.compile_expression(c2.expand_expression(parse_expression("net.any", messages)), env, messages)
 assert(n)
 table.print(decode(n.peg:rmatch("1.2.3.4")))
 print("match against 1.2.3.4 OK")
@@ -150,23 +151,30 @@ print("non-match against aksdlaksdlsakd OK")
 
 
 go('foo = net.any')
-n2 = c2.compile_expression(c2.expand_expression(c.parse_expression("foo", messages)), env, messages)
+n2 = c2.compile_expression(c2.expand_expression(parse_expression("foo", messages)), env, messages)
 assert(n2)
 table.print(decode(n2.peg:rmatch("1.2.3.4")))
 print("match against 1.2.3.4 OK")
 
 
 go('alias afoo = net.any')
-n3 = c2.compile_expression(c2.expand_expression(c.parse_expression("afoo", messages)), env, messages)
+n3 = c2.compile_expression(c2.expand_expression(parse_expression("afoo", messages)), env, messages)
 assert(n3)
-table.print(decode(n3.peg:rmatch("1.2.3.4")))
+m = decode(n3.peg:rmatch("1.2.3.4"))
+assert(m and m.type and m.type=="*")
+table.print(m)
 print("match against 1.2.3.4 OK")
 
-n4 = c2.compile_expression(c2.expand_expression(c.parse_expression("common.word afoo", messages)), env, messages)
+n4 = c2.compile_expression(c2.expand_expression(parse_expression("common.word afoo", messages)), env, messages)
 assert(n4)
 table.print(decode(n4.peg:rmatch("hello 1.2.3.4")))
 print("match against hello 1.2.3.4 OK")
 
-
-
+go('alias aresolv = common.word net.any')
+n5 = c2.compile_expression(c2.expand_expression(parse_expression("aresolv", messages)), env, messages)
+assert(n5)
+m = decode(n5.peg:rmatch("thisisaword 	1.2.3.4"))
+table.print(m)
+assert(m and m.type and m.type=="*")
+print("match against thisisaword 1.2.3.4 OK")
 

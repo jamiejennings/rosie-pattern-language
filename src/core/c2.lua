@@ -311,16 +311,17 @@ end
 function c2.compile_expression(a, env, messages)
    local ok, pat = compile_expression(a, env, messages)
    if not ok then return nil; end
-   local name
-   if ast.ref.is(a) then
-      if (not pat.uncap) then
-	 name = (a.packagename and (a.packagename .. ".") or "") .. a.localname
-	 pat.peg = common.match_node_wrap(pat.peg, name)
-      end
-   else
-      name = "*"
-      pat.peg = common.match_node_wrap(pat.peg, name)      
+   if not pattern.is(pat) then
+      throw("type error: expression did not compile to a pattern, instead got " .. tostring(pat), a)
    end
+   local peg, name = pat.peg, pat.name
+   if (not ast.ref.is(a)) or pat.alias then
+      -- anonymous pattern
+      name = "*"
+      if pat.uncap then peg = pat.uncap; end
+   end
+   pat.alias = false
+   pat.peg = common.match_node_wrap(peg, name)      
    return pat
 end
 
@@ -356,11 +357,13 @@ function c2.compile_block(a, pkgenv, messages)
       local ref, exp = b.ref, b.exp
       local ok, pat = compile_expression(exp, pkgenv, messages)
       if not ok then
+	 -- FIXME:
 	 error("caught a lua error!\n" ..
 	       tostring(pat).."\n"..
 	       table.tostring(messages))
       end
       if pat then 
+	 -- TEMPORARY
 	 print("*** actually compiled: " .. ref.localname)
 	 if type(pat)~="table" then
 	    print("    BUT DID NOT GET A PATTERN: " .. tostring(pat))
