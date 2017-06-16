@@ -1,0 +1,56 @@
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- json.rpl    some rpl patterns for processing json input
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+
+---------------------------------------------------------------------------------------------------
+-- Note:
+--
+-- A language-integrated parser built specifically to parse JSON is usually the best way to process
+-- json-encoded documents.  Occasionally, though, there will be a json-encoded field within non-json
+-- data, e.g. log files in which some entries contain json data in the message field.
+--
+-- When using Rosie to parse such mixed input, it is useful to have a pattern in RPL that will match
+-- a json-encoded value so that the structured data in this value can be extracted later, as needed.
+-- 
+---------------------------------------------------------------------------------------------------
+
+package json
+
+import common, num
+
+local key = common.dqstring
+local string = common.dqstring
+local number = num.signed_number
+
+local true = "true"
+local false = "false"
+local null = "null"
+
+grammar
+   value = ~ string / number / object / array / true / false / null
+   member = key ":" value
+   object = "{" (member ("," member)*)? "}"
+   array = "[" (value ("," value)*)? "]"
+end
+
+-- test value accepts "true", "false", "null"
+-- test value rejects "ture", "f", "NULL"
+-- test value accepts "0", "123", "-1", "1.1001", "1.2e10", "1.2e-10", "+3.3"
+-- test value accepts "\"hello\"", "\"this string has \\\"embedded\\\" double quotes\""
+-- test value rejects "hello", "\"this string has no \\\"final quote\\\" "
+-- test value rejects "--2", "9.1.", "9.1.2", "++2", "2E02."
+
+-- test value accepts "[]", "[1, 2, 3.14, \"V\", 6.02e23, true]", "[1, 2, [7], [[8]]]"
+-- test value rejects "[]]", "[", "[[]", "{1, 2}"
+
+-- test value accepts "{\"one\":1}", "{ \"one\" :1}", "{ \"one\" : 1  }"
+-- test value accepts "{\"one\":1, \"two\": 2}", "{\"one\":1, \"two\": 2, \"array\":[1,2]}"
+-- test value accepts "[{\"v\":1}, {\"v\":2}, {\"v\":3}]"
+
+
+
