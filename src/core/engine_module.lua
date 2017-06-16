@@ -33,10 +33,10 @@
 --
 -- e:load(rpl_string) compiles rpl_string in the current engine environment
 --   the rpl_string has "file semantics", i.e. it can be a module.
---   returns success code and a list of cerror objects
+--   returns success code and a list of violation objects
 -- 
 -- e:compile(expression, flavor) compiles the rpl expression
---   returns an rplx object or nil, and a list of cerror objects
+--   returns an rplx object or nil, and a list of violation objects
 --   API only: instead of the rplx object, returns the (string) id of an rplx object with
 --   indefinite extent; 
 --   The flavor argument, if nil or "match" compiles expression unmodified.  Otherwise:
@@ -87,12 +87,12 @@ local io = require "io"
 local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local common = require "common"
-local cerror = common.cerror
 local rmatch = common.rmatch
 local pfunction = common.pfunction
 local environment = require "environment"
 local lookup = environment.lookup
 local bind = environment.bind
+local violation = require "violation"
 local writer = require "writer"
 local eval = require "eval"
 
@@ -248,7 +248,12 @@ local function load_input(e, target_env, input, importpath, modonly)
    end
    assert(type(warnings)=="table")
    if not ast then
-      return false, nil, {cerror.new("syntax", {}, table.concat(warnings, "\n"))}
+      return false,
+	 nil,
+	 {violation.syntax.new{who='engine load input',
+			       message=table.concat(warnings, "\n"),
+			       origin=importpath,
+			       src=(type(input)=="string" and input) or nil}}
    end
    table.move(warnings, 1, #warnings, #messages+1, messages)
    assert(type(ast)=="table")
@@ -266,7 +271,7 @@ local function load_input(e, target_env, input, importpath, modonly)
    end
    if modonly and (not modname) then
       local msg = (importpath or "<top level>") .. " is not a module (no package declaration found)"
-      table.insert(messages, cerror.new("error", ast, msg))
+      table.insert(messages, violation.compile.new{who='load module', message=msg, ast=ast})
       return false, modname, msg, messages
    end
    common.note(string.format("COMPILED %s", modname or "<top level>"))

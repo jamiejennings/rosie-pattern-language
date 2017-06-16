@@ -10,7 +10,7 @@ local string = require "string"
 local coroutine = require "coroutine"
 local common = require "common"
 local pattern = common.pattern
-local cerror = common.cerror
+local violation = require "violation"
 local lpeg = require "lpeg"
 
 local environment = require "environment"
@@ -26,7 +26,7 @@ local c1 = require "c1"
 
 -- compile(importpath or nil, ast, pkgtable, env) --> success, packagename or nil, messages
 --   where success is boolean, packagename is a string if the ast defined a module, and
---   messages is a table of cerror records
+--   messages is a table of violation records
 
 local function make_compile(compile_ast)
    return function(importpath, ast, pkgtable, env)
@@ -45,7 +45,6 @@ local function make_compile(compile_ast)
 		   return success, packagename, messages -- message may contain compiler warnings
 		else
 		   messages = packagename	    -- error message is second return value
-		   assert(cerror.is(messages))
 		   return false, nil, {messages}
 		end
 	     else

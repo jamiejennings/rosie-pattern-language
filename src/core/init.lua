@@ -114,6 +114,7 @@ local function load_all()
 
    -- These MUST have a partial order so that dependencies can be loaded first
    recordtype = import("recordtype")
+   violation = import("violation")
    list = import("list")
    util = import("util")
    common = import("common")

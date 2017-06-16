@@ -12,7 +12,7 @@
 -- that happens before parsing.)  The result is a single parse tree.
 --
 -- The parse tree is searched for nodes named 'syntax_error'.  If found, the error is encoded in a
--- cerror data structure which is returned with an indication that the parse failed.
+-- violation object which is returned with an indication that the parse failed.
 --
 -- A successful parse produces a parse tree.
 -- 
@@ -50,7 +50,7 @@ local environment = require "environment"
 local lookup = environment.lookup
 local bind = environment.bind
 local common = require "common"
-local cerror = common.cerror
+local violation = require "violation"
 
 local load = {}
 
@@ -64,22 +64,29 @@ local function validate_block(a)
    assert(ast.block.is(a))
    local stmts = a.stmts
    if not stmts[1] then
-      return true, {cerror.new("warning", a, "Empty input")}
+      return true, {violation.warning.new{who='load package', message="Empty input", ast=a}}
    elseif ast.pdecl.is(stmts[1]) then
       a.pdecl = table.remove(stmts, 1)
       common.note("load: in package " .. a.pdecl.name)
    end
    if not stmts[1] then
-      return true, {cerror.new("warning", a, "Empty module (nothing after package declaration")}
+      return true,
+	 {violation.warning.new{who='load package',
+				message="Empty module (nothing after package declaration)",
+				ast=a}}
    elseif not ast.ideclist.is(stmts[1]) then
-      return true, {cerror.new("info", a, "Module consists only of import declarations")}
+      return true, {violation.info.new{who='load package',
+				       message="Module consists only of import declarations",
+				       ast=a}}
    end
    if ast.ideclist.is(stmts[1]) then
       a.ideclist = table.remove(stmts, 1)
    end
    for _, s in ipairs(stmts) do
       if not ast.binding.is(s) then
-	 return false, {cerror.new("error", s, "Declarations must appear before assignments")}
+	 return false, {violation.compile.new{who='load package',
+					      message="Declarations must appear before assignments",
+					      ast=s}}
       end
    end -- for
    return true, {}
@@ -96,7 +103,7 @@ local function compile(compiler, a, pkgenv, messages)
    end
    if a.importpath and (not pkgname) then
       local msg = a.importpath .. " is not a module (no package declaration found)"
-      table.insert(messages, cerror.new("error", a, msg))
+      table.insert(messages, violation.compile.new{who='compiler', message=msg, ast=a})
       return false
    end
    common.note(string.format("load: compiled %s", pkgname or "<top level>"))
@@ -141,10 +148,10 @@ end
 local function import_from_source(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
    local fullpath, src, msg = common.get_file(decl.importpath, searchpath)
    if not src then
-      local err = ("load: cannot find module source for '" .. decl.importpath ..
+      local msg = ("load: cannot find module source for '" .. decl.importpath ..
 		   "' needed by module '" .. (importpath or "<top level>") .. "': "
 		   .. msg)
-      table.insert(messages, cerror.new("error", decl, err))
+      table.insert(messages, violation.compile.new{who='import package', message=msg, ast=decl})
       return false
    end
    common.note("load: loading ", decl.importpath, " from ", fullpath)

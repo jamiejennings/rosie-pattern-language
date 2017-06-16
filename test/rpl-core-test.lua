@@ -20,7 +20,9 @@ if not test then
    test = import("test")
 end
 
-list = import("list")
+list = import "list"
+common = import "common"
+violation = import "violation"
 
 check = test.check
 heading = test.heading
@@ -1325,7 +1327,7 @@ end]]
 success, pkg, msg = e:load(g_syntax_error)
 check(not success)
 check(type(msg)=="table" and msg[1])
-check(msg[1].kind=="syntax")
+check(violation.syntax.is(msg[1]))
 check(msg[1].message:find("Syntax error"))
 
 g_left_recursion = [[grammar

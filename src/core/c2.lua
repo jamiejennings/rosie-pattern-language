@@ -19,12 +19,12 @@ local P, V, C, S, R, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Cmt, lpeg.B
 
 local common = require "common"
-local cerror = common.cerror
-local throw = common.throw
-local apply_catch = common.apply_catch
 local novalue = common.novalue
 local pattern = common.pattern
 local throw = common.throw_error
+local violation = require "violation"
+local throw = violation.throw
+local apply_catch = violation.catch
 local recordtype = require "recordtype"
 parent = recordtype.parent
 local environment = require "environment"
@@ -48,8 +48,8 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     local pt, warnings, leftover = parse_something(src)
 	     assert(type(warnings)=="table")
 	     if not pt then
-		local err = cerror.new("syntax", nil, table.concat(warnings, "\n"))
-		err.text = src
+		local err = violation.syntax.new{who='rpl parser', message=table.concat(warnings, "\n")}
+		err.src = src
 		err.origin = origin
 		table.insert(messages, err)
 		return false
@@ -317,10 +317,9 @@ function c2.compile_expression(a, env, messages)
    local ok, pat = compile_expression(a, env, messages)
    if not ok then return nil; end
    if not pattern.is(pat) then
-      return cerror.new("error",
-			a,
-			"type error: expression did not compile to a pattern, instead got "
-			   .. tostring(pat))
+      local msg = "type error: expression did not compile to a pattern, instead got " ..
+	 tostring(pat)
+      return violation.compile.new{who='compile expression', message=msg, ast=a}
    end
    local peg, name = pat.peg, pat.name
    if (not ast.ref.is(a)) or pat.alias then

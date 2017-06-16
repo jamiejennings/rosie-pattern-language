@@ -14,9 +14,9 @@ local lpeg = require "lpeg"
 local common = require "common"
 local pattern = common.pattern
 local pfunction = common.pfunction
-local cerror = common.cerror
 local decode_match = common.decode_match
-local throw = common.throw_error
+local violation = require "violation"
+local throw = violation.throw
 
 function c1.process_package_decl(typ, pos, text, subs, fin)
    assert(typ=="package_decl")
@@ -85,14 +85,20 @@ function c1.load(importpath, ast, pkgtable, env)
    local astlist = ast.subs or {}
    local thispkg
    local i = 1
-   if not astlist[i] then return true, nil, {cerror.new("warning", astlist, "Empty input")}; end
+   if not astlist[i] then
+      return true, nil, {violation.warning.new{who="load", message="Empty input", ast=ast}}
+   end
    local typ, pos, text, subs, fin = common.decode_match(astlist[i])
    assert(typ~="language_decl", "language declaration should be handled in preparse/parse")
    if typ=="package_decl" then
       thispkg = c1.process_package_decl(typ, pos, text, subs, fin)
       i=i+1;
       if not astlist[i] then
-	 return true, thispkg, {cerror.new("warning", astlist, "Empty module (nothing after package declaration)")}
+	 return true,
+	        thispkg,
+	        {violation.warning.new{who="load",
+				       message="Empty module (nothing after package declaration)",
+				       ast=ast}}
       end
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end
@@ -109,7 +115,11 @@ function c1.load(importpath, ast, pkgtable, env)
    while typ=="import_decl" do
       i=i+1
       if not astlist[i] then
-	 return true, thispkg, {cerror.new("info", astlist, "Module consists only of import declarations")}
+	 return true,
+	    thispkg,
+	    {violation.info.new{who="load",
+				message="Module consists only of import declarations",
+				ast=ast}}
       end
       typ, pos, text, subs, fin = common.decode_match(astlist[i])
    end -- while skipping import_decls

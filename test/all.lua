@@ -14,7 +14,9 @@
 -- When running rosie as "rosie -D" to get a Lua prompt after rosie is already loaded:
 --   dofile "test/all.lua"
 
+rosie = rosie or require("rosie")
 import = rosie._env.import
+ROSIE_HOME = rosie._env.ROSIE_HOME
 
 termcolor = import("termcolor")
 test = import("test")

@@ -22,7 +22,8 @@ local util = import "util"
 local common = import "common"
 local decode_match = common.decode_match
 local pattern = common.pattern
-local throw = common.throw_error
+local violation = require "violation"
+local throw = violation.throw
 
 local environment = import "environment"	    -- TEMPORARY
 local boundary = environment.boundary
@@ -37,7 +38,7 @@ local function explain_invalid_charset_escape(a, char)
    local msg = "invalid escape sequence in character set: \\" .. char
 --   msg = msg .. '\nin expression: ' .. writer.reveal_ast(a)
 --   coroutine.yield(false, msg)			    -- throw
-   throw(msg, a)
+   throw(violation.compile.new{who='compiler (c0)', message=msg, ast=a})
 end
 
 local function explain_quantified_limitation(a, maybe_rule)
@@ -52,7 +53,7 @@ local function explain_quantified_limitation(a, maybe_rule)
       -- string.format("%s\n", line) ..
       -- string.rep(" ", pos) .. "^"
 --   coroutine.yield(false, msg)			    -- throw
-   throw(msg, a)
+   throw(violation.compile.new{who='compiler (c0)', message=msg, ast=a})
 end
 
 local function explain_repetition_error(a)
@@ -68,7 +69,7 @@ local function explain_repetition_error(a)
    --    string.format("%s\n", line) ..
    --    string.rep(" ", pos-1) .. "^"
    -- coroutine.yield(false, msg)			    -- throw
-   throw(msg, a)
+   throw(violation.compile.new{who='compiler (c0)', message=msg, ast=a})
 end
 
 local function explain_undefined_identifier(a)
@@ -81,7 +82,7 @@ local function explain_undefined_identifier(a)
    --    string.format("%s\n", line) ..
    --    string.rep(" ", pos-1) .. "^"
    -- coroutine.yield(false, msg)				    -- throw
-   throw(msg, a)
+   throw(violation.compile.new{who='compiler (c0)', message=msg, ast=a})
 end
 
 local function explain_undefined_charset(a)
@@ -94,7 +95,7 @@ local function explain_undefined_charset(a)
    --    string.format("%s\n", line) ..
    --    string.rep(" ", pos-1) .. "^"
    -- coroutine.yield(false, msg)				    -- throw
-   throw(msg, a)
+   throw(violation.compile.new{who='compiler (c0)', ast=a, message=msg})
 end
 
 local function explain_unknown_quantifier(a)
@@ -108,7 +109,7 @@ local function explain_unknown_quantifier(a)
    --    string.format("%s\n", line) ..
    --    string.rep(" ", pos-1) .. "^"
    -- coroutine.yield(false, msg)				    -- throw
-   throw(msg, a)
+   throw(violation.compile.new{who='compiler (c0)', message=msg, ast=a})
 end
 
 local function explain_grammar_error(a, message)
@@ -123,10 +124,10 @@ local function explain_grammar_error(a, message)
    if message:find("may be left recursive") then
       local msg = string.format(fmt, message)
 --      coroutine.yield(false, msg)		    -- throw
-      throw(msg, a)
+      throw(violation.compile.new{who='compiler (c0)', message=msg, ast=a})
    else
 --      coroutine.yield(false, "unexpected error raised by lpeg: " .. tostring(message))
-      throw(msg, a)
+      throw(violation.compile.new{who='compiler (c0)', message=msg, ast=a})
    end
 end
 
@@ -289,7 +290,10 @@ function c0.compile_ref(a, gmr, env)
    local reftype, pos, name, subs = decode_match(a)
    local pat, packagename, localname = c0.lookup(a, gmr, env)
    if not(pattern.is(pat)) then
-      throw("expected a pattern, but " .. a.text .. " is bound to " .. tostring(pat), a)
+      throw(
+	 violation.compile.new{who='compiler (c0)',
+			       message="expected a pattern, but " .. a.text .. " is bound to " .. tostring(pat),
+			       ast=a})
    end
    local newpat = pattern.new{name=name, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
    if reftype=="extref" and (not pat.alias) then
@@ -427,7 +431,9 @@ end
 
 function c0.compile_syntax_error(a, gmr, env)
    assert(a, "did not get ast in compile_syntax_error")
-   throw("Compiler called on source code with errors! ", a)
+   throw(violation.compile.new{who='compiler (c0)',
+			       message="Compiler called on source code with syntax errors",
+			       ast=a})
 end
 
 function c0.compile_grammar_expression(a, gmr, env)
@@ -551,9 +557,14 @@ local function apply_pfunction(pf, args, a)
    if f then
       local ok, retval = pcall(f, table.unpack(args))
       if not ok then
-	 throw("function call failed: " .. tostring(retval), a)
+	 throw(violation.compile.new{who='compiler (c0)',
+				     message="function call failed: " .. tostring(retval),
+				  ast=a})
       elseif not pattern.is(retval) then
-	 throw("function call did not produce a pattern: " .. tostring(retval), a)
+	 throw(violation.compile.new{who='compiler (c0)',
+				     message="function call did not produce a pattern: "
+				     .. tostring(retval),
+				  ast=a})
       else
 	 return retval
       end -- if not ok
@@ -563,7 +574,10 @@ end
       
 local function compile_int(ast, gmr, env)
    local i = tonumber(ast.text)
-   if not i then throw("invalid number: " .. text, ast); end
+   if not i then throw(violation.compile.new{who='compiler (c0)',
+					     message="not an integer: " .. text,
+					     ast=ast})
+   end
    return i
 end
 
@@ -619,7 +633,9 @@ end
 local function compile_rhs(a, gmr, env, iname)
    assert(type(a)=="table", "did not get ast in compile_rhs: " .. tostring(a))
    if not c0.expression_p(a) then
-      throw('expected an expression', a)
+      throw(violation.compile.new{who='compiler (c0)',
+				  message='expected an expression',
+				  ast=a})
    end
    local pat = c0.compile_exp(a, gmr, env)
    local rhs_name = a.type
