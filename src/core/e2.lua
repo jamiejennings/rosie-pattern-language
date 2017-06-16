@@ -62,6 +62,8 @@ local function remove_raw_exp(ex)
    end
 end
 
+local remove_cooked_raw_from_stmts;
+
 -- The compiler does not know about cooked/raw expressions.  Both ast.cooked and ast.raw
 -- structures are removed here, where we implement the notion that the ambience is, by default,
 -- "cooked".
@@ -86,7 +88,8 @@ function remove_cooked_exp(ex)
       return ast.sequence.new{exps=new, s=ex.s, e=ex.e}
    elseif ast.grammar.is(ex) then
       -- ambience has no effect on a grammar expression
-      return ast.grammar.new{rules=remove_cooked_exp(ex.rules), s=ex.s, e=ex.e}
+      remove_cooked_raw_from_stmts(ex.rules) 
+      return ex
    elseif ast.repetition.is(ex) then 
       -- ambience has no effect on a repetition, but the expression being repeated must be
       -- carefully transformed: if it explicitly cooked, then flag the repetition as cooked, strip
@@ -104,7 +107,7 @@ end
 
 local remove_cooked_raw_from_exp = remove_cooked_exp;
 
-local function remove_cooked_raw_from_stmts(stmts)
+function remove_cooked_raw_from_stmts(stmts)
    for _, stmt in ipairs(stmts) do
       stmt.exp = remove_cooked_raw_from_exp(stmt.exp)
    end

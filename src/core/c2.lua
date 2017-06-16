@@ -200,8 +200,82 @@ function cs_exp(a, env, messages)
    end
 end
 
--- Can't just run peg:match("") because a lookahead expression will return nil (i.e. it will not
--- match the empty string), even though it cannot be put into a loop (because it consumes no
+local function wrap_pattern(pat, name)
+   if pat.uncap then
+      -- If pat.uncap exists, then pat.peg is already wrapped in a capture.  In order to wrap pat
+      -- with a capture called 'name', we start with pat.uncap.  Here's a case where this happens:
+      -- We must have an assignment like 'p1 = p2' where p2 is not an alias.  RPL semantics are
+      -- that p1 must capture the same as p2, but the output should be labeled p1.
+      pat.peg = common.match_node_wrap(pat.uncap, name)
+   else
+      -- If there is no pat.uncap, then pat.peg is NOT wrapped in a capture, so we can simply wrap
+      -- it with a capture called 'name'.
+      pat.uncap = pat.peg
+      pat.peg = common.match_node_wrap(pat.peg, name)
+   end
+end
+
+local function throw_grammar_error(a, message)
+   local maybe_rule = message:match("'%w'$")
+   local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
+   local fmt = "%s"
+   if message:find("may be left recursive") then
+      throw(violation.compile.new{who='compiler',
+				  message=string.format(fmt, message),
+			          ast=a})
+   end
+   throw(violation.compile.new{who='compiler',
+			       message="peg compilation error: " .. message,
+			       ast=a})
+end
+
+local function grammar(a, env, messages)
+   local gtable = environment.extend(env)
+   -- First pass: collect rule names as V() refs into a new env
+   for _, rule in ipairs(a.rules) do
+      assert(ast.binding.is(rule))
+      assert(not rule.ref.packagename)
+      assert(type(rule.ref.localname)=="string")
+      local id = rule.ref.localname
+      bind(gtable, id, pattern.new{name=id, peg=V(id), alias=rule.is_alias})
+   end
+   -- Second pass: compile right hand sides in gtable environment
+   local pats = {}
+   local start
+   for _, rule in ipairs(a.rules) do
+      local id = rule.ref.localname
+      if not start then start=id; end		    -- first rule is start rule
+      pats[id] = expression(rule.exp, gtable, messages)
+      if (not rule.is_alias) then wrap_pattern(pats[id], id); end
+   end -- for
+   -- Third pass: create the table that will create the LPEG grammar 
+   local t = {}
+   for id, pat in pairs(pats) do t[id] = pat.peg; end
+   t[1] = start					    -- first rule is start rule
+   local uncap_peg
+   local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
+   if success then
+      local aliasflag = lookup(gtable, t[1]).alias
+      if not aliasflag then
+	 assert(pats[start].uncap)
+	 t[start] = pats[start].uncap
+	 success, uncap_peg = pcall(P, t)
+      end
+      if (not success) then
+	 assert(type(peg_or_msg)=="string",
+	     "Internal error (compiler) while reporting an error in a grammar")
+	 throw_grammar_error(a, peg_or_msg)
+      end
+      return pattern.new{name="grammar",
+			 peg=peg_or_msg,
+			 uncap=(aliasflag and nil) or uncap_peg,
+		         ast=a,
+		         alias=aliasflag}
+   end
+end
+
+-- We cannot just run peg:match("") because a lookahead expression will return nil (i.e. it will
+-- not match the empty string), even though it cannot be put into a loop (because it consumes no
 -- input).
 local function matches_empty(peg)
    local ok, msg = pcall(function() return peg^1 end)
@@ -297,22 +371,26 @@ local dispatch = { [ast.literal] = literal,
 		   [ast.cs_list] = cs_list,
 		   [ast.repetition] = repetition,
 		   [ast.predicate] = predicate,
+		   [ast.grammar] = grammar,
 		}
 
 -- the forward reference declares 'expression' to be local
 function expression(a, env, messages)
    local compile = dispatch[parent(a)]
-   if compile then
-      return compile(a, env, messages)
-   else
-      print("*** NOT compiling " .. tostring(a))
+   if (not compile) then
+      throw(violation.compile.new{who='compiler', message="invalid expression", ast=a})
    end
+   return compile(a, env, messages)
 end
 
 local function compile_expression(...)
    return apply_catch(expression, ...)
 end
 
+-- 'c2.compile_expression' compiles a top-level expression for matching.  If the expression is
+-- simply a reference, the match output will have the name of the referenced pattern.  If the
+-- expression is a reference to an alias, or if the expression is not a reference at all, then the
+-- match output will have the name "*" (meaning "anonymous") at the top level.
 function c2.compile_expression(a, env, messages)
    local ok, pat = compile_expression(a, env, messages)
    if not ok then return nil; end
@@ -323,8 +401,7 @@ function c2.compile_expression(a, env, messages)
    end
    local peg, name = pat.peg, pat.name
    if (not ast.ref.is(a)) or pat.alias then
-      -- anonymous pattern
-      name = "*"
+      name = "*"				    -- anonymous pattern
       if pat.uncap then peg = pat.uncap; end
    end
    pat.alias = false
@@ -375,17 +452,7 @@ function c2.compile_block(a, pkgenv, messages)
 	 if type(pat)~="table" then
 	    print("    BUT DID NOT GET A PATTERN: " .. tostring(pat))
 	 end
-	 if (not b.is_alias) then
-	    if pat.uncap then
-	       -- We must have an assignment like 'p1 = p2' where p2 is not an alias.  RPL semantics
-	       -- are that p1 must capture the same as p2, but the output should be labeled p1.
-	       pat.peg = common.match_node_wrap(pat.uncap, ref.localname)
-	    else
-	       -- The binding b is a capture, and there is no pat.uncap
-	       pat.uncap = pat.peg
-	       pat.peg = common.match_node_wrap(pat.peg, ref.localname)
-	    end
-	 end
+	 if (not b.is_alias) then wrap_pattern(pat, ref.localname); end
 	 pat.alias = b.is_alias
 	 bind(pkgenv, ref.localname, pat)
       end
