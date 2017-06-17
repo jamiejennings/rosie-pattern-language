@@ -192,8 +192,8 @@ function cs_exp(a, env, messages)
       throw("character set intersection is not implemented", a)
    elseif ast.cs_difference.is(a.cexp) then
       throw("character set difference is not implemented", a)
-   elseif ast.simple_charset_p(a) then
-      local p = expression(a, env, messages)
+   elseif ast.simple_charset_p(a.cexp) then
+      local p = expression(a.cexp, env, messages)
       return pattern.new{name="cs_exp", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
    else
       assert(false, "unknown cexp inside cs_exp", a)

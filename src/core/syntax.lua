@@ -548,11 +548,6 @@ end
 --          (2) 'identifier' --> 'ref'                     (core, 0, 1)
 --          (3) 'quantified_exp' --> 'new_quantified_exp'  (core, 0, 1)
 
--- FIXED:
--- 'statement' stripped off (0, so UNUSED!)
--- 'expression' stripped off (core, so UNUSED!)
--- also accepts: 'language_decl' (UNUSED!)
-
 function syntax.top_level_transform1(ast)
    local name = ast.type
    if name=="rpl_statements" or name=="rpl_expression" then
@@ -561,16 +556,6 @@ function syntax.top_level_transform1(ast)
 			  ast.pos,
 			  ast.text,
 			  table.unpack(list.map(syntax.top_level_transform1, list.from(ast.subs or {}))))
-   -- elseif name=="statement" then
-   --    local name = common.decode_match(ast.subs[1])
-   --    assert(name=="alias_" or name=="assignment_" or name=="grammar_" or name=="local_",
-   -- 	  "unknown ast node type: " .. tostring(name))
-   --    -- strip off the 'statement' wrapper
-   --    return syntax.top_level_transform1(ast.subs[1])
---   elseif name=="expression" then
---      local name = common.decode_match(ast.subs[1])
---      -- strip off the 'expression' wrapper
---      return syntax.top_level_transform1(ast.subs[1])
    elseif (name=="assignment_") or (name=="alias_") then
       return syntax.to_binding(ast)
    elseif (name=="grammar_") then
@@ -585,7 +570,7 @@ function syntax.top_level_transform1(ast)
       return syntax.generate("local_", new)
    elseif (name=="syntax_error") then
       return ast				    -- errors will be culled out later
-   elseif (name=="package_decl") or (name=="import_decl") then -- or (name=="language_decl")
+   elseif (name=="package_decl") or (name=="import_decl") then
       return ast				    -- no transformation needed
    elseif (name=="application") then
       return transform_application(ast)

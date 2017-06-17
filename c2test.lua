@@ -178,3 +178,39 @@ table.print(m)
 assert(m and m.type and m.type=="*")
 print("match against thisisaword 1.2.3.4 OK")
 
+go("import rosie/rpl_1_1")
+rp11 = environment.lookup(env, "rpl_statements", "rpl_1_1")
+
+rpl11_source = util.readfile("rpl/rosie/rpl_1_1.rpl")
+assert(rpl11_source)
+t, leftover = RPLX_PREPARSE:match(rpl11_source)
+m11 = rp11.peg:rmatch(rpl11_source, #rpl11_source-leftover+1)
+assert(m11)
+m = decode(m11)
+assert(m.type=="rpl_statements")
+print("Success: rpl_1_1 can parse itself")
+
+-- It's not a valid test to see if rpl_1_0.statements can parse anything, because we are compiling
+-- rpl_1_0 with the c2 compiler, and there are surely subtle differences between pegs produced by
+-- c2 and c0.
+
+go("import rosie/rpl_1_0")
+rp10 = environment.lookup(env, "rpl_statements", "rpl_1_0")
+
+rpl10_source = util.readfile("rpl/rosie/rpl_1_0.rpl")
+assert(rpl10_source)
+t, leftover = RPLX_PREPARSE:match(rpl10_source)
+m10 = rp10.peg:rmatch(rpl10_source, #rpl10_source-leftover+1)
+assert(m10)
+m = decode(m10)
+assert(m.type=="rpl_statements")
+print("Success: rpl_1_0 can parse itself")
+
+t, leftover = RPLX_PREPARSE:match(rpl11_source)
+mm11 = rp10.peg:rmatch(rpl11_source, #rpl11_source-leftover+1)
+assert(mm11)
+m = decode(mm11)
+assert(m.type=="rpl_statements")
+print("Success: rpl_1_0 can parse rpl_1_1")
+
+
