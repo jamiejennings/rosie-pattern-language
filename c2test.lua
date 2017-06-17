@@ -209,8 +209,8 @@ print("Success: rpl_1_0 can parse itself")
 t, leftover = RPLX_PREPARSE:match(rpl11_source)
 mm11 = rp10.peg:rmatch(rpl11_source, #rpl11_source-leftover+1)
 assert(mm11)
-m = decode(mm11)
-assert(m.type=="rpl_statements")
+mm = decode(mm11)
+assert(mm.type=="rpl_statements")
 print("Success: rpl_1_0 can parse rpl_1_1")
 
 

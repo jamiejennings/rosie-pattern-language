@@ -461,7 +461,7 @@ function syntax.expression_p(ast)
 	   (name=="range") or
 	   (name=="charlist") or
 	   (name=="charset_exp") or
---	   (name=="charset") or		-- only used by core, which does not use syntax expansion
+	   (name=="charset") or
 	   (name=="choice") or
 	   (name=="sequence") or
 	   (name=="predicate"))

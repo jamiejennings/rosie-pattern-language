@@ -19,7 +19,7 @@
 
 package rpl_1_0
 
-alias newline = {"\n"}				    -- raw mode just to suppress compiler warning 
+alias newline = [[\n]]
 
 alias comment = { "--" {!newline .}* {newline / $} }
 alias ignore = { { [[:space:]] / comment }* }
@@ -114,5 +114,5 @@ alias package_decl = {"package" [[:space:]]} {!newline .}*
 rpl_statements = (ignore statement / package_decl / syntax_error)* ignore $
 rpl_expression = ignore expression ignore $
 
-alias item = {ignore {statement / expression / syntax_error}}
-rpl = item* ignore $
+--alias item = {ignore {statement / expression / syntax_error}}
+--rpl = item* ignore $
