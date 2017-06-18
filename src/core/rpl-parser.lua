@@ -118,7 +118,7 @@ function rpl_parser.make_preparser(rplx_preparse, supported_version)
 end -- make_preparser
 
 function rpl_parser.make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_expand)
-   return function(source, msgs)
+   return function(source, origin, msgs)
 	     local maj, min, pos, err
 	     assert(type(msgs)=="table")
 	     assert(type(source)=="string",
@@ -186,7 +186,7 @@ function rpl_parser.parse_deps(parser, input)
    local message = {}
    local ast, orig_ast
    if type(input)=="string" then
-      ast, orig_ast, leftover = parser.parse_statements(input, messages)
+      ast, orig_ast, leftover = parser.parse_statements(input, nil, messages)
       if not ast then return nil, messages; end
    elseif type(input)=="table" then
       ast, orig_ast = input, input

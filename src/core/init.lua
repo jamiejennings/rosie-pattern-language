@@ -166,8 +166,8 @@ local function create_core_engine()
    assert(syntax.transform0, "error while initializing: syntax module not loaded?")
 
    local function make_parser_expander(parser)
-      return function(source, msgs)
-		local pt, leftover = parser(source, msgs)
+      return function(source, origin, msgs)
+		local pt, leftover = parser(source, origin, msgs)
 		if not pt then
 		   return nil, nil, leftover
 		else
@@ -203,6 +203,7 @@ local function create_core_engine()
 
    if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
    local success, pkg, messages = CORE_ENGINE:load(rpl_1_0, "rosie/rpl_1_0.rpl")
+   if not success then error("Error while loading " .. rpl_1_0_filename .. ":\n" .. tostring(pkg)); end
 
    local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_statements', 'match')
    if not success then error("Error while initializing: could not compile 'rpl_statements' in "

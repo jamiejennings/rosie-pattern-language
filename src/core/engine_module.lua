@@ -121,13 +121,13 @@ local function compile_search(en, pattern_exp)
    -- First, we compile the exp in order to give an accurate message if it fails
    -- What to do with leftover?
    local warnings = {}
-   local ast, orig_ast, leftover = parse(pattern_exp, warnings)
+   local ast, orig_ast, leftover = parse(pattern_exp, nil, warnings)
    if not ast and ast.subs then return false, warnings, leftover; end
    local pat, msgs = compile(nil, ast, en._pkgtable, env)
    if not pat then return false, msgs; end
    local replacement = ast.subs[1]
    -- Next, transform pat.ast
-   local ast, orig_ast, leftover = parse("{{!e .}* e}+", warnings)
+   local ast, orig_ast, leftover = parse("{{!e .}* e}+", nil, warnings)
    assert(type(ast)=="table" and ast.subs and ast.subs[1] and (not ast.subs[2]))
    assert(ast.type=="rpl_expression")
    assert(ast.subs[1].type=="raw_exp", "type is: " .. ast.subs[1].type)
@@ -144,7 +144,7 @@ local function compile_match(en, source)
    local parse = en.compiler.parser.parse_expression
    local compile = en.compiler.compile_expression
    local messages = {}
-   local ast, original_ast, leftover = parse(source, messages)
+   local ast, original_ast, leftover = parse(source, nil, messages)
    assert(type(messages)=="table")
    if not ast then return false, messages; end
    return compile(nil, ast, en._pkgtable, en._env)
@@ -243,7 +243,7 @@ local function load_input(e, target_env, input, importpath, modonly)
    local ast, original_ast, leftover
    local warnings = {}
    if type(input)=="string" then
-      ast, original_ast, leftover = parser.parse_statements(input, warnings)
+      ast, original_ast, leftover = parser.parse_statements(input, nil, warnings)
    elseif type(input)=="table" then
       ast, original_ast, leftover = input, input, 0
    else
@@ -399,7 +399,7 @@ end
 
 local function parse_identifier(en, str)
    local msgs = {}
-   local m = en.compiler.parser.parse_expression(str, msgs)
+   local m = en.compiler.parser.parse_expression(str, nil, msgs)
    if m and m.subs and m.subs[1] then
       assert(m.type=="rpl_expression")
       m = m.subs[1]

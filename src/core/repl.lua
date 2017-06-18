@@ -164,7 +164,7 @@ function repl.repl(en)
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
 		     local errs = {}
-		     local ast, original_ast = en.compiler.parser.parse_expression(exp_string, errs)
+		     local ast, original_ast = en.compiler.parser.parse_expression(exp_string, nil, errs)
 		     if not ast then
 			table.print(errs)	    -- FIXME (TEMPORARY)
 			io.write("\n")
