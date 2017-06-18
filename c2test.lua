@@ -3,6 +3,7 @@ e = rosie.engine.new()
 
 list = rosie._env.list
 util = rosie._env.util
+recordtype = rosie._env.recordtype
 common = rosie._env.common
 environment = rosie._env.environment
 ast = rosie._env.ast
@@ -23,6 +24,21 @@ RPLX_EXPRESSION = e:compile("rpl_expression")
 version = common.rpl_version.new(1, 1)
 
 parse_expression = c2.make_parse_expression(RPLX_EXPRESSION)
+compile_expression = function(input, env, messages)
+			local ast = input
+			if type(input)=="string" then
+			   ast = parse_expression(input, nil, messages)
+			   -- syntax errors will be in messages table
+			   if not ast then return false; end
+			end
+			if not recordtype.parent(ast) then
+			   assert(false, "unexpected input type to compile_expression: " .. tostring(ast))
+			end
+			ast = c2.expand_expression(ast, env, messages)
+			-- syntax errors will be in messages table
+			if not ast then return false; end
+			return c2.compile_expression(ast, env, messages)
+		     end
 
 c = {parse_block = c2.make_parse_block(RPLX_PREPARSE, RPLX_STATEMENTS, version),
      expand_block = c2.expand_block,
@@ -139,7 +155,7 @@ goimport("os"); print(ast.tostring(c2.asts.os), "\n")
 
 print("--- Testing compile_expression ---")
 
-n = c2.compile_expression(c2.expand_expression(parse_expression("net.any", nil, messages)), env, messages)
+n = compile_expression("net.any", env, messages)
 assert(n)
 table.print(decode(n.peg:rmatch("1.2.3.4")))
 print("match against 1.2.3.4 OK")
@@ -151,27 +167,27 @@ print("non-match against aksdlaksdlsakd OK")
 
 
 go('foo = net.any')
-n2 = c2.compile_expression(c2.expand_expression(parse_expression("foo", nil, messages)), env, messages)
+n2 = compile_expression("foo", env, messages)
 assert(n2)
 table.print(decode(n2.peg:rmatch("1.2.3.4")))
 print("match against 1.2.3.4 OK")
 
 
 go('alias afoo = net.any')
-n3 = c2.compile_expression(c2.expand_expression(parse_expression("afoo", nil, messages)), env, messages)
+n3 = compile_expression("afoo", env, messages)
 assert(n3)
 m = decode(n3.peg:rmatch("1.2.3.4"))
 assert(m and m.type and m.type=="*")
 table.print(m)
 print("match against 1.2.3.4 OK")
 
-n4 = c2.compile_expression(c2.expand_expression(parse_expression("common.word afoo", nil, messages)), env, messages)
+n4 = compile_expression("common.word afoo", env, messages)
 assert(n4)
 table.print(decode(n4.peg:rmatch("hello 1.2.3.4")))
 print("match against hello 1.2.3.4 OK")
 
 go('alias aresolv = common.word net.any')
-n5 = c2.compile_expression(c2.expand_expression(parse_expression("aresolv", nil, messages)), env, messages)
+n5 = compile_expression("aresolv", env, messages)
 assert(n5)
 m = decode(n5.peg:rmatch("thisisaword 	1.2.3.4"))
 table.print(m)

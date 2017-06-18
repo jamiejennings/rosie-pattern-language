@@ -199,31 +199,30 @@ end
 -- Parser for the Rosie core language, i.e. rpl 0.0
 ----------------------------------------------------------------------------------------
 
-function parse.core_parse(source)
+function parse.core_parse(source, errs)
    assert(type(source)=="string", "Core parser: source argument is not a string: "..tostring(source))
-   local astlist, leftover = parse_without_error_check(source)
+   local ptlist, leftover = parse_without_error_check(source)
+   assert(type(ptlist)=="table")
    assert(type(leftover)=="number")
-   local errlist = {};
-   for _,a in ipairs(astlist) do
-      if parse.syntax_error_check(a) then table.insert(errlist, a); end
+   for _, pt in ipairs(ptlist) do
+      if parse.syntax_error_check(pt) then table.insert(errs, pt); end
    end
-   if #errlist==0 then
-      return common.create_match("core", 1, source, table.unpack(astlist)),
-             {},				    -- 2nd return value is empty table of messages
-	     leftover
+   if #errs==0 then
+      return common.create_match("core", 1, source, table.unpack(ptlist)), leftover
    else
       assert(false, "Core parser reports syntax errors:\n" ..
-	     util.table_to_pretty_string(errlist) .. "\n")
+	     util.table_to_pretty_string(errs or {}) .. "\n")
    end
 end
 
-function parse.core_parse_expression(source)
-   local ast, errs, leftover = parse.core_parse(source)
-   if not ast then return nil, errs, leftover; end
-   assert(type(ast)=="table" and ast.type=="core")
-   if not (ast.subs and ast.subs[1]) then return nil, "empty expression", #source
-   elseif ast.subs and ast.subs[2] then return nil, "not an expression", #source
-   else return ast, errs, leftover; end
+function parse.core_parse_expression(source, errs)
+   local pt, leftover = parse.core_parse(source, errs)
+   -- syntax errors will be in errs table
+   if not pt then return false, leftover; end
+   assert(type(pt)=="table" and pt.type=="core")
+   if not (pt.subs and pt.subs[1]) then return nil, "empty expression", #source
+   elseif (pt.subs and pt.subs[2]) then return nil, "not an expression", #source
+   else return pt, leftover; end
 end
       
 return parse

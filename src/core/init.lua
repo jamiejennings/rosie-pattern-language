@@ -167,11 +167,12 @@ local function create_core_engine()
 
    local function make_parser_expander(parser)
       return function(source)
-		local ast, msgs, leftover = parser(source)
-		if not ast then
+		local msgs = {}
+		local pt, leftover = parser(source, msgs)
+		if not pt then
 		   return nil, nil, msgs, leftover
 		else
-		   return syntax.transform0(ast), ast, msgs, leftover
+		   return syntax.transform0(pt), pt, msgs, leftover
 		end
 	     end
    end
