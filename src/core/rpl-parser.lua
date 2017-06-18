@@ -118,15 +118,18 @@ function rpl_parser.make_preparser(rplx_preparse, supported_version)
 end -- make_preparser
 
 function rpl_parser.make_parse_and_explain(preparse, supported_version, rplx_rpl, syntax_expand)
-   return function(source)
+   return function(source, msgs)
 	     local maj, min, pos, err
+	     assert(type(msgs)=="table")
 	     assert(type(source)=="string",
 		    "Error: source argument is not a string: "..tostring(source) ..
 		    "\n" .. debug.traceback())
 	     if preparse then
 		-- preparse to look for rpl language version declaration
 		maj, min, pos, err = preparse(source, supported_version)
-		if not maj then return nil, nil, {err}; end
+		if not maj then
+		   table.insert(msgs, err)
+		   return nil, nil, pos; end
 	     else
 		pos = 1
 	     end
@@ -135,15 +138,14 @@ function rpl_parser.make_parse_and_explain(preparse, supported_version, rplx_rpl
 	     local ast = syntax_expand(original_ast)
 	     -- if syntax errors, then generate readable explanations
 	     if #errlist~=0 then
-		local msgs = {}
 		--table.insert(msgs, "Warning: syntax error reporting is limited at this time")
 		for _,e in ipairs(errlist) do
 		   table.insert(msgs, explain_syntax_error(e, source))
 		end
-		return nil, nil, msgs, leftover
+		return nil, nil, leftover
 	     else
 		-- successful parse
-		return ast, original_ast, {}, leftover
+		return ast, original_ast, leftover
 	     end
 	  end -- parse and explain function
 end -- make_parse_and_explain
@@ -181,9 +183,10 @@ end
 function rpl_parser.parse_deps(parser, input)
    local maj, min, pos, err = parser.preparse(input)
    if not maj then return nil, err; end
-   local ast, orig_ast, messages
+   local message = {}
+   local ast, orig_ast
    if type(input)=="string" then
-      ast, orig_ast, messages = parser.parse_statements(input)
+      ast, orig_ast, leftover = parser.parse_statements(input, messages)
       if not ast then return nil, messages; end
    elseif type(input)=="table" then
       ast, orig_ast = input, input

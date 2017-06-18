@@ -166,13 +166,12 @@ local function create_core_engine()
    assert(syntax.transform0, "error while initializing: syntax module not loaded?")
 
    local function make_parser_expander(parser)
-      return function(source)
-		local msgs = {}
+      return function(source, msgs)
 		local pt, leftover = parser(source, msgs)
 		if not pt then
-		   return nil, nil, msgs, leftover
+		   return nil, nil, leftover
 		else
-		   return syntax.transform0(pt), pt, msgs, leftover
+		   return syntax.transform0(pt), pt, leftover
 		end
 	     end
    end

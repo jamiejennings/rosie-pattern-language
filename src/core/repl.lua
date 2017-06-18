@@ -163,7 +163,8 @@ function repl.repl(en)
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
-		     local ast, original_ast, errs = en.compiler.parser.parse_expression(exp_string)
+		     local errs = {}
+		     local ast, original_ast = en.compiler.parser.parse_expression(exp_string, errs)
 		     if not ast then
 			table.print(errs)	    -- FIXME (TEMPORARY)
 			io.write("\n")
