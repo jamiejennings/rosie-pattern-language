@@ -92,7 +92,6 @@ local function validate_block(a)
    return true, {}
 end
 
--- Returns pkgname (from inside the module source code), pkgenv
 local function compile(compiler, a, pkgenv, messages)
    -- We call the compiler with the import declarations already processed, and the imported
    -- bindings accessible in pkgenv
@@ -107,7 +106,7 @@ local function compile(compiler, a, pkgenv, messages)
       return false
    end
    common.note(string.format("load: compiled %s", pkgname or "<top level>"))
-   return pkgname, pkgenv
+   return true
 end
 
 function load.source(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
@@ -133,8 +132,10 @@ function load.source(compiler, pkgtable, top_level_env, searchpath, src, importp
    -- Via side effects, a.pdecl and a.ideclist are now filled in.
    -- With a mutually recursive call to load.imports, we can load the dependencies in a.ideclist. 
    if not load.imports(compiler, pkgtable, top_level_env, searchpath, importpath, a.ideclist, env, messages) then return false; end
-   if not compiler.expand_block(a, env, messages) then return false; end
-   if not compile(compiler, a, env, messages) then return false; end
+   if not compiler.expand_block(a, env, messages) then
+      print("*** EXPAND FAILED"); return false; end
+   if not compile(compiler, a, env, messages) then
+      print("*** COMPILE FAILED"); return false; end
    if importpath then
       if a.pdecl and a.pdecl.name then
 	 common.pkgtableset(pkgtable, importpath, a.pdecl.name, env)

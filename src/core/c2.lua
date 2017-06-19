@@ -21,9 +21,7 @@ local P, V, C, S, R, Cmt, B =
 local common = require "common"
 local novalue = common.novalue
 local pattern = common.pattern
-local throw = common.throw_error
 local violation = require "violation"
-local throw = violation.throw
 local apply_catch = violation.catch
 local recordtype = require "recordtype"
 parent = recordtype.parent
@@ -36,6 +34,12 @@ local e2 = require "e2"
 c2.asts = {}
 
 
+local function throw(msg, a)
+   return violation.throw(violation.compile.new{who='compiler (c2)',
+						message=msg,
+						ast=a})
+end
+						
 ---------------------------------------------------------------------------------------------------
 -- Create parser
 ---------------------------------------------------------------------------------------------------
@@ -348,7 +352,7 @@ local function ref(a, env, messages)
    if (not pat) then throw("unbound identifier", a); end
    if not(pattern.is(pat)) then
       local name = (a.packagename and (a.packagename .. ".") or "") .. a.localname
-      throw("type mismatch: expected a pattern, but " .. name .. " is bound to " .. tostring(pat), a)
+      throw("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
    end
    local newpat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
    if a.packagename and (not pat.alias) then
@@ -392,20 +396,21 @@ end
 -- expression is a reference to an alias, or if the expression is not a reference at all, then the
 -- match output will have the name "*" (meaning "anonymous") at the top level.
 function c2.compile_expression(a, env, messages)
-   local ok, pat = compile_expression(a, env, messages)
-   if not ok then return nil; end
-   if not pattern.is(pat) then
+   local ok, pat, err = compile_expression(a, env, messages)
+   if not ok then error("Internal error: " .. tostring(pat)); end
+   if not pat then return false, err; end
+   if pat and (not pattern.is(pat)) then
       local msg = "type error: expression did not compile to a pattern, instead got " ..
 	 tostring(pat)
-      return violation.compile.new{who='compile expression', message=msg, ast=a}
+      return false, violation.compile.new{who='compile expression', message=msg, ast=a}
    end
    local peg, name = pat.peg, pat.name
    if (not ast.ref.is(a)) or pat.alias then
       name = "*"				    -- anonymous pattern
       if pat.uncap then peg = pat.uncap; end
+      pat.alias = false
+      pat.peg = common.match_node_wrap(peg, name)
    end
-   pat.alias = false
-   pat.peg = common.match_node_wrap(peg, name)      
    return pat
 end
 

@@ -298,6 +298,52 @@ function create_rpl1_1_engine()
    ROSIE_ENGINE = RPL1_1_ENGINE
 end
 
+function create_NEW_rpl1_1_engine()
+   -- Like RPL1_1_ENGINE but uses the new c2 compiler
+   local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
+   local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
+   if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
+   local e = engine.new("RPL 1.1 engine", compiler1_0)
+   e.searchpath = ROSIE_LIB
+   e:load(rpl_1_1, "rosie/rpl_1_1.rpl")
+   local version = common.rpl_version.new(1, 1)
+   local rplx_preparse = e:compile("preparse")
+   local rplx_statements = e:compile("rpl_statements")
+   local rplx_expression = e:compile("rpl_expression")
+
+   local parse_expression = c2.make_parse_expression(rplx_expression)
+
+   local compile_expression =
+      function(input, env, messages)
+	 local ast = input
+	 if type(input)=="string" then
+	    ast = parse_expression(input, nil, messages)
+	    -- syntax errors will be in messages table
+	    if not ast then return false; end
+	 end
+	 if not recordtype.parent(ast) then
+	    assert(false, "unexpected input type to compile_expression: " .. tostring(ast))
+	 end
+	 ast = c2.expand_expression(ast, env, messages)
+	 -- syntax errors will be in messages table
+	 if not ast then return false; end
+	 return c2.compile_expression(ast, env, messages)
+      end
+
+   compiler2 = { version = version,
+		 parse_block = c2.make_parse_block(rplx_preparse, rplx_statements, version),
+	         expand_block = c2.expand_block,
+	         compile_block = c2.compile_block,
+	         compile_expression = compile_expression,
+	   }
+
+   local c2engine = engine.new("NEW RPL 1.1 engine (c2)", compiler2)
+   c2engine.searchpath = ROSIE_LIB
+
+   NEW_ENGINE = c2engine
+   announce("NEW_ENGINE", NEW_ENGINE)
+end
+
 ----------------------------------------------------------------------------------------
 -- INFO for debugging
 ----------------------------------------------------------------------------------------
@@ -373,6 +419,8 @@ create_rpl1_0_engine()
 create_rpl1_1_engine()
 assert(ROSIE_ENGINE)
 populate_info()
+
+create_NEW_rpl1_1_engine()
 
 rosie_package.engine = engine
 rosie_package.encoders = create_encoder_table()
