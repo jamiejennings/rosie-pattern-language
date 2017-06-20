@@ -54,8 +54,8 @@ function p.run(rosie, en, args, filename)
    local test_engine = rosie.engine.new()
    -- set it up using whatever rpl strings or files were given on the command line
    cli_common.setup_engine(test_engine, args)
-   -- load the rpl code we are going to test
-   local ok, _, msgs = test_engine:loadfile(filename, true) -- second arg true --> do not search
+   -- load the rpl code we are going to test (second arg true means "do not search")
+   local ok, pkgname, msgs, actual_path = test_engine:loadfile(filename, true)
    if not ok then
       io.write("Error: rpl file did not compile\n", util.table_to_pretty_string(msgs), "\n")
       return 0, 0
@@ -71,12 +71,17 @@ function p.run(rosie, en, args, filename)
       return 0, 0
    end
    local function test_accepts_exp(exp, q)
+      if pkgname then exp = pkgname .. "." .. exp; end
       local ok, res, pos = test_engine:match(exp, q)
+      if not ok then
+	 print("***"); table.print(res); print("***")
+      end
       if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
       if (not ok) or (not res) or (pos ~= 0) then return false end
       return true
    end
    local function test_rejects_exp(exp, q)
+      if pkgname then exp = pkgname .. "." .. exp; end
       local ok, res, pos = test_engine:match(exp, q)
       if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
       if (not ok) or (res and (pos == 0)) then return false end
@@ -99,6 +104,7 @@ function p.run(rosie, en, args, filename)
          end
          return found
       end
+      if pkgname then exp = pkgname .. "." .. exp; end
       local ok, res, leftover = test_engine:match(exp, q)
       if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
       -- check for match error, which prevents testing containment
@@ -141,7 +147,7 @@ function p.run(rosie, en, args, filename)
 	       msg = " did not exclude " .. containedIdentifier .. " with input " .. teststr
 	    end
 	    if msg then
-               print(filename .. ": FAIL: " .. testIdentifier .. msg)
+               print(filename .. ((includes==nil and ": BLOCKED: ") or ": FAIL: ") .. testIdentifier .. msg)
                failures = failures + 1
             end
          end

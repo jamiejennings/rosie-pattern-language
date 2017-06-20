@@ -85,9 +85,9 @@ ast.raw = recordtype.new("raw",
 
 
 ast.literal = recordtype.new("literal",			    -- interpolated string literals
-			 {value = NIL;
-			  s = NIL;
-			  e = NIL;})
+			     {value = NIL;		    -- raw value, as seen in rpl source
+			      s = NIL;
+			      e = NIL;})
 
 ast.cs_exp = recordtype.new("cs_exp",		    -- [ [exp1] ... ]
 			  {complement = false;
@@ -474,12 +474,11 @@ function ast.tostring(a)
    elseif ast.cs_list.is(a) then
       return ( "[" ..
 	       (a.complement and "^" or "") ..
-	       --table.concat(map(common.unescape_string, a.chars), "") ..
 	       table.concat(a.chars, "") ..
 	       "]" )
    elseif ast.cs_range.is(a) then
       return ( "[" .. (a.complement and "^" or "") ..
-	       common.unescape_string(a.first) .. "-" .. common.unescape_string(a.last) ..
+	       a.first .. "-" .. a.last ..
 	       "]" )
    elseif ast.cs_union.is(a) then
       return table.concat(map(ast.tostring, a.cexps), " ")

@@ -93,7 +93,7 @@ local function literal(a, env, messages)
    if not str then
       throw("invalid escape sequence in literal: \\" .. offense, a)
    end
-   return pattern.new{name="literal"; peg=P(a.value); ast=a}
+   return pattern.new{name="literal"; peg=P(str); ast=a}
 end
 
 local function sequence(a, env, messages)
@@ -477,12 +477,13 @@ function c2.compile_block(a, pkgenv, messages)
 
       if pat then 
 	 -- TEMPORARY
-	 print("*** actually compiled: " .. ref.localname)
+	 print("actually compiled: " .. ref.localname)
 	 if type(pat)~="table" then
 	    print("    BUT DID NOT GET A PATTERN: " .. tostring(pat))
 	 end
 	 if (not b.is_alias) then wrap_pattern(pat, ref.localname); end
 	 pat.alias = b.is_alias
+	 if b.is_local then pat.exported = false; end
 	 bind(pkgenv, ref.localname, pat)
       else
 	 return false

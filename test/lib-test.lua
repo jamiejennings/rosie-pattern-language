@@ -40,8 +40,9 @@ test.heading("Running self-tests on standard library")
 cmd = rosie_cmd .. " test " .. libdir .. "/*.rpl 2>/dev/null"
 print()
 print(cmd)
-results, status, code = util.os_execute_capture(cmd, nil, "l")
+results, status, code = util.os_execute_capture(cmd)
 if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
+if code~=0 then print("Status code was: ", code); end
 check(code==0, "Self test failed on the standard library")
 
 

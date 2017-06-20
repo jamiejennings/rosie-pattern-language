@@ -109,6 +109,8 @@ local function compile(compiler, a, pkgenv, messages)
    return true
 end
 
+local load_all_imports;
+
 function load.source(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
    assert(type(compiler)=="table")
    assert(type(pkgtable)=="table")
@@ -127,15 +129,20 @@ function load.source(compiler, pkgtable, top_level_env, searchpath, src, importp
    a.filename = fullpath
    if not validate_block(a) then return false; end
 
-   print("*** Block: "); print(ast.tostring(a)); print("*** end")
+   print("+++ Block: "); print(ast.tostring(a)); print("+++ end")
 
    -- Via side effects, a.pdecl and a.ideclist are now filled in.
-   -- With a mutually recursive call to load.imports, we can load the dependencies in a.ideclist. 
-   if not load.imports(compiler, pkgtable, top_level_env, searchpath, importpath, a.ideclist, env, messages) then return false; end
+   -- With a mutually recursive call to load_all_imports, we can load the dependencies in
+   -- a.ideclist.  
+   if not load_all_imports(compiler, pkgtable, top_level_env, searchpath, importpath,
+			   a.ideclist, env, messages)
+   then
+      return false
+   end
    if not compiler.expand_block(a, env, messages) then
-      print("*** EXPAND FAILED"); return false; end
+      print("+++ EXPAND FAILED"); return false; end
    if not compile(compiler, a, env, messages) then
-      print("*** COMPILE FAILED"); return false; end
+      print("+++ COMPILE FAILED"); return false; end
    if importpath then
       if a.pdecl and a.pdecl.name then
 	 common.pkgtableset(pkgtable, importpath, a.pdecl.name, env)
@@ -143,7 +150,7 @@ function load.source(compiler, pkgtable, top_level_env, searchpath, src, importp
 	 error("!!@#!#!#!@#!#@!#@ TODO: imported module source did not define a package")
       end
    end -- if importpath
-   return true
+   return true, (a.pdecl and a.pdecl.name)
 end
 
 local function import_from_source(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
@@ -159,7 +166,7 @@ local function import_from_source(compiler, pkgtable, top_level_env, searchpath,
    return load.source(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
 end
 
-local function import(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
+local function import_one(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
    -- First, look in the pkgtable to see if this pkg has been loaded already
    local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
    if pkgname then
@@ -173,7 +180,7 @@ local function import(compiler, pkgtable, top_level_env, searchpath, importpath,
    return import_from_source(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
 end
 
-local function create_import_binding(localname, pkgenv, target_env)
+function load.import_no_load(localname, pkgenv, target_env)
    assert(type(localname)=="string")
    assert(environment.is(pkgenv))
    assert(environment.is(target_env))
@@ -200,9 +207,9 @@ local function create_import_binding(localname, pkgenv, target_env)
    end
 end
 
--- 'load.imports' recursively loads each import in ideclist.
+-- 'load_all_imports' recursively loads each import in ideclist.
 -- Returns success; side-effects the messages argument.
-function load.imports(compiler, pkgtable, top_level_env, searchpath, importpath, ideclist, target_env, messages)
+function load_all_imports(compiler, pkgtable, top_level_env, searchpath, importpath, ideclist, target_env, messages)
    assert(type(compiler)=="table")
    assert(type(pkgtable)=="table")
    assert(environment.is(top_level_env))
@@ -216,7 +223,7 @@ function load.imports(compiler, pkgtable, top_level_env, searchpath, importpath,
    local idecls = ideclist and ideclist.idecls or {}
    if #idecls==0 then common.note("load: no imports to load"); end
    for _, decl in ipairs(idecls) do
-      local pkgname, pkgenv = import(compiler, pkgtable, top_level_env, searchpath, decl.importpath, decl, messages)
+      local pkgname, pkgenv = import_one(compiler, pkgtable, top_level_env, searchpath, decl.importpath, decl, messages)
       if not pkgname then
 	 common.note("FAILED to import from path " ..
 		     tostring(decl.importpath) ..
@@ -230,7 +237,7 @@ function load.imports(compiler, pkgtable, top_level_env, searchpath, importpath,
       local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
       local localname = decl.prefix or pkgname
       assert(type(localname)=="string")
-      create_import_binding(localname, pkgenv, target_env)
+      load.import_no_load(localname, pkgenv, target_env)
    end
    return true
 end

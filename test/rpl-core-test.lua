@@ -73,8 +73,9 @@ e = rosie.engine.new("rpl core test")
 check(rosie.engine.is(e))
 
 subheading("Setting up assignments")
-success, msg = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
+success, pkgname, msg = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
 check(type(success)=="boolean")
+check(not pkgname)
 check(type(msg)=="table")
 t = e:lookup("a")
 check(type(t)=="table")
@@ -1330,8 +1331,9 @@ g_syntax_error = [[grammar
   B = { {"b" S} / {"a" B B} }
 end]]
 
-success, msg = e:load(g_syntax_error)
+success, pkgname, msg = e:load(g_syntax_error)
 check(not success)
+check(not pkgname)
 check(type(msg)=="table" and msg[1])
 check(violation.syntax.is(msg[1]))
 check(msg[1].message:find("Syntax error"))
@@ -1343,8 +1345,9 @@ g_left_recursion = [[grammar
   B = { {"b" S} / {"a" B B} }
 end]]
 
-success, msg = e:load(g_left_recursion)
+success, pkgname, msg = e:load(g_left_recursion)
 check(not success)
+check(not pkgname)
 check(type(msg)=="table" and msg[1])
 check(violation.compile.is(msg[1])) --.message:find("may be left recursive"))
 
@@ -1355,7 +1358,7 @@ g_empty_string = [[grammar
   B = { {"b" S} / {"a" B B} }
 end]]
 
-ok, msg = e:load(g_empty_string)
+ok, pkgname, msg = e:load(g_empty_string)
 check(not ok)
 check(type(msg)=="table" and msg[1])
 check(violation.compile.is(msg[1])) --.message:find("can match the empty string"))

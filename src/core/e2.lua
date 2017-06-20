@@ -49,13 +49,21 @@ local function remove_raw_exp(ex)
    elseif ast.sequence.is(ex) then
       -- do not introduce boundary references between the exps
       return ast.sequence.new{exps=map(remove_cooked_exp, ex.exps), s=ex.s, e=ex.e}
-   elseif ast.predicate.is(ex) or
-          ast.choice.is(ex) or
-          ast.grammar.is(ex) or
-          ast.repetition.is(ex) then
-      -- the explicit 'raw' construct has no effect on these exps, but they have sub-expressions
-      -- that must be processed
-      return remove_cooked_exp(ex)
+   elseif ast.predicate.is(ex) then
+      return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), s=ex.s, e=ex.e}
+   elseif ast.choice.is(ex) then
+      return ast.choice.new{exps=map(remove_raw_exp, ex.exps), s=ex.s, e=ex.e}
+   elseif ast.sequence.is(ex) then
+      local exps = map(remove_raw_exp, ex.exps)
+      assert(#exps > 0, "received an empty sequence")
+      return ast.sequence.new{exps=exps, s=ex.s, e=ex.e}
+   elseif ast.repetition.is(ex) then 
+      local flag = ast.cooked.is(ex.exp)
+      local new = remove_raw_exp(ex.exp)
+      return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
+   elseif ast.grammar.is(ex) then
+      -- An explicit 'raw' syntax cannot appear around a grammar in the current syntax
+      assert(false, "rpl 1.1 grammar should not allow raw syntax surrounding a grammar")
    else
       -- finally, return expressions that do not have sub-expressions to process
       return ex

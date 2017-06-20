@@ -109,7 +109,7 @@ function repl.repl(en)
 	       else
 		  local pname, ppos, path = common.decode_match(csubs[1])
 		  local ok, messages, full_path
-		  ok, messages, full_path = pcall(en.loadfile, en, path)
+		  ok, pkgname, messages, full_path = en.loadfile(en, path)
 		  if ok then
 		     if messages then
 			for _,msg in ipairs(messages) do print(msg); end

@@ -345,9 +345,10 @@ function create_NEW_rpl1_1_engine()
    -- TEMPORARY:
    local load = function(e, input, importpath, fullpath)
 		      local messages = {}
-		      return loadpkg.source(e.compiler, e._pkgtable, e._env, e.searchpath,
-					    input, importpath, fullpath,
-					    messages), messages;
+		      local ok, pkgname = loadpkg.source(e.compiler, e._pkgtable, e._env, e.searchpath,
+							 input, importpath, fullpath,
+							 messages)
+		      return ok, pkgname, messages
 		end
 
    local compile = function(e, input, flavor)
@@ -374,13 +375,20 @@ function create_NEW_rpl1_1_engine()
 	 end
 	 local actual_path, source, msg = get_file_contents(e, filename, nosearch)
 	 if not source then return false, nil, msg, actual_path; end
-	 local success, warnings = e.load(e, source, filename)
-	 return success, warnings, actual_path
+
+	 local messages = {}
+	 local ok, pkgname = loadpkg.source(e.compiler, e._pkgtable, e._env, e.searchpath,
+					    source, filename, filename, messages)
+
+	 if pkgname then
+	    local _, pkgenv = common.pkgtableref(e._pkgtable, filename)
+	    loadpkg.import_no_load(pkgname, pkgenv, e._env)
+	 end
+	 return ok, pkgname, messages
       end
 
    engine_module.post_create_hook =
       function(e)
-	 common.note('Engine post_create_hook running on engine ' .. tostring(e.name()))
 	 e.load = load
 	 e.compile = compile
 	 e.loadfile = load_file

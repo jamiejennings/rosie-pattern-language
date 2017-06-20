@@ -28,13 +28,12 @@ maybe_id = { [:upper:] ![:lower:] [[:upper:][:digit:][-_]]* }
 
 -- Quoted strings, using single or double quote
 --
--- Within a string, the quote character can be escaped using a backslash, OR by repeating it twice,
--- e.g. "".
+-- Within a string, the quote character can be escaped using a backslash.
 
 local alias dquote = "\""			      -- "
-local alias escaped_dquote = "\\\"" / "\"\""	      -- \" or "" 
+local alias escaped_dquote = "\\\""		      -- \"
 local alias squote = "'"			      -- '
-local alias escaped_squote = "\\'" / "''"	      -- \' or ''
+local alias escaped_squote = "\\'"		      -- \'
 
 dqstring = {dquote {escaped_dquote / {!dquote .}}* dquote}
 sqstring = {squote {escaped_squote / {!squote .}}* squote}

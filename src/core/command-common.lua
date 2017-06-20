@@ -32,7 +32,7 @@ function p.load_string(en, input)
 end
 
 function p.load_file(en, filename)
-   local ok, messages = pcall(en.loadfile, en, filename)
+   local ok, pkgname, messages, actual_path = en.loadfile(en, filename)
    if not ok then
       if ROSIE_DEV then error("Cannot load file: \n" .. messages)
       else io.write("Cannot load file: \n", messages); os.exit(-1); end
@@ -52,7 +52,7 @@ function p.setup_engine(en, args)
 	    io.stdout:write("Compiling additional file ", filename, "\n")
 	 end
 	 -- nosearch is true so that files given on command line are not searched for
-	 local success, msg = pcall(en.loadfile, en, filename, true)
+	 local success, pkgname, msg, actual_path = en.loadfile(en, filename, true)
 	 if not success then
 	    io.stdout:write(msg, "\n")
 	    os.exit(-4)
