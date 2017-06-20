@@ -335,13 +335,67 @@ function create_NEW_rpl1_1_engine()
 	         expand_block = c2.expand_block,
 	         compile_block = c2.compile_block,
 	         compile_expression = compile_expression,
+	         parser = { parse_expression = c2.make_parse_expression(rplx_expression) }
 	   }
 
    local c2engine = engine.new("NEW RPL 1.1 engine (c2)", compiler2)
    c2engine.searchpath = ROSIE_LIB
 
+
+   -- TEMPORARY:
+   local load = function(e, input, importpath, fullpath)
+		      local messages = {}
+		      return loadpkg.source(e.compiler, e._pkgtable, e._env, e.searchpath,
+					    input, importpath, fullpath,
+					    messages), messages;
+		end
+
+   local compile = function(e, input, flavor)
+			 common.note("Ignoring 'flavor' arg to engine:compile")
+			 local messages = {}
+			 local pat = e.compiler.compile_expression(input, e._env, messages)
+			 if not pat then return false, messages; end
+			 return engine_module.rplx.new(e, pat)
+		      end
+      
+    local function get_file_contents(e, filename, nosearch)
+       if nosearch or util.absolutepath(filename) then
+	  local data, msg = util.readfile(filename)
+	  return filename, data, msg		    -- data could be nil
+       else
+	  return common.get_file(filename, e.searchpath, "")
+       end
+    end
+
+   local load_file =
+      function(e, filename, nosearch)
+	 if type(filename)~="string" then
+	    engine_module.engine_error(e, "file name argument not a string: " .. tostring(filename))
+	 end
+	 local actual_path, source, msg = get_file_contents(e, filename, nosearch)
+	 if not source then return false, nil, msg, actual_path; end
+	 local success, warnings = e.load(e, source, filename)
+	 return success, warnings, actual_path
+      end
+
+   engine_module.post_create_hook =
+      function(e)
+	 common.note('Engine post_create_hook running on engine ' .. tostring(e.name()))
+	 e.load = load
+	 e.compile = compile
+	 e.loadfile = load_file
+      end
+   
+   engine_module.post_create_hook(c2engine)
+
    NEW_ENGINE = c2engine
    announce("NEW_ENGINE", NEW_ENGINE)
+
+   -- Make the c2 compiler the default for new engines
+   engine_module._set_default_compiler(compiler2)
+
+   ROSIE_ENGINE = c2engine
+
 end
 
 ----------------------------------------------------------------------------------------

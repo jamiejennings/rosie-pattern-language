@@ -121,6 +121,7 @@ ok, msg = wapi.engine_lookup("hello")
 check(not ok)
 check(msg:find("not a json", 1, true))
 ok, def = wapi.engine_lookup(json.encode("$"))
+print("***"); print(def)
 check(ok, "can get a definition for '$'")
 check(json.decode(def).binding:find("built-in RPL pattern", 1, true))
 
@@ -132,21 +133,21 @@ check(type(wapi.load)=="function")
 ok, success, pkg, warning = wapi.load()
 check(not ok)					    -- called 'load' incorrectly
 check(success:find("not a string", 1, true))
-ok, success, pkg, warning = wapi.load("foo")
+ok, success, warning = wapi.load("foo")
 check(ok) 
 check(not success)
 check(warning:find("Syntax error at line 1: foo"))
-ok, success, pkg, warning = wapi.load('foo = "a"')
+ok, success, warning = wapi.load('foo = "a"')
 check(ok)
 check(success)
-check(type(pkg)=="string")
-pkg = json.decode(pkg)
-check(pkg == json.null)
-ok, success, pkg, warning = wapi.load('foo = "a"')
+--check(type(pkg)=="string")
+--pkg = json.decode(pkg)
+--check(pkg == json.null)
+ok, success, warning = wapi.load('foo = "a"')
 check(ok, "assignment did not load, returned: " .. tostring(msg))
 check(success)
-pkg = json.decode(pkg)
-check(pkg == json.null)
+--pkg = json.decode(pkg)
+--check(pkg == json.null)
 check(warning:find("reassignment to identifier"))
 ok, env_js = wapi.engine_lookup("null")
 check(ok)
@@ -172,7 +173,7 @@ def = json.decode(def)
 check(def)
 check(type(def)=="table")
 check(def.binding:find('CAPTURE as bar:'), "checking binding defn which relies on reveal_ast")
-ok, success, pkg, msg = wapi.load('x = //')
+ok, success, msg = wapi.load('x = //')
 check(ok)
 check(not success)
 check(msg:find("Syntax error at line 1"), "Exact message depends on syntax error reporting")
@@ -184,7 +185,7 @@ check(not env["x"])
 for _, exp in ipairs{"[0-9]", "[abcdef123]", "[:alpha:]", 
 		     "[^0-9]", "[^abcdef123]", "[:^alpha:]", 
 		     "[^[a][b]]"} do
-   local ok, success, pkg, msg = wapi.load('csx = '..exp)
+   local ok, success, msg = wapi.load('csx = '..exp)
    check(ok and success)
    --io.write("\n*****   ", tostring(ok), "  ", tostring(msg), "   *****\n")
    ok, msg = wapi.engine_lookup(json.encode("csx"))
@@ -195,13 +196,13 @@ for _, exp in ipairs{"[0-9]", "[abcdef123]", "[:alpha:]",
    end
 end
 
-ok, success, pkg, jsonmsgs = wapi.load('-- comments and \n -- whitespace\t\n\n')
+ok, success, jsonmsgs = wapi.load('-- comments and \n -- whitespace\t\n\n')
 -- "an empty list of ast's is the result of parsing comments and whitespace"
 check(ok and success)
 msgs = json.decode(jsonmsgs)
 check(type(msgs)=="table")
 check(type(msgs[1])=="table" and not msgs[2])
-check(msgs[1].message:find("Empty input"))
+check(msgs[1] and msgs[1].message:find("Empty input"))
 
 g = [[grammar
   S = {"a" B} / {"b" A} / "" 
@@ -209,9 +210,8 @@ g = [[grammar
   B = {"b" S} / {"a" B B}
 end]]
 
-ok, success, pkg, msg = wapi.load(g)
+ok, success, msg = wapi.load(g)
 check(ok)
-check(type(pkg)=="string")
 
 ok, def = wapi.engine_lookup(json.encode("S"))
 check(ok)
@@ -233,9 +233,8 @@ g2_defn = [[grammar
   alias B = { {"b" S} / {"a" B B} }
 end]]
 
-ok, success, pkg, msg = wapi.load(g2_defn)
+ok, success, msg = wapi.load(g2_defn)
 check(ok and success)
-check(type(pkg)=="string")
 
 ok, env_js = wapi.engine_lookup("null")
 check(ok)
@@ -269,9 +268,10 @@ check(ok)
 check(not success)
 check(msg:find("cannot open file"))
 
-ok, success, pkg, msgs, fullpath = wapi.loadfile(ROSIE_HOME .. "/test/ok.rpl")
+ok, success, msgs, fullpath = wapi.loadfile(ROSIE_HOME .. "/test/ok.rpl")
+print("***---> ", ok, success, fullpath); table.print(msgs)
 check(ok)
-check(type(pkg)=="string")
+--check(type(pkg)=="string")
 check(type(msgs)=="string")
 check(type(fullpath)=="string")
 check(fullpath:sub(-11)=="test/ok.rpl")
@@ -381,7 +381,7 @@ pcallok, ok, msg = wapi.match()
 check(not pcallok)
 check(ok:find("not a string"))
 
-ok, success, pkg, msgs = wapi.load("import common, num")
+ok, success, msgs = wapi.load("import common, num")
 check(ok)
 check(success)
 

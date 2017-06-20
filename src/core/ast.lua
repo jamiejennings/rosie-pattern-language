@@ -221,7 +221,7 @@ end
 
 local function convert_quantified_exp(pt)
    local s, e = pt.s, pt.e
-   local e, q = pt.subs[1], pt.subs[2]
+   local exp, q = pt.subs[1], pt.subs[2]
    local qname = q.type
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
    local min, max
@@ -243,9 +243,9 @@ local function convert_quantified_exp(pt)
       error("Internal error: do not know how to convert quantifier " .. tostring(qname))
    end
    return ast.repetition.new{min = min,
-		      max = max,
-		      exp = convert_exp(e),
-		      s=s, e=e}
+			     max = max,
+			     exp = convert_exp(exp),
+			     s=s, e=e}
 end
 
 local convert_char_exp;
@@ -271,15 +271,22 @@ local function infix_to_prefix(exps)
 end
 
 function convert_char_exp(pt)
-   assert(pt.subs and pt.subs[1])
-   local pt = pt.subs[1]
-   local s, e = pt.s, pt.e
-   local exps = list.from(pt.subs)
-   local compflag = (pt.subs[1].type=="complement")
-   if compflag then
-      exps = list.cdr(exps)
-      assert(pt.subs[2])
+   local exps, compflag
+   if pt.type=="charset_exp" then
+      assert(pt.subs and pt.subs[1])
+      pt = pt.subs[1]
+      exps = list.from(pt.subs)
+      compflag = (pt.subs[1].type=="complement")
+      if compflag then
+	 exps = list.cdr(exps)
+	 assert(pt.subs[2])
+      end
+   else
+      -- We have something that appeared inside a charset_exp.
+      exps = list.from(pt.subs)
+      compflag = false
    end
+   local s, e = pt.s, pt.e
    if pt.type=="named_charset" then
       return ast.cs_named.new{name = exps[1].text, complement = compflag, s=s, e=e}
    elseif pt.type=="charlist" then

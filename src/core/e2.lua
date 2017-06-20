@@ -96,7 +96,7 @@ function remove_cooked_exp(ex)
       -- the 'cooked' ast off the exp being repeated and treat what is inside the 'cooked' ast as
       -- if it were raw; if not explicitly cooked, then treat ex.exp it as if it is raw.
       local flag = ast.cooked.is(ex.exp)
-      local new = (flag and remove_raw_exp(ex.exp.exp)) or remove_raw_exp(ex.exp)
+      local new = remove_raw_exp(ex.exp)
       return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
    else
       -- There are no sub-expressions to process in the rest of the expression types, such as
@@ -131,7 +131,7 @@ function e2.stmts(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
       assert(ast.binding.is(stmt))
       local ref = stmt.ref
-      print("*** calling dummy e2.expression for " ..
+      print("expanding " ..
 	    (ref.packagename and (ref.packagename .. ".") or "") ..
 	    ref.localname ..
 	    " = " ..

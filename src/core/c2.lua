@@ -149,7 +149,7 @@ local function cs_range(a, env, messages)
 	 a)
    end
    local peg = R(c1..c2)
-   return pattern.new{name="cs_range", peg=(complement and (1-peg)) or peg, ast=a}
+   return pattern.new{name="cs_range", peg=(a.complement and (1-peg)) or peg, ast=a}
 end
 
 -- FUTURE optimization: All the single-byte chars can be put into one call to lpeg.S().
@@ -223,14 +223,11 @@ local function throw_grammar_error(a, message)
    local maybe_rule = message:match("'%w'$")
    local rule_explanation = (maybe_rule and "in pattern "..maybe_rule.." of:") or ""
    local fmt = "%s"
+   common.note("grammar: entering throw_grammar_error: " .. message)
    if message:find("may be left recursive") then
-      throw(violation.compile.new{who='compiler',
-				  message=string.format(fmt, message),
-			          ast=a})
+      throw(string.format(fmt, message), a)
    end
-   throw(violation.compile.new{who='compiler',
-			       message="peg compilation error: " .. message,
-			       ast=a})
+   throw("peg compilation error: " .. message, a)
 end
 
 local function grammar(a, env, messages)
@@ -242,6 +239,7 @@ local function grammar(a, env, messages)
       assert(type(rule.ref.localname)=="string")
       local id = rule.ref.localname
       bind(gtable, id, pattern.new{name=id, peg=V(id), alias=rule.is_alias})
+      common.note("grammar: binding " .. id)
    end
    -- Second pass: compile right hand sides in gtable environment
    local pats = {}
@@ -249,6 +247,7 @@ local function grammar(a, env, messages)
    for _, rule in ipairs(a.rules) do
       local id = rule.ref.localname
       if not start then start=id; end		    -- first rule is start rule
+      common.note("grammar: compiling " .. tostring(rule.exp))
       pats[id] = expression(rule.exp, gtable, messages)
       if (not rule.is_alias) then wrap_pattern(pats[id], id); end
    end -- for
@@ -258,6 +257,7 @@ local function grammar(a, env, messages)
    t[1] = start					    -- first rule is start rule
    local uncap_peg
    local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
+   common.note("grammar: lpeg.P() produced " .. tostring(success) .. ", " .. tostring(peg_or_msg))
    if success then
       local aliasflag = lookup(gtable, t[1]).alias
       if not aliasflag then
@@ -265,17 +265,17 @@ local function grammar(a, env, messages)
 	 t[start] = pats[start].uncap
 	 success, uncap_peg = pcall(P, t)
       end
-      if (not success) then
-	 assert(type(peg_or_msg)=="string",
-	     "Internal error (compiler) while reporting an error in a grammar")
-	 throw_grammar_error(a, peg_or_msg)
-      end
-      return pattern.new{name="grammar",
-			 peg=peg_or_msg,
-			 uncap=(aliasflag and nil) or uncap_peg,
-		         ast=a,
-		         alias=aliasflag}
    end
+   if (not success) then
+      assert(type(peg_or_msg)=="string",
+	  "Internal error (compiler) while reporting an error in a grammar")
+      throw_grammar_error(a, peg_or_msg)
+   end
+   return pattern.new{name="grammar",
+		      peg=peg_or_msg,
+		      uncap=(aliasflag and nil) or uncap_peg,
+		      ast=a,
+		      alias=aliasflag}
 end
 
 -- We cannot just run peg:match("") because a lookahead expression will return nil (i.e. it will
@@ -329,7 +329,16 @@ local function repetition(a, env, messages)
       -- Here's where things get interesting, because we must match at least min copies of
       -- epeg, and at most max.
       if min==0 then
-	 qpeg = ((cooked and (boundary * epeg)) or epeg)^(-max)
+	 if max==1 then
+	    qpeg = epeg^-1
+	 else
+	    assert(max > 1)
+	    if cooked then
+	       qpeg = (epeg * (boundary * epeg)^(1-max))^-1
+	    else
+	       qpeg = epeg^(-max)
+	    end
+	 end
       else
 	 assert(min > 0)
 	 qpeg = epeg
@@ -382,13 +391,27 @@ local dispatch = { [ast.literal] = literal,
 function expression(a, env, messages)
    local compile = dispatch[parent(a)]
    if (not compile) then
-      throw(violation.compile.new{who='compiler', message="invalid expression", ast=a})
+      throw("invalid expression", a)
    end
    return compile(a, env, messages)
 end
 
-local function compile_expression(...)
-   return apply_catch(expression, ...)
+local function compile_expression(exp, env, messages)
+   local ok, value, err = apply_catch(expression, exp, env, messages)
+   if not ok then
+      local full_message =
+	 "error in compile_expression:" ..
+	 tostring(value) .. "\n"
+      for _,v in ipairs(messages) do
+	 full_message = full_message .. tostring(v) .. "\n"
+      end
+      assert(false, full_message)
+   elseif not value then
+      assert(recordtype.parent(err))
+      table.insert(messages, err)		    -- enqueue violation object
+      return false
+   end
+   return value
 end
 
 -- 'c2.compile_expression' compiles a top-level expression for matching.  If the expression is
@@ -396,16 +419,22 @@ end
 -- expression is a reference to an alias, or if the expression is not a reference at all, then the
 -- match output will have the name "*" (meaning "anonymous") at the top level.
 function c2.compile_expression(a, env, messages)
-   local ok, pat, err = compile_expression(a, env, messages)
-   if not ok then error("Internal error: " .. tostring(pat)); end
-   if not pat then return false, err; end
+   local pat = compile_expression(a, env, messages)
+   if not pat then return false; end		    -- error will be in messages
    if pat and (not pattern.is(pat)) then
-      local msg = "type error: expression did not compile to a pattern, instead got " ..
-	 tostring(pat)
-      return false, violation.compile.new{who='compile expression', message=msg, ast=a}
+      local msg =
+	 "type error: expression did not compile to a pattern, instead got " .. tostring(pat)
+      table.insert(messages,
+		   violation.compile.new{who='compile expression', message=msg, ast=a})
+      return false
    end
    local peg, name = pat.peg, pat.name
-   if (not ast.ref.is(a)) or pat.alias then
+   if ast.ref.is(a) then
+      if pat.alias then
+	 pat.alias = false
+	 pat.peg = common.match_node_wrap(pat.peg, "*")
+      end
+   else -- (not ast.ref.is(a))
       name = "*"				    -- anonymous pattern
       if pat.uncap then peg = pat.uncap; end
       pat.alias = false
@@ -444,13 +473,8 @@ function c2.compile_block(a, pkgenv, messages)
    --       entire pass through a.stmts fails to change any binding.
    for _, b in ipairs(a.stmts) do
       local ref, exp = b.ref, b.exp
-      local ok, pat = compile_expression(exp, pkgenv, messages)
-      if not ok then
-	 -- FIXME:
-	 error("caught a lua error!\n" ..
-	       tostring(pat).."\n"..
-	       table.tostring(messages))
-      end
+      local pat = compile_expression(exp, pkgenv, messages)
+
       if pat then 
 	 -- TEMPORARY
 	 print("*** actually compiled: " .. ref.localname)
@@ -460,6 +484,8 @@ function c2.compile_block(a, pkgenv, messages)
 	 if (not b.is_alias) then wrap_pattern(pat, ref.localname); end
 	 pat.alias = b.is_alias
 	 bind(pkgenv, ref.localname, pat)
+      else
+	 return false
       end
    end -- for
 

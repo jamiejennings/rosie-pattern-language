@@ -89,6 +89,7 @@ local recordtype = require "recordtype"
 local common = require "common"
 local rmatch = common.rmatch
 local pfunction = common.pfunction
+local macro = common.macro
 local environment = require "environment"
 local lookup = environment.lookup
 local bind = environment.bind
@@ -362,7 +363,7 @@ local function load_file(e, filename, nosearch)
    end
    local actual_path, source, msg = get_file_contents(e, filename, nosearch)
    if not source then return false, nil, msg, actual_path; end
-   local success, modname, warnings = load_input(e, e._env, source, filename)
+   local success, modname, warnings = e.load(e, source, filename)
    return success, modname, warnings, actual_path
 end
 
@@ -370,6 +371,10 @@ end
 
 local function reconstitute_pattern_definition(id, p)
    if p then
+      if recordtype.parent(p.ast) then
+	 -- We have an ast, not a parse tree
+	 return ast.tostring(p.ast) or "built-in RPL pattern"
+      end
       return ( (p.original_ast and writer.reveal_ast(p.original_ast)) or
 	    (p.ast and writer.reveal_ast(p.ast)) or
 	 "// built-in RPL pattern //" )
@@ -400,6 +405,10 @@ end
 local function parse_identifier(en, str)
    local msgs = {}
    local m = en.compiler.parser.parse_expression(str, nil, msgs)
+   if ast.ref.is(m) then
+      -- using the new parser
+      return m.localname, m.packagename
+   end
    if m and m.subs and m.subs[1] then
       assert(m.type=="rpl_expression")
       m = m.subs[1]
@@ -471,6 +480,8 @@ end
 local function get_default_searchpath()
    return default_searchpath
 end
+
+engine_module.post_create_hook = function(e, ...) end
 
 ---------------------------------------------------------------------------------------------------
 
@@ -574,12 +585,14 @@ local function engine_create(name, compiler, searchpath)
    compiler = compiler or default_compiler
    searchpath = searchpath or default_searchpath
    if not compiler then error("no default compiler set"); end
-   return engine.factory { name=function() return name; end,
-			   compiler=compiler,
-			   searchpath=searchpath,
-			   _env=environment.new(),
-			   _pkgtable=environment.make_module_table(),
-			}
+   local new = engine.factory { name=function() return name; end,
+			     compiler=compiler,
+			     searchpath=searchpath,
+			     _env=environment.new(),
+			     _pkgtable=environment.make_module_table(),
+		    }
+   engine_module.post_create_hook(new)
+   return new
 end
 
 function engine_error(e, msg)
