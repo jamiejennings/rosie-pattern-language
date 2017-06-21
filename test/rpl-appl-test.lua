@@ -214,6 +214,13 @@ check(not m)
 
 subheading("Example macro: find")
 
-
+p = e:compile('find:a')
+ok, m, leftover = e:match(p, "xyzw 1 2 3 a")
+check(ok)
+check(m)
+check(leftover==0)
+check(m.type=="*")
+check(m.s==1 and m.e==13)
+check(m.subs and m.subs[1] and m.subs[1].s==12 and m.subs[1].e==13)
 
 return test.finish()

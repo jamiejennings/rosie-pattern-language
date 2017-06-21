@@ -20,6 +20,7 @@ local common = require "common"
 local pattern = common.pattern
 local macro = common.macro
 local pfunction = common.pfunction
+local ast = require "ast"
 local recordtype = require "recordtype"
 local lpeg = require "lpeg"
 local locale = lpeg.locale()
@@ -32,50 +33,33 @@ local b_id = common.boundary_identifier
 local dot_id = common.any_char_identifier
 local eol_id = common.end_of_input_identifier
 
-local function pfunction_find(...)
+local function macro_find(...)
    local args = {...}
    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
-   local ast = args[1]
-   assert(ast.type=="rpl_expression")
-   -- First we make sure that the argument actually compiles
---   local pat, msgs = compile(nil, ast, en._modtable, env)
---   if not pat then return false, msgs; end
-   local replacement = ast.subs[1]
-   -- Next, transform pat.ast
-   local ast, orig_ast = parse("{{!e .}* e}+")
-
-   
-
-   assert(type(ast)=="table" and ast.subs and ast.subs[1] and (not ast.subs[2]))
-   assert(ast.type=="rpl_expression")
-   assert(ast.subs[1].type=="raw_exp", "type is: " .. ast.subs[1].type)
-   ast = ast.subs[1]
-   assert(ast.subs and ast.subs[1])
-   local template = ast.subs[1]
-   local grep_ast = syntax.replace_ref(template, "e", replacement)
-   assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   grep_ast = common.create_match("rpl_expression", 1, "search:(" .. pattern_exp .. ")", grep_ast)
-
-
-end   
+   local any_char = ast.ref.new{localname="."}
+   local exp = args[1]
+   local not_exp = ast.predicate.new{type="!", exp=exp}
+   local advance = ast.repetition.new{min=0,
+				      exp=ast.raw.new{exp=ast.sequence.new{exps={not_exp, any_char}}}}
+   local wrapper = ast.cooked.is(args[1]) and ast.cooked or ast.raw
+   return wrapper.new{exp=ast.sequence.new{exps={advance, exp}}}
+end
+				    
+-- grep
+local function macro_findall(...)
+   local args = {...}
+   if #args~=1 then error("findall takes one argument, " .. tostring(#args) .. " given"); end
+   local find = macro_find(args[1])
+   return ast.repetition.new{min=1, exp=find, cooked=false}
+end
 
 local function example_first(...)
-   io.write("*** example_first called with args: ")
    local args = {...}
-   for _, arg in ipairs(args) do
-      io.write(tostring(arg), " ")
-   end
-   print("***")
    return args[1]
 end
 
 local function example_last(...)
-   io.write("*** example_last called with args: ")
    local args = {...}
-   for _, arg in ipairs(args) do
-      io.write(tostring(arg), " ")
-   end
-   print("***")
    return args[#args]
 end
 
@@ -100,7 +84,8 @@ local ENV =
     {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
      [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
---     ["find"] = macro.new{primop=pfunction_find};
+     ["find"] = macro.new{primop=macro_find};
+     ["findall"] = macro.new{primop=macro_findall};
      ["last"] = macro.new{primop=example_last};
      ["first"] = macro.new{primop=example_first};
   }

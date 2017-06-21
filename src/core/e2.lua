@@ -146,7 +146,6 @@ local function apply_macro(ex, env, messages)
       assert(false, "user-defined macros are currently not supported")
    end
    common.note("applying built-in macro '" .. refname .. "'")
-   print("*** macro arglist: " .. tostring(ex.arglist))
    local ok, new = pcall(list.apply, m.primop, ex.arglist)
    if not ok then
       local msg = "error while expanding macro '" .. refname .. "': "

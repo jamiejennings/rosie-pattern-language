@@ -167,7 +167,7 @@ function repl.repl(en)
 		     local a = en.compiler.parser.parse_expression(exp_string, nil, errs)
 		     if not a then
 			print("*** These will be printed in full later:")
-			table.print(errs)	    -- FIXME (TEMPORARY)
+			table.print(errs, false)	    -- FIXME (TEMPORARY)
 			io.write("\n")
 		     -- elseif not ast.subs then
 		     -- 	io.write("Syntax error\n")  -- no other info???
@@ -187,7 +187,7 @@ function repl.repl(en)
 			input_text = common.unescape_string(input_text:sub(2, -2))
 			local rplx, msgs = en:compile(str)
 			if not rplx then
-			   table.print(msgs); print() -- FIXME (TEMPORARY)
+			   table.print(msgs, false); print() -- FIXME (TEMPORARY)
 			   --io.write(rplx, "\n") -- syntax and compile errors
 			else
 			   local m, left = rplx:match(input_text)

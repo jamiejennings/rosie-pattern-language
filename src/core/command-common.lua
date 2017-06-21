@@ -44,7 +44,6 @@ end
 function p.setup_engine(en, args)
    -- (1a) Load whatever is specified in ~/.rosierc ???
 
-
    -- (1b) Load an rpl file
    if args.rpls then
       for _,filename in pairs(args.rpls) do
@@ -78,23 +77,27 @@ function p.setup_engine(en, args)
    if args.pattern then
       local expression
       if args.fixed_strings then
-	 expression = '"' .. args.pattern:gsub('"', '\\"') .. '"' -- FUTURE: rosie.expr.literal(arg[2])
+	 -- FUTURE: rosie.expr.literal(arg[2])
+	 expression = '"' .. args.pattern:gsub('"', '\\"') .. '"'
       else
 	 expression = args.pattern
       end
-      local flavor = (args.command=="grep") and "search" or "match"
+      if (args.command=="grep") then
+	 -- FUTURE: rosie.expr.apply_macro("findall", exp)
+	 if expression:sub(1,1) ~= "{" then
+	    expression = "(" .. expression .. ")"
+	 end
+	 expression = "findall:" .. expression
+      end
       local ok, msgs
-      ok, compiled_pattern, msgs = pcall(en.compile, en, expression, flavor)
-      if not ok then
-	 io.stdout:write(compiled_pattern, "\n")
-	 os.exit(-4)
-      elseif not compiled_pattern then
+      compiled_pattern, msgs = en:compile(expression)
+      if not compiled_pattern then
 	 table.print(msgs, false); print()	  -- FIXME (TEMPORARY)
 --	 io.stdout:write(table.concat(msgs, '\n'), '\n')
 	 os.exit(-4)
       end
    end
-   return compiled_pattern			    -- could be nil
+   return compiled_pattern
 end
 
 return p

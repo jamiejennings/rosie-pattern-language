@@ -113,12 +113,10 @@ ok, pkgname, msgs = e:load("package foo")
 check(ok)
 check(pkgname=="foo")
 
--- TODO: When we create an interface at the engine level for loading the source of a module, test
--- it here:
--- ok, pkgname, msgs = e:load_module("package foo")
--- check(ok)
--- check(pkgname=="foo")
--- check(type(msgs)=="table")
+
+print("\nTODO: add tests for other kinds of failures\n")
+
+
 
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:

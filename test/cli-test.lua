@@ -66,7 +66,7 @@ function run(import, expression, grep_flag, expectations)
    if import then import_option = " --rpl '" .. import .. "' "; end
    local cmd = rosie_cmd .. import_option ..
       (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
---   cmd = cmd .. " 2>/dev/null"
+   cmd = cmd .. " 2>/dev/null"
    print(cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
