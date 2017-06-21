@@ -18,6 +18,7 @@ local environment = {}
 
 local common = require "common"
 local pattern = common.pattern
+local macro = common.macro
 local pfunction = common.pfunction
 local recordtype = require "recordtype"
 local lpeg = require "lpeg"
@@ -99,9 +100,9 @@ local ENV =
     {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
      [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
-     ["find"] = pfunction.new{primop=pfunction_find};
-     ["last"] = pfunction.new{primop=example_last};
-     ["first"] = pfunction.new{primop=example_first};
+--     ["find"] = macro.new{primop=pfunction_find};
+     ["last"] = macro.new{primop=example_last};
+     ["first"] = macro.new{primop=example_first};
   }
 	      
 setmetatable(ENV, {__tostring = function(env)

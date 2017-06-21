@@ -361,7 +361,7 @@ common.macro =
 		    exported=false;
 		  })
 
--- TODO: get rid of original_ast?
+-- FUTURE: get rid of original_ast
 
 common.pattern = 
    recordtype.new("pattern",

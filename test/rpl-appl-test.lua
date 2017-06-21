@@ -70,7 +70,9 @@ heading("Testing application of primitive functions")
 
 subheading("Example function: first")
 
-p = e:compile('first:a')
+p, msg = e:compile('first:a')
+check(p)
+if not p then print("*** compile failed: "); table.print(msg); end
 ok, m, leftover = e:match(p, "a")
 check(ok)
 check(type(m)=="table")

@@ -430,7 +430,7 @@ function c2.compile_expression(a, env, messages)
 	 pat.alias = false
 	 pat.peg = common.match_node_wrap(pat.peg, "*")
       end
-   else -- (not ast.ref.is(a))
+   else -- not a reference
       name = "*"				    -- anonymous pattern
       if pat.uncap then peg = pat.uncap; end
       pat.alias = false

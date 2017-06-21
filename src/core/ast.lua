@@ -130,13 +130,13 @@ ast.cs_difference = recordtype.new("cs_difference",	-- [ [first]-[second] ]
 				      s = NIL;
 				      e = NIL;})
 
-ast.app = recordtype.new("app",
-			 {ref = NIL;
-			  kind = NIL;		    -- macro or function
-			  fn = NIL;		    -- actual macro/function to apply
-			  arglist = {};
-			  s = NIL;
-			  e = NIL;})
+ast.application = recordtype.new("appication",
+				 {ref = NIL;
+--				  kind = NIL;		    -- macro or function
+--				  fn = NIL;		    -- actual macro/function to apply
+				  arglist = NIL;
+				  s = NIL;
+				  e = NIL;})
 
 ast.arglist = recordtype.new("arglist",
 			     {cooked = true;
@@ -311,6 +311,20 @@ function convert_char_exp(pt)
    end
 end
 
+local function convert_identifier(pt)
+   assert(pt.subs and pt.subs[1])
+   local localname, packagename
+   if pt.subs[1].type=="localname" then
+      localname = pt.subs[1].text
+   else
+      assert(pt.subs[1].type=="packagename")
+      assert(pt.subs[2] and pt.subs[2].type=="localname")
+      packagename = pt.subs[1].text
+      localname = pt.subs[2].text
+   end
+   return ast.ref.new{localname=localname, packagename=packagename, s=s, e=e}
+end   
+
 function convert_exp(pt)
    local s, e = pt.s, pt.e
    if pt.type=="capture" then
@@ -326,23 +340,22 @@ function convert_exp(pt)
    elseif pt.type=="sequence" then
       return ast.sequence.new{exps = map(convert_exp, flatten(pt, "sequence")), s=s, e=e}
    elseif pt.type=="identifier" then
-      assert(pt.subs and pt.subs[1])
-      local localname, packagename
-      if pt.subs[1].type=="localname" then
-	 localname = pt.subs[1].text
-      else
-	 assert(pt.subs[1].type=="packagename")
-	 assert(pt.subs[2] and pt.subs[2].type=="localname")
-	 packagename = pt.subs[1].text
-	 localname = pt.subs[2].text
-      end
-      return ast.ref.new{localname = localname, packagename = packagename, s=s, e=e}
+      return convert_identifier(pt)
    elseif pt.type=="literal" then
       return ast.literal.new{value = pt.text, s=s, e=e}
    elseif pt.type=="charset_exp" then
       return convert_char_exp(pt)
    elseif pt.type=="quantified_exp" then
       return convert_quantified_exp(pt)
+   elseif pt.type=="arg" then
+      return convert_exp(pt.subs[1])
+   elseif pt.type=="application" then
+      local parts = list.from(pt.subs)
+      local id = list.car(parts)
+      local rawargs = list.cdr(parts)
+      return ast.application.new{ref=convert_identifier(id),
+			         arglist=map(convert_exp, rawargs),
+			         s=s, e=e}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
@@ -486,8 +499,8 @@ function ast.tostring(a)
       return table.concat(map(ast.tostring(a.cexps)), "&&")
    elseif ast.cs_difference.is(a) then
       return ast.tostring(a.first) .. "-" .. ast.tostring(a.second)
---   elseif ast.app.is(a) then
---      return ast.tostring(a.ref) .. ":" .. ast_tostring(arglist)
+   elseif ast.application.is(a) then
+      return ast.tostring(a.ref) .. ":" .. ast_tostring(arglist)
    else
       error("do not know how to print this ast: " .. tostring(a))
    end

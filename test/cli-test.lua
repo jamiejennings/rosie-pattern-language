@@ -174,7 +174,6 @@ print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(results)
 check(code==0, "Return code is zero")
-print("***"); table.print(results, false)
 check(results[#results]:find("tests passed"))
 -- Failing tests
 cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-fail.rpl"

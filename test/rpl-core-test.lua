@@ -112,7 +112,6 @@ ok, pkgname, msg = e.load(e, 'alias plain_old_alias = "p"')
 check(ok)
 
 ok, pkgname, msg = e.load(e, 'alias alias_to_plain_old_alias = plain_old_alias')
-print("***", ok, pkgname); table.print(msg)
 check(ok)
 
 ok, pkgname, msg = e.load(e, 'alias alias_to_a = a')

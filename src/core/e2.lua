@@ -121,6 +121,83 @@ function remove_cooked_raw_from_stmts(stmts)
    end
 end
 
+local function apply_macro(ex, env, messages)
+   assert(ast.application.is(ex))
+   assert(ast.ref.is(ex.ref))
+   local m = environment.lookup(env, ex.ref.localname, ex.ref.packagename)
+   local refname = ex.ref.packagename and (ex.ref.packagename .. ".") or ""
+   refname = refname .. ex.ref.localname
+   if not obj then
+      throw(violation.compile.new{who='macro expander',
+				  msg='undefined operator: ' .. refname,
+				  ast=ex})
+   elseif ast.pfunction.is(m) then
+      return ex				    -- pfunctions applied later
+   elseif not ast.macro.is(m) then
+      local msg = 'type mismatch: ' .. refname .. " is not a macro/function"
+      throw(violation.compile.new{who='macro expander',
+				  msg=msg,
+				  ast=ex})
+   end
+   -- Have a macro to expand!
+   if not m.primop then
+      assert(false, "user-defined macros are currently not supported")
+   end
+   common.note("applying built-in macro '" .. refname .. "'")
+   print("*** macro arglist: " .. tostring(ex.arglist))
+   -- local ok, new = pcall(m.primop, ex.arglist)
+   -- if not ok then
+   -- 	 ...
+   -- end
+   -- return new
+   return ex
+end
+   
+local function apply_macros(ex, env, messages)
+   local map_apply_macros = function(exp)
+			       return apply_macros(exp, env, messages)
+			    end
+   if ast.application.is(ex) then
+      return apply_macro(ex, env, messages)
+   elseif ast.cooked.is(ex) then
+      return ast.cooked.new{exp=apply_macros(ex.exp, env, messages),
+			    s=ex.s, e=ex.e}
+   elseif ast.raw.is(ex) then
+      return ast.raw.new{exp=apply_macros(ex.exp, env, messages),
+		         s=ex.s, e=ex.e}
+   elseif ast.sequence.is(ex) then
+      return ast.sequence.new{exps=map(map_apply_macros, ex.exps),
+			      s=ex.s, e=ex.e}
+   elseif ast.choice.is(ex) then
+      return ast.choice.new{exps=map(map_apply_macros, ex.exps),
+			    s=ex.s, e=ex.e}
+   elseif ast.predicate.is(ex) then
+      return ast.predicate.new{type=ex.type, exp=apply_macros(ex.exp, env, messages),
+			       s=ex.s, e=ex.e}
+   elseif ast.repetition.is(ex) then 
+      return ast.repetition.new{exp=apply_macros(ex.exp, env, messages),
+			        cooked=ex.cooked, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
+   elseif ast.grammar.is(ex) then
+      local newrules = {}
+      local new
+      for _, rule in ipairs(ex.rules) do
+	 assert(ast.binding.is(rule))
+	 -- N.B. If in future we ever allow macro definitions within a grammar, then the 'env'
+	 -- passed to apply_macros below will have to be the grammar environment.
+	 new = ast.binding.new{ref=rule.ref,
+			       exp=apply_macros(rule.exp, env, messages),
+			       is_alias=rule.is_alias,
+			       is_local=rule.is_local,
+			       s=rule.s, e=rule.e}
+	 table.insert(newrules, new)
+      end -- for
+      return ast.grammar.new{rules=newrules, s=ex.s, e=ex.e}
+   else
+      -- finally, return expressions that do not have sub-expressions to process
+      return ex
+   end
+end
+   
 -- Process macro-expansions, which are encoded in the ast as applications.  Note that not all
 -- applications are macros.  Some may be functions.  It is intentionally reminiscent of Scheme
 -- that (1) macro use looks syntactically like function application, (2) there is a single
@@ -129,9 +206,23 @@ end
 function e2.expression(ex, env, messages)
    local cooked = ambient_cook_exp(ex)
    if cooked then ex = cooked; end
-   ex = remove_cooked_raw_from_exp(ex)
-   -- TODO: macro expansion goes here
 
+   -- Now we have an ast that a user should recognize as a parsing of their rpl source code, with
+   -- the minor addition of a 'cooked' wrapper which makes the ambient/default mode of 'cooked'
+   -- explicit.
+
+   -- So we now pass the ast to any macros for expansion.  The resulting ast is then checked for
+   -- validity and then further processed before compilation.
+
+   ex = apply_macros(ex, env, messages)
+   -- TODO: check for validity here
+
+
+   -- The final steps in processing the ast are purely syntactic.  Here, we simplify the ast to
+   -- transform some constructs, like raw/cooked, which are unknown to the compiler.  Such
+   -- constructs are, of course, transformed into lower-level operations that the compiler does
+   -- know about.
+   ex = remove_cooked_raw_from_exp(ex)
    return ex
 end
 

@@ -26,7 +26,7 @@ test.dofile(ROSIE_HOME .. "/test/lib-test.lua")
 print("SKIPPING API TEST")--test.dofile(ROSIE_HOME .. "/test/api-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-mod-test.lua")
-print("SKIPPING APPL TEST")--test.dofile(ROSIE_HOME .. "/test/rpl-appl-test.lua")
+--test.dofile(ROSIE_HOME .. "/test/rpl-appl-test.lua")
 
 print("SKIPPING EVAL TEST")--test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
 
