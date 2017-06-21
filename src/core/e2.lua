@@ -27,7 +27,9 @@ local list = require "list"
 local environment = require "environment"
 local lookup = environment.lookup
 local bind = environment.bind
-
+local common = require "common"
+local pfunction = common.pfunction
+local macro = common.macro
 
 -- The ambient "atmosphere" in rpl is that sequences are cooked unless explicitly marked as raw.
 -- 'ambient_cook' wraps the rhs of bindings in an explicit 'cooked' ast unless the expression is
@@ -46,14 +48,14 @@ local remove_cooked_exp;
 local function remove_raw_exp(ex)
    if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
    elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
-   elseif ast.sequence.is(ex) then
-      -- do not introduce boundary references between the exps
-      return ast.sequence.new{exps=map(remove_cooked_exp, ex.exps), s=ex.s, e=ex.e}
+--   elseif ast.sequence.is(ex) then
+--      return ast.sequence.new{exps=map(remove_cooked_exp, ex.exps), s=ex.s, e=ex.e}
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), s=ex.s, e=ex.e}
    elseif ast.choice.is(ex) then
       return ast.choice.new{exps=map(remove_raw_exp, ex.exps), s=ex.s, e=ex.e}
    elseif ast.sequence.is(ex) then
+      -- do not introduce boundary references between the exps
       local exps = map(remove_raw_exp, ex.exps)
       assert(#exps > 0, "received an empty sequence")
       return ast.sequence.new{exps=exps, s=ex.s, e=ex.e}
@@ -127,17 +129,17 @@ local function apply_macro(ex, env, messages)
    local m = environment.lookup(env, ex.ref.localname, ex.ref.packagename)
    local refname = ex.ref.packagename and (ex.ref.packagename .. ".") or ""
    refname = refname .. ex.ref.localname
-   if not obj then
-      throw(violation.compile.new{who='macro expander',
-				  msg='undefined operator: ' .. refname,
-				  ast=ex})
-   elseif ast.pfunction.is(m) then
+   if not m then
+      violation.throw(violation.compile.new{who='macro expander',
+					    message='undefined operator: ' .. refname,
+					    ast=ex})
+   elseif pfunction.is(m) then
       return ex				    -- pfunctions applied later
-   elseif not ast.macro.is(m) then
+   elseif not macro.is(m) then
       local msg = 'type mismatch: ' .. refname .. " is not a macro/function"
-      throw(violation.compile.new{who='macro expander',
-				  msg=msg,
-				  ast=ex})
+      violation.throw(violation.compile.new{who='macro expander',
+					    message=msg,
+					    ast=ex})
    end
    -- Have a macro to expand!
    if not m.primop then
@@ -145,12 +147,15 @@ local function apply_macro(ex, env, messages)
    end
    common.note("applying built-in macro '" .. refname .. "'")
    print("*** macro arglist: " .. tostring(ex.arglist))
-   -- local ok, new = pcall(m.primop, ex.arglist)
-   -- if not ok then
-   -- 	 ...
-   -- end
-   -- return new
-   return ex
+   local ok, new = pcall(list.apply, m.primop, ex.arglist)
+   if not ok then
+      local msg = "error while expanding macro '" .. refname .. "': "
+      msg = msg .. tostring(new)		    -- 'new' is the lua error
+      violation.throw(violation.compile.new{who='macro expander',
+					    message=msg,
+					    ast=ex})
+   end
+   return new
 end
    
 local function apply_macros(ex, env, messages)
@@ -203,7 +208,7 @@ end
 -- that (1) macro use looks syntactically like function application, (2) there is a single
 -- namespace for macros, functions, and other values, and (3) macro expansion requires a syntactic
 -- environment in which (at least) references to macros can be resolved.
-function e2.expression(ex, env, messages)
+local function expression(ex, env, messages)
    local cooked = ambient_cook_exp(ex)
    if cooked then ex = cooked; end
 
@@ -226,25 +231,43 @@ function e2.expression(ex, env, messages)
    return ex
 end
 
-function e2.stmts(stmts, env, messages)
+local function statements(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
       assert(ast.binding.is(stmt))
       local ref = stmt.ref
       common.note("expanding " ..
 		  (ref.packagename and (ref.packagename .. ".") or "") ..
-	          ref.localname ..
-	          " = " ..
-	          tostring(stmt.exp))
-      stmt.exp = e2.expression(stmt.exp, env, messages)
+	       ref.localname ..
+	       " = " ..
+	       tostring(stmt.exp))
+      stmt.exp = expression(stmt.exp, env, messages)
    end
+   return true
 end
+
+function e2.expression(ex, env, messages)
+   local ok, result, err = violation.catch(expression, ex, env, messages)
+   if not ok then error("Internal error in e2: " .. tostring(result)); end
+   if not result then table.insert(messages, err); end
+   return result				    -- if false, errors in messages tables
+end
+
+function e2.stmts(stmts, env, messages)
+   local ok, result, err = violation.catch(statements, stmts, env, messages)
+   if not ok then error("Internal error in e2: " .. tostring(result)); end
+   if not result then table.insert(messages, err); end
+   return result				    -- if false, errors in messages tables
+end   
+
 
 function e2.block(a, env, messages)
    assert(ast.block.is(a))
    assert(environment.is(env))
    assert(type(messages)=="table")
-   e2.stmts(a.stmts, env, messages)
-   return true
+   local ok, result, err = violation.catch(statements, a.stmts, env, messages)
+   if not ok then error("Internal error in e2: " .. tostring(result)); end
+   if not result then table.insert(messages, err); end
+   return result				    -- if false, errors in messages tables
 end
 
 return e2

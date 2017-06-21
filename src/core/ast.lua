@@ -130,10 +130,11 @@ ast.cs_difference = recordtype.new("cs_difference",	-- [ [first]-[second] ]
 				      s = NIL;
 				      e = NIL;})
 
-ast.application = recordtype.new("appication",
+ast.application = recordtype.new("application",
 				 {ref = NIL;
 --				  kind = NIL;		    -- macro or function
 --				  fn = NIL;		    -- actual macro/function to apply
+				  raw = false;	    -- is arglist raw {} or cooked ()
 				  arglist = NIL;
 				  s = NIL;
 				  e = NIL;})
@@ -347,14 +348,43 @@ function convert_exp(pt)
       return convert_char_exp(pt)
    elseif pt.type=="quantified_exp" then
       return convert_quantified_exp(pt)
-   elseif pt.type=="arg" then
-      return convert_exp(pt.subs[1])
+--   elseif pt.type=="arg" then
+--      return convert_exp(pt.subs[1])
    elseif pt.type=="application" then
-      local parts = list.from(pt.subs)
-      local id = list.car(parts)
-      local rawargs = list.cdr(parts)
+      local id = pt.subs[1]
+      assert(id.type=="identifier")
+      local operands
+      local arglist = pt.subs[2]
+      if (arglist.type=="arglist") then
+	 -- Wrap non-numeric args in 'cooked'.
+	 operands = map(function(arg)
+			   if arg.type=="int" then
+			      return arg
+			   else
+			      return ast.cooked.new{exp=convert_exp(arg),
+						    s=arg.s, e=arg.e}
+			   end
+			end,
+			arglist.subs)
+      elseif (arglist.type=="rawarglist") then
+	 -- Wrap non-numeric args in 'raw'.
+	 operands = map(function(arg)
+			   if arg.type=="int" then
+			      return arg
+			   else
+			      return ast.raw.new{exp=convert_exp(arg),
+						 s=arg.s, e=arg.e}
+			   end
+			end,
+			arglist.subs)
+      elseif (arglist.type=="arg") then
+	 operands = list.new(convert_exp(arglist.subs[1]))
+      else
+	 error("Internal error: invalid arglist in application of " .. tostring(refname) ..
+	       ": " .. tostring(arglist.type))
+      end
       return ast.application.new{ref=convert_identifier(id),
-			         arglist=map(convert_exp, rawargs),
+			         arglist=operands,
 			         s=s, e=e}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))

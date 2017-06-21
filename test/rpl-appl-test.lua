@@ -65,10 +65,10 @@ t = e:lookup("a")
 check(type(t)=="table")
 
 ----------------------------------------------------------------------------------------
-heading("Testing application of primitive functions")
+heading("Testing application of primitive macros")
 ----------------------------------------------------------------------------------------
 
-subheading("Example function: first")
+subheading("Example macro: first")
 
 p, msg = e:compile('first:a')
 check(p)
@@ -77,14 +77,14 @@ ok, m, leftover = e:match(p, "a")
 check(ok)
 check(type(m)=="table")
 check(type(leftover)=="number" and leftover==0)
-check(m.type=="*")
+check(m.type=="a")
 
 p = e:compile('first:(a, b)')			    -- 2 args
 ok, m, leftover = e:match(p, "a")
 check(ok)
 check(type(m)=="table")
 check(type(leftover)=="number" and leftover==0)
-check(m.type=="*")
+check(m.type=="a")
 
 p = e:compile('first:(a b, b b)')		    -- 2 args
 ok, m, leftover = e:match(p, "a b")
@@ -165,14 +165,14 @@ check(m and m.type=="*")
 check(leftover==0)
 
 
-subheading("Example function: last")
+subheading("Example macro: last")
 
 p = e:compile('last:a')
 ok, m, leftover = e:match(p, "a")
 check(ok)
 check(type(m)=="table")
 check(type(leftover)=="number" and leftover==0)
-check(m.type=="*")
+check(m and m.type=="a")
 
 p = e:compile('last:(a, b)')			    -- 2 args
 ok, m, leftover = e:match(p, "a")
@@ -182,7 +182,7 @@ ok, m, leftover = e:match(p, "b")
 check(ok)
 check(type(m)=="table")
 check(type(leftover)=="number" and leftover==0)
-check(m.type=="*")
+check(m and m.type=="b")
 
 p = e:compile('last:(a b, b b)')		    -- 2 args
 ok, m, leftover = e:match(p, "a b")
@@ -212,7 +212,7 @@ check(ok)
 check(not m)
 
 
-subheading("Example function: find")
+subheading("Example macro: find")
 
 
 

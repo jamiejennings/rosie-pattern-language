@@ -387,7 +387,7 @@ local dispatch = { [ast.literal] = literal,
 function expression(a, env, messages)
    local compile = dispatch[parent(a)]
    if (not compile) then
-      throw("invalid expression", a)
+      throw("invalid expression: " .. tostring(a), a)
    end
    return compile(a, env, messages)
 end
