@@ -346,19 +346,24 @@ function create_NEW_rpl1_1_engine()
 
 
    -- TEMPORARY:
-   local load = function(e, input, importpath, fullpath)
-		   -- ignoring importpath, which we will remove from this api
+   local load = function(e, input, fullpath)
 		   local messages = {}
 		   local ok, pkgname, env = loadpkg.source(e.compiler,
 							   e._pkgtable,
 							   e._env,
 							   e.searchpath,
 							   input,
-							   nil, fullpath,
+							   fullpath,
 							   messages)
 		   if ok then
-		      assert(environment.is(env))
-		      e._env = env			    -- nested envs
+		      if pkgname then
+			 -- We compiled a module, reified it as the package in 'env'
+			 environment.bind(e._env, pkgname, env)
+		      else
+			 -- Did not load a module, so the env we passed in was extended with new bindings 
+			 assert(environment.is(env))
+			 e._env = env
+		      end
 		   end
 		   return ok, pkgname, messages
 		end
@@ -385,21 +390,10 @@ function create_NEW_rpl1_1_engine()
 	 if type(filename)~="string" then
 	    engine_module.engine_error(e, "file name argument not a string: " .. tostring(filename))
 	 end
-	 local actual_path, source, msg = get_file_contents(e, filename, nosearch)
-	 if not source then return false, nil, msg, actual_path; end
-
-	 local messages = {}
-	 local ok, pkgname, env = loadpkg.source(e.compiler,
-						 e._pkgtable,
-						 e._env,
-						 e.searchpath,
-						 source,
-						 nil, filename, messages)
-	 if ok then
-	    assert(environment.is(env))
-	    e._env = env				    -- nested envs
-	 end
-	 return ok, pkgname, messages
+	 local actual_path, src, msg = get_file_contents(e, filename, nosearch)
+	 -- TODO: re-work these return values:
+	 if not src then return false, nil, msg, actual_path; end
+	 return load(e, src, actual_path)
       end
 
    engine_module.post_create_hook =

@@ -110,7 +110,8 @@ check(not pkgname)
 check(type(msgs)=="table")
 
 ok, pkgname, msgs = e:load("package foo")
-check(not ok)
+check(ok)
+check(pkgname=="foo")
 
 -- TODO: When we create an interface at the engine level for loading the source of a module, test
 -- it here:
