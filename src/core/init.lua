@@ -299,6 +299,9 @@ function create_rpl1_1_engine()
 end
 
 function create_NEW_rpl1_1_engine()
+
+--   common.notes = true
+
    -- Like RPL1_1_ENGINE but uses the new c2 compiler
    local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
    local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
@@ -344,11 +347,20 @@ function create_NEW_rpl1_1_engine()
 
    -- TEMPORARY:
    local load = function(e, input, importpath, fullpath)
-		      local messages = {}
-		      local ok, pkgname = loadpkg.source(e.compiler, e._pkgtable, e._env, e.searchpath,
-							 input, importpath, fullpath,
-							 messages)
-		      return ok, pkgname, messages
+		   -- ignoring importpath, which we will remove from this api
+		   local messages = {}
+		   local ok, pkgname, env = loadpkg.source(e.compiler,
+							   e._pkgtable,
+							   e._env,
+							   e.searchpath,
+							   input,
+							   nil, fullpath,
+							   messages)
+		   if ok then
+		      assert(environment.is(env))
+		      e._env = env			    -- nested envs
+		   end
+		   return ok, pkgname, messages
 		end
 
    local compile = function(e, input, flavor)
@@ -377,12 +389,15 @@ function create_NEW_rpl1_1_engine()
 	 if not source then return false, nil, msg, actual_path; end
 
 	 local messages = {}
-	 local ok, pkgname = loadpkg.source(e.compiler, e._pkgtable, e._env, e.searchpath,
-					    source, filename, filename, messages)
-
-	 if pkgname then
-	    local _, pkgenv = common.pkgtableref(e._pkgtable, filename)
-	    loadpkg.import_no_load(pkgname, pkgenv, e._env)
+	 local ok, pkgname, env = loadpkg.source(e.compiler,
+						 e._pkgtable,
+						 e._env,
+						 e.searchpath,
+						 source,
+						 nil, filename, messages)
+	 if ok then
+	    assert(environment.is(env))
+	    e._env = env				    -- nested envs
 	 end
 	 return ok, pkgname, messages
       end

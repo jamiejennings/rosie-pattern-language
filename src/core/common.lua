@@ -179,7 +179,10 @@ end
 -- Functions for logging informational messages (note) and warnings (warn) to stderr
 ----------------------------------------------------------------------------------------
 
+common.notes = false;
+
 function common.note(...)
+   if (not common.notes) then return; end
    for _, item in ipairs{...} do io.stderr:write(item); end
    io.stderr:write("\n")
 end

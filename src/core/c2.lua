@@ -30,10 +30,6 @@ lookup = environment.lookup
 bind = environment.bind
 local e2 = require "e2"
 
--- TEMPORARY:
-c2.asts = {}
-
-
 local function throw(msg, a)
    return violation.throw(violation.compile.new{who='compiler (c2)',
 						message=msg,
@@ -451,9 +447,6 @@ end
 -- phase, in order to access macro definitions.
 function c2.compile_block(a, pkgenv, messages)
    assert(ast.block.is(a))
-
-   c2.asts[a.importpath or "nilimportpath"] = a	    -- TEMPORARY
-
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    -- TODO: Ensure each lhs appears only once in a.stmts.
    for _, b in ipairs(a.stmts) do
@@ -461,9 +454,9 @@ function c2.compile_block(a, pkgenv, messages)
       local ref = b.ref
       assert(not ref.packagename)
       if environment.lookup(pkgenv, ref.localname) then
-	 print("      rebinding " .. ref.localname)
+	 common.note("Rebinding " .. ref.localname)
       else
-	 print("      creating novalue binding for " .. ref.localname)
+	 common.note("Creating novalue binding for " .. ref.localname)
       end
       bind(pkgenv, ref.localname, novalue.new{exported=true, ast=b})
    end -- for
@@ -477,9 +470,9 @@ function c2.compile_block(a, pkgenv, messages)
 
       if pat then 
 	 -- TEMPORARY
-	 print("actually compiled: " .. ref.localname)
+	 io.stderr:write("actually compiled: " .. ref.localname .. "\n")
 	 if type(pat)~="table" then
-	    print("    BUT DID NOT GET A PATTERN: " .. tostring(pat))
+	    io.stderr:write("    BUT DID NOT GET A PATTERN: ", tostring(pat), "\n")
 	 end
 	 if (not b.is_alias) then wrap_pattern(pat, ref.localname); end
 	 pat.alias = b.is_alias

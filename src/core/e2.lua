@@ -139,11 +139,11 @@ function e2.stmts(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
       assert(ast.binding.is(stmt))
       local ref = stmt.ref
-      print("expanding " ..
-	    (ref.packagename and (ref.packagename .. ".") or "") ..
-	    ref.localname ..
-	    " = " ..
-	    tostring(stmt.exp))
+      common.note("expanding " ..
+		  (ref.packagename and (ref.packagename .. ".") or "") ..
+	          ref.localname ..
+	          " = " ..
+	          tostring(stmt.exp))
       stmt.exp = e2.expression(stmt.exp, env, messages)
    end
 end

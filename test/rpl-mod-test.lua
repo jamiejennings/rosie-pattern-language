@@ -110,11 +110,14 @@ check(not pkgname)
 check(type(msgs)=="table")
 
 ok, pkgname, msgs = e:load("package foo")
-check(ok)
-check(pkgname=="foo")
-check(type(msgs)=="table")
+check(not ok)
 
-
+-- TODO: When we create an interface at the engine level for loading the source of a module, test
+-- it here:
+-- ok, pkgname, msgs = e:load_module("package foo")
+-- check(ok)
+-- check(pkgname=="foo")
+-- check(type(msgs)=="table")
 
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:

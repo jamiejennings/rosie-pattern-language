@@ -52,7 +52,7 @@ local bind = environment.bind
 local common = require "common"
 local violation = require "violation"
 
-local load = {}
+local loadpkg = {}
 
 -- 'validate_block' enforces the structure of an rpl module:
 --     rpl_module = language_decl? package_decl? import_decl* statement* ignore
@@ -102,8 +102,7 @@ local function compile(compiler, a, pkgenv, messages)
    end
    if a.importpath and (not pkgname) then
       local msg = a.importpath .. " is not a module (no package declaration found)"
-      table.insert(messages, violation.compile.new{who='compiler', message=msg, ast=a})
-      return false
+      table.insert(messages, violation.info.new{who='loader', message=msg, ast=a})
    end
    common.note(string.format("load: compiled %s", pkgname or "<top level>"))
    return true
@@ -111,47 +110,81 @@ end
 
 local load_all_imports;
 
-function load.source(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
+-- TODO: factor out the common parts between load.source and load.import
+function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
    assert(type(compiler)=="table")
    assert(type(pkgtable)=="table")
    assert(environment.is(top_level_env))
    assert(type(searchpath)=="string")
    assert(type(src)=="string")
-   assert(importpath==nil or type(importpath)=="string")
+   assert(importpath==nil)			    -- TODO: remove from arglist
    assert(fullpath==nil or type(fullpath)=="string")
    assert(type(messages)=="table")
-   local env = (importpath and environment.new()) or top_level_env
-   -- assert((importpath and (env~=top_level_env)) or
-   --     ((not importpath) and (env==top_level_env)))
    local a = compiler.parse_block(src, importpath, messages)
    if not a then return false; end
    a.importpath = importpath
    a.filename = fullpath
    if not validate_block(a) then return false; end
-
-   print("+++ Block: "); print(ast.tostring(a)); print("+++ end")
-
    -- Via side effects, a.pdecl and a.ideclist are now filled in.
-   -- With a mutually recursive call to load_all_imports, we can load the dependencies in
-   -- a.ideclist.  
-   if not load_all_imports(compiler, pkgtable, top_level_env, searchpath, importpath,
-			   a.ideclist, env, messages)
-   then
+   if a.pdecl then
+      local msg = "loaded code is a module (use import, not load)"
+      table.insert(messages, violation.compile.new{who='loader', message=msg, ast=a})
       return false
    end
-   if not compiler.expand_block(a, env, messages) then
-      print("+++ EXPAND FAILED"); return false; end
-   if not compile(compiler, a, env, messages) then
-      print("+++ COMPILE FAILED"); return false; end
-   if importpath then
-      if a.pdecl and a.pdecl.name then
-	 common.pkgtableset(pkgtable, importpath, a.pdecl.name, env)
-      else
-	 error("!!@#!#!#!@#!#@!#@ TODO: imported module source did not define a package")
-      end
-   end -- if importpath
-   return true, (a.pdecl and a.pdecl.name)
+   local env = environment.extend(top_level_env)
+   -- Load the dependencies in a.ideclist:
+   if not load_all_imports(compiler, pkgtable, top_level_env,
+			   searchpath, importpath,
+			   a.ideclist, env, messages) then
+      return false
+   end
+   if not compiler.expand_block(a, env, messages) then return false; end
+   if not compile(compiler, a, env, messages) then return false; end
+   return true, nil, env			    -- TODO: remove the pkgname return value
 end
+
+-- TODO: remove top_level_env from arg list
+function loadpkg.import(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
+   assert(type(compiler)=="table")
+   assert(type(pkgtable)=="table")
+   assert(environment.is(top_level_env))
+   assert(type(searchpath)=="string")
+   assert(type(src)=="string")
+   assert(type(importpath)=="string")
+   assert(fullpath==nil or type(fullpath)=="string")
+   assert(type(messages)=="table")
+   local a = compiler.parse_block(src, importpath, messages)
+   if not a then return false; end
+   a.importpath = importpath
+   a.filename = fullpath
+   if not validate_block(a) then return false; end
+   -- Via side effects, a.pdecl and a.ideclist are now filled in.
+   if not a.pdecl then
+      local msg = "imported code is not a module"
+      table.insert(messages, violation.compile.new{who='loader', message=msg, ast=a})
+      return false
+   end
+   local env = environment.new()
+   -- With a mutually recursive call to load_all_imports, we load the dependencies in a.ideclist.  
+   if not load_all_imports(compiler, pkgtable, top_level_env,
+			   searchpath, importpath,
+			   a.ideclist, env, messages) then
+      return false
+   end
+   if not compiler.expand_block(a, env, messages) then return false; end
+   if not compile(compiler, a, env, messages) then return false; end
+   common.pkgtableset(pkgtable, importpath, a.pdecl.name, env)
+   return true, a.pdecl.name, env
+end
+   -- loadpkg.import_no_load(pkgname, pkgenv, top_level_env)
+   -- else
+   --    -- copy new bindings, if any, into the top level environment
+   --    for name, value in env:bindings() do
+   -- 	 bind(top_level_env, name, value)
+   --    end
+   -- end -- if pkgname (we compiled a module) or not
+   -- return true, (a.pdecl and a.pdecl.name)
+--end
 
 local function import_from_source(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
    local fullpath, src, msg = common.get_file(decl.importpath, searchpath)
@@ -163,24 +196,10 @@ local function import_from_source(compiler, pkgtable, top_level_env, searchpath,
       return false
    end
    common.note("load: loading ", decl.importpath, " from ", fullpath)
-   return load.source(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
+   return loadpkg.import(compiler, pkgtable, top_level_env, searchpath, src, importpath, fullpath, messages)
 end
 
-local function import_one(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
-   -- First, look in the pkgtable to see if this pkg has been loaded already
-   local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
-   if pkgname then
-      common.note("load: ", decl.importpath, " already loaded")
-      return pkgname, pkgenv
-   end
-   common.note("load: looking for ", decl.importpath)
-   -- FUTURE: Next, look for a compiled version of the file to load
-   -- ...
-   -- Finally, look for a source file to compile and load
-   return import_from_source(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
-end
-
-function load.import_no_load(localname, pkgenv, target_env)
+function loadpkg.import_no_load(localname, pkgenv, target_env)
    assert(type(localname)=="string")
    assert(environment.is(pkgenv))
    assert(environment.is(target_env))
@@ -205,6 +224,20 @@ function load.import_no_load(localname, pkgenv, target_env)
       bind(target_env, localname, pkgenv)
       common.note("load: binding package prefix " .. localname)
    end
+end
+
+local function import_one(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
+   -- First, look in the pkgtable to see if this pkg has been loaded already
+   local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
+   if pkgname then
+      common.note("load: ", decl.importpath, " already loaded")
+      return pkgname, pkgenv
+   end
+   common.note("load: looking for ", decl.importpath)
+   -- FUTURE: Next, look for a compiled version of the file to load
+   -- ...
+   -- Finally, look for a source file to compile and load
+   return import_from_source(compiler, pkgtable, top_level_env, searchpath, importpath, decl, messages)
 end
 
 -- 'load_all_imports' recursively loads each import in ideclist.
@@ -237,9 +270,9 @@ function load_all_imports(compiler, pkgtable, top_level_env, searchpath, importp
       local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
       local localname = decl.prefix or pkgname
       assert(type(localname)=="string")
-      load.import_no_load(localname, pkgenv, target_env)
+      loadpkg.import_no_load(localname, pkgenv, target_env)
    end
    return true
 end
 
-return load
+return loadpkg

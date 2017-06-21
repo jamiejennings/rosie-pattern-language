@@ -164,36 +164,39 @@ function repl.repl(en)
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
 		     local errs = {}
-		     local ast, original_ast = en.compiler.parser.parse_expression(exp_string, nil, errs)
-		     if not ast then
+		     local a = en.compiler.parser.parse_expression(exp_string, nil, errs)
+		     if not a then
+			print("*** These will be printed in full later:")
 			table.print(errs)	    -- FIXME (TEMPORARY)
 			io.write("\n")
-		     elseif not ast.subs then
-			io.write("Syntax error\n")  -- no other info???
+		     -- elseif not ast.subs then
+		     -- 	io.write("Syntax error\n")  -- no other info???
 		     else
-			assert(type(ast)=="table")
-			-- parsing strips the quotes off when exp is only a literal string, but compiler
-			-- needs them there.  this is inelegant.  sigh
-			assert(ast.subs and ast.subs[1])
-			assert(original_ast.subs and original_ast.subs[1])
-			local ename, epos, exp = common.decode_match(original_ast.subs[1])
-			if ename=="literal" then exp = '"'..exp..'"'; end
+			assert(recordtype.parent(a))
+			-- Parsing strips the quotes off when exp is only a literal string, but compiler
+			-- needs them there.  This is inelegant.  <sigh>
+			local str
+			if ast.literal.is(a) then
+			   str = '"' .. a.value .. '"'
+			else
+			   str = exp_string
+			end
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			assert(tname=="common.dqstring")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
 			input_text = common.unescape_string(input_text:sub(2, -2))
-			local rplx, msgs = en:compile(exp)
+			local rplx, msgs = en:compile(str)
 			if not rplx then
 			   table.print(msgs); print() -- FIXME (TEMPORARY)
 			   --io.write(rplx, "\n") -- syntax and compile errors
 			else
 			   local m, left = rplx:match(input_text)
 			   --       if debug and (not m) then
-			   -- 	 local match, leftover, trace = en:tracematch(exp, input_text)
+			   -- 	 local match, leftover, trace = en:tracematch(str, input_text)
 			   -- 	 io.write(trace, "\n")
 			   --       end
 			   --    else
-			   --       local match, leftover, trace = en:tracematch(exp, input_text)
+			   --       local match, leftover, trace = en:tracematch(str, input_text)
 			   --       io.write(trace, "\n")
 			   --    end
 			   print_match(m, left, (cname=="trace"))

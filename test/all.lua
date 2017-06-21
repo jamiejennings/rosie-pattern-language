@@ -30,8 +30,8 @@ print("SKIPPING APPL TEST")--test.dofile(ROSIE_HOME .. "/test/rpl-appl-test.lua"
 
 print("SKIPPING EVAL TEST")--test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
 
-print("SKIPPING REPL TEST due to extra compiler output")--test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
-print("SKIPPING REPL TEST due to extra compiler output")--test.dofile(ROSIE_HOME .. "/test/repl-test.lua")
+test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
+test.dofile(ROSIE_HOME .. "/test/repl-test.lua")
 
 passed = test.print_grand_total()
 

@@ -16,8 +16,9 @@ if not test then
    test = import("test")
 end
 
-list = import("list")
+list = import "list"
 util = import "util"
+violation = import "violation"
 check = test.check
 
 rosie_cmd = ROSIE_HOME .. "/bin/rosie"
@@ -145,11 +146,11 @@ run("import num", "~ num.any ~", true, results_common_number)
 
 ok, msg = pcall(run, "import common", "foo = common.word", nil, nil)
 check(ok)
-check(msg[1]:find("Syntax error"))
+check(table.concat(msg, "\n"):find("Syntax error"))
 
 ok, msg = pcall(run, "import common", "/foo/", nil, nil)
 check(ok)
-check(msg[1]:find("Syntax error"))
+check(table.concat(msg, "\n"):find("Syntax error"))
 
 ok, ignore = pcall(run, "import common", '"Gold"', nil, nil)
 check(ok, [[testing for a shell quoting error in which rpl expressions containing double quotes
@@ -173,6 +174,7 @@ print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(results)
 check(code==0, "Return code is zero")
+print("***"); table.print(results, false)
 check(results[#results]:find("tests passed"))
 -- Failing tests
 cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-fail.rpl"

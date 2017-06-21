@@ -37,7 +37,7 @@ function set_expression(exp)
    if not global_rplx then
       print("This exp failed to compile: " .. tostring(exp))
       table.print(msg)
-      error("asdadasdasda")
+      error("compile failed in rpl-core-test")
    end
 end
 
@@ -108,31 +108,32 @@ if false then
    check(submatchname=="a", "the only sub of this expression is the identifier in the raw group")
 end
 
-ok, msg = pcall(e.load, e, 'alias plain_old_alias = "p"')
+ok, pkgname, msg = e.load(e, 'alias plain_old_alias = "p"')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alias alias_to_plain_old_alias = plain_old_alias')
+ok, pkgname, msg = e.load(e, 'alias alias_to_plain_old_alias = plain_old_alias')
+print("***", ok, pkgname); table.print(msg)
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alias alias_to_a = a')
+ok, pkgname, msg = e.load(e, 'alias alias_to_a = a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alternate_a = a')
+ok, pkgname, msg = e.load(e, 'alternate_a = a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alternate_to_alias_to_a = alias_to_a')
+ok, pkgname, msg = e.load(e, 'alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
+ok, pkgname, msg = e.load(e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'uses_a = a a')
+ok, pkgname, msg = e.load(e, 'uses_a = a a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alternate_uses_a = uses_a')
+ok, pkgname, msg = e.load(e, 'alternate_uses_a = uses_a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alias alias_to_uses_a = uses_a')
+ok, pkgname, msg = e.load(e, 'alias alias_to_uses_a = uses_a')
 check(ok)
 
 subheading("Checking for required parse failures")
