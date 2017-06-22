@@ -4,8 +4,8 @@
 search nc.rr.com
 nameserver 10.0.1.1
 nameserver 2606:a000:1120:8152:2f7:6fff:fed4:dc1f
-# And below here are some random items inserted manually
+# And below here are some random items inserted manually into this file
 # to make testing more interesting
-/usr/share/bin/foo
+ibm:/usr/share/bin/foo
 jjennings@us.ibm.com
-HTTP://www.ibm.com
+HTTP://www.IBM.com

@@ -90,6 +90,7 @@ results_common_word =
    {"\27[33msearch\27[0m ",
     "\27[33mnameserver\27[0m ",
     "\27[33mnameserver\27[0m ",
+    "\27[33mibm\27[0m ",
     "\27[33mjjennings\27[0m ",
     "\27[33mHTTP\27[0m "}
 
@@ -98,11 +99,11 @@ results_common_word_grep =
     "search nc.rr.com",
     "nameserver 10.0.1.1",
     "nameserver 2606:a000:1120:8152:2f7:6fff:fed4:dc1f",
-    "# And below here are some random items inserted manually",
+    "# And below here are some random items inserted manually into this file",
     "# to make testing more interesting",
-    "/usr/share/bin/foo",
+    "ibm:/usr/share/bin/foo",
     "jjennings@us.ibm.com",
-    "HTTP://www.ibm.com" }
+    "HTTP://www.IBM.com" }
 
 results_word_network = 
    {"[33msearch[0m [30mnc.rr.com[0m ",
