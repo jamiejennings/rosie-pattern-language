@@ -114,7 +114,7 @@ grammar
    application = { identifier ":" } ignore (arg / arglist / rawarglist )
    arglist = { ignore open int_or_exp { ignore "," int_or_exp }* close }
    rawarglist = { ignore openraw int_or_exp { ignore "," int_or_exp }* closeraw }
-   arg = quantified_exp / plain_exp / int
+   arg = application / quantified_exp / plain_exp / int
    alias int_or_exp = ignore int / exp
    choice = { {quantified_exp / plain_exp} ignore slash exp }
    sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }

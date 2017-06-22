@@ -48,8 +48,6 @@ local remove_cooked_exp;
 local function remove_raw_exp(ex)
    if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
    elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
---   elseif ast.sequence.is(ex) then
---      return ast.sequence.new{exps=map(remove_cooked_exp, ex.exps), s=ex.s, e=ex.e}
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), s=ex.s, e=ex.e}
    elseif ast.choice.is(ex) then
@@ -123,6 +121,8 @@ function remove_cooked_raw_from_stmts(stmts)
    end
 end
 
+local apply_macros;
+
 local function apply_macro(ex, env, messages)
    assert(ast.application.is(ex))
    assert(ast.ref.is(ex.ref))
@@ -146,7 +146,12 @@ local function apply_macro(ex, env, messages)
       assert(false, "user-defined macros are currently not supported")
    end
    common.note("applying built-in macro '" .. refname .. "'")
-   local ok, new = pcall(list.apply, m.primop, ex.arglist)
+   local ok, new = pcall(list.apply,
+			 m.primop,
+			 map(function(arg)
+				return apply_macros(arg, env, messages)
+			     end,
+			     ex.arglist))
    if not ok then
       local msg = "error while expanding macro '" .. refname .. "': "
       msg = msg .. tostring(new)		    -- 'new' is the lua error
@@ -157,7 +162,7 @@ local function apply_macro(ex, env, messages)
    return new
 end
    
-local function apply_macros(ex, env, messages)
+function apply_macros(ex, env, messages)
    local map_apply_macros = function(exp)
 			       return apply_macros(exp, env, messages)
 			    end

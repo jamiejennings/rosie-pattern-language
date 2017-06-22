@@ -24,6 +24,7 @@ local ast = require "ast"
 local recordtype = require "recordtype"
 local lpeg = require "lpeg"
 local locale = lpeg.locale()
+local list = require "list"
 
 ---------------------------------------------------------------------------------------------------
 -- Items for the initial environment
@@ -51,6 +52,26 @@ local function macro_findall(...)
    if #args~=1 then error("findall takes one argument, " .. tostring(#args) .. " given"); end
    local find = macro_find(args[1])
    return ast.repetition.new{min=1, exp=find, cooked=false}
+end
+
+-- FUTURE: rewrite this with utf8 support (without relying on literal being valid utf8)
+local function macro_case_insensitive(...)
+   local args = {...}
+   if #args~=1 then error("ci takes one argument, " .. tostring(#args) .. " given"); end
+   local exp = args[1]
+   if ast.literal.is(exp) then
+      local lc, uc = string.lower(exp.value), string.upper(exp.value)
+      local chars = list.new()
+      for i = 1, #exp.value do
+	 local upper_lower_choices =
+	    { ast.literal.new{value=uc:sub(i,i)}, ast.literal.new{value=lc:sub(i,i)} }
+	 table.insert(chars, ast.choice.new{exps=upper_lower_choices})
+      end
+      return ast.raw.new{exp=ast.sequence.new{exps=chars, s=exp.s, e=exp.e}}
+   else
+      -- For now, we won't look for other string/char expressions in exp
+      return exp				    
+   end
 end
 
 local function example_first(...)
@@ -86,6 +107,8 @@ local ENV =
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
      ["find"] = macro.new{primop=macro_find};
      ["findall"] = macro.new{primop=macro_findall};
+     ["ci"] = macro.new{primop=macro_case_insensitive};
+--     ["cs"] = macro.new{primop=macro_case_sensitive};
      ["last"] = macro.new{primop=example_last};
      ["first"] = macro.new{primop=example_first};
   }

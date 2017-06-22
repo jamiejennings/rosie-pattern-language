@@ -49,14 +49,20 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     assert(type(warnings)=="table")
 	     if not pt then
 		local err = violation.syntax.new{who='rpl parser', message=table.concat(warnings, "\n")}
-		err.src = src
-		err.origin = origin
+		err.src = src; err.origin = origin
 		table.insert(messages, err)
 		return false
 	     end
 	     table.move(warnings, 1, #warnings, #messages+1, messages)
 	     assert(type(pt)=="table")
 	     assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
+	     if leftover~=0 then
+		local msg = "extraneous input after expression: " .. src:sub(-leftover)
+		local err = violation.syntax.new{who='rpl parser', message=msg}
+		err.src = src; err.origin = origin
+		table.insert(messages, err)
+		return false
+	     end
 	     return ast.from_parse_tree(pt)
 	  end
  end
