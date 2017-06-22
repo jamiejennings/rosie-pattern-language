@@ -44,7 +44,7 @@ local function make_parser_from(parse_something, expected_pt_node)
    return function(src, origin, messages)
 	     assert(type(src)=="string", "src is " .. tostring(src))
 	     assert(origin==nil or type(origin)=="string")
-	     assert(type(messages)=="table")
+	     assert(type(messages)=="table", "missing messages arg?")
 	     local pt, warnings, leftover = parse_something(src)
 	     assert(type(warnings)=="table")
 	     if not pt then

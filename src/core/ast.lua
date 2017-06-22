@@ -132,8 +132,6 @@ ast.cs_difference = recordtype.new("cs_difference",	-- [ [first]-[second] ]
 
 ast.application = recordtype.new("application",
 				 {ref = NIL;
---				  kind = NIL;		    -- macro or function
---				  fn = NIL;		    -- actual macro/function to apply
 				  raw = false;	    -- is arglist raw {} or cooked ()
 				  arglist = NIL;
 				  s = NIL;
@@ -487,8 +485,6 @@ function ast.tostring(a)
    elseif ast.predicate.is(a) then
       return a.type .. ast.tostring(a.exp)
    elseif ast.repetition.is(a) then
---      local open = a.cooked and "(" or "{"
---      local close = a.cooked and ")" or "}"
       local postfix
       if (not a.max) then
 	 if a.min==0 then postfix = "*"
@@ -499,10 +495,6 @@ function ast.tostring(a)
       else
 	 postfix = "{" .. tostring(a.min) .. "," .. tostring(a.max) .. "}"
       end
---      if not ast.sequence.is(a.exp) then
---	 open, close = "", ""
---      end
---      return open .. ast.tostring(a.exp) .. close .. postfix
       return ast.tostring(a.exp) .. postfix
    elseif ast.cooked.is(a) then
       return "(" .. ast.tostring(a.exp) .. ")"
@@ -530,7 +522,9 @@ function ast.tostring(a)
    elseif ast.cs_difference.is(a) then
       return ast.tostring(a.first) .. "-" .. ast.tostring(a.second)
    elseif ast.application.is(a) then
-      return ast.tostring(a.ref) .. ":" .. ast_tostring(arglist)
+      return ast.tostring(a.ref) .. ":" .. tostring(map(ast.tostring, a.arglist))
+   elseif list.is(a) then
+      return tostring(map(ast.tostring, a))
    else
       error("do not know how to print this ast: " .. tostring(a))
    end

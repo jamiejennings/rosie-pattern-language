@@ -105,7 +105,6 @@ alias predicate_symbol = { negation / lookat }
 	    
 grammar
    alias exp = {ignore { syntax_error /
-	                 application /
 	                 choice /
 	                 sequence /
 	                 quantified_exp / 
@@ -114,15 +113,15 @@ grammar
    application = { identifier ":" } ignore (arg / arglist / rawarglist )
    arglist = { ignore open int_or_exp { ignore "," int_or_exp }* close }
    rawarglist = { ignore openraw int_or_exp { ignore "," int_or_exp }* closeraw }
-   arg = application / quantified_exp / plain_exp / int
+   arg = quantified_exp / plain_exp / int
    alias int_or_exp = ignore int / exp
    choice = { {quantified_exp / plain_exp} ignore slash exp }
    sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }
    alias plain_exp = { ignore 
-		       { identifier / quoted_string / raw / cooked / charset_exp / predicate } }
+		       { application / identifier / quoted_string / raw / cooked / charset_exp / predicate } }
    quantified_exp = { plain_exp ignore quantifier }
-   cooked = { open exp+ ignore close }
-   raw = { openraw exp+ ignore closeraw }
+   cooked = { open exp ignore close }
+   raw = { openraw exp ignore closeraw }
    predicate = { predicate_symbol ignore {quantified_exp / plain_exp} }
 end
 
@@ -155,7 +154,7 @@ package_decl = ignore {"package" [:space:]} packagename [;]?
 import_decl = ignore {"import" [:space:]} import_spec ("," ignore import_spec)* [;]?
 
 rpl_statements = (ignore [;] / package_decl / import_decl / stmnt / syntax_error)* ignore $
-rpl_expression = exp / syntax_error
+rpl_expression = {exp ignore} / syntax_error
 
 preparse = language_decl
 
