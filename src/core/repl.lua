@@ -24,9 +24,9 @@ local ok, HOMEDIR = pcall(os.getenv, "HOME")
 if (not ok) or (type(HOMEDIR)~="string") then HOMEDIR = ""; end
 
 local repl_patterns = [==[
-      comma_or_quoted_string = ","? common.dqstring
+      comma_or_quoted_string = ","? word.dqstring
       rpl_exp_placeholder = {!{comma_or_quoted_string $} .}+
-      parsed_args = rpl_exp_placeholder? ","? common.dqstring?
+      parsed_args = rpl_exp_placeholder? ","? word.dqstring?
       path = {![[:space:]] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path?
       args = .*
@@ -49,7 +49,7 @@ local repl_patterns = [==[
 
 local repl_engine = rosie.engine.new("repl")
 repl.repl_engine = repl_engine
-repl_engine:load("import rosie/rpl_1_1 as rpl, common")
+repl_engine:load("import rosie/rpl_1_1 as rpl, word")
 repl_engine:load(repl_patterns)
 input_rplx = repl_engine:compile("input")
 assert(input_rplx, "internal error: input_rplx failed to compile")
@@ -191,7 +191,7 @@ function repl.repl(en)
 			   str = exp_string
 			end
 			local tname, tpos, input_text = common.decode_match(msubs[2])
-			assert(tname=="common.dqstring")
+			assert(tname=="word.dqstring")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
 			input_text = common.unescape_string(input_text:sub(2, -2))
 			local rplx, msgs = en:compile(str)

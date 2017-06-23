@@ -106,37 +106,32 @@ results_common_word_grep =
     "HTTP://www.IBM.com" }
 
 results_word_network = 
-   {"[33msearch[0m [30mnc.rr.com[0m ",
-    "[33mnameserver[0m [30m10.0.1.1[0m ",
-    "[33mnameserver[0m [30m2606[0m [30ma000[0m [30m1120[0m [30m8152[0m [30m2f7[0m [30m6fff[0m [30mfed4[0m [30mdc1f[0m "}
+      { "[33msearch[0m [31mnc.rr.com[0m ",
+	"[33mnameserver[0m [31m10.0.1.1[0m ",
+	"[33mnameserver[0m [30m2606[0m [30ma000[0m [30m1120[0m [30m8152[0m [30m2f7[0m [30m6fff[0m [30mfed4[0m [30mdc1f[0m " }
 
---   {"\27[33msearch\27[0m \27[31mnc.rr.com\27[0m ",
---    "\27[33mnameserver\27[0m \27[31m10.0.1.1\27[0m "}
 
-results_common_number =
+results_number_grep =
    {"nameserver 10.0.1.1",
     "nameserver 2606:a000:1120:8152:2f7:6fff:fed4:dc1f"}
-
-
-
 
 -- FIXME: add basic.matchall back in when we have the equivalent pattern written for rpl 1.1
 --run("basic.matchall", nil, results_basic_matchall)
 
-run("import common", "common.word", nil, results_common_word)
-run("import common", "common.word", true, results_common_word_grep)
-run("import common, net", "common.word net.any", nil, results_word_network)
-run("import num", "~ num.any ~", true, results_common_number)
+run("import word", "word.any", false, results_common_word)
+run("import word", "word.any", true, results_common_word_grep)
+run("import word, net", "word.any net.any", false, results_word_network)
+run("import num", "~ num.any ~", true, results_number_grep)
 
-ok, msg = pcall(run, "import common", "foo = common.word", nil, nil)
+ok, msg = pcall(run, "import word", "foo = word.any", nil, nil)
 check(ok)
 check(table.concat(msg, "\n"):find("Syntax error"))
 
-ok, msg = pcall(run, "import common", "/foo/", nil, nil)
+ok, msg = pcall(run, "import word", "/foo/", nil, nil)
 check(ok)
 check(table.concat(msg, "\n"):find("Syntax error"))
 
-ok, ignore = pcall(run, "import common", '"Gold"', nil, nil)
+ok, ignore = pcall(run, "import word", '"Gold"', nil, nil)
 check(ok, [[testing for a shell quoting error in which rpl expressions containing double quotes
       were not properly passed to lua in bin/run-rosie]])
 

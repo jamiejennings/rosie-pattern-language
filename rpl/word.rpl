@@ -1,0 +1,58 @@
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- word.rpl   Patterns in Rosie Pattern Language for word variations
+----
+---- © Copyright IBM Corporation 2017
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+rpl 1.1
+
+package word
+
+-- Note: These patterns make use of ASCII (Posix) character classes, which is a limitation that will
+-- be lifted when Unicode character classes are introduced.
+
+sp = [:space:]						    -- whitespace
+ltr = [:alpha:]						    -- letter
+
+-- test sp accepts " ", "\t", "\n"
+-- test sp rejects "\b", "A", "!"
+-- test ltr accepts "a", "z", "A", "Z"
+-- test ltr rejects " ", "!", "0", "-"
+
+any = [:alpha:]+					    -- mixed case
+uc = [:upper:]+						    -- upper case
+lc = [:lower:]+						    -- lower case
+tc = {[:upper:] [:lower:]*}				    -- title case
+
+id1 = { [:alpha:] [[_][:alnum:]]* }			    -- allows dashes
+id2 = { [:alpha:] [[_-][:alnum:]]* }			    -- ... and underscores
+id3 = { [:alpha:] [[$_-][:alnum:]]* }			    -- ... and dollar signs
+
+id = id3
+dotted_id = { id { "." id}+ }
+
+-- test id1 accepts "h", "www", "w1", "w_", "w_w"
+-- test id1 rejects "1h", "_www", "w-1", "w$"
+-- test id2 accepts "h", "www", "w1", "w_", "w_w", "w-", "w-w", "w-9"
+-- test id2 rejects "1h", "_www", "w$"
+-- test id3 accepts "h", "www", "w1", "w_", "w_w", "w-", "w-w", "w-9", "w$", "a$b", "a54$d"
+-- test id3 rejects "1h", "_www"
+
+
+-- Quoted strings, using single or double quote.
+-- Within a string, the quote character can be escaped using a backslash.
+
+local alias dquote = ["]			      -- "
+local alias escaped_dquote = { [\\] dquote }
+local alias squote = [']			      -- '
+local alias escaped_squote = { [\\] squote }
+
+sqstring = {squote {escaped_squote / {!squote .}}* squote}
+dqstring = {dquote {escaped_dquote / {!dquote .}}* dquote}
+
+qstring = sqstring / dqstring
+
+-- test sqstring accepts "''", "'abc 92'", "'abc \\'def\\' ghi'"
+-- test dqstring accepts "\"\"", "\"abc 92\"", "\"abc \\\"def\\\"\""

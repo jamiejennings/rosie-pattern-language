@@ -69,19 +69,34 @@ local shell_color_table =
 co.colormap = {["."] = "black";
 	    ["basic.unmatched"] = "black";
 	    ["simplified_json"] = "yellow";	    -- won't work. need aliases within grammars.
-	    ["common.word"] = "yellow";
-	    ["common.int"] = "underline";
-	    ["common.float"] = "underline";
-	    ["common.mantissa"] = "underline";
-	    ["common.exp"] = "underline";
-	    ["common.hex"] = "underline";
-	    ["common.denoted_hex"] = "underline";
-	    ["common.number"] = "underline";
-	    ["common.maybe_identifier"] = "cyan";
-	    ["common.identifier_not_word"] = "cyan";
-	    ["common.identifier_plus"] = "cyan";
-	    ["common.identifier_plus_plus"] = "cyan";
-	    ["common.path"] = "green";
+	    ["word.any"] = "yellow";
+
+            ["net.any"] = "red";
+            ["fqdn"] = "red";
+            ["url"] = "red";
+            ["http_command"] = "red";
+            ["http_version"] = "red";
+            ["ip"] = "red";
+            ["ipv4"] = "red";
+            ["ipv6"] = "red";
+            ["email"] = "red";
+
+	    ["num.any"] = "underline";
+	    ["int"] = "underline";
+	    ["float"] = "underline";
+	    ["mantissa"] = "underline";
+	    ["exponent"] = "underline";
+	    ["hex"] = "underline";
+	    ["denoted_hex"] = "underline";
+
+	    ["word.id"] = "cyan";
+	    ["word.id1"] = "cyan";
+	    ["word.id2"] = "cyan";
+	    ["word.id3"] = "cyan";
+	    ["word.dotted_id"] = "cyan";
+
+	    ["os.path"] = "green";
+
 	    ["basic.datetime_patterns"] = "blue";
 	    ["basic.network_patterns"] = "red";
        
@@ -99,13 +114,6 @@ co.colormap = {["."] = "black";
             ["datetime.simple_time"] = "blue";
             ["datetime.funny_time"] = "blue";
        
-            ["network.http_command"] = "red";
-            ["network.url"] = "red";
-            ["network.http_version"] = "red";
-            ["network.ip_address"] = "red";
-            ["network.fqdn"] = "red";
-            ["network.email_address"] = "red";
-
 	 }
 
 
