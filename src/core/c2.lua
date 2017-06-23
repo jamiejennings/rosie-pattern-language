@@ -475,7 +475,7 @@ function c2.compile_block(a, pkgenv, messages)
       local pat = compile_expression(exp, pkgenv, messages)
 
       if pat then 
-	 -- FIXME: need a proper error message
+	 -- TODO: need a proper error message
 	 if type(pat)~="table" then
 	    io.stderr:write("    BUT DID NOT GET A PATTERN: ", tostring(pat), "\n")
 	 end

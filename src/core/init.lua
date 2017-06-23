@@ -277,13 +277,13 @@ function create_rpl1_1_engine()
 			 preparse = preparser;
 			 parse_statements = parse_and_explain;
 			 parse_expression = parse_and_explain_exp;
-			 parse_deps = rpl_parser.parse_deps;
-			 prefixes = unsupported;	       -- FIXME
+			 parse_deps = rpl_parser.parse_deps;   -- TODO: update this
+			 prefixes = unsupported;	       -- TODO: drop this?
 		      }
    compiler1_1 =
       common.compiler.new{ version = supported_version;
 			   load = compile.compile1.compile;
-			   import = unsupported;               -- FIXME
+			   import = unsupported;               -- TODO: implement this?
 			   compile_expression = compile.compile1.compile_expression;
 			   parser = parser1_1;
 			}
@@ -345,7 +345,6 @@ function create_NEW_rpl1_1_engine()
    c2engine.searchpath = ROSIE_LIB
 
 
-   -- TEMPORARY:
    local load = function(e, input, fullpath)
 		   local messages = {}
 		   local ok, pkgname, env = loadpkg.source(e.compiler,
@@ -393,7 +392,8 @@ function create_NEW_rpl1_1_engine()
 	 local actual_path, src, msg = get_file_contents(e, filename, nosearch)
 	 -- TODO: re-work these return values:
 	 if not src then return false, nil, msg, actual_path; end
-	 return load(e, src, actual_path)
+	 local ok, pkgname, messages = load(e, src, actual_path)
+	 return ok, pkgname, messages, actual_path
       end
 
    engine_module.post_create_hook =

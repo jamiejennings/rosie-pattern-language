@@ -92,7 +92,7 @@ function p.setup_engine(en, args)
       local ok, msgs
       compiled_pattern, msgs = en:compile(expression)
       if not compiled_pattern then
-	 table.print(msgs, false); print()	  -- FIXME (TEMPORARY)
+	 table.print(msgs, false); print()	  -- TODO: need better printing
 --	 io.stdout:write(table.concat(msgs, '\n'), '\n')
 	 os.exit(-4)
       end
