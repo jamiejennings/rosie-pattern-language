@@ -16,6 +16,12 @@ local ui = require "ui"
 local environment = require "environment"
 local readline = require "readline"
 local lpeg = require "lpeg"
+local os = require "os"
+
+-- For basic ~ expansion when the user enters a file name.  (Only ~/... is supported, not the
+-- ~otheruser/... syntax.)
+local ok, HOMEDIR = pcall(os.getenv, "HOME")
+if (not ok) or (type(HOMEDIR)~="string") then HOMEDIR = ""; end
 
 local repl_patterns = [==[
       comma_or_quoted_string = ","? common.dqstring
@@ -108,8 +114,11 @@ function repl.repl(en)
 		  io.write("Command requires a file name\n")
 	       else
 		  local pname, ppos, path = common.decode_match(csubs[1])
+		  if path:sub(1,2)=="~/" then
+		     path = HOMEDIR .. path:sub(2)
+		  end
 		  local ok, messages, full_path
-		  ok, pkgname, messages, full_path = en.loadfile(en, path)
+		  ok, pkgname, messages, full_path = en:loadfile(path, true)
 		  if ok then
 		     if messages then
 			for _,msg in ipairs(messages) do print(msg); end
@@ -167,7 +176,7 @@ function repl.repl(en)
 		     local a = en.compiler.parser.parse_expression(exp_string, nil, errs)
 		     if not a then
 			print("*** These will be printed in full later:")
-			table.print(errs, false)	    -- FIXME (TEMPORARY)
+			table.print(errs, false)	    -- TODO: print actual messages
 			io.write("\n")
 		     -- elseif not ast.subs then
 		     -- 	io.write("Syntax error\n")  -- no other info???
@@ -187,7 +196,7 @@ function repl.repl(en)
 			input_text = common.unescape_string(input_text:sub(2, -2))
 			local rplx, msgs = en:compile(str)
 			if not rplx then
-			   table.print(msgs, false); print() -- FIXME (TEMPORARY)
+			   table.print(msgs, false); print() -- TODO: print actual messages
 			   --io.write(rplx, "\n") -- syntax and compile errors
 			else
 			   local m, left = rplx:match(input_text)
@@ -211,7 +220,7 @@ function repl.repl(en)
 	    end -- switch on command
 	 elseif name=="statements" then
 	    local ok, pkg, messages = en:load(text);
-	    table.print(messages, false)		    -- FIXME (TEMPORARY)
+	    table.print(messages, false)		    -- TODO: print actual messages
 --	    io.write(messages, "\n")
 	 else
 	    io.write("Repl: internal error (name was '" .. tostring(name) .. "')\n")
