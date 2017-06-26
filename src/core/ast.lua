@@ -25,6 +25,7 @@ ast.block = recordtype.new("block",
 			                            -- or nil, e.g. for user input in CLI or REPL
 			    pdecl = NIL;	    -- filled in during expansion
 			    ideclist = NIL;	    -- filled in during expansion
+			    pat = NIL;
 			    s = NIL;
 			    e = NIL;})
 
@@ -33,6 +34,7 @@ ast.binding = recordtype.new("binding",
 			   exp = NIL;
 			   is_alias = false;
 			   is_local = false;
+			   pat = NIL;
 			   s = NIL;
 			   e = NIL;})
 
@@ -40,28 +42,33 @@ ast.binding = recordtype.new("binding",
 -- 1.1, the keyword 'grammar' introduces a binding of a name to a 'grammar expression'.
 ast.grammar = recordtype.new("grammar",
 			     {rules = {};
+			      pat = NIL;
 			      s = NIL;
 			      e = NIL;})
 
 ast.ref = recordtype.new("ref",
 			 {localname = NIL;
 			  packagename = NIL;
+			  pat = NIL;
 			  s = NIL;
 			  e = NIL;})
 
 ast.sequence = recordtype.new("sequence",
 			 {exps = {};
+			  pat = NIL;
 			  s = NIL;
 			  e = NIL;})
 
 ast.choice = recordtype.new("choice",
 			    {exps = {};
+			     pat = NIL;
 			     s = NIL;
 			     e = NIL;})
 
 ast.predicate = recordtype.new("predicate",
 			  {type = NIL;
 			   exp = NIL;
+			   pat = NIL;
 			   s = NIL;
 			   e = NIL;})
 
@@ -70,40 +77,47 @@ ast.repetition = recordtype.new("repetition",
 			  max = NIL;
 			  exp = NIL;
 			  cooked = false;
+			  pat = NIL;
 			  s = NIL;
 			  e = NIL;})
 
 ast.cooked = recordtype.new("cooked",
 			  {exp = NIL;
+			   pat = NIL;
 			   s = NIL;
 			   e = NIL;})
 
 ast.raw = recordtype.new("raw",
 			 {exp = NIL;
+			  pat = NIL;
 			  s = NIL;
 			  e = NIL;})
 
 
 ast.literal = recordtype.new("literal",			    -- interpolated string literals
 			     {value = NIL;		    -- raw value, as seen in rpl source
+			      pat = NIL;
 			      s = NIL;
 			      e = NIL;})
 
 ast.cs_exp = recordtype.new("cs_exp",		    -- [ [exp1] ... ]
 			  {complement = false;
 			   cexp = {};
+			   pat = NIL;
 			   s = NIL;
 			   e = NIL;})
 
 ast.cs_named = recordtype.new("cs_named",	    -- [:name:]
 			      {complement = false;
 			       name = NIL;
+			       pat = NIL;
 			       s = NIL;
 			       e = NIL;})
 
 ast.cs_list = recordtype.new("cs_list",		    -- [abc12$]
 			      {complement = false;
 			       chars = {};
+			       pat = NIL;
 			       s = NIL;
 			       e = NIL;})
 
@@ -111,22 +125,26 @@ ast.cs_range = recordtype.new("cs_range",	    -- [a-z]
 			      {complement = false;
 			       first = NIL;
 			       last = NIL;
+			       pat = NIL;
 			       s = NIL;
 			       e = NIL;})
 
 ast.cs_union = recordtype.new("cs_union",	    -- [ [exp1] ... ]
 				{cexps = {};
+				 pat = NIL;
 				 s = NIL;
 				 e = NIL;})
 
 ast.cs_intersection = recordtype.new("cs_intersection", -- [ [exp1]&&[exp2]&& ... ]
 				       {cexps = {};
+					pat = NIL;
 					s = NIL;
 					e = NIL;})
 
 ast.cs_difference = recordtype.new("cs_difference",	-- [ [first]-[second] ]
 				     {first = NIL;
 				      second = NIL;
+				      pat = NIL;
 				      s = NIL;
 				      e = NIL;})
 
@@ -134,33 +152,39 @@ ast.application = recordtype.new("application",
 				 {ref = NIL;
 				  raw = false;	    -- is arglist raw {} or cooked ()
 				  arglist = NIL;
+				  pat = NIL;
 				  s = NIL;
 				  e = NIL;})
 
 ast.arglist = recordtype.new("arglist",
 			     {cooked = true;
 			      args = {};
+			      pat = NIL;
 			      s = NIL;
 			      e = NIL;})
 
 ast.int = recordtype.new("int",
 			 {value = NIL;
+			  pat = NIL;
 			  s = NIL;
 			  e = NIL;})
 
 ast.pdecl = recordtype.new("pdecl",
 			   {name = NIL;
+			    pat = NIL;
 			    s = NIL;
 			    e = NIL;})
 
 ast.idecl = recordtype.new("idecl",
 			   {importpath = NIL;
 			    prefix = NIL;
+			    pat = NIL;
 			    s = NIL;
 			    e = NIL;})
 
 ast.ideclist = recordtype.new("ideclist",
 			      {idecls = {};
+			       pat = NIL;
 			       s = NIL;
 			       e = NIL;})
 			    

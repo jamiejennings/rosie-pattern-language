@@ -133,6 +133,7 @@ local function load_all()
    color_output = import("color-output")
    eval = import("eval")
    engine_module = import("engine_module")
+   trace = import("trace")
    loadpkg = import("loadpkg")
    ui = import("ui")
 

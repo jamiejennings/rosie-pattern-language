@@ -95,7 +95,8 @@ local function literal(a, env, messages)
    if not str then
       throw("invalid escape sequence in literal: \\" .. offense, a)
    end
-   return pattern.new{name="literal"; peg=P(str); ast=a}
+   a.pat = pattern.new{name="literal"; peg=P(str); ast=a}
+   return a.pat
 end
 
 local function sequence(a, env, messages)
@@ -104,7 +105,8 @@ local function sequence(a, env, messages)
    for i = 2, #a.exps do
       peg = peg * expression(a.exps[i], env, messages).peg
    end
-   return pattern.new{name="sequence", peg=peg, ast=a}
+   a.pat = pattern.new{name="sequence", peg=peg, ast=a}
+   return a.pat
 end
 
 local function choice(a, env, messages)
@@ -113,7 +115,8 @@ local function choice(a, env, messages)
    for i = 2, #a.exps do
       peg = peg + expression(a.exps[i], env, messages).peg
    end
-   return pattern.new{name="choice", peg=peg, ast=a}
+   a.pat = pattern.new{name="choice", peg=peg, ast=a}
+   return a.pat
 end
 
 local function predicate(a, env, messages)
@@ -125,7 +128,8 @@ local function predicate(a, env, messages)
    else
       throw("invalid predicate type: " .. tostring(a.type), a)
    end
-   return pattern.new{name="predicate", peg=peg, ast=a}
+   a.pat = pattern.new{name="predicate", peg=peg, ast=a}
+   return a.pat
 end
 
 
@@ -138,7 +142,8 @@ local function cs_named(a, env, messages)
       throw("unknown named charset: " .. a.name, a)
    end
    -- The posix character sets are ascii-only, so the "1-peg" below is ok.
-   return pattern.new{name="cs_named", peg=((a.complement and 1-peg) or peg), ast=a}
+   a.pat = pattern.new{name="cs_named", peg=((a.complement and 1-peg) or peg), ast=a}
+   return a.pat
 end
 
 -- TODO: This impl works only for single byte chars!
@@ -151,7 +156,8 @@ local function cs_range(a, env, messages)
 	 a)
    end
    local peg = R(c1..c2)
-   return pattern.new{name="cs_range", peg=(a.complement and (1-peg)) or peg, ast=a}
+   a.pat = pattern.new{name="cs_range", peg=(a.complement and (1-peg)) or peg, ast=a}
+   return a.pat
 end
 
 -- FUTURE optimization: All the single-byte chars can be put into one call to lpeg.S().
@@ -167,9 +173,10 @@ function cs_list(a, env, messages)
       if not alternatives then alternatives = P(char)
       else alternatives = alternatives + P(char); end
    end -- for
-   return pattern.new{name="cs_list",
+   a.pat = pattern.new{name="cs_list",
 		      peg=(a.complement and (1-alternatives) or alternatives),
 		      ast=a}
+   return a.pat
 end
 
 local cexp;
@@ -191,16 +198,18 @@ function cs_exp(a, env, messages)
       for i = 2, #a.cexp.cexps do
 	 alternatives = alternatives + expression(a.cexp.cexps[i]).peg
       end
-      return pattern.new{name="cs_exp",
+      a.pat = pattern.new{name="cs_exp",
 			 peg=((a.complement and (1-alternatives)) or alternatives),
 			 ast=a}
+      return a.pat
    elseif ast.cs_intersection.is(a.cexp) then
       throw("character set intersection is not implemented", a)
    elseif ast.cs_difference.is(a.cexp) then
       throw("character set difference is not implemented", a)
    elseif ast.simple_charset_p(a.cexp) then
       local p = expression(a.cexp, env, messages)
-      return pattern.new{name="cs_exp", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
+      a.pat = pattern.new{name="cs_exp", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
+      return a.pat
    else
       assert(false, "unknown cexp inside cs_exp", a)
    end
@@ -273,11 +282,12 @@ local function grammar(a, env, messages)
 	  "Internal error (compiler) while reporting an error in a grammar")
       throw_grammar_error(a, peg_or_msg)
    end
-   return pattern.new{name="grammar",
+   a.pat = pattern.new{name="grammar",
 		      peg=peg_or_msg,
 		      uncap=(aliasflag and nil) or uncap_peg,
 		      ast=a,
 		      alias=aliasflag}
+   return a.pat
 end
 
 -- We cannot just run peg:match("") because a lookahead expression will return nil (i.e. it will
@@ -355,7 +365,8 @@ local function repetition(a, env, messages)
       end -- switch on min
    end
    -- return peg being quantified, quantified peg, whether boundary was appended, quantifier name, min, max
-   return pattern.new{name="repetition", peg=qpeg, ast=a}
+   a.pat = pattern.new{name="repetition", peg=qpeg, ast=a}
+   return a.pat
 end
 
 local function ref(a, env, messages)
@@ -365,15 +376,15 @@ local function ref(a, env, messages)
       local name = (a.packagename and (a.packagename .. ".") or "") .. a.localname
       throw("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
    end
-   local newpat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
+   a.pat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
    if a.packagename and (not pat.alias) then
       -- Here, pat was wrapped with only a local name when its module was compiled.  We need to
       -- rewrap using the fully qualified name, because the code we are compiling now uses the
       -- fully qualified name to refer to this value.
       assert(pat.uncap)
-      newpat.peg = common.match_node_wrap(pat.uncap, a.packagename .. "." .. a.localname)
+      a.pat.peg = common.match_node_wrap(pat.uncap, a.packagename .. "." .. a.localname)
    end
-   return newpat
+   return a.pat
 end
 
 local dispatch = { [ast.literal] = literal,
@@ -395,7 +406,8 @@ function expression(a, env, messages)
    if (not compile) then
       throw("invalid expression: " .. tostring(a), a)
    end
-   return compile(a, env, messages)
+   a.pat = compile(a, env, messages)
+   return a.pat
 end
 
 local function compile_expression(exp, env, messages)
