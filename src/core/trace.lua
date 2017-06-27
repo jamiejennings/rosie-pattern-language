@@ -111,20 +111,24 @@ local function ref(e, a, input, start, expected, nextpos)
    end
 end
 
-local function repetition(e, a, input, start, expected, nextpos)
-   local min, max, exp = a.min, a.max, a.exp
+local function rep(e, a, input, start, expected, nextpos)
 
    -- LEFT OFF HERE
-
-   local result = expression(e, pat.ast, input, start)
-   if expected then
-      assert(result.match, "reference match differs from expected")
-      assert(nextpos==result.nextpos, "reference nextpos differs from expected")
-   else
-      assert(not result.match)
+   
+   local epat = expression(a.exp, env, messages)
+   local epeg = epat.peg
+   if matches_empty(epeg) then
+      throw("pattern being repeated can match the empty string", a)
    end
-   -- In a trace, a reference has one sub (or none, if it is built-in)
-   return {match=expected, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
+   a.exp.pat = epat
+   if ast.atleast.is(a) then
+      a.pat = pattern.new{name="atleast", peg=(epeg)^(a.min), ast=a}
+   elseif ast.atmost.is(a) then
+      a.pat = pattern.new{name="atmost", peg=(epeg)^(-a.max), ast=a}
+   else
+      assert(false, "invalid ast node dispatched to 'rep': " .. tostring(a))
+   end
+   return a.pat
 end
 
 function expression(e, a, input, start)
@@ -142,8 +146,8 @@ function expression(e, a, input, start)
       return choice(e, a, input, start, m, nextpos)
    elseif ast.ref.is(a) then
       return ref(e, a, input, start, m, nextpos)
-   elseif ast.repetition.is(a) then
-      return repetition(e, a, input, start, m, nextpos)
+   elseif ast.atleast.is(a) or ast.atmost.is(a) then
+      return rep(e, a, input, start, m, nextpos)
    else
       error("Internal error: invalid ast type in eval expression: " .. tostring(a))
    end

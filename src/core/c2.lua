@@ -298,77 +298,77 @@ local function matches_empty(peg)
    return (not ok) and msg:find("loop body may accept empty string")
 end
 
-local function repetition(a, env, messages)
-   local boundary_pattern, boundary
-   if a.cooked then
-      boundary_pattern = lookup(env, common.boundary_identifier)
-      if not pattern.is(boundary_pattern) then
-	 throw("a very unusual situation occurred in which the boundary identifier, " ..
-	       common.boundary_identifier, ", is not bound to a pattern", a)
-      end
-      boundary = boundary_pattern.peg
-      assert(boundary)
-   end -- if a.cooked
-   local epat = expression(a.exp, env, messages)
-   a.exp.pat = epat
-   local epeg = epat.peg
-   if matches_empty(epeg) then
-      throw("pattern being repeated can match the empty string", a)
-   end
-   local qpeg
-   local min, max, cooked = a.min, a.max, a.cooked
-   if (not min) then min = 0; end		    -- {,max}
-   if (not max) then
-      if min==1 then				    -- +
-	 if cooked then qpeg = (epeg * boundary)^1
-	 else qpeg = epeg^1; end
-      elseif min==0 then			    -- *
-	 if cooked then qpeg = (epeg * (boundary * epeg)^0)^-1
-	 else qpeg = epeg^0; end
-      else
-	 assert(type(min)=="number", "min not a number? " .. tostring(min))
-	 assert(min > 0)
-	 if cooked then qpeg = (epeg * (boundary * epeg)^(min-1))
-	 else qpeg = epeg^min; end		    -- {min,}
-      end -- switch on min
-   else -- have a max and a min value
-      if min > max then
-	 throw("invalid repetition (min must be greater than max)", a)
-      elseif (max < 1) then
-	 throw("invalid repetition (max must be greater than zero)", a)
-      elseif min < 0 then
-	 throw("invalid repetition (min must be greater than or equal to zero)", a)
-      end
-      -- Here's where things get interesting, because we must match at least min copies of
-      -- epeg, and at most max.
-      if min==0 then
-	 if max==1 then
-	    qpeg = epeg^-1
-	 else
-	    assert(max > 1)
-	    if cooked then
-	       qpeg = (epeg * (boundary * epeg)^(1-max))^-1
-	    else
-	       qpeg = epeg^(-max)
-	    end
-	 end
-      else
-	 assert(min > 0)
-	 qpeg = epeg
-	 for i=1, (min-1) do
-	    qpeg = qpeg * ((cooked and (boundary * epeg)) or epeg)
-	 end -- for
-	 if (min-max) < 0 then
-	    qpeg = qpeg * ((cooked and (boundary * epeg) or epeg)^(min-max))
-	 else
-	    assert(min==max)
-	 end
-      end -- switch on min
-   end -- switch on max
-   -- return peg being quantified, quantified peg, whether boundary was appended, quantifier name, min, max
-   a.pat = pattern.new{name="repetition", peg=qpeg, ast=a}
-   return a.pat
-end
+-- local function repetition(a, env, messages)
+--    local boundary_pattern, boundary
+--    if a.cooked then
+--       boundary_pattern = lookup(env, common.boundary_identifier)
+--       if not pattern.is(boundary_pattern) then
+-- 	 throw("a very unusual situation occurred in which the boundary identifier, " ..
+-- 	       common.boundary_identifier, ", is not bound to a pattern", a)
+--       end
+--       boundary = boundary_pattern.peg
+--       assert(boundary)
+--    end -- if a.cooked
+--    local epat = expression(a.exp, env, messages)
+--    a.exp.pat = epat
+--    local epeg = epat.peg
+--    if matches_empty(epeg) then
+--       throw("pattern being repeated can match the empty string", a)
+--    end
+--    local qpeg
+--    local min, max, cooked = a.min, a.max, a.cooked
+--    if (not min) then min = 0; end		    -- {,max}
+--    if (not max) then
+--       if min==1 then				    -- +
+-- 	 if cooked then qpeg = (epeg * boundary)^1
+-- 	 else qpeg = epeg^1; end
+--       elseif min==0 then			    -- *
+-- 	 if cooked then qpeg = (epeg * (boundary * epeg)^0)^-1
+-- 	 else qpeg = epeg^0; end
+--       else
+-- 	 assert(type(min)=="number", "min not a number? " .. tostring(min))
+-- 	 assert(min > 0)
+-- 	 if cooked then qpeg = (epeg * (boundary * epeg)^(min-1))
+-- 	 else qpeg = epeg^min; end		    -- {min,}
+--       end -- switch on min
+--    else -- have a max and a min value
+--       if min > max then
+-- 	 throw("invalid repetition (min must be greater than max)", a)
+--       elseif (max < 1) then
+-- 	 throw("invalid repetition (max must be greater than zero)", a)
+--       elseif min < 0 then
+-- 	 throw("invalid repetition (min must be greater than or equal to zero)", a)
+--       end
+--       -- Here's where things get interesting, because we must match at least min copies of
+--       -- epeg, and at most max.
+--       if min==0 then
+-- 	 if max==1 then
+-- 	    qpeg = epeg^-1
+-- 	 else
+-- 	    assert(max > 1)
+-- 	    if cooked then
+-- 	       qpeg = (epeg * (boundary * epeg)^(1-max))^-1
+-- 	    else
+-- 	       qpeg = epeg^(-max)
+-- 	    end
+-- 	 end
+--       else
+-- 	 assert(min > 0)
+-- 	 qpeg = epeg
+-- 	 for i=1, (min-1) do
+-- 	    qpeg = qpeg * ((cooked and (boundary * epeg)) or epeg)
+-- 	 end -- for
+-- 	 if (min-max) < 0 then
+-- 	    qpeg = qpeg * ((cooked and (boundary * epeg) or epeg)^(min-max))
+-- 	 else
+-- 	    assert(min==max)
+-- 	 end
+--       end -- switch on min
+--    end -- switch on max
+--    -- return peg being quantified, quantified peg, whether boundary was appended, quantifier name, min, max
+--    a.pat = pattern.new{name="repetition", peg=qpeg, ast=a}
+--    return a.pat
+-- end
 
 local function rep(a, env, messages)
    local epat = expression(a.exp, env, messages)

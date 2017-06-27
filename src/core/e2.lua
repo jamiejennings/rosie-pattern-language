@@ -147,8 +147,9 @@ local function xrepetition(a, env, messages)
 	 end
       elseif (min==1) then			    -- +
 	 if boundary_exp then
-	    final = ast.atleast.new{min=1,
-				    exp=ast.sequence.new{exps={exp, boundary_ref}}}
+	    final = ast.sequence.new{exps={exp,
+					   ast.atleast.new{min=0,
+							   exp=boundary_exp}}}
 	 else
 	    final = ast.atleast.new{min=1, exp=exp}
 	 end
