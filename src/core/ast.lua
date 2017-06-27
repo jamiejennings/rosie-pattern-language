@@ -486,6 +486,42 @@ end
 ast.from_parse_tree = convert
 
 ---------------------------------------------------------------------------------------------------
+-- Find all references in an ast which have a non-nil packagename
+---------------------------------------------------------------------------------------------------
+
+function ast.dependencies_of(a)
+   -- Until we have new use cases, this only works on non-grammar expressions.  And it only works
+   -- on pre-expansion ASTs, i.e. those produced by the compiler's parse_expression function.
+   if ast.ref.is(a) then
+      if a.packagename then
+	 return {a.packagename}
+      else
+	 return {}
+      end
+   elseif ast.sequence.is(a) or ast.choice.is(a) then
+      return apply(append, map(ast.dependencies_of, a.exps))
+   elseif ast.application.is(a) then
+      return apply(append, map(ast.dependencies_of, a.arglist))
+   elseif (ast.predicate.is(a) or
+	   ast.atleast.is(a) or
+	   ast.atmost.is(a) or
+	   ast.repetition.is(a) or
+	   ast.cooked.is(a) or
+	   ast.raw.is(a)) then
+      return ast.dependencies_of(a.exp)
+   elseif (ast.literal.is(a) or
+	   ast.cs_exp.is(a) or 
+	   ast.cs_named.is(a) or
+	   ast.cs_union.is(a) or
+	   ast.cs_intersection.is(a) or
+	   ast.cs_difference.is(a)) then
+      return {}
+   else
+      assert(false, "ast.dependencies_of received an unexpected ast type: " .. tostring(a))
+   end
+end
+      
+---------------------------------------------------------------------------------------------------
 -- Reconstruct valid RPL from an ast
 ---------------------------------------------------------------------------------------------------
 

@@ -627,7 +627,9 @@ local engine =
 			     return load_input(e, e._env, input)
 			  end,
 		     loadfile=load_file,
+		     import=function() error("'import' unsupported for this engine"); end,
 		     compile=engine_compile,
+		     dependencies=function() error("'dependencies' unsupported for this engine"); end,
 		     searchpath="",
 
 		     match=engine_match,

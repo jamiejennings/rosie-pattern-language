@@ -181,6 +181,7 @@ function repl.repl(en)
 		     -- elseif not ast.subs then
 		     -- 	io.write("Syntax error\n")  -- no other info???
 		     else
+			-- Assert that 'a' is a record, and assume it's an AST record
 			assert(recordtype.parent(a))
 			-- Parsing strips the quotes off when exp is only a literal string, but compiler
 			-- needs them there.  This is inelegant.  <sigh>
@@ -194,6 +195,7 @@ function repl.repl(en)
 			assert(tname=="word.dqstring")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
 			input_text = common.unescape_string(input_text:sub(2, -2))
+			-- Compile the expression given in the command
 			local rplx, msgs = en:compile(str)
 			if not rplx then
 			   table.print(msgs, false); print() -- TODO: print actual messages

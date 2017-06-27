@@ -40,6 +40,17 @@ function p.load_file(en, filename)
    return ok, messages
 end
 
+local function import_dependencies(en, a, msgs)
+   local deps = en:dependencies(a)
+   for _, packagename in ipairs(deps) do
+      local ok, err = en:import(packagename, nil)
+      if not ok then
+	 table.insert(msgs, err)
+	 break;
+      end
+   end -- for each dependency
+   return true
+end
 
 function p.setup_engine(en, args)
    -- (1a) Load whatever is specified in ~/.rosierc ???
@@ -89,11 +100,23 @@ function p.setup_engine(en, args)
 	 end
 	 expression = "findall:" .. expression
       end
+
+      local errs = {}
+      local AST = en.compiler.parser.parse_expression(expression, nil, errs)
+      if not AST then
+	 table.print(errs, false); print()	  -- TODO: need better printing
+	 os.exit(-4)
+      end
+      local ok = import_dependencies(en, AST, errs)
+      if not ok then
+	 table.print(errs, false); print()	  -- TODO: need better printing
+	 os.exit(-4)
+      end
       local ok, msgs
-      compiled_pattern, msgs = en:compile(expression)
+      compiled_pattern, msgs = en:compile(AST)
       if not compiled_pattern then
 	 table.print(msgs, false); print()	  -- TODO: need better printing
---	 io.stdout:write(table.concat(msgs, '\n'), '\n')
+	 --	 io.stdout:write(table.concat(msgs, '\n'), '\n')
 	 os.exit(-4)
       end
    end

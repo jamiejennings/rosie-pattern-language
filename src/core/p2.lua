@@ -46,7 +46,7 @@ local function preparse(rplx_preparse, input)
    if type(input)=="string" then
       language_decl, leftover = rplx_preparse:match(input)
    elseif type(input)=="table" then
-      -- assume ast provided, although it will be empty even if the original source was not, 
+      -- Assume ast provided, although it will be empty even if the original source was not, 
       -- because the source could contain only comments and/or whitespace
       if not input[1] then return nil, nil, 1; end
       if input[1].type=="language_decl" then
@@ -104,8 +104,6 @@ end -- make_preparser
 -- Parse block
 ---------------------------------------------------------------------------------------------------
 
-p2.parses = {}					    -- TEMPORARY:
-
 local function find_syntax_errors(pt, source)
    -- First look for the syntax error tag(s) in the parse tree
    local errlist = {};
@@ -126,8 +124,8 @@ local function find_syntax_errors(pt, source)
 end
 
 function p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
-   -- preparser looks for rpl language version declaration, and ensures that it is compatible with
-   -- supported_version 
+   -- The preparser function uses rplx_preparse to look for a rpl language version declaration,
+   -- and, if found, ensures that it is compatible with supported_version.
    local preparser = p2.make_preparser(rplx_preparse, supported_version)
    return function(src)
 	     assert(type(src)=="string",
@@ -137,9 +135,6 @@ function p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
 	     if not maj then return nil, {err}, 0; end
 	     -- Input is compatible with what is supported, so we continue parsing
 	     local pt, leftover = rplx_statements:match(src, start)
-
-	     p2.parses[src] = pt		    -- TEMPORARY
-
 	     local syntax_errors = find_syntax_errors(pt, src)
 	     if syntax_errors then return nil, syntax_errors, leftover; end
 	     -- Otherwise, we had a successful parse
@@ -155,9 +150,6 @@ function p2.make_parse_expression(rplx_expression)
 		    "Error: source argument is not a string: "..tostring(src) ..
 		    "\n" .. debug.traceback())
 	     local pt, leftover = rplx_expression:match(src)
-
-	     p2.parses[src] = pt		    -- TEMPORARY
-
 	     local syntax_errors = find_syntax_errors(pt, src)
 	     if syntax_errors then return nil, syntax_errors, leftover; end
 	     -- FUTURE: do a 'lint' pass to produce warnings, and return them in place of the

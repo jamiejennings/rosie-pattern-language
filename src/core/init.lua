@@ -339,7 +339,9 @@ function create_NEW_rpl1_1_engine()
 	         expand_block = c2.expand_block,
 	         compile_block = c2.compile_block,
 	         compile_expression = compile_expression,
-	         parser = { parse_expression = c2.make_parse_expression(rplx_expression) }
+	         dependencies_of = c2.dependencies_of,
+	      -- TODO: remove parser, and move parse_expression out as needed
+	      parser = { parse_expression = c2.make_parse_expression(rplx_expression) }
 	   }
 
    local c2engine = engine.new("NEW RPL 1.1 engine (c2)", compiler2)
@@ -397,11 +399,31 @@ function create_NEW_rpl1_1_engine()
 	 return ok, pkgname, messages, actual_path
       end
 
+   local import =
+      function(e, packagename, as_name)
+	 local messages = {}
+	 local ok = loadpkg.import(e.compiler,
+				   e._pkgtable,
+				   e.searchpath,
+				   packagename,	    -- importpath
+				   as_name,
+				   e._env,
+				   messages)
+	 return ok, messages
+      end
+
+   local dependencies =
+      function(e, AST)
+	 return e.compiler.dependencies_of(AST)
+      end
+
    engine_module.post_create_hook =
       function(e)
 	 e.load = load
 	 e.compile = compile
 	 e.loadfile = load_file
+	 e.import = import
+	 e.dependencies = dependencies
       end
    
    engine_module.post_create_hook(c2engine)

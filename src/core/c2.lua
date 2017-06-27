@@ -77,6 +77,8 @@ function c2.make_parse_expression(rplx_expression)
    return make_parser_from(parse_expression, "rpl_expression")
 end
 
+c2.dependencies_of = ast.dependencies_of
+
 ---------------------------------------------------------------------------------------------------
 -- Syntax expander
 ---------------------------------------------------------------------------------------------------
