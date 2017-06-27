@@ -29,6 +29,7 @@ function trace.tostring(t, indent)
    local delta = 2
    assert(t.ast)
    local str = tab(indent) .. "Expression: " .. ast.tostring(t.ast) .. "\n"
+   indent = indent + 2
    str = str .. tab(indent) .. "Input: |" .. t.input:sub(t.start) .. "|\n"
    str = str .. tab(indent)
    if t.match then
@@ -42,11 +43,7 @@ function trace.tostring(t, indent)
    end
    return str
 end
-
       
-   
-
-
 ---------------------------------------------------------------------------------------------------
 -- Trace functions for each expression type
 ---------------------------------------------------------------------------------------------------
@@ -74,6 +71,25 @@ local function sequence(e, a, input, start, expected, nextpos)
    end
 end
 
+local function choice(e, a, input, start, expected, nextpos)
+   local matches = {}
+   for _, exp in ipairs(a.exps) do
+      local result = expression(e, exp, input, start)
+      table.insert(matches, result)
+      if result.match then break; end
+   end -- for
+   local last = matches[#matches]
+   if (last.match) then
+      print("expected: ", expected and tostring(expected))
+      assert(expected, "choice match differs from expected")
+      assert(last.nextpos==nextpos, "choice nextpos differs from expected")
+      return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
+   else
+      assert(not expected, "choice non-match differs from expected")
+      return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
+   end
+end
+
 -- FUTURE: A qualified reference to a separately compiled module may not have an AST available
 -- for debugging (unless it was compiled with debugging enabled).  N.B. Currently, when the AST
 -- field of a pattern is false, the pattern is a built-in.  This must change.
@@ -95,6 +111,22 @@ local function ref(e, a, input, start, expected, nextpos)
    end
 end
 
+local function repetition(e, a, input, start, expected, nextpos)
+   local min, max, exp = a.min, a.max, a.exp
+
+   -- LEFT OFF HERE
+
+   local result = expression(e, pat.ast, input, start)
+   if expected then
+      assert(result.match, "reference match differs from expected")
+      assert(nextpos==result.nextpos, "reference nextpos differs from expected")
+   else
+      assert(not result.match)
+   end
+   -- In a trace, a reference has one sub (or none, if it is built-in)
+   return {match=expected, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
+end
+
 function expression(e, a, input, start)
    local pat = a.pat
    assert(pattern.is(pat), "no pattern stored in ast node " .. tostring(a))
@@ -106,8 +138,12 @@ function expression(e, a, input, start)
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
    elseif ast.sequence.is(a) then
       return sequence(e, a, input, start, m, nextpos)
+   elseif ast.choice.is(a) then
+      return choice(e, a, input, start, m, nextpos)
    elseif ast.ref.is(a) then
       return ref(e, a, input, start, m, nextpos)
+   elseif ast.repetition.is(a) then
+      return repetition(e, a, input, start, m, nextpos)
    else
       error("Internal error: invalid ast type in eval expression: " .. tostring(a))
    end

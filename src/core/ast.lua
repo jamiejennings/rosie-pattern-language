@@ -150,7 +150,6 @@ ast.cs_difference = recordtype.new("cs_difference",	-- [ [first]-[second] ]
 
 ast.application = recordtype.new("application",
 				 {ref = NIL;
-				  raw = false;	    -- is arglist raw {} or cooked ()
 				  arglist = NIL;
 				  pat = NIL;
 				  s = NIL;
@@ -187,7 +186,25 @@ ast.ideclist = recordtype.new("ideclist",
 			       pat = NIL;
 			       s = NIL;
 			       e = NIL;})
-			    
+
+-- 'ast.repetition' is transformed during expansion into expressions that use atmost and atleast.
+-- An 'ast.atmost' node compiles to a peg that accepts between 0 and max copies of exp, inclusive.
+ast.atmost = recordtype.new("atmost",
+			    {max = NIL;
+			     exp = NIL;
+			     pat = NIL;
+			     s = NIL;
+			     e = NIL;})
+
+-- An 'ast.atleast' node compiles to a peg that accepts at least min copies of exp, with no
+-- maximum limit.
+ast.atleast = recordtype.new("atleast",
+			     {min = NIL;
+			      exp = NIL;
+			      pat = NIL;
+			      s = NIL;
+			      e = NIL;})
+
 ---------------------------------------------------------------------------------------------------
 -- Convert a parse tree into an ast
 ---------------------------------------------------------------------------------------------------
@@ -348,6 +365,20 @@ local function convert_identifier(pt)
    return ast.ref.new{localname=localname, packagename=packagename, s=s, e=e}
 end   
 
+-- The ambient "atmosphere" in rpl is that sequences are cooked unless explicitly marked as raw.
+-- 'ambient_cook' wraps the rhs of bindings in an explicit 'cooked' ast unless the expression is
+-- already explicitly cooked or raw.  
+function ast.ambient_cook_exp(ex)
+   if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
+      return ast.cooked.new{exp=ex, s=0, e=0}
+   end
+end
+function ast.ambient_raw_exp(ex)
+   if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
+      return ast.raw.new{exp=ex, s=0, e=0}
+   end
+end
+
 function convert_exp(pt)
    local s, e = pt.s, pt.e
    if pt.type=="capture" then
@@ -375,35 +406,15 @@ function convert_exp(pt)
    elseif pt.type=="application" then
       local id = pt.subs[1]
       assert(id.type=="identifier")
-      local operands
       local arglist = pt.subs[2]
+      local operands = map(convert_exp, arglist.subs)
       if (arglist.type=="arglist") then
-	 -- Wrap non-numeric args in 'cooked'.
-	 operands = map(function(arg)
-			   if arg.type=="int" then
-			      return arg
-			   else
-			      return ast.cooked.new{exp=convert_exp(arg),
-						    s=arg.s, e=arg.e}
-			   end
-			end,
-			arglist.subs)
+	 operands = map(ast.ambient_cook_exp, operands)
       elseif (arglist.type=="rawarglist") then
-	 -- Wrap non-numeric args in 'raw'.
-	 operands = map(function(arg)
-			   if arg.type=="int" then
-			      return arg
-			   else
-			      return ast.raw.new{exp=convert_exp(arg),
-						 s=arg.s, e=arg.e}
-			   end
-			end,
-			arglist.subs)
-      elseif (arglist.type=="arg") then
-	 operands = list.new(convert_exp(arglist.subs[1]))
+	 operands = map(ast.ambient_raw_exp, operands)
       else
-	 error("Internal error: invalid arglist in application of " .. tostring(refname) ..
-	       ": " .. tostring(arglist.type))
+	 assert(arglist.type=="arg")
+	 assert(#arglist.subs==1)
       end
       return ast.application.new{ref=convert_identifier(id),
 			         arglist=operands,
@@ -547,6 +558,10 @@ function ast.tostring(a)
       return ast.tostring(a.first) .. "-" .. ast.tostring(a.second)
    elseif ast.application.is(a) then
       return ast.tostring(a.ref) .. ":" .. tostring(map(ast.tostring, a.arglist))
+   elseif ast.atleast.is(a) then
+      return "{" .. ast.tostring(a.exp) .. "}{" .. tostring(a.min) .. ",}"
+   elseif ast.atmost.is(a) then
+      return "{" .. ast.tostring(a.exp) .. "}{," .. tostring(a.max) .. "}"
    elseif list.is(a) then
       return tostring(map(ast.tostring, a))
    else

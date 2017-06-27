@@ -31,17 +31,11 @@ local common = require "common"
 local pfunction = common.pfunction
 local macro = common.macro
 
--- The ambient "atmosphere" in rpl is that sequences are cooked unless explicitly marked as raw.
--- 'ambient_cook' wraps the rhs of bindings in an explicit 'cooked' ast unless the expression is
--- already explicitly cooked or raw.  Each statement in the list is side-effected, replacing its
--- 'exp' field.
-local function ambient_cook_exp(ex)
-   if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
-      return ast.cooked.new{exp=ex, s=0, e=0}
-   end
-end
-
 local boundary_ref = ast.ref.new{localname=common.boundary_identifier}
+
+---------------------------------------------------------------------------------------------------
+-- Transform AST to remove cooked and raw nodes
+---------------------------------------------------------------------------------------------------
 
 local remove_cooked_exp;
 
@@ -64,6 +58,8 @@ local function remove_raw_exp(ex)
    elseif ast.grammar.is(ex) then
       -- An explicit 'raw' syntax cannot appear around a grammar in the current syntax
       assert(false, "rpl 1.1 grammar should not allow raw syntax surrounding a grammar")
+   elseif ast.application.is(ex) then
+      assert(false, "pattern function encountered (feature not supported)")
    else
       -- finally, return expressions that do not have sub-expressions to process
       return ex
@@ -106,6 +102,8 @@ function remove_cooked_exp(ex)
       local flag = ast.cooked.is(ex.exp)
       local new = remove_raw_exp(ex.exp)
       return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
+   elseif ast.application.is(ex) then
+      assert(false, "pattern function encountered (feature not supported)")
    else
       -- There are no sub-expressions to process in the rest of the expression types, such as
       -- refs, literals, and character set expressions.
@@ -113,13 +111,130 @@ function remove_cooked_exp(ex)
    end -- switch on kind of ex
 end
 
-local remove_cooked_raw_from_exp = remove_cooked_exp;
+-- Ambient nature of statements is that their right hand sides are cooked.
+-- 'remove_cooked_raw_from_exp' side-effects any nested expressions.
+local remove_cooked_raw_from_exp = remove_cooked_exp
 
 function remove_cooked_raw_from_stmts(stmts)
    for _, stmt in ipairs(stmts) do
       stmt.exp = remove_cooked_raw_from_exp(stmt.exp)
    end
 end
+
+---------------------------------------------------------------------------------------------------
+-- Transform each repetition node into atmost/atleast nodes
+---------------------------------------------------------------------------------------------------
+
+local remove_repetition;
+
+local function xrepetition(a, env, messages)
+   local min, max, exp = (a.min or 0), a.max, remove_repetition(a.exp)
+   local boundary_exp, final
+   if a.cooked then
+      boundary_exp = ast.sequence.new{exps={boundary_ref, exp}}
+   end
+   if (not max) then
+      if (min==0) then				    -- *
+	 if boundary_exp then
+	    final =
+	       ast.atmost.new{max=1,
+			      exp=ast.sequence.new{exps=
+						   {exp,
+						    ast.atleast.new{min=0,
+								    exp=boundary_exp}}}}
+	 else
+	    final = ast.atleast.new{min=0, exp=exp}
+	 end
+      elseif (min==1) then			    -- +
+	 if boundary_exp then
+	    final = ast.atleast.new{min=1,
+				    exp=ast.sequence.new{exps={exp, boundary_ref}}}
+	 else
+	    final = ast.atleast.new{min=1, exp=exp}
+	 end
+      else
+	 assert(min > 1)			    -- {min,}
+	 if boundary_exp then
+	    final = ast.sequence.new{exps={exp,
+					   ast.atleast.new{min=(min-1),
+							   exp=boundary_exp}}}
+	 else
+	    final = ast.atleast.new{min=min, exp=exp}
+	 end
+      end -- switch on min where (not max)
+   else -- have both min and max values
+      if (min > max) then
+	 throw("invalid repetition (min must be greater than max)", a)
+      elseif (max < 1) then
+	 throw("invalid repetition (max must be greater than zero)", a)
+      elseif (min < 0) then
+	 throw("invalid repetition (min must be greater than or equal to zero)", a)
+      end
+      -- Here's where things get interesting, because we must match at least min copies of 
+      -- exp, and at most max.
+      if (min==0) then				    -- {,max} and ?
+	 final = ast.atmost.new{max=max, exp=exp}
+	 if boundary_exp and (max > 1) then
+	    final =
+	       ast.atmost.new{max=1,
+			      exp=ast.sequence.new{exps={exp,
+							 ast.atmost.new{max=(max-1),
+								        exp=boundary_exp}}}}
+	 end
+      else
+	 assert(min > 0)			    -- {min,max}
+	 local exps = {exp}
+	 for i=2, min do
+	    exps[i] = (boundary_exp or exp)
+	 end -- for
+	 -- exps is now ready to be made into a sequence that will ensure the minimum
+	 -- requirement is met.
+	 if (min < max) then
+	    table.insert(exps,
+			 ast.atmost.new{max=(max-min),
+				        exp=(boundary_exp or exp)})
+	 else
+	    assert(min==max)
+	 end
+	 final = ast.sequence.new{exps=exps}
+      end -- switch on min
+   end -- switch on max
+   assert(final)
+   return final
+end
+
+function remove_repetition(ex)
+   if ast.predicate.is(ex) then
+      ex.exp = remove_repetition(ex.exp)
+      return ex
+   elseif ast.choice.is(ex) then
+      ex.exps = map(remove_repetition, ex.exps)
+      return ex
+   elseif ast.sequence.is(ex) then
+      ex.exps = map(remove_repetition, ex.exps)
+      return ex
+   elseif ast.grammar.is(ex) then
+      remove_repetition_from_stmts(ex.rules) 
+      return ex
+   elseif ast.repetition.is(ex) then
+      return xrepetition(ex)
+   elseif ast.application.is(ex) then
+      ex.arglist = map(remove_repetition, ex.arglist)
+      return ex
+   else
+      return ex
+   end
+end
+
+function remove_repetition_from_stmts(stmts)
+   for _, stmt in ipairs(stmts) do
+      stmt.exp = remove_repetition(stmt.exp)
+   end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Apply macros
+---------------------------------------------------------------------------------------------------
 
 local apply_macros;
 
@@ -213,7 +328,7 @@ end
 -- namespace for macros, functions, and other values, and (3) macro expansion requires a syntactic
 -- environment in which (at least) references to macros can be resolved.
 local function expression(ex, env, messages)
-   local cooked = ambient_cook_exp(ex)
+   local cooked = ast.ambient_cook_exp(ex)
    if cooked then ex = cooked; end
 
    -- Now we have an ast that a user should recognize as a parsing of their rpl source code, with
@@ -224,7 +339,7 @@ local function expression(ex, env, messages)
    -- validity and then further processed before compilation.
 
    ex = apply_macros(ex, env, messages)
-   -- TODO: check for validity here
+   -- TODO: check for valid AST here
 
 
    -- The final steps in processing the ast are purely syntactic.  Here, we simplify the ast to
@@ -232,6 +347,7 @@ local function expression(ex, env, messages)
    -- constructs are, of course, transformed into lower-level operations that the compiler does
    -- know about.
    ex = remove_cooked_raw_from_exp(ex)
+   ex = remove_repetition(ex)
    return ex
 end
 

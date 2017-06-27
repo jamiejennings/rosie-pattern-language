@@ -310,6 +310,7 @@ local function repetition(a, env, messages)
       assert(boundary)
    end -- if a.cooked
    local epat = expression(a.exp, env, messages)
+   a.exp.pat = epat
    local epeg = epat.peg
    if matches_empty(epeg) then
       throw("pattern being repeated can match the empty string", a)
@@ -363,9 +364,26 @@ local function repetition(a, env, messages)
 	    assert(min==max)
 	 end
       end -- switch on min
-   end
+   end -- switch on max
    -- return peg being quantified, quantified peg, whether boundary was appended, quantifier name, min, max
    a.pat = pattern.new{name="repetition", peg=qpeg, ast=a}
+   return a.pat
+end
+
+local function rep(a, env, messages)
+   local epat = expression(a.exp, env, messages)
+   local epeg = epat.peg
+   if matches_empty(epeg) then
+      throw("pattern being repeated can match the empty string", a)
+   end
+   a.exp.pat = epat
+   if ast.atleast.is(a) then
+      a.pat = pattern.new{name="atleast", peg=(epeg)^(a.min), ast=a}
+   elseif ast.atmost.is(a) then
+      a.pat = pattern.new{name="atmost", peg=(epeg)^(-a.max), ast=a}
+   else
+      assert(false, "invalid ast node dispatched to 'rep': " .. tostring(a))
+   end
    return a.pat
 end
 
@@ -395,7 +413,9 @@ local dispatch = { [ast.literal] = literal,
 		   [ast.cs_named] = cs_named,
 		   [ast.cs_range] = cs_range,
 		   [ast.cs_list] = cs_list,
-		   [ast.repetition] = repetition,
+		   --[ast.repetition] = repetition,
+		   [ast.atmost] = rep,
+		   [ast.atleast] = rep,
 		   [ast.predicate] = predicate,
 		   [ast.grammar] = grammar,
 		}
