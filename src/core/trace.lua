@@ -30,7 +30,8 @@ function trace.tostring(t, indent)
    assert(t.ast)
    local str = tab(indent) .. "Expression: " .. ast.tostring(t.ast) .. "\n"
    indent = indent + 2
-   str = str .. tab(indent) .. "Input: |" .. t.input:sub(t.start) .. "|\n"
+   str = str .. tab(indent) .. "Looking at: |" .. t.input:sub(t.start) .. "| (input pos = "
+   str = str .. tostring(t.start) .. ")\n"
    str = str .. tab(indent)
    if t.match then
       str = str .. "Matched " .. tostring(t.nextpos - t.start) .. " chars"
@@ -60,7 +61,6 @@ local function sequence(e, a, input, start, expected, nextpos)
       else nextstart = result.nextpos; end
    end -- for
    if (#matches==#a.exps) and (matches[#matches].match) then
-      print("expected: ", expected and tostring(expected))
       assert(expected, "sequence match differs from expected")
       local last = matches[#matches]
       assert(last.nextpos==nextpos, "sequence nextpos differs from expected")
@@ -80,7 +80,6 @@ local function choice(e, a, input, start, expected, nextpos)
    end -- for
    local last = matches[#matches]
    if (last.match) then
-      print("expected: ", expected and tostring(expected))
       assert(expected, "choice match differs from expected")
       assert(last.nextpos==nextpos, "choice nextpos differs from expected")
       return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
@@ -111,24 +110,44 @@ local function ref(e, a, input, start, expected, nextpos)
    end
 end
 
-local function rep(e, a, input, start, expected, nextpos)
-
-   -- LEFT OFF HERE
-   
-   local epat = expression(a.exp, env, messages)
-   local epeg = epat.peg
-   if matches_empty(epeg) then
-      throw("pattern being repeated can match the empty string", a)
-   end
-   a.exp.pat = epat
-   if ast.atleast.is(a) then
-      a.pat = pattern.new{name="atleast", peg=(epeg)^(a.min), ast=a}
-   elseif ast.atmost.is(a) then
-      a.pat = pattern.new{name="atmost", peg=(epeg)^(-a.max), ast=a}
+-- Note: 'atleast' implements * when a.min==0
+local function atleast(e, a, input, start, expected, nextpos)
+   local matches = {}
+   local nextstart = start
+   assert(type(a.min)=="number")
+   while true do
+      local result = expression(e, a.exp, input, nextstart)
+      table.insert(matches, result)
+      if not result.match then break
+      else nextstart = result.nextpos; end
+   end -- while
+   local last = matches[#matches]
+   if (#matches > a.min) or (#matches==a.min and last.match) then
+      assert(expected, "atleast match differs from expected")
+      assert(nextstart==nextpos, "atleast nextpos differs from expected")
+      return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
    else
-      assert(false, "invalid ast node dispatched to 'rep': " .. tostring(a))
+      assert(not expected, "atleast non-match differs from expected")
+      return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
    end
-   return a.pat
+end
+
+-- 'atmost' always succeeds, because it matches from 0 to a.max copies of exp, and it stops trying
+-- to match after it matches a.max times.
+local function atmost(e, a, input, start, expected, nextpos)
+   local matches = {}
+   local nextstart = start
+   assert(type(a.max)=="number")
+   for i = 1, a.max do
+      local result = expression(e, a.exp, input, nextstart)
+      table.insert(matches, result)
+      if not result.match then break
+      else nextstart = result.nextpos; end
+   end -- while
+   local last = matches[#matches]
+   assert(expected, "atmost match differs from expected")
+   assert(last.nextpos==nextpos, "atmost nextpos differs from expected")
+   return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
 end
 
 function expression(e, a, input, start)
@@ -146,8 +165,10 @@ function expression(e, a, input, start)
       return choice(e, a, input, start, m, nextpos)
    elseif ast.ref.is(a) then
       return ref(e, a, input, start, m, nextpos)
-   elseif ast.atleast.is(a) or ast.atmost.is(a) then
-      return rep(e, a, input, start, m, nextpos)
+   elseif ast.atleast.is(a) then
+      return atleast(e, a, input, start, m, nextpos)
+   elseif ast.atmost.is(a) then
+      return atmost(e, a, input, start, m, nextpos)
    else
       error("Internal error: invalid ast type in eval expression: " .. tostring(a))
    end

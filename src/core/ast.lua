@@ -559,9 +559,17 @@ function ast.tostring(a)
    elseif ast.application.is(a) then
       return ast.tostring(a.ref) .. ":" .. tostring(map(ast.tostring, a.arglist))
    elseif ast.atleast.is(a) then
-      return "{" .. ast.tostring(a.exp) .. "}{" .. tostring(a.min) .. ",}"
+      local quantifier
+      if a.min==0 then quantifier = "*"
+      elseif a.min==1 then quantifier = "+"
+      else quantifier = "{" .. tostring(a.min) .. ",}"; end
+      local exp = ast.tostring(a.exp)
+      if exp:sub(1,1)~="{" then exp = "{" .. exp .. "}"; end
+      return exp .. quantifier
    elseif ast.atmost.is(a) then
-      return "{" .. ast.tostring(a.exp) .. "}{," .. tostring(a.max) .. "}"
+      local exp = ast.tostring(a.exp)
+      if exp:sub(1,1)~="{" then exp = "{" .. exp .. "}"; end
+      return exp .. "{," .. tostring(a.max) .. "}"
    elseif list.is(a) then
       return tostring(map(ast.tostring, a))
    else
