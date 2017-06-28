@@ -244,7 +244,7 @@ install_so: lib/lpeg.so lib/cjson.so
 .PHONY: install_metadata
 install_metadata:
 	mkdir -p "$(ROSIED)"
-	cp CHANGELOG CONTRIBUTORS LICENSE README VERSION MANIFEST "$(ROSIED)"
+	cp CHANGELOG CONTRIBUTORS LICENSE README THANKS VERSION "$(ROSIED)"
 
 # Install the real run script, and the rosie.lua file
 .PHONY: install_run_script
