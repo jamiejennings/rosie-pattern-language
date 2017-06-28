@@ -1,7 +1,7 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- color-output.lua    Takes json from Rosie, reconstructs the input text while
-----                     highlighting recognized items in color.
+---- color-output.lua    Takes match output from Rosie in the form of a Lua table, and produces a
+----                     string that uses ANSI color codes to highlight patterns in custom colors.
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -9,6 +9,70 @@
 
 
 local co = {}
+
+-- How to produce useful color output
+
+-- Each Rosie "match" of a pattern against some input data is internally represented as a parse
+-- tree.  When a parse tree is encoded as a JSON document, you can see the tree structure in the
+-- form of objects within other objects.  In other words, a match can have "sub-matches".
+
+-- Because a match is a tree, it is not obvious how to choose a color when printing a match.  For
+-- example, a match to the pattern 'net.ipv6' could be shown in red, like other network patterns,
+-- or it could be shown as a series of underlined hex numbers (which are the sub-matches of
+-- net.ipv6).  
+
+-- Using the leaf nodes of the tree will obscure the "higher meaning" that the arrangement of
+-- these nodes match a larger pattern, namely the one at the root node of the tree.  Alas, we
+-- cannot provide in advance any default colors for user-defined patterns; nor can we expect users
+-- to define a color for each of their patterns.  This suggests that we should allow matches to be
+-- split when printed into segments of varying color.  So, when a user creates a pattern
+-- containing a date and a network address as sub-matches, they can identify sub-matches easily by
+-- color (assuming that patterns in the date and net packages are given default colors).
+
+-- Depth-first tree coloring
+
+-- Conceptually, we can use a depth-first traversal to color a tree in a way that produces the
+-- variously colored segments we will print.  If the root of the tree (e.g. 'net.ip') has an
+-- assigned color, then that is the color for this entire match.  In other words, we can stop the
+-- descent into lower nodes.  And if the root of the tree, e.g. 'net.any' does not have an
+-- assigned color, then we traverse the tree trying to find an assigned color for each node, and
+-- descending no further in that subtree when we find one.
+
+-- Default colors
+
+-- Another consideration is how users can specify custom colors for library patterns or their own
+-- patterns.  It would be convenient to specify a color for all patterns in a package,
+-- e.g. 'net.*', instead of having to name them all.  Further, it would be nice to be able to have
+-- a different color for some of those patterns, such as printing all 'net.*' patterns in red,
+-- except for 'net.ipv6', which should print in orange.
+
+-- Since Rosie's package system is simple (there are no nested packages), we can achieve this
+-- easily.  If there is a color assigned to a pattern type (e.g. 'net.ipv6'), then the text
+-- matching that pattern is printing using that color.  If not, then look for a package-level
+-- wildcard pattern (e.g. 'net.*'), and use that color.  Finally, if there is no package-level
+-- wildcard, then use the global wildcard color, '*'.
+
+-- Combining depth-first coloring with wildcard colors
+
+-- We must address the case in which there is a color for patterns defined by a wildcard, such as
+-- 'net.*', but there are also colors assigned to specific patterns in the 'net' package
+-- (e.g. 'net.ipv6').  We can modify our depth-first coloring algorithm to be aware of wildcard
+-- colors.
+
+-- Before we had wildcard colors, we would not visit the children of a node that we have colored.
+-- But if a node's color was assigned not with an exact match to the node type, but instead by a
+-- wildcard match, then we must visit the children in case any of them have a color assignment
+-- that overrides the parent.  To keep things simple, we will define "C overrides P" to mean that
+-- the color of the child C is assigned to C's node type precisely (with no wildcard) AND the
+-- color of the parent P is assigned by wildcard match to P's node type.
+
+-- One last twist
+
+-- Despite the simplicity of Rosie's package system, ...
+
+
+
+
 
 -- Rewrite notes
 --
@@ -24,8 +88,6 @@ local co = {}
 -- (2) Change the color encoding to use the rgb approach instead (TEST it first!)
 --
 -- (3) Move the color encoding functions to a common place, like utils
-
-
 
 local common = require "common"
 
@@ -72,22 +134,22 @@ co.colormap = {["."] = "black";
 	    ["word.any"] = "yellow";
 
             ["net.any"] = "red";
-            ["fqdn"] = "red";
-            ["url"] = "red";
+            ["net.fqdn"] = "red";
+            ["net.url"] = "red";
             ["http_command"] = "red";
             ["http_version"] = "red";
-            ["ip"] = "red";
-            ["ipv4"] = "red";
-            ["ipv6"] = "red";
-            ["email"] = "red";
+            ["net.ip"] = "red";
+            ["net.ipv4"] = "red";
+            ["net.ipv6"] = "red";
+            ["net.email"] = "red";
 
 	    ["num.any"] = "underline";
-	    ["int"] = "underline";
-	    ["float"] = "underline";
-	    ["mantissa"] = "underline";
-	    ["exponent"] = "underline";
-	    ["hex"] = "underline";
-	    ["denoted_hex"] = "underline";
+	    ["num.int"] = "underline";
+	    ["num.float"] = "underline";
+	    ["num.mantissa"] = "underline";
+	    ["num.exponent"] = "underline";
+	    ["num.hex"] = "underline";
+	    ["num.denoted_hex"] = "underline";
 
 	    ["word.id"] = "cyan";
 	    ["word.id1"] = "cyan";
