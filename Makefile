@@ -246,11 +246,12 @@ install_metadata:
 	mkdir -p "$(ROSIED)"
 	cp CHANGELOG CONTRIBUTORS LICENSE README VERSION MANIFEST "$(ROSIED)"
 
-# Install the real run script
+# Install the real run script, and the rosie.lua file
 .PHONY: install_run_script
 install_run_script:
 	mkdir -p "$(ROSIED)"/lib
 	@cp src/run-rosie "$(ROSIED)"/lib
+	@cp rosie.lua "$(ROSIED)"/
 
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
@@ -261,7 +262,7 @@ install_luac_bin:
 # Install the provided RPL patterns
 .PHONY: install_rpl
 install_rpl:
-	mkdir -p "$(ROSIED)"/src
+	mkdir -p "$(ROSIED)"/rpl
 	cp -r rpl "$(ROSIED)"/
 
 # Main install rule
