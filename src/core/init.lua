@@ -392,9 +392,9 @@ function create_NEW_rpl1_1_engine()
 	 if type(filename)~="string" then
 	    engine_module.engine_error(e, "file name argument not a string: " .. tostring(filename))
 	 end
-	 local actual_path, src, msg = get_file_contents(e, filename, nosearch)
+	 local actual_path, src, errmsg = get_file_contents(e, filename, nosearch)
 	 -- TODO: re-work these return values:
-	 if not src then return false, nil, msg, actual_path; end
+	 if not src then return false, nil, {errmsg}, actual_path; end
 	 local ok, pkgname, messages = load(e, src, actual_path)
 	 return ok, pkgname, messages, actual_path
       end
