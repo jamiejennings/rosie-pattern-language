@@ -21,10 +21,10 @@
 
 package json
 
-import common, num
+import word, num
 
-local key = common.dqstring
-local string = common.dqstring
+local key = word.dqstring
+local string = word.dqstring
 local number = num.signed_number
 
 local true = "true"
