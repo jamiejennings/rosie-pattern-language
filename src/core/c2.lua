@@ -399,7 +399,7 @@ local function ref(a, env, messages)
    a.pat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
    if a.packagename and (not pat.alias) then
       -- Here, pat was wrapped with only a local name when its module was compiled.  We need to
-      -- rewrap using the fully qualified name, because the code we are compiling now uses the
+      -- rewrap using the fully qualified name, because the code we are now compiling uses the
       -- fully qualified name to refer to this value.
       assert(pat.uncap)
       a.pat.peg = common.match_node_wrap(pat.uncap, a.packagename .. "." .. a.localname)
