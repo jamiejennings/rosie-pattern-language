@@ -485,8 +485,11 @@ end
 
 -- Compile all the statements in the block.  Any imports were loaded during the syntax expansion
 -- phase, in order to access macro definitions.
-function c2.compile_block(a, pkgenv, messages)
+function c2.compile_block(a, pkgenv, request, messages)
    assert(ast.block.is(a))
+   assert(environment.is(pkgenv))
+   assert(request==nil or ast.idecl.is(request))
+   assert(type(messages)=="table")
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    -- TODO: Ensure each lhs appears only once in a.stmts.
    for _, b in ipairs(a.stmts) do

@@ -92,11 +92,13 @@ local function validate_block(a)
    return true, {}
 end
 
-local function compile(compiler, a, env, messages)
+local function compile(compiler, a, env, request, messages)
    -- The 'a' parameter is the AST to compile, which is a block that has been parsed, but not
    -- expanded yet.
    -- All dependencies of the block have been loaded.
    -- Bindings for all dependencies have been created already.
+   -- The 'request' parameter is nil for top-level code, or an idecl that indicates how the
+   -- importing module requested that we compile THIS code (in 'a').
    if not compiler.expand_block(a, env, messages) then return false; end
    -- One of the expansion steps is to fill in the pdecl and ideclist slots in the block AST, so
    -- we can now use those fields.
@@ -105,7 +107,7 @@ local function compile(compiler, a, env, messages)
       local msg = a.request.importpath .. " is not a module (no package declaration found)"
       table.insert(messages, violation.info.new{who='loader', message=msg, ast=a})
    end
-   if not compiler.compile_block(a, env, messages) then
+   if not compiler.compile_block(a, env, request, messages) then
       common.note(string.format("load: failed to compile %s", pkgname or "<top level>"))
       return false
    end
@@ -149,7 +151,7 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, src, full
    if not load_dependencies(compiler, pkgtable, searchpath, nil, a, env, messages) then
       return false
    end
-   if not compile(compiler, a, env, messages) then
+   if not compile(compiler, a, env, nil, messages) then
       return false
    end
    if a.pdecl then
@@ -185,7 +187,7 @@ local function import_from_source(compiler, pkgtable, searchpath, src, request, 
    if not load_dependencies(compiler, pkgtable, searchpath, request, a, env, messages) then
       return false
    end
-   if not compile(compiler, a, env, messages) then
+   if not compile(compiler, a, env, request, messages) then
       return false
    end
    common.pkgtableset(pkgtable, request.importpath, a.pdecl.name, env)
