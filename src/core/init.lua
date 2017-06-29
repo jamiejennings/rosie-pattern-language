@@ -405,8 +405,8 @@ function create_NEW_rpl1_1_engine()
 	 local ok = loadpkg.import(e.compiler,
 				   e._pkgtable,
 				   e.searchpath,
-				   packagename,	    -- importpath
-				   as_name,
+				   packagename,	    -- requested importpath
+				   as_name,	    -- requested prefix
 				   e._env,
 				   messages)
 	 return ok, messages

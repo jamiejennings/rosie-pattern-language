@@ -19,12 +19,13 @@ local ast = {}
 
 ast.block = recordtype.new("block",
 			   {stmts = {};
-			    importpath = NIL;	    -- origin of this block from import stmt
-			                            -- or nil for top level
-			    filename = NIL;	    -- origin of this block from file system
+			    request = NIL;	    -- Not a block property, but an idecl that
+			                            -- explains WHY we are compiling this block
+			                            -- (nil indicates a top-level block)
+			    filename = NIL;	    -- Origin of this block from file system
 			                            -- or nil, e.g. for user input in CLI or REPL
-			    pdecl = NIL;	    -- filled in during expansion
-			    ideclist = NIL;	    -- filled in during expansion
+			    pdecl = NIL;	    -- Filled in during expansion
+			    ideclist = NIL;	    -- Filled in during expansion
 			    pat = NIL;
 			    s = NIL;
 			    e = NIL;})

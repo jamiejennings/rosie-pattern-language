@@ -98,14 +98,16 @@ local function compile(compiler, a, env, messages)
    -- All dependencies of the block have been loaded.
    -- Bindings for all dependencies have been created already.
    if not compiler.expand_block(a, env, messages) then return false; end
+   -- One of the expansion steps is to fill in the pdecl and ideclist slots in the block AST, so
+   -- we can now use those fields.
    local pkgname = a.pdecl and a.pdecl.name
-   if not compiler.compile_block(a, env, messages) then
-      common.note(string.format("load: FAILED TO COMPILE %s", pkgname or "<top level>"))
-      return false
-   end
-   if a.importpath and (not pkgname) then
-      local msg = a.importpath .. " is not a module (no package declaration found)"
+   if a.request and a.request.importpath and (not pkgname) then
+      local msg = a.request.importpath .. " is not a module (no package declaration found)"
       table.insert(messages, violation.info.new{who='loader', message=msg, ast=a})
+   end
+   if not compiler.compile_block(a, env, messages) then
+      common.note(string.format("load: failed to compile %s", pkgname or "<top level>"))
+      return false
    end
    common.note(string.format("load: compiled %s", pkgname or "<top level>"))
    return true
@@ -113,10 +115,10 @@ end
 
 local load_dependencies;
 
-local function parse_block(compiler, src, importpath, fullpath, messages)
-   local a = compiler.parse_block(src, importpath, messages)
+local function parse_block(compiler, src, request, fullpath, messages)
+   local a = compiler.parse_block(src, request, messages)
    if not a then return false; end		    -- errors will be in messages table
-   a.importpath = importpath
+   a.request = request
    a.filename = fullpath
    if not validate_block(a) then return false; end
    -- Via side effects, a.pdecl and a.ideclist are now filled in.
@@ -164,7 +166,7 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, src, full
    end
 end
 
-local function import_from_source(compiler, pkgtable, searchpath, src, importpath, fullpath, messages)
+local function import_from_source(compiler, pkgtable, searchpath, src, request, fullpath, messages)
    -- assert(type(compiler)=="table")
    -- assert(type(pkgtable)=="table")
    -- assert(type(searchpath)=="string")
@@ -172,7 +174,7 @@ local function import_from_source(compiler, pkgtable, searchpath, src, importpat
    -- assert(type(importpath)=="string")
    -- assert(fullpath==nil or type(fullpath)=="string")
    -- assert(type(messages)=="table")
-   local a = parse_block(compiler, src, importpath, fullpath, messages)
+   local a = parse_block(compiler, src, request, fullpath, messages)
    if not a then return false; end		    -- errors will be in messages table
    if not a.pdecl then
       local msg = "imported code is not a module"
@@ -180,24 +182,24 @@ local function import_from_source(compiler, pkgtable, searchpath, src, importpat
       return false
    end
    local env = environment.new()
-   if not load_dependencies(compiler, pkgtable, searchpath, importpath, a, env, messages) then
+   if not load_dependencies(compiler, pkgtable, searchpath, request, a, env, messages) then
       return false
    end
    if not compile(compiler, a, env, messages) then
       return false
    end
-   common.pkgtableset(pkgtable, importpath, a.pdecl.name, env)
+   common.pkgtableset(pkgtable, request.importpath, a.pdecl.name, env)
    return true, a.pdecl.name, env
 end
 
-local function find_module_source(compiler, pkgtable, searchpath, importpath, decl, messages)
-   local fullpath, src, msg = common.get_file(decl.importpath, searchpath)
+local function find_module_source(compiler, pkgtable, searchpath, request, importpath, messages)
+   local fullpath, src, msg = common.get_file(request.importpath, searchpath)
    if src then
       return src, fullpath
    end
-   local msg = ("load: cannot find module source for '" .. decl.importpath ..
-		"' needed by module '" .. (importpath or "<top level>") .. "': "
-	        .. msg)
+   local msg = ("load: cannot find module source for '" .. request.importpath ..
+		"' needed by module '" .. (importpath or "<top level>") .. 
+	        "': " .. msg)
    table.insert(messages, violation.compile.new{who='import package', message=msg, ast=decl})
    return false
 end
@@ -229,21 +231,22 @@ local function create_package_bindings(localname, pkgenv, target_env)
    end
 end
 
-local function import_one(compiler, pkgtable, searchpath, importpath, decl, messages)
+local function import_one(compiler, pkgtable, searchpath, request, importpath, messages)
+   -- Note: 'importpath' is the module making the request for this import.
    -- First, look in the pkgtable to see if this pkg has been loaded already
-   local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
+   local pkgname, pkgenv = common.pkgtableref(pkgtable, request.importpath)
    if pkgname then
-      common.note("load: ", decl.importpath, " already loaded")
+      common.note("load: ", request.importpath, " already loaded")
       return true, pkgname, pkgenv
    end
-   common.note("load: looking for ", decl.importpath)
+   common.note("load: looking for ", request.importpath)
    -- FUTURE: Next, look for a compiled version of the file to load
    -- ...
    -- Finally, look for a source file to compile and load
-   local src, fullpath = find_module_source(compiler, pkgtable, searchpath, importpath, decl, messages)
+   local src, fullpath = find_module_source(compiler, pkgtable, searchpath, request, importpath, messages)
    if not src then return false; end 		    -- message already in 'messages'
-   common.note("load: loading ", decl.importpath, " from ", fullpath)
-   return import_from_source(compiler, pkgtable, searchpath, src, importpath, fullpath, messages)
+   common.note("load: loading ", request.importpath, " from ", fullpath)
+   return import_from_source(compiler, pkgtable, searchpath, src, request, fullpath, messages)
 end
 
 function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, env, messages)
@@ -254,8 +257,8 @@ function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, en
    assert(as_name==nil or type(as_name)=="string")
    assert(environment.is(env))
    assert(type(messages)=="table")
-   local decl = ast.idecl.new{importpath=packagename, prefix=as_name}
-   local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, packagename, decl, messages)
+   local request = ast.idecl.new{importpath=packagename, prefix=as_name}
+   local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, request, messages)
    if not ok then return false; end 		    -- message already in 'messages'
    create_package_bindings(pkgname, pkgenv, env)
    return true
@@ -263,19 +266,20 @@ end
 
 -- 'load_dependencies' recursively loads each import in ideclist.
 -- Returns success; side-effects the messages argument.
-function load_dependencies(compiler, pkgtable, searchpath, importpath, a, target_env, messages)
+function load_dependencies(compiler, pkgtable, searchpath, request, a, target_env, messages)
    assert(type(compiler)=="table")
    assert(type(pkgtable)=="table")
    assert(type(searchpath)=="string")
-   assert(importpath==nil or type(importpath)=="string")
+   assert(request==nil or ast.idecl.is(request))
    assert(ast.block.is(a))
    assert(environment.is(target_env))
    assert(type(messages)=="table")
    assert(a.ideclist==nil or ast.ideclist.is(a.ideclist), "a.ideclist is: "..tostring(a.ideclist))   
    local idecls = a.ideclist and a.ideclist.idecls or {}
+   local importpath = request and request.importpath
    if #idecls==0 then common.note("load: no imports to load"); end
    for _, decl in ipairs(idecls) do
-      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, decl.importpath, decl, messages)
+      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, decl, importpath, messages)
       if not ok then
 	 common.note("FAILED to import from path " ..
 		     tostring(decl.importpath) ..

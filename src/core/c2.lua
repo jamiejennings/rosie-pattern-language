@@ -43,13 +43,13 @@ end
 local function make_parser_from(parse_something, expected_pt_node)
    return function(src, origin, messages)
 	     assert(type(src)=="string", "src is " .. tostring(src))
-	     assert(origin==nil or type(origin)=="string")
+	     assert(origin==nil or ast.idecl.is(origin))
 	     assert(type(messages)=="table", "missing messages arg?")
 	     local pt, warnings, leftover = parse_something(src)
 	     assert(type(warnings)=="table")
 	     if not pt then
 		local err = violation.syntax.new{who='rpl parser', message=table.concat(warnings, "\n")}
-		err.src = src; err.origin = origin
+		err.src = src; err.origin = origin and origin.importpath
 		table.insert(messages, err)
 		return false
 	     end
@@ -59,7 +59,7 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     if leftover~=0 then
 		local msg = "extraneous input after expression: " .. src:sub(-leftover)
 		local err = violation.syntax.new{who='rpl parser', message=msg}
-		err.src = src; err.origin = origin
+		err.src = src; err.origin = origin and origin.importpath
 		table.insert(messages, err)
 		return false
 	     end
@@ -496,7 +496,7 @@ function c2.compile_block(a, pkgenv, messages)
       if environment.lookup(pkgenv, ref.localname) then
 	 common.note("Rebinding " .. ref.localname)
       else
-	 common.note("Creating novalue binding for " .. ref.localname)
+	 common.note("Creating initial binding for " .. ref.localname)
       end
       bind(pkgenv, ref.localname, novalue.new{exported=true, ast=b})
    end -- for
@@ -516,6 +516,7 @@ function c2.compile_block(a, pkgenv, messages)
 	 if (not b.is_alias) then wrap_pattern(pat, ref.localname); end
 	 pat.alias = b.is_alias
 	 if b.is_local then pat.exported = false; end
+	 common.note("Binding value to " .. ref.localname)
 	 bind(pkgenv, ref.localname, pat)
       else
 	 return false
