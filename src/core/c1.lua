@@ -130,7 +130,7 @@ function c1.load(importpath, ast, pkgtable, env)
       i=i+1
    until not astlist[i]
    -- success! save this env in the pkgtable, if we have an importpath.
-   if importpath and thispkg then common.pkgtableset(pkgtable, importpath, thispkg, env); end
+   if importpath and thispkg then common.pkgtableset(pkgtable, importpath, nil, thispkg, env); end
    return true, thispkg, messages
 end
 

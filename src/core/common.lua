@@ -326,15 +326,17 @@ local pkgtabletype =
    recordtype.new("pkgtable", {packagename=NIL,
 			       env=NIL} )
 
-function common.pkgtableref(tbl, importpath)
-   local entry = tbl[importpath]
-   if entry then return entry.packagename, entry.env;
-   else return nil; end
+function common.pkgtableref(tbl, importpath, prefix)
+   local probe = tbl[importpath] and tbl[importpath][prefix or 1]
+   if not probe then return nil; end
+   return probe.packagename, probe.env
 end
 
-function common.pkgtableset(tbl, importpath, p, e)
+function common.pkgtableset(tbl, importpath, prefix, p, e)
    assert(p and e and type(importpath)=="string")
-   tbl[importpath] = pkgtabletype.new{packagename=p, env=e}
+   local new_entry = pkgtabletype.new{packagename=p, env=e}
+   if not tbl[importpath] then tbl[importpath] = {}; end
+   tbl[importpath][prefix or 1] = new_entry
 end
 
 ----------------------------------------------------------------------------------------

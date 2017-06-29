@@ -43,13 +43,13 @@ end
 local function make_parser_from(parse_something, expected_pt_node)
    return function(src, origin, messages)
 	     assert(type(src)=="string", "src is " .. tostring(src))
-	     assert(origin==nil or ast.idecl.is(origin))
+	     assert(origin==nil or ast.importrequest.is(origin), "origin is: " .. tostring(origin))
 	     assert(type(messages)=="table", "missing messages arg?")
 	     local pt, warnings, leftover = parse_something(src)
 	     assert(type(warnings)=="table")
 	     if not pt then
 		local err = violation.syntax.new{who='rpl parser', message=table.concat(warnings, "\n")}
-		err.src = src; err.origin = origin and origin.importpath
+		err.src = src; err.origin = origin and origin.packagename
 		table.insert(messages, err)
 		return false
 	     end
@@ -59,7 +59,7 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     if leftover~=0 then
 		local msg = "extraneous input after expression: " .. src:sub(-leftover)
 		local err = violation.syntax.new{who='rpl parser', message=msg}
-		err.src = src; err.origin = origin and origin.importpath
+		err.src = src; err.origin = origin and origin.packagename
 		table.insert(messages, err)
 		return false
 	     end
@@ -415,7 +415,7 @@ end
 function c2.compile_block(a, pkgenv, request, messages)
    assert(ast.block.is(a))
    assert(environment.is(pkgenv))
-   assert(request==nil or ast.idecl.is(request))
+   assert(request==nil or ast.importrequest.is(request))
    assert(type(messages)=="table")
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    -- TODO: Ensure each lhs appears only once in a.stmts.
@@ -442,16 +442,26 @@ function c2.compile_block(a, pkgenv, request, messages)
 	 if type(pat)~="table" then
 	    io.stderr:write("    BUT DID NOT GET A PATTERN: ", tostring(pat), "\n")
 	 end
-	 local fullname = ref.localname
-	 if request and (request.prefix~=".") then
-	    assert(type(request.importpath)=="string")
-	    assert(request.prefix==nil or type(request.prefix=="string"))
-	    fullname = (request.prefix or request.importpath) .. "." .. fullname
+	 if (not b.is_alias) then
+	    local fullname = ref.localname
+	    if request and (request.prefix~=".") then
+	       assert(type(request.packagename)=="string")
+	       assert(request.prefix==nil or type(request.prefix=="string"))
+	       fullname = (request.prefix or request.packagename) .. "." .. fullname
+	    end
+	    wrap_pattern(pat, fullname);
 	 end
-	 if (not b.is_alias) then wrap_pattern(pat, fullname); end
 	 pat.alias = b.is_alias
 	 if b.is_local then pat.exported = false; end
 	 common.note("Binding value to " .. ref.localname)
+
+	 -- TEMPORARY:
+	 if request then
+	    common.note("request.prefix=", request.prefix)
+	    common.note("request.packagename=", request.packagename)
+	    common.note("request.importpath=", request.importpath)
+	 end
+
 	 bind(pkgenv, ref.localname, pat)
       else
 	 return false

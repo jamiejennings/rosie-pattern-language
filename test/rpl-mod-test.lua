@@ -94,14 +94,52 @@ check(not p)
 p = e:lookup("name_is_unexpectedly_different_from_file_name.y")
 check(p)
 
-ok, m, left, t0 = e:match("name_is_unexpectedly_different_from_file_name.y", "world")
+ok, m, left, t0 = e:match("name_is_unexpectedly_different_from_file_name.y", "hello world")
 check(ok)
 check(m)
-table.print(m, false)
+--table.print(m, false)
+
+-- ensure that the package name is the one in the module source (i.e. the package declaration in
+-- mod3.rpl) and not the name in the import declaration ("import mod3" above).
 check(m.type=="name_is_unexpectedly_different_from_file_name.y")
 check(left==0)
+check(m.subs, "missing submatch for x")
+check(m.subs and m.subs[1].type=="name_is_unexpectedly_different_from_file_name.x")
+
+-- x is local to mod3.  make sure we cannot see it.
 p = e:lookup("name_is_unexpectedly_different_from_file_name.x")
 check(not p)
+
+-- check that "import as..." works
+ok, pkgname, msgs = e:load("import mod3 as foo")
+check(ok)
+check(not pkgname)
+ok, m, left, t0 = e:match("foo.y", "hello world")
+check(ok)
+check(m)
+-- ensure that the package name is the one in the "as ..." part of the import declaration.
+check(m.type=="foo.y")
+check(left==0)
+check(m.subs, "missing submatch for x")
+check(m.subs and m.subs[1].type=="foo.x")
+
+
+-- check the same for grammars
+p = e:lookup("name_is_unexpectedly_different_from_file_name.gx") -- local
+check(not p)
+p = e:lookup("foo.gx")				    -- local
+check(not p)
+p = e:lookup("gy")				    -- not imported at top level
+check(not p)
+p = e:lookup("foo.gy")
+check(p)
+ok, m, left, t0 = e:match("foo.gy", "hello world")
+check(ok)
+check(m)
+check(m.type=="foo.gy")
+check(left==0)
+check(m.subs, "missing submatch for gx")
+check(m.subs and m.subs[1].type=="foo.gx")
 
 
 ok, pkgname, msgs = e:load("import mod4")

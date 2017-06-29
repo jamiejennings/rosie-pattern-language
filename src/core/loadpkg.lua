@@ -97,16 +97,20 @@ local function compile(compiler, a, env, request, messages)
    -- expanded yet.
    -- All dependencies of the block have been loaded.
    -- Bindings for all dependencies have been created already.
-   -- The 'request' parameter is nil for top-level code, or an idecl that indicates how the
-   -- importing module requested that we compile THIS code (in 'a').
+   -- The 'request' parameter is nil for top-level code, or an importrequest that indicates how
+   -- the importing module requested that we compile the code in 'a'.
    if not compiler.expand_block(a, env, messages) then return false; end
    -- One of the expansion steps is to fill in the pdecl and ideclist slots in the block AST, so
    -- we can now use those fields.
    local pkgname = a.pdecl and a.pdecl.name
-   if a.request and a.request.importpath and (not pkgname) then
+   if a.request and (not pkgname) then
       local msg = a.request.importpath .. " is not a module (no package declaration found)"
       table.insert(messages, violation.info.new{who='loader', message=msg, ast=a})
    end
+   -- If we are compiling 'a' due to a request, then the request has an importpath and a prefix,
+   -- both of which came from an import declaration.  The packagename in the request object was
+   -- not known until now (because we just parsed and expanded the module source).
+   if a.request then a.request.packagename = pkgname; end
    if not compiler.compile_block(a, env, request, messages) then
       common.note(string.format("load: failed to compile %s", pkgname or "<top level>"))
       return false
@@ -183,6 +187,7 @@ local function import_from_source(compiler, pkgtable, searchpath, src, request, 
       table.insert(messages, violation.compile.new{who='loader', message=msg, ast=a})
       return false
    end
+   request.packagename = a.pdecl.name
    local env = environment.new()
    if not load_dependencies(compiler, pkgtable, searchpath, request, a, env, messages) then
       return false
@@ -190,7 +195,7 @@ local function import_from_source(compiler, pkgtable, searchpath, src, request, 
    if not compile(compiler, a, env, request, messages) then
       return false
    end
-   common.pkgtableset(pkgtable, request.importpath, a.pdecl.name, env)
+   common.pkgtableset(pkgtable, request.importpath, request.prefix, request.packagename, env)
    return true, a.pdecl.name, env
 end
 
@@ -236,7 +241,7 @@ end
 local function import_one(compiler, pkgtable, searchpath, request, importpath, messages)
    -- Note: 'importpath' is the module making the request for this import.
    -- First, look in the pkgtable to see if this pkg has been loaded already
-   local pkgname, pkgenv = common.pkgtableref(pkgtable, request.importpath)
+   local pkgname, pkgenv = common.pkgtableref(pkgtable, request.importpath, request.prefix)
    if pkgname then
       common.note("load: ", request.importpath, " already loaded")
       return true, pkgname, pkgenv
@@ -259,7 +264,7 @@ function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, en
    assert(as_name==nil or type(as_name)=="string")
    assert(environment.is(env))
    assert(type(messages)=="table")
-   local request = ast.idecl.new{importpath=packagename, prefix=as_name}
+   local request = ast.importrequest.new{importpath=packagename, prefix=as_name, packagename=NIL}
    local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, request, messages)
    if not ok then return false; end 		    -- message already in 'messages'
    create_package_bindings(pkgname, pkgenv, env)
@@ -272,7 +277,7 @@ function load_dependencies(compiler, pkgtable, searchpath, request, a, target_en
    assert(type(compiler)=="table")
    assert(type(pkgtable)=="table")
    assert(type(searchpath)=="string")
-   assert(request==nil or ast.idecl.is(request))
+   assert(request==nil or ast.importrequest.is(request))
    assert(ast.block.is(a))
    assert(environment.is(target_env))
    assert(type(messages)=="table")
@@ -281,7 +286,8 @@ function load_dependencies(compiler, pkgtable, searchpath, request, a, target_en
    local importpath = request and request.importpath
    if #idecls==0 then common.note("load: no imports to load"); end
    for _, decl in ipairs(idecls) do
-      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, decl, importpath, messages)
+      local request = ast.importrequest.new{importpath=decl.importpath, prefix=decl.prefix}
+      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, request, importpath, messages)
       if not ok then
 	 common.note("FAILED to import from path " ..
 		     tostring(decl.importpath) ..
@@ -292,7 +298,7 @@ function load_dependencies(compiler, pkgtable, searchpath, request, a, target_en
    -- With all imports loaded and registered in pkgtable, we can now create bindings in target_env
    -- to make the exported bindings accessible.
    for _, decl in ipairs(idecls) do
-      local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath)
+      local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath, decl.prefix)
       local localname = decl.prefix or pkgname
       assert(type(localname)=="string")
       create_package_bindings(localname, pkgenv, target_env)

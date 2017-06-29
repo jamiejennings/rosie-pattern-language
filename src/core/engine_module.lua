@@ -614,7 +614,7 @@ local engine =
 				    return common.pkgtableref(self._pkgtable, path)
 				 end,
 		     pkgtableset=function(self, path, p, e)
-				    common.pkgtableset(self._pkgtable, path, p, e)
+				    common.pkgtableset(self._pkgtable, path, nil, p, e)
 				 end,
 
 		     encode_function=false,	      -- false or nil ==> use default encoder
