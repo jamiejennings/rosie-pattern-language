@@ -130,7 +130,8 @@ function p.run(rosie, en, args, filename)
 	 local t = m.subs[2]
 	 assert(t.subs and t.subs[1] and t.subs[1].type=="includesKeyword")
 	 local testing_excludes = (t.subs[1].text=="excludes")
-	 assert(t.subs[2] and t.subs[2].type=="identifier")
+	 assert(t.subs[2] and t.subs[2].type=="identifier",
+		"not an identifier: " .. tostring(t.subs[2].type))
          local containedIdentifier = t.subs[2].text
          for i = literals, #m.subs do
             total = total + 1

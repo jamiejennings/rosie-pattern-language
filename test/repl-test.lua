@@ -77,8 +77,8 @@ results_num_any =
 '       [{"data": "123", ',
 '         "end": 6.0, ',
 '         "pos": 3.0, ',
-'         "type": "hex"}], ',
-'     "type": "denoted_hex"}], ',
+'         "type": "num.hex"}], ',
+'     "type": "num.denoted_hex"}], ',
 ' "type": "num.any"}',
 }
 

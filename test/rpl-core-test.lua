@@ -1510,7 +1510,7 @@ check(m and m.type=="foo.float" and m.subs)
 m = check_match("num.float", "42.1", true)	    -- and num still works
 check(m.type=="num.float" and m.subs)
 m = check_match("float", "42.1", true)		    -- and now float works at top level
-check(m.type=="float" and m.subs, true)
+check(m.type=="num.float" and m.subs, true)
 
 subheading("Bindings (equivalence of reference and referent)")
 
