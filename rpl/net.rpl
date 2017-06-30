@@ -20,12 +20,16 @@ local alias ipv4_component = [:digit:]{1,3}
 local alias ip_address_v4 = { ipv4_component "." ipv4_component "." ipv4_component "." ipv4_component }
 local alias ipv6_component = [:xdigit:]{1,4}
 local alias ipv6_rest = { ":" ipv6_component }
--- ipv6 is complex, but we don't need to be as exact as rfc3986 is
--- this could be expanded a little more
+-- ipv6 is complex, but we don't need to be as exact as rfc3986 is.  We might add the mixed
+-- syntax (ipv6/ipv4) for ipv4 addresses that are mapped into ipv6.
 local alias ip_address_v6 = {
 	{ ipv6_component ipv6_rest{7,7} } /
-	{ ipv6_component ipv6_rest{0,5} "::" ipv6_component ipv6_rest{0,4} } /
-	{ ipv6_component ipv6_rest{1,5} "::" } /
+	{ ipv6_component "::" ipv6_component ipv6_rest{0,4} } /
+	{ ipv6_component ipv6_rest{1} "::" ipv6_component ipv6_rest{0,3} } /
+	{ ipv6_component ipv6_rest{2} "::" ipv6_component ipv6_rest{0,2} } /
+	{ ipv6_component ipv6_rest{3} "::" ipv6_component ipv6_rest{0,1} } /
+	{ ipv6_component ipv6_rest{4} "::" ipv6_component } /
+	{ ipv6_component ipv6_rest{5} "::" } /
 	{ "::" ipv6_component ipv6_rest{0,5} } /
 	{ "::" }  -- undefined address
 }
