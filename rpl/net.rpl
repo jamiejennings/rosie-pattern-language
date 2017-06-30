@@ -15,12 +15,10 @@ package net
 -- [2] RFC3696 Application Techniques for Checking and Transformation of Names
 -- (https:--tools.ietf.org/html/rfc3696)
 
-import num
-
 -- IP ADDRESSES
 local alias ipv4_component = [:digit:]{1,3}
 local alias ip_address_v4 = { ipv4_component "." ipv4_component "." ipv4_component "." ipv4_component }
-local alias ipv6_component = num.hex{1,4}
+local alias ipv6_component = [:xdigit:]{1,4}
 local alias ipv6_rest = { ":" ipv6_component }
 -- ipv6 is complex, but we don't need to be as exact as rfc3986 is
 -- this could be expanded a little more
