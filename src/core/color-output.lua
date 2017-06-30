@@ -66,9 +66,76 @@ local co = {}
 -- the color of the child C is assigned to C's node type precisely (with no wildcard) AND the
 -- color of the parent P is assigned by wildcard match to P's node type.
 
--- One last twist
+-- A limitation
 
--- Despite the simplicity of Rosie's package system, ...
+-- Despite the simplicity of Rosie's package system, it is flexible enough to allow you to import
+-- a module under a different name from the one declared inside the module.  When you "import X as
+-- Y", you get all the things in package X, e.g. a and b, but you refer to them as Y.a and Y.b
+-- instead of the default X.a and X.b.
+
+-- The color assignment system does not know how to map from the module names that are declared
+-- inside module files and what you might map them to.  (This is something that is, in fact,
+-- possible to do!  But it is not done today.)
+
+-- As a result, if you have a color assignment for pattern X.a, but you "import X as Y", then your
+-- output will include match types such as Y.a, which will not trigger the coloring unless you
+-- also add entries for Y.a.
+
+local list = require "list"
+
+
+local function split(name)
+   local pkgname, localname
+   local start, finish = name:find(".", 1, true)
+   if start then
+      return name:sub(start, finish-1), name:sub(finish+1)
+   else
+      return nil, name
+   end
+end
+
+local function color(match, db, pkgname, pkgcolor, global_default)
+   local c = query(db, match.type, "exact")
+   -- Exact match in color database: print in color c
+   if c then return {c, match}; end
+   -- Else, if match is a leaf, then check for a default color
+   if not match.subs then
+      local match_pkg, match_name = split(match.type)
+      if match_pkg then
+	 if not pkgname then
+	    -- We were not given any default package with a default color, so
+	    -- look for one.
+	    pkgname, pkgcolor = query(db, match_pkg, "default")
+	    return {pkgcolor or global_default, match}
+	 elseif (match_pkg==pkgname) then
+	    return {pkgcolor, match}
+	 end
+      else
+	 -- The match does not have a pkg prefix (only a local name, match_name).  And we know
+	 -- also that there is no assigned color for this exact match type.
+	 return {global_default, match}
+      end
+   else
+      -- Else, print each sub-match in its own color.  Start by looking for a package default,
+      -- provided we were not given one already.
+      if not pkgname then
+	 pkgname, pkgcolor = query(db, match_pkg, "default")
+      end
+      return map(function(sub)
+		    return color(sub, db, pkgname, pkgcolor, global_default)
+		 end,
+		 match.subs)
+   end
+end
+
+function co.color(match, db)
+   local global_default = query(db, nil, "global_default")
+   return color(match, db, nil, nil, global_default)
+end
+
+      
+      
+
 
 
 
@@ -143,13 +210,13 @@ co.colormap = {["."] = "black";
             ["net.ipv6"] = "red";
             ["net.email"] = "red";
 
-	    ["num.any"] = "underline";
-	    ["num.int"] = "underline";
-	    ["num.float"] = "underline";
-	    ["num.mantissa"] = "underline";
-	    ["num.exponent"] = "underline";
-	    ["num.hex"] = "underline";
-	    ["num.denoted_hex"] = "underline";
+	    -- ["num.any"] = "underline";
+	    -- ["num.int"] = "underline";
+	    -- ["num.float"] = "underline";
+	    -- ["num.mantissa"] = "underline";
+	    -- ["num.exponent"] = "underline";
+	    -- ["num.hex"] = "underline";
+	    -- ["num.denoted_hex"] = "underline";
 
 	    ["word.id"] = "cyan";
 	    ["word.id1"] = "cyan";

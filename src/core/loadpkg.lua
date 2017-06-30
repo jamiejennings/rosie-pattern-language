@@ -199,7 +199,7 @@ local function import_from_source(compiler, pkgtable, searchpath, src, request, 
    return true, a.pdecl.name, env
 end
 
-local function find_module_source(compiler, pkgtable, searchpath, request, importpath, messages)
+local function find_module_source(compiler, pkgtable, searchpath, request, messages)
    local fullpath, src, msg = common.get_file(request.importpath, searchpath)
    if src then
       return src, fullpath
@@ -238,8 +238,7 @@ local function create_package_bindings(localname, pkgenv, target_env)
    end
 end
 
-local function import_one(compiler, pkgtable, searchpath, request, importpath, messages)
-   -- Note: 'importpath' is the module making the request for this import.
+local function import_one(compiler, pkgtable, searchpath, request, messages)
    -- First, look in the pkgtable to see if this pkg has been loaded already
    local pkgname, pkgenv = common.pkgtableref(pkgtable, request.importpath, request.prefix)
    if pkgname then
@@ -250,7 +249,7 @@ local function import_one(compiler, pkgtable, searchpath, request, importpath, m
    -- FUTURE: Next, look for a compiled version of the file to load
    -- ...
    -- Finally, look for a source file to compile and load
-   local src, fullpath = find_module_source(compiler, pkgtable, searchpath, request, importpath, messages)
+   local src, fullpath = find_module_source(compiler, pkgtable, searchpath, request, messages)
    if not src then return false; end 		    -- message already in 'messages'
    common.note("load: loading ", request.importpath, " from ", fullpath)
    return import_from_source(compiler, pkgtable, searchpath, src, request, fullpath, messages)
@@ -287,7 +286,7 @@ function load_dependencies(compiler, pkgtable, searchpath, request, a, target_en
    if #idecls==0 then common.note("load: no imports to load"); end
    for _, decl in ipairs(idecls) do
       local request = ast.importrequest.new{importpath=decl.importpath, prefix=decl.prefix}
-      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, request, importpath, messages)
+      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, request, messages)
       if not ok then
 	 common.note("FAILED to import from path " ..
 		     tostring(decl.importpath) ..
