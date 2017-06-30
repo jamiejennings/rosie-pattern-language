@@ -201,13 +201,13 @@ co.colormap = {["."] = "black";
 	    ["word.any"] = "yellow";
 
             ["net.any"] = "red";
-            ["net.fqdn"] = "red";
+            ["net.fqdn"] = "yellow";
             ["net.url"] = "red";
             ["http_command"] = "red";
             ["http_version"] = "red";
             ["net.ip"] = "red";
             ["net.ipv4"] = "red";
-            ["net.ipv6"] = "red";
+            ["net.ipv6"] = "magenta";
             ["net.email"] = "red";
 
 	    -- ["num.any"] = "underline";
