@@ -1,7 +1,7 @@
 ---- -*- Mode: rpl; -*-                                                                             
 ---- vim:syn=rosie
 ----
----- rpl-1.1.rpl     RPL language version 1.1, written in RPL version 1.0
+---- rpl-1.1.rpl     RPL language version 1.1, written in RPL version 0 (core)
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -25,33 +25,33 @@
 --    .$ is NOT a parse error.  
 
 
-rpl 1.0
+--rpl 1.0
 
 package rpl_1_1
 
-alias newline = [\n]
+alias newline = [[\n]]
 
 alias comment = { "--" {!newline .}* {newline / $} }
 alias ignore = { { [[:space:]] / comment }* }
 
-alias id_char = { [[:alnum:]] / [_] }
+alias id_char = { [[:alnum:]] / [[_]] }
 alias id = { [[:alpha:]] id_char* }
 
-alias id_symbol = [.$~]
+alias id_symbol = [[.$~]]
 
 localname = {id_symbol !id} / {id !id_symbol}
 packagename = id
-identifier = { {packagename [.]}? localname }
+identifier = { {packagename [[.]]}? localname }
 
-alias dquote = { [\"] }
-alias esc =    { [\\] }
+alias dquote = { [[\"]] }
+alias esc =    { [[\\]] }
 literal = { {!{esc/dquote} .} / {esc .} }* 
 alias quoted_string = { dquote literal dquote }
 
 
-star =     { [*] }
-question = { [?] }
-plus =     { [+] }
+star =     { [[*]] }
+question = { [[?]] }
+plus =     { [[+]] }
 alias end_token = { "end" !id_char }
 alias keyword_list = "local" / "alias" / "grammar" / "end"
 keyword = { keyword_list !id_char }
@@ -63,7 +63,7 @@ syntax_error = { rest_of_line }
 
 complement = "^"
 character = { {!esc !"[" !"^" !"]" .} / {esc .} }
-range = { complement? character [-] !"]" character } 
+range = { complement? character [[-]] !"]" character } 
 charlist = { complement? {!"]" character}+ }		    -- cannot be empty
 name = {!":" .}+
 named_charset = { complement? name } 
@@ -86,21 +86,21 @@ low =  [[0-9]]*				    -- an int or nothing
 high = [[0-9]]* 
 repetition = { "{" ignore low ignore {"," ignore high ignore}? "}" }
 	          
-int = ignore [0-9]+
+int = ignore [[0-9]]+
 
 alias quantifier = star / question / plus / repetition
 
 assignment_prefix = identifier ignore "="
 stmnt_prefix = {keyword / assignment_prefix}
 
-alias slash =         { [/] }
-alias open =          { [(] }
-alias openraw =       { [{] }
-alias close =         { [)] }
-alias closeraw =      { [}] }
+alias slash =         { [[/]] }
+alias open =          { [[(]] }
+alias openraw =       { [[{]] }
+alias close =         { [[)]] }
+alias closeraw =      { [[}]] }
 
-negation = { [!] }
-lookat = { [@] }
+negation = { [[!]] }
+lookat = { [[@]] }
 alias predicate_symbol = { negation / lookat }
 	    
 grammar
@@ -139,7 +139,7 @@ importpath = quoted_string		  -- double quoted, interpreted, pattern name is "li
 --              / {[[:alnum:]]/[_-//]}+	  -- whitespace terminated, uninterpreted
 
 
-major = [0-9]{1,2}
+major = [[0-9]]{1,2}
 minor = major
 version_spec = { major "." minor ignore }
 dot = "."
@@ -149,11 +149,11 @@ import_spec = ignore importpath ("as" (packagename / dot))?
 -- Top level patterns
 ----------------------------------------------------------------------------------------
 
-language_decl = ignore {"rpl" [:space:]} version_spec [;]?
-package_decl = ignore {"package" [:space:]} packagename [;]?
-import_decl = ignore {"import" [:space:]} import_spec ("," ignore import_spec)* [;]?
+language_decl = ignore {"rpl" [[:space:]]} version_spec [[;]]?
+package_decl = ignore {"package" [[:space:]]} packagename [[;]]?
+import_decl = ignore {"import" [[:space:]]} import_spec ("," ignore import_spec)* [[;]]?
 
-rpl_statements = (ignore [;] / package_decl / import_decl / stmnt / syntax_error)* ignore $
+rpl_statements = (ignore [[;]] / package_decl / import_decl / stmnt / syntax_error)* ignore $
 rpl_expression = {exp ignore} / syntax_error
 
 preparse = language_decl

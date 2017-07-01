@@ -198,106 +198,111 @@ local function create_core_engine()
    CORE_ENGINE.searchpath = ROSIE_LIB
    announce("CORE_ENGINE", CORE_ENGINE)
 
-   -- Into the core engine, load the rpl 1.0 definition, which is written in rpl 0.0
-   local rpl_1_0_filename = common.path(ROSIE_LIB, "rosie", "rpl_1_0.rpl")
-   local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
-
-   if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
-   local success, pkg, messages = CORE_ENGINE:load(rpl_1_0, "rosie/rpl_1_0.rpl")
-   if not success then error("Error while loading " .. rpl_1_0_filename .. ":\n" .. tostring(pkg)); end
-
-   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_statements', 'match')
-   if not success then error("Error while initializing: could not compile 'rpl_statements' in "
-			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-   ROSIE_RPLX = result
-
-   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_expression', 'match')
-   if not success then error("Error while initializing: could not compile 'rpl_expression' in "
-			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-   ROSIE_EXP_RPLX = result
-
-   local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse', 'match')
-   if not success then error("Error while initializing: could not compile 'preparse' in "
-			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-   ROSIE_PREPARSE = result
-end
-
-
-function create_rpl1_0_engine()
-   -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
-   local supported_version = common.rpl_version.new(1, 0)
-   local preparser =
-      rpl_parser.make_preparser(ROSIE_PREPARSE, supported_version);
-   local parse_and_explain =
-      rpl_parser.make_parse_and_explain(preparser, supported_version, ROSIE_RPLX, syntax.transform0)
-   local parse_and_explain_exp =
-      rpl_parser.make_parse_and_explain(nil, nil, ROSIE_EXP_RPLX, syntax.transform0)
-
-   parser1_0 =
-      common.parser.new{ version = supported_version;
-			 preparse = preparser;
-			 parse_statements = parse_and_explain;
-			 parse_expression = parse_and_explain_exp;
-			 parse_deps = function() return {} end;
-			 prefixes = unsupported;
-		      }
-   compiler1_0 =
-      common.compiler.new{ version = common.rpl_version.new(1, 0);
-			   load = compile.compile0.compile;
-			   import = unsupported;
-			   compile_expression = compile.compile0.compile_expression;
-			   parser = parser1_0;
-			}
-   RPL1_0_ENGINE = engine.new("RPL 1.0 engine", compiler1_0)
-   RPL1_0_ENGINE.searchpath = ROSIE_LIB
-   announce("RPL1_0_ENGINE", RPL1_0_ENGINE)
-end
-
-function create_rpl1_1_engine()
-   -- Create an engine, and load the rpl 1.1 definition, which is written in rpl 1.0
-   local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
-   local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
-   if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
-   local e = engine.new("RPL 1.1 engine", compiler1_0)
-   e.searchpath = ROSIE_LIB
-   e:load(rpl_1_1, "rosie/rpl_1_1.rpl")
-   local messages
-   RPL1_1_RPLX, messages = e:compile('rpl_statements')
-   RPL1_1_EXP_RPLX, messages = e:compile('rpl_expression')
-   rpl_parser = import("rpl-parser")		    -- idempotent
-   local supported_version = common.rpl_version.new(1, 1)
-   local preparser =
-      rpl_parser.make_preparser(ROSIE_PREPARSE, supported_version);
-   local parse_and_explain =
-      rpl_parser.make_parse_and_explain(preparser, supported_version, RPL1_1_RPLX, syntax.transform1)
-   local parse_and_explain_exp =
-      rpl_parser.make_parse_and_explain(nil, nil, RPL1_1_EXP_RPLX, syntax.transform1)
-
-   parser1_1 =
-      common.parser.new{ version = supported_version;
-			 preparse = preparser;
-			 parse_statements = parse_and_explain;
-			 parse_expression = parse_and_explain_exp;
-			 parse_deps = rpl_parser.parse_deps;   -- TODO: update this
-			 prefixes = unsupported;	       -- TODO: drop this?
-		      }
-   compiler1_1 =
-      common.compiler.new{ version = supported_version;
-			   load = compile.compile1.compile;
-			   import = unsupported;               -- TODO: implement this?
-			   compile_expression = compile.compile1.compile_expression;
-			   parser = parser1_1;
-			}
-
-   -- Make RPL 1.1 the default for new engines
-   engine_module._set_default_compiler(compiler1_1)
    engine_module._set_default_searchpath(ROSIE_PATH)
 
-   RPL1_1_ENGINE = e
-   announce("RPL1_1_ENGINE", RPL1_1_ENGINE)
+   -- Into the core engine, load the rpl 1.1 definition, which is written in rpl 0.0
 
-   ROSIE_ENGINE = RPL1_1_ENGINE
+
+   -- local rpl_1_0_filename = common.path(ROSIE_LIB, "rosie", "rpl_1_0.rpl")
+   -- local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
+
+   -- if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
+   -- local success, pkg, messages = CORE_ENGINE:load(rpl_1_0, "rosie/rpl_1_0.rpl")
+   -- if not success then error("Error while loading " .. rpl_1_0_filename .. ":\n" .. tostring(pkg)); end
+
+   -- local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_statements', 'match')
+   -- if not success then error("Error while initializing: could not compile 'rpl_statements' in "
+   -- 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
+   -- ROSIE_RPLX = result
+
+   -- local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_expression', 'match')
+   -- if not success then error("Error while initializing: could not compile 'rpl_expression' in "
+   -- 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
+   -- ROSIE_EXP_RPLX = result
+
+   -- local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse', 'match')
+   -- if not success then error("Error while initializing: could not compile 'preparse' in "
+   -- 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
+   -- ROSIE_PREPARSE = result
+
 end
+
+
+-- function create_rpl1_0_engine()
+--    -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
+--    local supported_version = common.rpl_version.new(1, 0)
+--    local preparser =
+--       rpl_parser.make_preparser(ROSIE_PREPARSE, supported_version);
+--    local parse_and_explain =
+--       rpl_parser.make_parse_and_explain(preparser, supported_version, ROSIE_RPLX, syntax.transform0)
+--    local parse_and_explain_exp =
+--       rpl_parser.make_parse_and_explain(nil, nil, ROSIE_EXP_RPLX, syntax.transform0)
+
+--    parser1_0 =
+--       common.parser.new{ version = supported_version;
+-- 			 preparse = preparser;
+-- 			 parse_statements = parse_and_explain;
+-- 			 parse_expression = parse_and_explain_exp;
+-- 			 parse_deps = function() return {} end;
+-- 			 prefixes = unsupported;
+-- 		      }
+--    compiler1_0 =
+--       common.compiler.new{ version = common.rpl_version.new(1, 0);
+-- 			   load = compile.compile0.compile;
+-- 			   import = unsupported;
+-- 			   compile_expression = compile.compile0.compile_expression;
+-- 			   parser = parser1_0;
+-- 			}
+--    RPL1_0_ENGINE = engine.new("RPL 1.0 engine", compiler1_0)
+--    RPL1_0_ENGINE.searchpath = ROSIE_LIB
+--    announce("RPL1_0_ENGINE", RPL1_0_ENGINE)
+-- end
+
+-- function create_rpl1_1_engine()
+--    -- Create an engine, and load the rpl 1.1 definition, which is written in rpl 1.0
+--    local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
+--    local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
+--    if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
+--    local e = engine.new("RPL 1.1 engine", compiler1_0)
+--    e.searchpath = ROSIE_LIB
+--    e:load(rpl_1_1, "rosie/rpl_1_1.rpl")
+--    local messages
+--    RPL1_1_RPLX, messages = e:compile('rpl_statements')
+--    RPL1_1_EXP_RPLX, messages = e:compile('rpl_expression')
+--    rpl_parser = import("rpl-parser")		    -- idempotent
+--    local supported_version = common.rpl_version.new(1, 1)
+--    local preparser =
+--       rpl_parser.make_preparser(ROSIE_PREPARSE, supported_version);
+--    local parse_and_explain =
+--       rpl_parser.make_parse_and_explain(preparser, supported_version, RPL1_1_RPLX, syntax.transform1)
+--    local parse_and_explain_exp =
+--       rpl_parser.make_parse_and_explain(nil, nil, RPL1_1_EXP_RPLX, syntax.transform1)
+
+--    parser1_1 =
+--       common.parser.new{ version = supported_version;
+-- 			 preparse = preparser;
+-- 			 parse_statements = parse_and_explain;
+-- 			 parse_expression = parse_and_explain_exp;
+-- 			 parse_deps = rpl_parser.parse_deps;   -- TODO: update this
+-- 			 prefixes = unsupported;	       -- TODO: drop this?
+-- 		      }
+--    compiler1_1 =
+--       common.compiler.new{ version = supported_version;
+-- 			   load = compile.compile1.compile;
+-- 			   import = unsupported;               -- TODO: implement this?
+-- 			   compile_expression = compile.compile1.compile_expression;
+-- 			   parser = parser1_1;
+-- 			}
+
+--    -- Make RPL 1.1 the default for new engines
+--    engine_module._set_default_compiler(compiler1_1)
+--    engine_module._set_default_searchpath(ROSIE_PATH)
+
+--    RPL1_1_ENGINE = e
+--    announce("RPL1_1_ENGINE", RPL1_1_ENGINE)
+
+--    ROSIE_ENGINE = RPL1_1_ENGINE
+-- end
 
 function create_NEW_rpl1_1_engine()
 
@@ -307,7 +312,8 @@ function create_NEW_rpl1_1_engine()
    local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
    local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
    if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
-   local e = engine.new("RPL 1.1 engine", compiler1_0)
+--   local e = engine.new("RPL 1.1 engine", compiler1_0)
+   local e = CORE_ENGINE
    e.searchpath = ROSIE_LIB
    e:load(rpl_1_1, "rosie/rpl_1_1.rpl")
    local version = common.rpl_version.new(1, 1)
@@ -509,12 +515,12 @@ rosie_package._env = _ENV
 load_all()
 setup_paths()
 create_core_engine()
-create_rpl1_0_engine()
-create_rpl1_1_engine()
-assert(ROSIE_ENGINE)
-populate_info()
+--create_rpl1_0_engine()
+--create_rpl1_1_engine()
 
 create_NEW_rpl1_1_engine()
+assert(ROSIE_ENGINE)
+populate_info()
 
 rosie_package.engine = engine
 rosie_package.encoders = create_encoder_table()
