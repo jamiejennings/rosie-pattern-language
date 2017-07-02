@@ -333,6 +333,7 @@ function convert_char_exp(pt)
    end
    local s, e = pt.s, pt.e
    if pt.type=="named_charset" then
+      print("***", map(function(e) return e.text end, exps))
       return ast.cs_named.new{name = exps[1].text, complement = compflag, s=s, e=e}
    elseif pt.type=="charlist" then
       return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
@@ -494,47 +495,6 @@ ast.from_parse_tree = convert
 -- Convert a parse tree produced by the rpl core parser
 ---------------------------------------------------------------------------------------------------
 
--- function convert_core_charset(pt)
---    local exps, compflag
---    if pt.type=="charset_exp" then
---       assert(pt.subs and pt.subs[1])
---       pt = pt.subs[1]
---       exps = list.from(pt.subs)
---       compflag = (pt.subs[1].type=="complement")
---       if compflag then
--- 	 exps = list.cdr(exps)
--- 	 assert(pt.subs[2])
---       end
---    else
---       -- We have something that appeared inside a charset_exp.
---       exps = list.from(pt.subs)
---       compflag = false
---    end
---    local s, e = pt.s, pt.e
---    if pt.type=="named_charset" then
---       return ast.cs_named.new{name = exps[1].text, complement = compflag, s=s, e=e}
---    elseif pt.type=="charlist" then
---       return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
--- 			     complement = compflag,
--- 			     s=s, e=e}
---    elseif pt.type=="range" then
---       return ast.cs_range.new{first = exps[1].text,
--- 			      last = exps[2].text,
--- 			      complement = compflag,
--- 			      s=s, e=e}
---    elseif pt.type=="compound_charset" then
---       assert(exps[1])
---       local prefix_cexp = infix_to_prefix(exps)
---       flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
---       flatten_cexp_in_place(prefix_cexp, ast.cs_union)
---       return ast.cs_exp.new{cexp = prefix_cexp,
--- 			    complement = compflag,
--- 			    s=s, e=e}
---    else
---       error("Internal error: do not know how to convert charset exp type: " .. tostring(pt.type))
---    end
--- end
-
 function convert_core_exp(pt)
    local s, e = pt.s, pt.e
    if pt.type=="capture" then
@@ -561,6 +521,9 @@ function convert_core_exp(pt)
       local text = pt.text
       assert(text:sub(1,2)=="[:" and text:sub(-2,-1)==":]")
       text = text:sub(3,-3)
+      if text:sub(1,1)=="^" then
+	 error("Internal error: rpl core does not support complemented character sets")
+      end
       return ast.cs_named.new{name = text, complement = compflag, s=s, e=e}      
    elseif pt.type=="quantified_exp" then
       return convert_quantified_exp(pt, convert_core_exp)
@@ -619,7 +582,7 @@ local function convert_core_stmt(pt)
       b.is_local = true
       return b
    elseif pt.type=="fake_package" then
-      return ast.pdecl.new{name="anonymous", s=s, e=e}
+      return ast.pdecl.new{name=".", s=s, e=e}
    elseif pt.type=="import_decl" then
       error("Internal error: core rpl does not support import declarations")
    else

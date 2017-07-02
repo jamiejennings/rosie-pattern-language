@@ -55,7 +55,9 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     end
 	     table.move(warnings, 1, #warnings, #messages+1, messages)
 	     assert(type(pt)=="table")
-	     assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
+	     if expected_pt_node then
+		assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
+	     end
 	     if leftover~=0 then
 		local msg = "extraneous input after expression: " .. src:sub(-leftover)
 		local err = violation.syntax.new{who='rpl parser', message=msg}
@@ -65,7 +67,7 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     end
 	     return ast.from_parse_tree(pt)
 	  end
- end
+end
 
 function c2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
    local parse_block = p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
@@ -78,6 +80,14 @@ function c2.make_parse_expression(rplx_expression)
 end
 
 c2.dependencies_of = ast.dependencies_of
+
+-- function c2.make_core_parser(statement_parser)
+--    return make_parser_from(statement_parser, "rpl_core")
+-- end
+
+-- function c2.make_core_expression_parser(exp_parser)
+--    return make_parser_from(exp_parser, nil)
+-- end
 
 ---------------------------------------------------------------------------------------------------
 -- Syntax expander

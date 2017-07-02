@@ -162,164 +162,158 @@ end
 
 local unsupported = function() init_error("operation not supported in this parser"); end
 
-local function create_core_engine()
-   assert(parse.core_parse, "error while initializing: parse module not loaded?")
-   assert(syntax.transform0, "error while initializing: syntax module not loaded?")
+-- local function create_core_engine()
+--    assert(parse.core_parse, "error while initializing: parse module not loaded?")
+--    assert(syntax.transform0, "error while initializing: syntax module not loaded?")
 
-   local function make_parser_expander(parser)
-      return function(source, origin, msgs)
-		local pt, leftover = parser(source, origin, msgs)
-		if not pt then
-		   return nil, nil, leftover
-		else
-		   return syntax.transform0(pt), pt, leftover
-		end
-	     end
-   end
+--    local function make_parser_expander(parser)
+--       return function(source, origin, msgs)
+-- 		local pt, leftover = parser(source, origin, msgs)
+-- 		if not pt then
+-- 		   return nil, nil, leftover
+-- 		else
+-- 		   return syntax.transform0(pt), pt, leftover
+-- 		end
+-- 	     end
+--    end
 
-   core_parser =
-      common.parser.new{ version = common.rpl_version.new(0, 0);
-			 preparse = unsupported;
-			 parse_statements = make_parser_expander(parse.core_parse);
-			 parse_expression = make_parser_expander(parse.core_parse_expression);
-			 parse_deps = function() return {} end;
-			 prefixes = unsupported;
-		      }
-   corecompiler =
-      common.compiler.new{ version = common.rpl_version.new(0, 0);
-			   load = compile.compile0.compile;
-			   import = unsupported;
-			   compile_expression = compile.compile0.compile_expression;
-			   parser = core_parser;
-			}
-
-   -- Create a core engine that accepts rpl 0.0
-   CORE_ENGINE = engine.new("RPL core engine", corecompiler)
-   CORE_ENGINE.searchpath = ROSIE_LIB
-   announce("CORE_ENGINE", CORE_ENGINE)
-
-   engine_module._set_default_searchpath(ROSIE_PATH)
-
-   -- Into the core engine, load the rpl 1.1 definition, which is written in rpl 0.0
-
-
-   -- local rpl_1_0_filename = common.path(ROSIE_LIB, "rosie", "rpl_1_0.rpl")
-   -- local rpl_1_0, msg = util.readfile(rpl_1_0_filename)
-
-   -- if not rpl_1_0 then error("Error while reading " .. rpl_1_0_filename .. ": " .. msg); end
-   -- local success, pkg, messages = CORE_ENGINE:load(rpl_1_0, "rosie/rpl_1_0.rpl")
-   -- if not success then error("Error while loading " .. rpl_1_0_filename .. ":\n" .. tostring(pkg)); end
-
-   -- local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_statements', 'match')
-   -- if not success then error("Error while initializing: could not compile 'rpl_statements' in "
-   -- 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-   -- ROSIE_RPLX = result
-
-   -- local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'rpl_expression', 'match')
-   -- if not success then error("Error while initializing: could not compile 'rpl_expression' in "
-   -- 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-   -- ROSIE_EXP_RPLX = result
-
-   -- local success, result, messages = pcall(CORE_ENGINE.compile, CORE_ENGINE, 'preparse', 'match')
-   -- if not success then error("Error while initializing: could not compile 'preparse' in "
-   -- 			     .. rpl_1_0_filename .. ":\n" .. tostring(result)); end
-   -- ROSIE_PREPARSE = result
-
-end
-
-
--- function create_rpl1_0_engine()
---    -- Install the fancier parser, parse_and_explain, which uses ROSIE_RPLX and ROSIE_PREPARSE
---    local supported_version = common.rpl_version.new(1, 0)
---    local preparser =
---       rpl_parser.make_preparser(ROSIE_PREPARSE, supported_version);
---    local parse_and_explain =
---       rpl_parser.make_parse_and_explain(preparser, supported_version, ROSIE_RPLX, syntax.transform0)
---    local parse_and_explain_exp =
---       rpl_parser.make_parse_and_explain(nil, nil, ROSIE_EXP_RPLX, syntax.transform0)
-
---    parser1_0 =
---       common.parser.new{ version = supported_version;
--- 			 preparse = preparser;
--- 			 parse_statements = parse_and_explain;
--- 			 parse_expression = parse_and_explain_exp;
+--    local core_parser =
+--       common.parser.new{ version = common.rpl_version.new(0, 0);
+-- 			 preparse = unsupported;
+-- 			 parse_statements = make_parser_expander(parse.core_parse);
+-- 			 parse_expression = make_parser_expander(parse.core_parse_expression);
 -- 			 parse_deps = function() return {} end;
 -- 			 prefixes = unsupported;
 -- 		      }
---    compiler1_0 =
---       common.compiler.new{ version = common.rpl_version.new(1, 0);
+--    local core_compiler =
+--       common.compiler.new{ version = common.rpl_version.new(0, 0);
 -- 			   load = compile.compile0.compile;
 -- 			   import = unsupported;
 -- 			   compile_expression = compile.compile0.compile_expression;
--- 			   parser = parser1_0;
--- 			}
---    RPL1_0_ENGINE = engine.new("RPL 1.0 engine", compiler1_0)
---    RPL1_0_ENGINE.searchpath = ROSIE_LIB
---    announce("RPL1_0_ENGINE", RPL1_0_ENGINE)
--- end
-
--- function create_rpl1_1_engine()
---    -- Create an engine, and load the rpl 1.1 definition, which is written in rpl 1.0
---    local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
---    local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
---    if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
---    local e = engine.new("RPL 1.1 engine", compiler1_0)
---    e.searchpath = ROSIE_LIB
---    e:load(rpl_1_1, "rosie/rpl_1_1.rpl")
---    local messages
---    RPL1_1_RPLX, messages = e:compile('rpl_statements')
---    RPL1_1_EXP_RPLX, messages = e:compile('rpl_expression')
---    rpl_parser = import("rpl-parser")		    -- idempotent
---    local supported_version = common.rpl_version.new(1, 1)
---    local preparser =
---       rpl_parser.make_preparser(ROSIE_PREPARSE, supported_version);
---    local parse_and_explain =
---       rpl_parser.make_parse_and_explain(preparser, supported_version, RPL1_1_RPLX, syntax.transform1)
---    local parse_and_explain_exp =
---       rpl_parser.make_parse_and_explain(nil, nil, RPL1_1_EXP_RPLX, syntax.transform1)
-
---    parser1_1 =
---       common.parser.new{ version = supported_version;
--- 			 preparse = preparser;
--- 			 parse_statements = parse_and_explain;
--- 			 parse_expression = parse_and_explain_exp;
--- 			 parse_deps = rpl_parser.parse_deps;   -- TODO: update this
--- 			 prefixes = unsupported;	       -- TODO: drop this?
--- 		      }
---    compiler1_1 =
---       common.compiler.new{ version = supported_version;
--- 			   load = compile.compile1.compile;
--- 			   import = unsupported;               -- TODO: implement this?
--- 			   compile_expression = compile.compile1.compile_expression;
--- 			   parser = parser1_1;
+-- 			   parser = core_parser;
 -- 			}
 
---    -- Make RPL 1.1 the default for new engines
---    engine_module._set_default_compiler(compiler1_1)
+--    -- Create a core engine that accepts rpl 0.0
+--    local CORE_ENGINE = engine.new("RPL core engine", core_compiler)
+--    CORE_ENGINE.searchpath = ROSIE_LIB
+--    announce("CORE_ENGINE", CORE_ENGINE)
 --    engine_module._set_default_searchpath(ROSIE_PATH)
-
---    RPL1_1_ENGINE = e
---    announce("RPL1_1_ENGINE", RPL1_1_ENGINE)
-
---    ROSIE_ENGINE = RPL1_1_ENGINE
+--    return CORE_ENGINE
 -- end
 
-function create_NEW_rpl1_1_engine()
+function NEW_create_core_engine()
+   assert(parse.core_parse, "error while initializing: parse module not loaded?")
 
+   local core_parser = function(src, origin, messages)
+			  local pt = parse.core_parse(src, origin, messages)
+			  return ast.from_core_parse_tree(pt)
+		       end
+
+   local core_expression_parser = function(src, origin, messages)
+				     local pt = parse.core_parse_expression(src, origin, messages)
+				     return ast.from_core_parse_tree(pt)
+				  end
+   local compile_expression =
+      function(input, env, messages)
+	 local ast = input
+	 if type(input)=="string" then
+	    ast = core_expression_parser(input, nil, messages)
+	    -- syntax errors will be in messages table
+	    if not ast then return false; end
+	 end
+	 if not recordtype.parent(ast) then
+	    assert(false, "unexpected input type to compile_expression: " .. tostring(ast))
+	 end
+	 ast = c2.expand_expression(ast, env, messages)
+	 -- syntax errors will be in messages table
+	 if not ast then return false; end
+	 return c2.compile_expression(ast, env, messages)
+      end
+
+   local load = function(e, input, fullpath)
+		   local messages = {}
+		   local ok, pkgname, env = loadpkg.source(e.compiler,
+							   e._pkgtable,
+							   e._env,
+							   e.searchpath,
+							   input,
+							   fullpath,
+							   messages)
+		   if ok then
+		      if pkgname then
+			 -- We compiled a module, reified it as the package in 'env'
+			 environment.bind(e._env, pkgname, env)
+		      else
+			 -- Did not load a module, so the env we passed in was extended with new bindings 
+			 assert(environment.is(env))
+			 e._env = env
+		      end
+		   end
+		   return ok, pkgname, messages
+		end
+
+   local compile = function(e, input, flavor)
+			 common.note("Ignoring 'flavor' arg to engine:compile")
+			 local messages = {}
+			 local pat = e.compiler.compile_expression(input, e._env, messages)
+			 if not pat then return false, messages; end
+			 return engine_module.rplx.new(e, pat)
+		      end
+
+   local COREcompiler2 = { version = common.rpl_version.new(0, 0),
+			   parse_block = core_parser,
+			   expand_block = c2.expand_block,
+			   compile_block = c2.compile_block,
+			   compile_expression = compile_expression,
+			   dependencies_of = c2.dependencies_of,
+			   -- TODO: remove parser, and move parse_expression out 
+			   parser = { parse_expression = core_expression_parser }
+			}
+
+   local import =
+      function(e, packagename, as_name)
+	 local messages = {}
+	 local ok = loadpkg.import(e.compiler,
+				   e._pkgtable,
+				   e.searchpath,
+				   packagename,	    -- requested importpath
+				   as_name,	    -- requested prefix
+				   e._env,
+				   messages)
+	 return ok, messages
+      end
+
+   -- Create a core engine that loads/compiles rpl 0.0
+   local NEWCORE_ENGINE = engine.new("NEW RPL core engine", COREcompiler2)
+   NEWCORE_ENGINE.searchpath = ROSIE_LIB
+   announce("NEWCORE_ENGINE", NEWCORE_ENGINE)
+   engine_module._set_default_searchpath(ROSIE_PATH)
+   NEWCORE_ENGINE.load = load
+   NEWCORE_ENGINE.import = import
+   NEWCORE_ENGINE.compile = compile
+   return NEWCORE_ENGINE
+end
+
+function create_NEW_rpl1_1_engine(e)
 --   common.notes = true
+--   local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
+--   local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
+--   if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
+--   e.searchpath = ROSIE_LIB
+--   assert( e:load(rpl_1_1, "rosie/rpl_1_1.rpl") )
+   assert( e:import("rosie/rpl_1_1", ".") )
 
-   -- Like RPL1_1_ENGINE but uses the new c2 compiler
-   local rpl_1_1_filename = ROSIE_HOME.."/rpl/rosie/rpl_1_1.rpl"
-   local rpl_1_1, msg = util.readfile(rpl_1_1_filename)
-   if not rpl_1_1 then error("Error while reading " .. rpl_1_1_filename .. ": " .. msg); end
---   local e = engine.new("RPL 1.1 engine", compiler1_0)
-   local e = CORE_ENGINE
-   e.searchpath = ROSIE_LIB
-   e:load(rpl_1_1, "rosie/rpl_1_1.rpl")
+--   for k,v in (e._pkgtable["rosie/rpl_1_1"]["."]).env:bindings() do print(k,v) end
+
    local version = common.rpl_version.new(1, 1)
-   local rplx_preparse = e:compile("preparse")
+   local rplx_preparse, errs = e:compile("preparse")
+   assert(rplx_preparse, errs and util.table_to_pretty_string(errs) or "no err info")
    local rplx_statements = e:compile("rpl_statements")
+   assert(rplx_statements)
    local rplx_expression = e:compile("rpl_expression")
+   assert(rplx_expression)
+
+   FOO = rplx_expression
 
    local parse_expression = c2.make_parse_expression(rplx_expression)
 
@@ -384,14 +378,14 @@ function create_NEW_rpl1_1_engine()
 			 return engine_module.rplx.new(e, pat)
 		      end
       
-    local function get_file_contents(e, filename, nosearch)
-       if nosearch or util.absolutepath(filename) then
-	  local data, msg = util.readfile(filename)
-	  return filename, data, msg		    -- data could be nil
-       else
-	  return common.get_file(filename, e.searchpath, "")
-       end
-    end
+   local function get_file_contents(e, filename, nosearch)
+      if nosearch or util.absolutepath(filename) then
+	 local data, msg = util.readfile(filename)
+	 return filename, data, msg		    -- data could be nil
+      else
+	 return common.get_file(filename, e.searchpath, "")
+      end
+   end
 
    local load_file =
       function(e, filename, nosearch)
@@ -434,13 +428,12 @@ function create_NEW_rpl1_1_engine()
    
    engine_module.post_create_hook(c2engine)
 
-   NEW_ENGINE = c2engine
-   announce("NEW_ENGINE", NEW_ENGINE)
+   announce("c2 engine", c2engine)
 
    -- Make the c2 compiler the default for new engines
    engine_module._set_default_compiler(compiler2)
 
-   ROSIE_ENGINE = c2engine
+   return c2engine
 
 end
 
@@ -514,11 +507,9 @@ local rosie_package = {}
 rosie_package._env = _ENV
 load_all()
 setup_paths()
-create_core_engine()
---create_rpl1_0_engine()
---create_rpl1_1_engine()
+CORE_ENGINE = NEW_create_core_engine()
 
-create_NEW_rpl1_1_engine()
+ROSIE_ENGINE = create_NEW_rpl1_1_engine(CORE_ENGINE)
 assert(ROSIE_ENGINE)
 populate_info()
 

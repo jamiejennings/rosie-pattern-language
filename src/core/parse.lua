@@ -223,7 +223,10 @@ function parse.core_parse_expression(source, origin, errs)
    assert(type(pt)=="table" and pt.type=="rpl_core")
    if not (pt.subs and pt.subs[1]) then return nil, "empty expression", #source
    elseif (pt.subs and pt.subs[2]) then return nil, "not an expression", #source
-   else return pt, leftover; end
+   else
+      pt.type = "rpl_expression"
+      return pt, leftover;
+   end
 end
       
 return parse
