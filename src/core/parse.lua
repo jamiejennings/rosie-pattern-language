@@ -50,10 +50,10 @@ local plus = token("plus", S"+");
 local character = token("character", (P(1) - S"\\]") + (P"\\" * locale.print))   -- OR a numeric syntax???
 local character_range = token("range", (character * P"-" * character * #P"]"));
 local character_list = token("charlist", (character^1));
-local character_set = P{"charset";
-		  charset = (V"named" + V"plain" + V"charset_syntax_error");
+local character_set = P{"charset_exp";
+		  charset_exp = (V"named" + V"plain" + V"charset_syntax_error");
 		  named = token("named_charset0", P"[:" * ((locale.print-(S":\\"))^1) * P":]");
-		  plain = token("charset", P"["  * (V"contents"^-1) * P"]");
+		  plain = token("charset_exp", P"["  * (V"contents"^-1) * P"]");
 		  charset_syntax_error = token("syntax_error", (P"[" * rC((locale.print-P"]")^1, "charset") * P"]"));
 		  contents = ( character_range
 			       + character_list
@@ -177,7 +177,7 @@ function parse.syntax_error_check(ast)
 		      lookat=none_found;
 		      named_charset=none_found;
 		      charset_exp=check_all_branches;
-		      charset=check_one_branch;	    -- USED ONLY IN CORE
+		      charset_exp=check_one_branch;	    -- USED ONLY IN CORE
 		      charlist=check_all_branches;
 		      range=check_two_branches;
 		      complement=none_found;
@@ -209,7 +209,7 @@ function parse.core_parse(source, origin, errs)
       if parse.syntax_error_check(pt) then table.insert(errs, pt); end
    end
    if #errs==0 then
-      return common.create_match("core", 1, source, table.unpack(ptlist)), leftover
+      return common.create_match("rpl_core", 1, source, table.unpack(ptlist)), leftover
    else
       assert(false, "Core parser reports syntax errors:\n" ..
 	     util.table_to_pretty_string(errs or {}) .. "\n")
@@ -220,7 +220,7 @@ function parse.core_parse_expression(source, origin, errs)
    local pt, leftover = parse.core_parse(source, origin, errs)
    -- syntax errors will be in errs table
    if not pt then return false, leftover; end
-   assert(type(pt)=="table" and pt.type=="core")
+   assert(type(pt)=="table" and pt.type=="rpl_core")
    if not (pt.subs and pt.subs[1]) then return nil, "empty expression", #source
    elseif (pt.subs and pt.subs[2]) then return nil, "not an expression", #source
    else return pt, leftover; end

@@ -236,7 +236,6 @@ end
 
 local function flatten_cexp_in_place(a, target_type)
    local function lift(exps)
---      print("*** lifting: "); for i,v in ipairs(exps) do io.write(tostring(v), " "); end; io.write("\n")
       if list.null(exps) then return list.from({}); end
       local first = exps[1]
       local lift1
@@ -265,7 +264,7 @@ local function flatten_cexp_in_place(a, target_type)
    end
 end
 
-local function convert_quantified_exp(pt)
+local function convert_quantified_exp(pt, exp_converter)
    local s, e = pt.s, pt.e
    local exp, q = pt.subs[1], pt.subs[2]
    local qname = q.type
@@ -290,7 +289,7 @@ local function convert_quantified_exp(pt)
    end
    return ast.repetition.new{min = min,
 			     max = max,
-			     exp = convert_exp(exp),
+			     exp = exp_converter(exp),
 			     s=s, e=e}
 end
 
@@ -406,7 +405,7 @@ function convert_exp(pt)
    elseif pt.type=="charset_exp" then
       return convert_char_exp(pt)
    elseif pt.type=="quantified_exp" then
-      return convert_quantified_exp(pt)
+      return convert_quantified_exp(pt, convert_exp)
 --   elseif pt.type=="arg" then
 --      return convert_exp(pt.subs[1])
    elseif pt.type=="application" then
@@ -482,7 +481,7 @@ local function convert(pt)
    if pt.type=="rpl_expression" then
       assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
       return convert_exp(pt.subs[1])
-   elseif pt.type=="rpl_statements" then
+   elseif pt.type=="rpl_statements" or pt.type=="rpl_core" then
       return ast.block.new{stmts = map(convert_stmt, pt.subs or {}), s=s, e=e}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
@@ -490,6 +489,157 @@ local function convert(pt)
 end
 
 ast.from_parse_tree = convert
+
+---------------------------------------------------------------------------------------------------
+-- Convert a parse tree produced by the rpl core parser
+---------------------------------------------------------------------------------------------------
+
+-- function convert_core_charset(pt)
+--    local exps, compflag
+--    if pt.type=="charset_exp" then
+--       assert(pt.subs and pt.subs[1])
+--       pt = pt.subs[1]
+--       exps = list.from(pt.subs)
+--       compflag = (pt.subs[1].type=="complement")
+--       if compflag then
+-- 	 exps = list.cdr(exps)
+-- 	 assert(pt.subs[2])
+--       end
+--    else
+--       -- We have something that appeared inside a charset_exp.
+--       exps = list.from(pt.subs)
+--       compflag = false
+--    end
+--    local s, e = pt.s, pt.e
+--    if pt.type=="named_charset" then
+--       return ast.cs_named.new{name = exps[1].text, complement = compflag, s=s, e=e}
+--    elseif pt.type=="charlist" then
+--       return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
+-- 			     complement = compflag,
+-- 			     s=s, e=e}
+--    elseif pt.type=="range" then
+--       return ast.cs_range.new{first = exps[1].text,
+-- 			      last = exps[2].text,
+-- 			      complement = compflag,
+-- 			      s=s, e=e}
+--    elseif pt.type=="compound_charset" then
+--       assert(exps[1])
+--       local prefix_cexp = infix_to_prefix(exps)
+--       flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
+--       flatten_cexp_in_place(prefix_cexp, ast.cs_union)
+--       return ast.cs_exp.new{cexp = prefix_cexp,
+-- 			    complement = compflag,
+-- 			    s=s, e=e}
+--    else
+--       error("Internal error: do not know how to convert charset exp type: " .. tostring(pt.type))
+--    end
+-- end
+
+function convert_core_exp(pt)
+   local s, e = pt.s, pt.e
+   if pt.type=="capture" then
+      return ast.cap.new{name = pt.subs[1].text, exp = convert_core_exp(pt.subs[2]), s=s, e=e}
+   elseif pt.type=="predicate" then
+      return ast.predicate.new{type = pt.subs[1].text, exp = convert_core_exp(pt.subs[2]), s=s, e=e}
+   elseif pt.type=="cooked" then
+      return ast.cooked.new{exp = convert_core_exp(pt.subs[1]), s=s, e=e}
+   elseif pt.type=="raw" then
+      return ast.raw.new{exp = convert_core_exp(pt.subs[1]), s=s, e=e}
+   elseif pt.type=="choice" then
+      return ast.choice.new{exps = map(convert_core_exp, flatten(pt, "choice")), s=s, e=e}
+   elseif pt.type=="sequence" then
+      return ast.sequence.new{exps = map(convert_core_exp, flatten(pt, "sequence")), s=s, e=e}
+   elseif pt.type=="identifier" then
+      return ast.ref.new{localname=pt.text, s=s, e=e}
+   elseif pt.type=="literal0" then
+      local text = pt.text
+      assert(text:sub(1,1)=='"' and text:sub(-1,-1)=='"', "literal not in quotes: " .. text)
+      return ast.literal.new{value = pt.text:sub(2, -2), s=s, e=e}
+   elseif pt.type=="charset_exp" then
+      return convert_char_exp(pt)
+   elseif pt.type=="named_charset0" then
+      local text = pt.text
+      assert(text:sub(1,2)=="[:" and text:sub(-2,-1)==":]")
+      text = text:sub(3,-3)
+      return ast.cs_named.new{name = text, complement = compflag, s=s, e=e}      
+   elseif pt.type=="quantified_exp" then
+      return convert_quantified_exp(pt, convert_core_exp)
+--   elseif pt.type=="arg" then
+--      return convert_core_exp(pt.subs[1])
+   -- elseif pt.type=="application" then
+   --    local id = pt.subs[1]
+   --    assert(id.type=="identifier")
+   --    local arglist = pt.subs[2]
+   --    local operands = map(convert_core_exp, arglist.subs)
+   --    if (arglist.type=="arglist") then
+   -- 	 operands = map(ast.ambient_cook_exp, operands)
+   --    elseif (arglist.type=="rawarglist") then
+   -- 	 operands = map(ast.ambient_raw_exp, operands)
+   --    else
+   -- 	 assert(arglist.type=="arg")
+   -- 	 assert(#arglist.subs==1)
+   --    end
+   --    local id_ast = ast.ref.new{localname=id.text, s=id.s, e=id.e}
+   --    return ast.application.new{ref=id_ast,
+   -- 			         arglist=operands,
+   -- 			         s=s, e=e}
+   else
+      error("Internal error: do not know how to convert " .. tostring(pt.type))
+   end
+end
+
+local function convert_core_stmt(pt)
+   local s, e = pt.s, pt.e
+   if pt.type=="assignment_" then
+      assert(pt.subs and pt.subs[1] and pt.subs[2])
+      return ast.binding.new{ref = convert_core_exp(pt.subs[1]),
+			  exp = convert_core_exp(pt.subs[2]),
+			  is_alias = false,
+			  is_local = false,
+			  s=s, e=e}
+   elseif pt.type=="alias_" then
+      return ast.binding.new{ref = convert_core_exp(pt.subs[1]),
+			  exp = convert_core_exp(pt.subs[2]),
+			  is_alias = true,
+			  is_local = false,
+			  s=s, e=e}
+   elseif pt.type=="grammar_" then
+      local rules = map(convert_core_stmt, pt.subs)
+      assert(rules and rules[1])
+      local aliasflag = rules[1].is_alias
+      local boundref = rules[1].ref
+      local gexp = ast.grammar.new{rules = rules,
+				   s=s, e=e}
+      return ast.binding.new{ref = boundref,
+			  exp = gexp,
+			  is_alias = aliasflag,
+			  is_local = false}
+   elseif pt.type=="local_" then
+      local b = convert_core_stmt(pt.subs[1])
+      b.is_local = true
+      return b
+   elseif pt.type=="fake_package" then
+      return ast.pdecl.new{name="anonymous", s=s, e=e}
+   elseif pt.type=="import_decl" then
+      error("Internal error: core rpl does not support import declarations")
+   else
+      error("Internal error: do not know how to convert " .. tostring(pt.type))
+   end
+end
+
+local function convert_core(pt)
+   local s, e = pt.s, pt.e
+   if pt.type=="rpl_expression" then
+      assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
+      return convert_core_exp(pt.subs[1])
+   elseif pt.type=="rpl_core" then
+      return ast.block.new{stmts = map(convert_core_stmt, pt.subs or {}), s=s, e=e}
+   else
+      error("Internal error: do not know how to convert " .. tostring(pt.type))
+   end
+end
+
+ast.from_core_parse_tree = convert_core
 
 ---------------------------------------------------------------------------------------------------
 -- Find all references in an ast which have a non-nil packagename

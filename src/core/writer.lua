@@ -281,7 +281,7 @@ function writer.reveal_syntax_error(a)
       else
 	 return "SYNTAX ERROR: (UNKNOWN STATEMENT TYPE) " .. writer.reveal_ast(subs[3])
       end
-   elseif text=="charset" then
+   elseif text=="charset_exp" then
       return "SYNTAX ERROR: CHARSET " .. tostring(subs[1]) .. " ..."
    else
       return "SYNTAX ERROR: " .. text

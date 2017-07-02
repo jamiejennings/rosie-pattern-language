@@ -180,7 +180,7 @@ local function transform_quantified_exp(ast)
    local new_exp = syntax.id_to_ref(ast.subs[1])
    local name = new_exp.type
    if name=="raw" 
-      or name=="charset" 
+      or name=="charset_exp" 
       or name=="named_charset" or name=="named_charset0"
       or name=="literal" or name=="literal0" 
       or name=="ref" or name=="extref"
@@ -399,7 +399,7 @@ function syntax.expand_rhs(ast, original_rhs_name)
    elseif syntax.expression_p(ast) then
       local new = ast
       if ((name=="raw") or (name=="literal") or (name=="literal0") or
-          (name=="charset") or (name=="charset_exp") or
+          (name=="charset_exp") or
           (name=="named_charset") or (name=="named_charset0") or
           (name=="range") or (name=="charlist") or 
           (name=="predicate")) then
@@ -461,7 +461,6 @@ function syntax.expression_p(ast)
 	   (name=="range") or
 	   (name=="charlist") or
 	   (name=="charset_exp") or
-	   (name=="charset") or
 	   (name=="choice") or
 	   (name=="sequence") or
 	   (name=="predicate"))
@@ -476,7 +475,7 @@ end
 
 function syntax.top_level_transform0(ast)
    local name = ast.type
-   if name=="core" or
+   if name=="rpl_core" or
       name=="rpl_statements" or
       name=="rpl_expression" then		    -- this works for rpl 0.0 and 1.0
       return

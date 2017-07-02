@@ -68,7 +68,7 @@ local function make_compile_expression(expression_p, compile_ast)
    return function(importpath, ast, pkgtable, env)
 	     assert(type(importpath)=="string" or importpath==nil, "importpath was: " .. tostring(importpath))
 	     assert(type(ast)=="table", "ast is: " .. tostring(ast))
-	     assert(ast.type=="rpl_expression" or ast.type=="core")
+	     assert(ast.type=="rpl_expression" or ast.type=="rpl_core")
 	     assert(type(pkgtable)=="table")
 	     assert(environment.is(env))
 
