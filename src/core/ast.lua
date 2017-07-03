@@ -13,7 +13,7 @@ local recordtype = require "recordtype"
 local NIL = recordtype.NIL
 local list = require "list"
 map = list.map; apply = list.apply; append = list.append;
-local rpl_parser = require "rpl-parser"
+--local rpl_parser = require "rpl-parser"
 
 local ast = {}
 
@@ -450,6 +450,30 @@ function convert_exp(pt)
    end
 end
 
+-- expand_import_decl takes a single import decl parse node and expands it into a list of as many
+-- individual import declarations as it contains.  The individual declarations are added to the
+-- results table (i.e. that argument is side-effected).
+local function expand_import_decl(decl_parse_node, results)
+   local decode_match = common.decode_match
+   local typ, pos, text, specs, fin = decode_match(decl_parse_node)
+   assert(typ=="import_decl")
+   assert(type(results)=="table")
+   for _,spec in ipairs(specs) do
+      local importpath, prefix
+      local typ, pos, text, subs, fin = decode_match(spec)
+      assert(subs and subs[1], "missing package name to import?")
+      local typ, pos, importpath = decode_match(subs[1])
+      importpath = common.dequote(importpath)
+      common.note("*\t", "import |", importpath, "|")
+      if subs[2] then
+	 typ, pos, prefix = decode_match(subs[2])
+	 assert(typ=="packagename" or typ=="dot")
+	 common.note("\t  as ", prefix)
+      end
+      table.insert(results, {importpath=importpath, prefix=prefix})
+   end -- for each importspec in the import_decl
+end
+
 local function convert_stmt(pt)
    local s, e = pt.s, pt.e
    if pt.type=="assignment_" then
@@ -486,7 +510,7 @@ local function convert_stmt(pt)
       return ast.pdecl.new{name=pname, s=s, e=e}
    elseif pt.type=="import_decl" then
       local deps = {}
-      rpl_parser.expand_import_decl(pt, deps)
+      expand_import_decl(pt, deps)
       local function to_idecl(dep)
 	 return ast.idecl.new{importpath = dep.importpath,
 			      prefix = dep.prefix}

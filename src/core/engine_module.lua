@@ -95,7 +95,7 @@ local lookup = environment.lookup
 local bind = environment.bind
 local violation = require "violation"
 local writer = require "writer"
-local eval = require "eval"
+--local eval = require "eval"
 
 local rplx 					    -- forward reference
 local engine_error				    -- forward reference
