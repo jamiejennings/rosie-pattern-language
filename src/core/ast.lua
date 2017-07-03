@@ -264,6 +264,90 @@ local function flatten_cexp_in_place(a, target_type)
    end
 end
 
+local convert_char_exp;
+
+local function infix_to_prefix(exps)
+   -- exps := exp (op exp)*
+   local rest = list.from(exps)
+   local first = rest[1]
+   local op = rest[2]
+   if not op then return convert_char_exp(first); end
+   local optype = op.subs[1].type
+   assert(optype)
+   rest = list.cdr(list.cdr(rest))
+   if optype=="intersection" then
+      return ast.cs_intersection.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
+   elseif optype=="difference" then
+      return ast.cs_difference.new{first = convert_char_exp(first), second = infix_to_prefix(rest), s=s, e=e}
+   elseif optype=="union" then
+      return ast.cs_union.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
+   else
+      error("Internal error: do not know how to convert charset op " .. tostring(optype))
+   end
+end
+
+local function convert_cs_named(pt)
+   assert(pt.subs and pt.subs[1])
+   local name = pt.subs[1].text
+--   print("***", map(function(sub) return sub.type end, pt.subs))
+   local compflag = (pt.subs[1].type=="complement")
+   if compflag then
+      assert(pt.subs[2])
+      name = pt.subs[2].text
+   end
+   return ast.cs_named.new{name = name,
+			   complement = compflag,
+			   s = pt.s, e = pt.e}
+end
+
+function convert_char_exp(pt)
+   local exps, compflag
+   if pt.type=="charset_exp" then
+      assert(pt.subs and pt.subs[1])
+      pt = pt.subs[1]
+      exps = list.from(pt.subs)
+      compflag = (pt.subs[1].type=="complement")
+      if compflag then
+	 exps = list.cdr(exps)
+	 assert(pt.subs[2])
+      end
+   else
+      -- We have something that appeared inside a charset_exp.
+      exps = list.from(pt.subs)
+      compflag = false
+   end
+   local s, e = pt.s, pt.e
+   if pt.type=="named_charset" then
+      return convert_cs_named(pt)
+   elseif pt.type=="charlist" then
+      return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
+			     complement = compflag,
+			     s=s, e=e}
+   elseif pt.type=="range" then
+      return ast.cs_range.new{first = exps[1].text,
+			      last = exps[2].text,
+			      complement = compflag,
+			      s=s, e=e}
+   elseif pt.type=="compound_charset" then
+      assert(exps[1])
+      local prefix_cexp
+      if not exps[2] then
+	 -- There is only one charset expression inside the compound charset
+	 local cexp = convert_char_exp(exps[1])
+	 if compflag then cexp.complement = not cexp.complement; end
+	 return cexp
+      end
+      prefix_cexp = infix_to_prefix(exps)
+      flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
+      flatten_cexp_in_place(prefix_cexp, ast.cs_union)
+      return ast.cs_exp.new{cexp = prefix_cexp,
+			    complement = compflag,
+			    s=s, e=e}
+   else
+      error("Internal error: do not know how to convert charset exp type: " .. tostring(pt.type))
+   end
+end
+
 local function convert_quantified_exp(pt, exp_converter)
    local s, e = pt.s, pt.e
    local exp, q = pt.subs[1], pt.subs[2]
@@ -291,70 +375,6 @@ local function convert_quantified_exp(pt, exp_converter)
 			     max = max,
 			     exp = exp_converter(exp),
 			     s=s, e=e}
-end
-
-local convert_char_exp;
-
-local function infix_to_prefix(exps)
-   -- exps := exp (op exp)*
-   local rest = list.from(exps)
-   local first = rest[1]
-   local op = rest[2]
-   if not op then return convert_char_exp(first); end
-   local optype = op.subs[1].type
-   assert(optype)
-   rest = list.cdr(list.cdr(rest))
-   if optype=="intersection" then
-      return ast.cs_intersection.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
-   elseif optype=="difference" then
-      return ast.cs_difference.new{first = convert_char_exp(first), second = infix_to_prefix(rest), s=s, e=e}
-   elseif optype=="union" then
-      return ast.cs_union.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
-   else
-      error("Internal error: do not know how to convert charset op " .. tostring(optype))
-   end
-end
-
-function convert_char_exp(pt)
-   local exps, compflag
-   if pt.type=="charset_exp" then
-      assert(pt.subs and pt.subs[1])
-      pt = pt.subs[1]
-      exps = list.from(pt.subs)
-      compflag = (pt.subs[1].type=="complement")
-      if compflag then
-	 exps = list.cdr(exps)
-	 assert(pt.subs[2])
-      end
-   else
-      -- We have something that appeared inside a charset_exp.
-      exps = list.from(pt.subs)
-      compflag = false
-   end
-   local s, e = pt.s, pt.e
-   if pt.type=="named_charset" then
-      print("***", map(function(e) return e.text end, exps))
-      return ast.cs_named.new{name = exps[1].text, complement = compflag, s=s, e=e}
-   elseif pt.type=="charlist" then
-      return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
-			     complement = compflag,
-			     s=s, e=e}
-   elseif pt.type=="range" then
-      return ast.cs_range.new{first = exps[1].text,
-			      last = exps[2].text,
-			      complement = compflag,
-			      s=s, e=e}
-   elseif pt.type=="compound_charset" then
-      assert(exps[1])
-      local prefix_cexp = infix_to_prefix(exps)
-      flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
-      flatten_cexp_in_place(prefix_cexp, ast.cs_union)
-      return ast.cs_exp.new{cexp = prefix_cexp,
-			    complement = compflag,
-			    s=s, e=e}
-   else
-      error("Internal error: do not know how to convert charset exp type: " .. tostring(pt.type))
-   end
 end
 
 local function convert_identifier(pt)
@@ -522,7 +542,7 @@ function convert_core_exp(pt)
       assert(text:sub(1,2)=="[:" and text:sub(-2,-1)==":]")
       text = text:sub(3,-3)
       if text:sub(1,1)=="^" then
-	 error("Internal error: rpl core does not support complemented character sets")
+	 error("Internal error: rpl core does not support complemented named character sets")
       end
       return ast.cs_named.new{name = text, complement = compflag, s=s, e=e}      
    elseif pt.type=="quantified_exp" then

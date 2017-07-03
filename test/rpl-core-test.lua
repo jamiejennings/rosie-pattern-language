@@ -1213,10 +1213,10 @@ test_charsets("[[!#$%\\^&*()_-+=|\\\\'`~?/{}{}:;]]",
 subheading("Complements")
 test_charsets("[^a]", {"b", "y", "z", "^", " ", "X", "0", "!"}, {"a"})
 test_charsets("[^abc]", {"d", "y", "z", "^", " ", "X", "0", "!"}, {"a", "b", "c"})
-test_charsets("[:^digit:]", {"a", " ", "!"}, {"0", "9"})
-test_charsets("[[:^space:]]", {"A", "0", "\b"}, {" ", "\t", "\n", "\r"})
 test_charsets("[^a-z]", {" ", "X", "0", "!"}, {"a", "b", "y", "z"})
 test_charsets("[^ab-z]", {"c", "d", " ", "X", "0", "!"}, {"a", "b", "-", "z"}) -- NOT a range!
+test_charsets("[:^digit:]", {"a", " ", "!"}, {"0", "9"})
+test_charsets("[[:^space:]]", {"A", "0", "\b"}, {" ", "\t", "\n", "\r"})
 test_charsets("[^[:^digit:]]+", {"0", "123"}, {"", " ", "d", "@"})
 test_charsets("{[^[:^digit:]]}+", {"0", "123"}, {"", " ", "d", "@"})
 test_charsets("([^[:^digit:]])+", {"0", "1 2 3"}, {"", " ", "d", "@"})

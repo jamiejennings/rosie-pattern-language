@@ -153,7 +153,6 @@ local function cs_named(a, env, messages)
    if not peg then
       throw("unknown named charset: " .. a.name, a)
    end
-   -- The posix character sets are ascii-only, so the "1-peg" below is ok.
    a.pat = pattern.new{name="cs_named", peg=((a.complement and 1-peg) or peg), ast=a}
    return a.pat
 end
