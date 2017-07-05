@@ -222,7 +222,7 @@ function cs_exp(a, env, messages)
       a.pat = pattern.new{name="cs_exp", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
       return a.pat
    else
-      assert(false, "unknown cexp inside cs_exp", a)
+      assert(false, "compile: unknown cexp inside cs_exp", a)
    end
 end
 

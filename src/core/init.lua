@@ -307,7 +307,8 @@ function create_NEW_rpl1_1_engine(e)
    local rplx_expression = e:compile("rpl_expression")
    assert(rplx_expression)
 
-   FOO = rplx_expression
+-- Debugging:
+--   FOO = rplx_expression
 
    local parse_expression = c2.make_parse_expression(rplx_expression)
 

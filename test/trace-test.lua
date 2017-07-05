@@ -1,14 +1,20 @@
 ---- -*- Mode: Lua; -*- 
 ----
----- eval-test.lua
+---- trace-test.lua
 ----
----- (c) 2016, Jamie A. Jennings
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
 ----
 
 -- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
 assert(ROSIE_HOME, "ROSIE_HOME is not set?")
 assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
+trace = rosie._env.trace
 import = rosie._env.import
+if not termcolor then
+   import("termcolor")
+end
 if not test then
    test = import("test")
 end
@@ -21,41 +27,49 @@ subheading = test.subheading
 e = false;
 global_rplx = false;
 
-function set_expression(exp)
-   global_rplx = e:compile(exp)
+lasttrace = "no trace set"
+
+function check_eval(exp, input, expectation, expected_nextpos, expected_contents_list)
+   local rplx, errs = e:compile(exp)
+   if not rplx then
+      error("this expression failed to compile: " .. exp)
+   end
+   local t = trace.expression(rplx, input)
+   for k,v in pairs(t) do print(k,v); end
+   check(( (expectation and t.match) or ((not expectation) and (not t.match)) ),
+         "t.match was not as expected",
+         1)
+   if expectation then
+      check(t.nextpos==expected_nextpos,
+	    "t.nextpos was " .. tostring(t.nextpos) .. " but expected "
+            .. tostring(expected_nextpos),
+	    1)
+   end
+   
+   -- check(ok, "failed call to eval: " .. tostring(m) .. "\nexp=" .. exp .. "\ninput=" .. input)
+   -- if ok then
+   --    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
+   -- 	 ((m and "matched") or "did NOT match") .. " " .. input .. " ", 1)
+   --    if type(expected_contents_list)=="table" then
+   -- 	 local pos, all_met_flag, msg = 1, true, ""
+   -- 	 for _, text in ipairs(expected_contents_list) do
+   -- 	    local nextpos = localtrace:find(text, pos, true)	-- plain text matching flag is true
+   -- 	    if nextpos then
+   -- 	       pos = nextpos
+   -- 	    else
+   -- 	       msg = msg .. string.format("%q NOT found at/after position %d\n", text, pos)
+   -- 	       all_met_flag = false
+   -- 	    end
+   -- 	 end -- for
+   -- 	 check(all_met_flag, "expected content of trace not met:\n" .. msg, 1)
+   --    end
+   --    lasttrace = "\n\ncheck_eval('" .. exp .. "','" .. input .. "') returned this trace: \n" .. localtrace
+   -- end -- if ok
 end
 
-function check_match(...) error("Called check_match accidentally"); end
-
-trace = "no trace set"
-
-function check_eval(exp, input, expectation, expected_contents_list)
---   set_expression(exp)
-   local ok, m, leftover, localtrace = pcall(e.tracematch, e, exp, input)
-   check(ok, "failed call to eval: " .. tostring(m) .. "\nexp=" .. exp .. "\ninput=" .. input)
-   if ok then
-      check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
-	 ((m and "matched") or "did NOT match") .. " " .. input .. " ", 1)
-      if type(expected_contents_list)=="table" then
-	 local pos, all_met_flag, msg = 1, true, ""
-	 for _, text in ipairs(expected_contents_list) do
-	    local nextpos = localtrace:find(text, pos, true)	-- plain text matching flag is true
-	    if nextpos then
-	       pos = nextpos
-	    else
-	       msg = msg .. string.format("%q NOT found at/after position %d\n", text, pos)
-	       all_met_flag = false
-	    end
-	 end -- for
-	 check(all_met_flag, "expected content of trace not met:\n" .. msg, 1)
-      end
-      trace = "\n\ncheck_eval('" .. exp .. "','" .. input .. "') returned this trace: \n" .. localtrace
-   end -- if ok
-end
-
-print("+------------------------------------------------------------------------------------+")
-print("| Note that check_eval sets the global variable 'trace', which can be easily printed |")
-print("+------------------------------------------------------------------------------------+")
+print("+----------------------------------------------------------------------------------------+")
+print("| Note that check_eval sets the global variable 'lasttrace', which can be easily printed |")
+print("+----------------------------------------------------------------------------------------+")
 
 test.start(test.current_filename())
 
@@ -63,46 +77,53 @@ test.start(test.current_filename())
 heading("Setting up")
 ----------------------------------------------------------------------------------------
 check(type(rosie)=="table")
-ok, e = pcall(rosie.engine.new, "eval test")
+ok, e = pcall(rosie.engine.new, "trace test engine")
 check(rosie.engine.is(e))
 check(ok)
 
 subheading("Setting up assignments")
-t1, t2 = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
-check(type(t1)=="string" and t1:find("top level"))
-if t2 then check(type(t2)=="table"); end
+ok = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
+check(ok)
 t = e:lookup("a")
 check(type(t)=="table")
 
-ok, msg = pcall(e.load, e, 'alias plain_old_alias = "p"')
+ok = e:load('alias plain_old_alias = "p"')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alias alias_to_plain_old_alias = plain_old_alias')
+ok = e:load('alias alias_to_plain_old_alias = plain_old_alias')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alias alias_to_a = a')
+ok = e:load('alias alias_to_a = a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alternate_a = a')
+ok = e:load('alternate_a = a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alternate_to_alias_to_a = alias_to_a')
+ok = e:load('alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = pcall(e.load, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
+ok = e:load('alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
 ----------------------------------------------------------------------------------------
-heading("Eval built-ins")
+heading("Trace built-ins")
 ----------------------------------------------------------------------------------------
 print("\tNeed tests for built-ins like ., $, and ~")
+check_eval('.', "xyz", true, 2)
+check_eval('~', "\t ", true, 3)
+check_eval('$', "", true, 1)
 
 ----------------------------------------------------------------------------------------
-heading("Eval literals")
+heading("Trace literals")
 ----------------------------------------------------------------------------------------
-check_eval('"foo"', "foo", true, {'1..LITERAL: "foo"', 'Matched "foo"'})
-check_eval('"foo"', "foobar", true, {'1..LITERAL: "foo"', 'Matched "foo"'})
-check_eval('"foo"', "notfoo", false, {'1..LITERAL: "foo"', 'FAILED to match'})
+check_eval('"foo"', "foo", true, 4)
+check_eval('"foo"', "foobar", true, 4)
+check_eval('"foo"', "notfoo", false, nil)
+
+
+
+
+--[===[
 
 ----------------------------------------------------------------------------------------
 heading("Eval sequences")
@@ -279,5 +300,6 @@ check_eval('S', "aabb", true, {'1..GRAMMAR:',
 			       'Matched "aabb" (against input "aabb")'} )
 
 
+--]===]
 
 return test.finish()

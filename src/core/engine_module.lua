@@ -656,6 +656,7 @@ rplx = recordtype.new("rplx",
 			_engine=recordtype.NIL;
 			--
 			match=false;
+			trace=false;
 		      },
 		      rplx_create
 		   )

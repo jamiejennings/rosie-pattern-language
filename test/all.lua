@@ -28,7 +28,7 @@ test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-mod-test.lua")
 test.dofile(ROSIE_HOME .. "/test/rpl-appl-test.lua")
 
-print("SKIPPING EVAL TEST")--test.dofile(ROSIE_HOME .. "/test/eval-test.lua")
+test.dofile(ROSIE_HOME .. "/test/trace-test.lua")
 
 test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
 test.dofile(ROSIE_HOME .. "/test/repl-test.lua")
