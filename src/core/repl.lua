@@ -55,7 +55,6 @@ input_rplx = repl_engine:compile("input")
 assert(input_rplx, "internal error: input_rplx failed to compile")
 pargs_rplx = repl_engine:compile("parsed_args")
 assert(pargs_rplx, "internal error: pargs_rplx failed to compile")
-local parse_and_explain = repl_engine.compiler.parser
 
 local repl_prompt = "Rosie> "
 
@@ -173,7 +172,7 @@ function repl.repl(en)
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
 		     local errs = {}
-		     local a = en.compiler.parser.parse_expression(exp_string, nil, errs)
+		     local a = en.compiler.parse_expression(exp_string, nil, errs)
 		     if not a then
 			print("*** These will be printed in full later:")
 			table.print(errs, false)	    -- TODO: print actual messages

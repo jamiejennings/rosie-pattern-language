@@ -48,6 +48,9 @@
 -- r:match(input, optional_start) like e:match but r is a compiled rplx object
 --   returns match or nil, and leftover
 --
+-- r:trace(input, optional_start) like e:trace but r is a compiled rplx object
+--   returns a trace object
+--
 -- e:match(expression, input, optional_start, optional_flavor, optional_acc0, optional_acc1)
 --   behaves like: r=e:compile(expression, optional_flavor);
 --                 r:match(input, optional_start, optional_acc0, optional_acc1)
@@ -57,9 +60,10 @@
 --   returns ok, match or nil, leftover, time
 --      where ok means "successful compile", and if not ok then match is a table of messages
 -- 
--- e:tracematch(expression, input, optional_start, optional_flavor) like match, with tracing (was eval)
--- ??? API only: expression can be an rplx id, in which case that compiled expression is used
---   returns match or nil, leftover, trace (a json object or a string, depending on output encoding);
+-- e:trace(expression, input, optional_start, optional_flavor) like match, but generates a trace
+--   of the entire matching process
+--   ??? API only: expression can be an rplx id, in which case that compiled expression is used
+--   returns a trace object
 -- 
 -- e:output(optional_formatter) sets or returns the formatter (a function)
 --   an engine calls formatter on each successful match result;
@@ -71,10 +75,9 @@
 
 -- FUTURE:
 --
--- e:trace(id1, ... | nil) trace the listed identifiers, or if nil return the identifiers being traced
+-- e:traceid(id1, ... | nil) trace the listed identifiers, or if nil return the identifiers being traced
 -- e:traceall(flag) trace all identifiers if flag is true, or no indentifiers if flag is false
--- e:untrace(id1, ...) untrace the listed identifiers
--- e:tracesearch(identifier, input, optional_start) like search, but generates a trace output (was eval)
+-- e:untraceid(id1, ...) untrace the listed identifiers
 --
 -- e:stats() returns number of patterns bound, some measure of env size (via lua collectgarbage), more...
 
@@ -95,84 +98,100 @@ local lookup = environment.lookup
 local bind = environment.bind
 local violation = require "violation"
 local writer = require "writer"
---local eval = require "eval"
+local loadpkg = require "loadpkg"
+--local trace = require "trace"
 
-local rplx 					    -- forward reference
+local engine, rplx				    -- forward reference
 local engine_error				    -- forward reference
 
 ----------------------------------------------------------------------------------------
 
--- Grep searches a line for all occurrences of a given pattern.  For Rosie to search a line for
--- all occurrences of pattern p, we want to transform p into:  {{!p .}* p}+
--- E.g.
---    bash-3.2$ ./run '{{!int .}* int}+' /etc/resolv.conf 
---    10 0 1 1 
---    2606 000 1120 8152 2 7 6 4 1 
---
--- Flavors are RPL "macros" hand-coded in Lua, used in Rosie v1.0 as a very limited kind of macro
--- system that we can extend in versions 1.x without losing backwards compatibility (and without
--- introducing a "real" macro facility.
--- N.B. Macros are transformations on ASTs, so they leverage the (rough and in need of
--- refactoring) syntax module.
-
-local function compile_search(en, pattern_exp)
-   local parse = en.compiler.parser.parse_expression
-   local compile = en.compiler.compile_expression
-   local env = environment.extend(en._env)	    -- new scope, which will be discarded
-   -- First, we compile the exp in order to give an accurate message if it fails
-   -- What to do with leftover?
-   local warnings = {}
-   local ast, orig_ast, leftover = parse(pattern_exp, nil, warnings)
-   if not ast and ast.subs then return false, warnings, leftover; end
-   local pat, msgs = compile(nil, ast, en._pkgtable, env)
-   if not pat then return false, msgs; end
-   local replacement = ast.subs[1]
-   -- Next, transform pat.ast
-   local ast, orig_ast, leftover = parse("{{!e .}* e}+", nil, warnings)
-   assert(type(ast)=="table" and ast.subs and ast.subs[1] and (not ast.subs[2]))
-   assert(ast.type=="rpl_expression")
-   assert(ast.subs[1].type=="raw_exp", "type is: " .. ast.subs[1].type)
-   ast = ast.subs[1]
-   assert(ast.subs and ast.subs[1])
-   local template = ast.subs[1]
-   local grep_ast = syntax.replace_ref(template, "e", replacement)
-   assert(type(grep_ast)=="table", "syntax.replace_ref failed")
-   grep_ast = common.create_match("rpl_expression", 1, "search:(" .. pattern_exp .. ")", grep_ast)
-   return compile(nil, grep_ast, en._pkgtable, env)
-end
-
-local function compile_match(en, source)
-   local parse = en.compiler.parser.parse_expression
-   local compile = en.compiler.compile_expression
+local function compile_expression(e, input)
    local messages = {}
-   local ast, original_ast, leftover = parse(source, nil, messages)
-   assert(type(messages)=="table")
-   if not ast then return false, messages; end
-   return compile(nil, ast, en._pkgtable, en._env)
-end
-
-local function engine_compile(en, expression, flavor)
-   flavor = flavor or "match"
-   if type(expression)~="string" then engine_error(en, "Expression not a string: " .. tostring(expression)); end
-   if type(flavor)~="string" then engine_error(en, "Flavor not a string: " .. tostring(flavor)); end
-   local pat, msgs
-   if flavor=="match" then
-      pat, msgs = compile_match(en, expression)
-   elseif flavor=="search" then
-      pat, msgs = compile_search(en, expression)
-   else
-      engine_error(en, "Unknown flavor: " .. flavor)
+   local ast = input
+   if type(input)=="string" then
+      ast = e.compiler.parse_expression(input, nil, messages)
+      -- Syntax errors will be in messages table
+      if not ast then return false, messages; end
    end
-   if not pat then return false, msgs; end
-   return rplx.new(en, pat), msgs
+   if not recordtype.parent(ast) then
+      assert(false, "unexpected input type to compile_expression: " .. tostring(ast))
+   end
+   ast = e.compiler.expand_expression(ast, e._env, messages)
+   -- Errors will be in messages table
+   if not ast then return false, messages; end
+   local pat = e.compiler.compile_expression(ast, e._env, messages)
+   if not pat then return false, messages; end
+   return rplx.new(e, pat)   
 end
 
--- N.B. The _engine_match code is essentially duplicated (for speed, to avoid a function call) in
+local function load(e, input, fullpath)
+   local messages = {}
+   local ok, pkgname, env = loadpkg.source(e.compiler,
+					   e._pkgtable,
+					   e._env,
+					   e.searchpath,
+					   input,
+					   fullpath,
+					   messages)
+   if ok then
+      if pkgname then
+	 -- We compiled a module, reified it as the package in 'env'
+	 bind(e._env, pkgname, env)
+      else
+	 -- Did not load a module, so the env we passed in was extended with new bindings 
+	 assert(environment.is(env))
+	 e._env = env
+      end
+   end
+   return ok, pkgname, messages
+end
+
+local function import(e, packagename, as_name)
+   local messages = {}
+   local ok = loadpkg.import(e.compiler,
+			     e._pkgtable,
+			     e.searchpath,
+			     packagename,	    -- requested importpath
+			     as_name,		    -- requested prefix
+			     e._env,
+			     messages)
+   return ok, messages
+end
+
+local function get_file_contents(e, filename, nosearch)
+  if nosearch or util.absolutepath(filename) then
+     local data, msg = util.readfile(filename)
+     return filename, data, msg		    -- data could be nil
+  else
+     return common.get_file(filename, e.searchpath, "")
+  end
+end
+
+local function loadfile(e, filename, nosearch)
+   if type(filename)~="string" then
+      e._engine_error(e, "file name argument not a string: " .. tostring(filename))
+   end
+   local actual_path, src, errmsg = get_file_contents(e, filename, nosearch)
+   -- TODO: re-work these return values:
+   if not src then return false, nil, {errmsg}, actual_path; end
+   local ok, pkgname, messages = load(e, src, actual_path)
+   return ok, pkgname, messages, actual_path
+end
+
+-- local dependencies =
+--   function(e, AST)
+--      return e.compiler.dependencies_of(AST)
+--   end
+
+----------------------------------------------------------------------------------------
+
+-- N.B. The _match code is essentially duplicated (for speed, to avoid a function call) in
 -- process_input_file (below).  There's still room for optimizations, e.g.
 --   Create a closure over the encode function to avoid looking it up in e.
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
-local function _engine_match(e, pat, input, start, total_time_accum, lpegvm_time_accum)
+local function _match(e, pat, input, start, total_time_accum, lpegvm_time_accum)
    local result, nextpos
    local encode = e.encode_function
    result, nextpos, total_time_accum, lpegvm_time_accum =
@@ -194,178 +213,26 @@ end
 
 -- FUTURE: Maybe cache expressions?
 -- returns matches, leftover, total match time, total spent in lpeg vm
-local function make_matcher(processing_fcn)
-   return function(e, expression, input, start, flavor, total_time_accum, lpegvm_time_accum)
-	     if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
-	     if start and type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
-	     if flavor and type(flavor)~="string" then engine_error(e, "Flavor not a string: " .. tostring(flavor)); end
-	     if rplx.is(expression) then
-		return true, processing_fcn(e, expression._pattern, input, start, total_time_accum, lpegvm_time_accum)
-	     elseif type(expression)=="string" then -- expression has not been compiled
-		-- If we cache, look up expression in the cache here.
-		local r, msgs = e:compile(expression, flavor)
-		if not r then return false, msgs; end
-		return true, processing_fcn(e, r._pattern, input, start, total_time_accum, lpegvm_time_accum)
-	     else
-		engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
-	     end
-	  end  -- matcher function
-end
-
--- returns matches, leftover
-local engine_match = make_matcher(_engine_match)
-
--- returns matches, leftover, trace
-local engine_tracematch = make_matcher(function(e, pat, input, start)
-				    local m, left, ttime, lptime = _engine_match(e, pat, input, start)
-				    local _,_,trace, ttime, lptime = eval.eval(pat, input, start, e, false)
-				    return m, left, trace, ttime, lptime
-				 end)
-
-----------------------------------------------------------------------------------------
-
-local maybe_load_dependency			    -- forward reference
-local load_dependencies				    -- forward reference
-local import_dependency				    -- forward reference
-
--- load a unit of rpl code (decls and statements) into an environment:
---   * parse out the dependencies (import decls)
---   * load dependencies that have not been loaded (into the pkgtable)
---   * import the dependencies into the target environment
---   * compile the input in the target environment
---   * return success code, modname or nil, table of messages (errors, warnings)
-
-local function load_input(e, target_env, input, importpath, modonly)
-   assert(engine.is(e))
-   assert(environment.is(target_env), "target not an environment: " .. tostring(target_env))
-   assert(type(e.searchpath)=="string", "engine search path not a string")
-   local messages = {}
-   local parser = e.compiler.parser
-   local ast, original_ast, leftover
-   local warnings = {}
-   if type(input)=="string" then
-      ast, original_ast, leftover = parser.parse_statements(input, nil, warnings)
-   elseif type(input)=="table" then
-      ast, original_ast, leftover = input, input, 0
+local function match(e, expression, input, start, total_time_accum, lpegvm_time_accum)
+   if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
+   if start and type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
+   if type(expression)=="string" then
+      -- Expression has not been compiled.
+      -- If in future we cache the string expressions, then look up expression in the cache here.
+      local msgs
+      expression, msgs = e:compile(expression)
+      if not expression then return false, msgs; end
+   end
+   if rplx.is(expression) then
+      return true, _match(e, expression._pattern, input, start, total_time_accum, lpegvm_time_accum)
    else
-      engine_error(e, "Error: input not a string or ast: " .. tostring(input));
-   end
-   assert(type(warnings)=="table")
-   if not ast then
-      return false,
-	 nil,
-	 {violation.syntax.new{who='engine load input',
-			       message=table.concat(warnings, "\n"),
-			       origin=importpath,
-			       src=(type(input)=="string" and input) or nil}}
-   end
-   table.move(warnings, 1, #warnings, #messages+1, messages)
-   assert(type(ast)=="table")
-   -- load_dependencies has side-effects on e._pkgtable, target_env, and messages
-   if not load_dependencies(e, ast, target_env, messages, importpath) then
-      return false, nil, messages
-   end
-   -- now we can compile the input
-   local success, modname, more_messages = e.compiler.load(importpath, ast, e._pkgtable, target_env)
-   assert(type(more_messages)=="table", "messages is: " .. tostring(more_messages))
-   table.move(more_messages, 1, #more_messages, #messages+1, messages)
-   if not success then
-      common.note(string.format("FAILED TO COMPILE %s", modname))
-      return false, modname, messages
-   end
-   if modonly and (not modname) then
-      local msg = (importpath or "<top level>") .. " is not a module (no package declaration found)"
-      table.insert(messages, violation.compile.new{who='load module', message=msg, ast=ast})
-      return false, modname, msg, messages
-   end
-   common.note(string.format("COMPILED %s", modname or "<top level>"))
-   return true, modname, messages
-end
-
-load_dependencies =
-   function(e, ast, target_env, messages, importpath)
-      local deps = e.compiler.parser.parse_deps(e.compiler.parser, ast)
-      if not deps then return true; end
-      for _, dep in ipairs(deps) do
-	 local ok, modname, new_messages = maybe_load_dependency(e, ast, target_env, dep, importpath);
-	 table.move(new_messages, 1, #new_messages, #messages+1, messages)
-	 if not ok then return false; end
-      end
-      -- if all dependecies loaded ok, we can import them
-      for _, dep in ipairs(deps) do import_dependency(e, target_env, dep); end
-      return true
-end
-      
--- find and load any missing dependency
-maybe_load_dependency =
-   function(e, ast, target_env, dep, importpath)
-      local messages = {}
-      common.note("-> Loading dependency " .. dep.importpath .. " required by " .. (importpath or "<top level>"))
-      local modname, modenv = e:pkgtableref(dep.importpath)
-      if not modname then
-	 common.note("Looking for ", dep.importpath, " required by ", (importpath or "<top level>"))
-	 local fullpath, source = common.get_file(dep.importpath, e.searchpath)
-	 if not fullpath then
-	    local err = "cannot find module '" .. dep.importpath ..
-	       "' needed by module '" .. (importpath or "<top level>") .. "'"
-	    engine_error(e, err)
-	 else
-	    common.note("Loading ", dep.importpath, " from ", fullpath)
-	    target_env = environment.new()
-	    -- mutually recursive call to load_input, but now we can require that load_input
-	    -- accept only modules, not any file of rpl code.
-	    local ok, modname, new_messages = load_input(e, target_env, source, dep.importpath, true)
-	    table.move(new_messages, 1, #new_messages, #messages+1, messages)
-	    if not ok then return false, modname, messages; end
-	 end -- if not fullpath
-      end -- if dependency was not already loaded
-      return true, modname, messages
-   end
-
-import_dependency =
-   function(e, target_env, dep)
-      assert(engine.is(e))
-      assert(environment.is(target_env))
-      local modname, modenv = e:pkgtableref(dep.importpath)
-      if dep.prefix=="." then
-	 -- import all exported bindings into the current environment
-	 for name, obj in modenv:bindings() do
-	    if obj.exported then		    -- quack
-	       if lookup(target_env, name) then
-		  common.note("REBINDING ", name)
-	       end
-	       bind(target_env, name, obj)
-	    end
-	 end -- for each obj in the module environment
-      else
-	 -- import the entire package under the desired name
-	 local packagename = dep.prefix or modname
-	 if lookup(target_env, packagename) then
-	    common.note("REBINDING ", packagename)
-	 end
-	 bind(target_env, packagename, modenv)
-	 common.note("-> Binding module prefix: " .. packagename)
-      end
-   end
-
-local function get_file_contents(e, filename, nosearch)
-   if nosearch or util.absolutepath(filename) then
-      local data, msg = util.readfile(filename)
-      return filename, data, msg		    -- data could be nil
-   else
-      return common.get_file(filename, e.searchpath, "")
+      engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
    end
 end
 
-local function load_file(e, filename, nosearch)
-   if type(filename)~="string" then
-      engine_error(e, "file name argument not a string: " .. tostring(filename))
-   end
-   local actual_path, source, msg = get_file_contents(e, filename, nosearch)
-   if not source then return false, nil, msg, actual_path; end
-   local success, modname, warnings = e.load(e, source, filename)
-   return success, modname, warnings, actual_path
-end
+-- returns trace object
+local engine_tracematch = false;
+
 
 ----------------------------------------------------------------------------------------
 
@@ -404,7 +271,7 @@ end
 
 local function parse_identifier(en, str)
    local msgs = {}
-   local m = en.compiler.parser.parse_expression(str, nil, msgs)
+   local m = en.compiler.parse_expression(str, nil, msgs)
    if ast.ref.is(m) then
       -- using the new parser
       return m.localname, m.packagename
@@ -581,18 +448,16 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
-local function engine_create(name, compiler, searchpath)
+local function create_engine(name, compiler, searchpath)
    compiler = compiler or default_compiler
    searchpath = searchpath or default_searchpath
    if not compiler then error("no default compiler set"); end
-   local new = engine.factory { name=function() return name; end,
-			     compiler=compiler,
-			     searchpath=searchpath,
-			     _env=environment.new(),
-			     _pkgtable=environment.make_module_table(),
-		    }
-   engine_module.post_create_hook(new)
-   return new
+   return engine.factory { name=function() return name; end,
+			   compiler=compiler,
+			   searchpath=searchpath,
+			   _env=environment.new(),
+			   _pkgtable=environment.make_module_table(),
+		        }
 end
 
 function engine_error(e, msg)
@@ -600,7 +465,7 @@ function engine_error(e, msg)
    		       ROSIE_DEV and (debug.traceback().."\n") or "" ), 0)
 end
 
-local engine = 
+engine = 
    recordtype.new("engine",
 		  {  name=function() return nil; end, -- for reference, debugging
 		     compiler=false,
@@ -610,12 +475,12 @@ local engine =
 
 		     id=recordtype.id,
 
-		     pkgtableref=function(self, path)
-				    return common.pkgtableref(self._pkgtable, path)
-				 end,
-		     pkgtableset=function(self, path, p, e)
-				    common.pkgtableset(self._pkgtable, path, nil, p, e)
-				 end,
+		     -- pkgtableref=function(self, path)
+		     -- 		    return common.pkgtableref(self._pkgtable, path)
+		     -- 		 end,
+		     -- pkgtableset=function(self, path, p, e)
+		     -- 		    common.pkgtableset(self._pkgtable, path, nil, p, e)
+		     -- 		 end,
 
 		     encode_function=false,	      -- false or nil ==> use default encoder
 		     output=get_set_encoder_function,
@@ -623,33 +488,34 @@ local engine =
 		     lookup=get_environment,
 		     clear=clear_environment,
 
-		     load=function(e, input)
-			     return load_input(e, e._env, input)
-			  end,
-		     loadfile=load_file,
-		     import=function() error("'import' unsupported for this engine"); end,
-		     compile=engine_compile,
-		     dependencies=function() error("'dependencies' unsupported for this engine"); end,
+		     load=load,
+		     loadfile=loadfile,
+		     import=import,
+--		     dependencies=dependencies,
 		     searchpath="",
 
-		     match=engine_match,
-		     tracematch=engine_tracematch,
+		     compile=compile_expression,
+		     match=match,
+		     trace=false,
 
 		     matchfile = process_input_file.match,
 		     tracematchfile = process_input_file.tracematch,
 
 		  },
-		  engine_create
+		  create_engine
 	       )
 
 ----------------------------------------------------------------------------------------
 
-local rplx_create = function(en, pattern)			    
+local create_rplx = function(en, pattern)			    
 		       return rplx.factory{ _engine=en,
 					    _pattern=pattern,
-					    match=function(self, ...)
-						     return _engine_match(en, pattern, ...)
-						  end }; end
+					    match=function(...)
+						     local ok, m, left, t0, t1 = en:match(...)
+						     return m, left, t0, t1
+						  end,
+					 };
+		    end
 
 rplx = recordtype.new("rplx",
 		      { _pattern=recordtype.NIL;
@@ -658,16 +524,16 @@ rplx = recordtype.new("rplx",
 			match=false;
 			trace=false;
 		      },
-		      rplx_create
+		      create_rplx
 		   )
 
 ---------------------------------------------------------------------------------------------------
 
 engine_module.engine = engine
-engine_module._set_default_compiler = set_default_compiler
-engine_module._set_default_searchpath = set_default_searchpath
-engine_module._get_default_compiler = get_default_compiler
-engine_module._get_default_searchpath = get_default_searchpath
+engine_module.set_default_compiler = set_default_compiler
+engine_module.set_default_searchpath = set_default_searchpath
+engine_module.get_default_compiler = get_default_compiler
+engine_module.get_default_searchpath = get_default_searchpath
 engine_module.rplx = rplx
 
 return engine_module

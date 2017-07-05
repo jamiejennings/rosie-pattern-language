@@ -41,7 +41,7 @@ function p.load_file(en, filename)
 end
 
 local function import_dependencies(en, a, msgs)
-   local deps = en:dependencies(a)
+   local deps = en.compiler.dependencies_of(a)
    for _, packagename in ipairs(deps) do
       local ok, err = en:import(packagename, nil)
       if not ok then
@@ -102,7 +102,7 @@ function p.setup_engine(en, args)
       end
 
       local errs = {}
-      local AST = en.compiler.parser.parse_expression(expression, nil, errs)
+      local AST = en.compiler.parse_expression(expression, nil, errs)
       if not AST then
 	 table.print(errs, false); print()	  -- TODO: need better printing
 	 os.exit(-4)
