@@ -109,9 +109,9 @@ check(ok)
 heading("Trace built-ins")
 ----------------------------------------------------------------------------------------
 print("\tNeed tests for built-ins like ., $, and ~")
-check_eval('.', "xyz", true, 2)
-check_eval('~', "\t ", true, 3)
-check_eval('$', "", true, 1)
+--check_eval('.', "xyz", true, 2)
+--check_eval('~', "\t ", true, 3)
+--check_eval('$', "", true, 1)
 
 ----------------------------------------------------------------------------------------
 heading("Trace literals")

@@ -102,9 +102,9 @@ local utf8_char_peg = common.utf8_char_peg
 -- prelude", a la Haskell.  :-)
 
 local ENV =
-    {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true; raw=true};  -- any single character
-     [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true; raw=true}; -- end of input
-     [b_id] = pattern.new{name=b_id; peg=boundary; alias=true; raw=true}; -- token boundary
+    {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true};  -- any single character
+     [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true};	  -- end of input
+     [b_id] = pattern.new{name=b_id; peg=boundary; alias=true};		  -- token boundary
      ["find"] = macro.new{primop=macro_find};
      ["findall"] = macro.new{primop=macro_findall};
      ["ci"] = macro.new{primop=macro_case_insensitive};

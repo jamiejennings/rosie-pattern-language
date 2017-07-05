@@ -333,7 +333,7 @@ local function ref(a, env, messages)
       local name = (a.packagename and (a.packagename .. ".") or "") .. a.localname
       throw("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
    end
-   a.pat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, raw=pat.raw, uncap=pat.uncap}
+   a.pat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, uncap=pat.uncap}
    if a.packagename and (not pat.alias) then
       -- Here, pat was wrapped with only a local name when its module was compiled.  We need to
       -- rewrap using the fully qualified name, because the code we are now compiling uses the
