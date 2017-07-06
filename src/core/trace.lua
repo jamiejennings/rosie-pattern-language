@@ -207,9 +207,20 @@ end
 function expression(e, a, input, start)
    local pat = a.pat
    assert(pattern.is(pat), "no pattern stored in ast node " .. tostring(a))
-   local m, nextpos = pat.peg:rmatch(input, start)
-   if m and (#m > 0) then m = lpeg.decode(m); end
-   print("\n*** (trace):", a, start, m, nextpos)
+   local peg = lpeg.rcap(pat.peg, "*")
+   local ok, m, nextpos = pcall(pat.peg.rmatch, peg, input, start)
+   if not ok then
+      print("\n\n\nTrace failed while working on: ", a)
+      if a.exps then print("a.exps: " .. tostring(list.from(a.exps))); end
+      print("ast.tostring(a) is: " .. ast.tostring(a))
+      print("start is: " .. tostring(start) .. " and input is: |" ..  input .. "|")
+      error("rmatch failed: " .. m)
+   end
+   if m then
+      assert(#m > 0)
+      m = lpeg.decode(m)
+   end
+   print("\n*** (trace):", ast.tostring(a), a, start, m, nextpos)
    
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}

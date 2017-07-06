@@ -59,7 +59,52 @@ function printtrace()
    end
 end
 
-
+-- Examine the structure in the global lasttrace.
+function check_structure(representation, subs_representation)
+   local actual = ast.tostring(lasttrace.ast)
+   check(representation == actual,
+	 "expected ast representation: " .. representation .. " but received: " .. actual,
+	 1)
+   if subs_representation then
+      -- Caller expects all sub-matches to be a match iff expected_submatch is true
+      local expected_submatch = subs_representation[1]
+      table.remove(subs_representation, 1)
+      local last = subs_representation[#subs_representation]
+      if last==true or last==false then
+	 -- Caller expects the last sub-match to be different from the rest, e.g. a match (true)
+	 -- where the prior ones were non-matches, or false where the prior ones were matches.
+	 -- From here on, we use last as a flag to indicate when the last sub-match is different. 
+	 last = 999
+	 table.remove(subs_representation, #subs_representation)
+      else
+	 -- Clear 'last' so we can use it as a flag to indicate whether the last sub-match is
+	 -- expected to be different from expected_submatch
+	 last = nil				   
+      end
+      local max = #subs_representation
+      for i = 1, max do
+	 local sub_rep = subs_representation[i]
+	 if not lasttrace.subs[i] then
+	    check(false, "expected sub #" .. tostring(i) .. " but received no value", 1)
+	 else
+	    local actual = ast.tostring(lasttrace.subs[i].ast)
+	    check(sub_rep == actual,
+		  "expected ast representation: " .. sub_rep .. " but received: " .. actual,
+		  1)
+	    -- Check the match to see if it jibes with what we expected
+	    local m = lasttrace.subs[i].match
+	    if (last and (i==max)) then
+	       expected_submatch = not expected_submatch
+	    end
+	    if expected_submatch then
+	       check(m, "expected match success for " .. sub_rep, 1)
+	    else
+	       check(not m, "expected match failure for " .. sub_rep, 1)
+	    end
+	 end
+      end -- for
+   end -- if subs_representation
+end
 
 print("+-----------------------------------------------------------------------------------------+")
 print("| Note that check_trace sets the global variable 'lasttrace', which can be easily printed |")
@@ -124,82 +169,55 @@ check(ast.literal.is(lasttrace.ast))
 heading("Eval sequences")
 ----------------------------------------------------------------------------------------
 check_trace('a b', "a b", true, 4)
-check(lasttrace.subs and (#lasttrace.subs==3))
-
--- Examine the structure in the global lasttrace.
-function check_structure(representation, subs_representation)
-   local actual = ast.tostring(lasttrace.ast)
-   check(representation == actual,
-	 "expected ast representation: " .. representation .. " but received: " .. actual,
-	 1)
-   if subs_representation then
-      for i, sub_rep in ipairs(subs_representation) do
-	 if not sub_rep then break; end		    -- don't process false (if present)
-	 if not lasttrace.subs[i] then
-	    check(false, "expected a sub but received no value", 1)
-	 else
-	    local actual = ast.tostring(lasttrace.subs[i].ast)
-	    check(sub_rep == actual,
-		  "expected ast representation: " .. sub_rep .. " but received: " .. actual,
-		  1)
-	    -- When the next sub_rep is false, look for a match failure
-	    local m = lasttrace.subs[i].match
-	    if subs_representation[i+1]==false then
-	       check(not m, "expected match failure for " .. sub_rep, 1)
-	    else
-	       check(m, "expected match success for " .. sub_rep, 1)
-	    end
-	 end
-      end -- for
-   end -- if subs_representation
-end
-
-check_structure("{a ~ b}", {"a", "~", "b"})
+check_structure("{a ~ b}", {true, "a", "~", "b"})
 
 check_trace('a b', "ab", false, 3)
-check_structure("{a ~ b}", {"a", "~", false})
+check_structure("{a ~ b}", {true, "a", "~", false})
 
 check_trace('{a b}', "ab", true, 3)
-check_structure("{a b}", {"a", "b"})
+check_structure("{a b}", {true, "a", "b"})
 
 check_trace('({a b})', "ab", true, 3)
-check_structure("{a b}", {"a", "b"})
+check_structure("{a b}", {true, "a", "b"})
 
---[===[
 
 ----------------------------------------------------------------------------------------
 heading("Eval alternation (choice)")
 ----------------------------------------------------------------------------------------
-check_trace('a/b/c', "a", true, {'CHOICE: a / b / c',
-				'1........LITERAL: "a"'})
+check_trace('a/b/c', "a", true, 2)
+check_structure('{a / b / c}', {false, 'a', true})
 
-check_trace('a/b/c', "d", false, {'CHOICE: a / b / c',
-				 'FAILED'})
+check_trace('a/b/c', "c", true, 2)
+check_structure('{a / b / c}', {false, 'a', 'b', 'c', true})
+
+check_trace('a/b/c', "d", false, 1)
+check_structure('{a / b / c}', {false, 'a', 'b', 'c'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval cooked groups")
 ----------------------------------------------------------------------------------------
-check_trace('a b', "a b ", true, {'SEQUENCE: (a ~ b)',
-				 '1...........LITERAL: "a"'})
+check_trace('a b', "a b ", true, 4)		    -- leftover==1
+check_structure('{a ~ b}', {true, 'a', '~', 'b'})
 
-check_trace('(a b)', "a b ", true, {'SEQUENCE: (a ~ b)',
-				   '1...........LITERAL: "a"'})
+check_trace('(a b)', "a b ", true, 4)		    -- leftover==1
+check_structure('{a ~ b}', {true, 'a', '~', 'b'})
 
-check_trace('a b ~', "a bx", false, {'SEQUENCE: (a ~ b ~ ~)',
-				  '1...........LITERAL: "a"',
-				  'FAILED'})
+check_trace('a b ~', "a bx", false, 1)
+check_structure('{a ~ b ~ ~}', {true, 'a', '~', 'b', '~', false})
 
-check_trace('(a b)~', "a bx", false, {'SEQUENCE: (a ~ b ~ ~)',
-				     '1.................LITERAL: "a"',
-				     'FAILED'})
+check_trace('(a b)~', "a bx", false, 1)
+check_structure('{{a ~ b} ~ ~}', {true, '{a ~ b}', '~', false})
+
+
 ----------------------------------------------------------------------------------------
 heading("Eval raw groups")
 ----------------------------------------------------------------------------------------
-check_trace('{a b}', "a b ", false, {'SEQUENCE: (a b)',
-				    '1........LITERAL: "a"',
-				    'Matched',
-				    '2........LITERAL: "b"',
-				    'FAILED to match'})
+
+
+check_trace('{a b}', "a b ", false, 1)
+check_structure('{a b}', {true, 'a', 'b', false})
+
+--[===[
 
 
 check_trace('{a b}', "abx", true, {'SEQUENCE: (a b)',
