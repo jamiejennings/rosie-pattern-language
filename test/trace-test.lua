@@ -11,6 +11,7 @@
 assert(ROSIE_HOME, "ROSIE_HOME is not set?")
 assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
 trace = rosie._env.trace
+ast = rosie._env.ast
 import = rosie._env.import
 if not termcolor then
    import("termcolor")
@@ -29,13 +30,13 @@ global_rplx = false;
 
 lasttrace = "no trace set"
 
-function check_eval(exp, input, expectation, expected_nextpos, expected_contents_list)
+function check_trace(exp, input, expectation, expected_nextpos, expected_contents_list)
    local rplx, errs = e:compile(exp)
    if not rplx then
       error("this expression failed to compile: " .. exp)
    end
    local t = trace.expression(rplx, input)
-   for k,v in pairs(t) do print(k,v); end
+   lasttrace = t				    -- GLOBAL
    check(( (expectation and t.match) or ((not expectation) and (not t.match)) ),
          "t.match was not as expected",
          1)
@@ -45,31 +46,24 @@ function check_eval(exp, input, expectation, expected_nextpos, expected_contents
             .. tostring(expected_nextpos),
 	    1)
    end
-   
-   -- check(ok, "failed call to eval: " .. tostring(m) .. "\nexp=" .. exp .. "\ninput=" .. input)
-   -- if ok then
-   --    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
-   -- 	 ((m and "matched") or "did NOT match") .. " " .. input .. " ", 1)
-   --    if type(expected_contents_list)=="table" then
-   -- 	 local pos, all_met_flag, msg = 1, true, ""
-   -- 	 for _, text in ipairs(expected_contents_list) do
-   -- 	    local nextpos = localtrace:find(text, pos, true)	-- plain text matching flag is true
-   -- 	    if nextpos then
-   -- 	       pos = nextpos
-   -- 	    else
-   -- 	       msg = msg .. string.format("%q NOT found at/after position %d\n", text, pos)
-   -- 	       all_met_flag = false
-   -- 	    end
-   -- 	 end -- for
-   -- 	 check(all_met_flag, "expected content of trace not met:\n" .. msg, 1)
-   --    end
-   --    lasttrace = "\n\ncheck_eval('" .. exp .. "','" .. input .. "') returned this trace: \n" .. localtrace
-   -- end -- if ok
 end
 
-print("+----------------------------------------------------------------------------------------+")
-print("| Note that check_eval sets the global variable 'lasttrace', which can be easily printed |")
-print("+----------------------------------------------------------------------------------------+")
+function printtrace()
+   print(); for k,v in pairs(lasttrace) do print(k,v); end
+   if lasttrace.subs then
+      for i, sub in ipairs(lasttrace.subs) do
+	 print("Sub " .. tostring(i) .. ": ")
+	 for k,v in pairs(sub) do print(k,v); end
+      end
+      print("---")
+   end
+end
+
+
+
+print("+-----------------------------------------------------------------------------------------+")
+print("| Note that check_trace sets the global variable 'lasttrace', which can be easily printed |")
+print("+-----------------------------------------------------------------------------------------+")
 
 test.start(test.current_filename())
 
@@ -109,73 +103,113 @@ check(ok)
 heading("Trace built-ins")
 ----------------------------------------------------------------------------------------
 print("\tNeed tests for built-ins like ., $, and ~")
---check_eval('.', "xyz", true, 2)
---check_eval('~', "\t ", true, 3)
---check_eval('$', "", true, 1)
+--check_trace('.', "xyz", true, 2)
+--check_trace('~', "\t ", true, 3)
+--check_trace('$', "", true, 1)
 
 ----------------------------------------------------------------------------------------
 heading("Trace literals")
 ----------------------------------------------------------------------------------------
-check_eval('"foo"', "foo", true, 4)
-check_eval('"foo"', "foobar", true, 4)
-check_eval('"foo"', "notfoo", false, nil)
-
-
-
-
---[===[
+check_trace('"foo"', "foo", true, 4)
+check(not lasttrace.subs)
+check(ast.literal.is(lasttrace.ast))
+check_trace('"foo"', "foobar", true, 4)
+check(not lasttrace.subs)
+check(ast.literal.is(lasttrace.ast))
+check_trace('"foo"', "notfoo", false, nil)
+check(not lasttrace.subs)
+check(ast.literal.is(lasttrace.ast))
 
 ----------------------------------------------------------------------------------------
 heading("Eval sequences")
 ----------------------------------------------------------------------------------------
-check_eval('a b', "a b", true, {'SEQUENCE: (a ~ b)', '1...........LITERAL: "a"'})
-check_eval('a b', "ab", false, {'SEQUENCE: (a ~ b)', '1...........LITERAL: "a"'})
-check_eval('{a b}', "ab", true, {'SEQUENCE: (a b)', '1........LITERAL: "a"', '2........LITERAL: "b"'})
-check_eval('({a b})', "ab", true, {'SEQUENCE: (a b)', '1........LITERAL: "a"', '2........LITERAL: "b"'})
+check_trace('a b', "a b", true, 4)
+check(lasttrace.subs and (#lasttrace.subs==3))
+
+-- Examine the structure in the global lasttrace.
+function check_structure(representation, subs_representation)
+   local actual = ast.tostring(lasttrace.ast)
+   check(representation == actual,
+	 "expected ast representation: " .. representation .. " but received: " .. actual,
+	 1)
+   if subs_representation then
+      for i, sub_rep in ipairs(subs_representation) do
+	 if not sub_rep then break; end		    -- don't process false (if present)
+	 if not lasttrace.subs[i] then
+	    check(false, "expected a sub but received no value", 1)
+	 else
+	    local actual = ast.tostring(lasttrace.subs[i].ast)
+	    check(sub_rep == actual,
+		  "expected ast representation: " .. sub_rep .. " but received: " .. actual,
+		  1)
+	    -- When the next sub_rep is false, look for a match failure
+	    local m = lasttrace.subs[i].match
+	    if subs_representation[i+1]==false then
+	       check(not m, "expected match failure for " .. sub_rep, 1)
+	    else
+	       check(m, "expected match success for " .. sub_rep, 1)
+	    end
+	 end
+      end -- for
+   end -- if subs_representation
+end
+
+check_structure("{a ~ b}", {"a", "~", "b"})
+
+check_trace('a b', "ab", false, 3)
+check_structure("{a ~ b}", {"a", "~", false})
+
+check_trace('{a b}', "ab", true, 3)
+check_structure("{a b}", {"a", "b"})
+
+check_trace('({a b})', "ab", true, 3)
+check_structure("{a b}", {"a", "b"})
+
+--[===[
 
 ----------------------------------------------------------------------------------------
 heading("Eval alternation (choice)")
 ----------------------------------------------------------------------------------------
-check_eval('a/b/c', "a", true, {'CHOICE: a / b / c',
+check_trace('a/b/c', "a", true, {'CHOICE: a / b / c',
 				'1........LITERAL: "a"'})
 
-check_eval('a/b/c', "d", false, {'CHOICE: a / b / c',
+check_trace('a/b/c', "d", false, {'CHOICE: a / b / c',
 				 'FAILED'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval cooked groups")
 ----------------------------------------------------------------------------------------
-check_eval('a b', "a b ", true, {'SEQUENCE: (a ~ b)',
+check_trace('a b', "a b ", true, {'SEQUENCE: (a ~ b)',
 				 '1...........LITERAL: "a"'})
 
-check_eval('(a b)', "a b ", true, {'SEQUENCE: (a ~ b)',
+check_trace('(a b)', "a b ", true, {'SEQUENCE: (a ~ b)',
 				   '1...........LITERAL: "a"'})
 
-check_eval('a b ~', "a bx", false, {'SEQUENCE: (a ~ b ~ ~)',
+check_trace('a b ~', "a bx", false, {'SEQUENCE: (a ~ b ~ ~)',
 				  '1...........LITERAL: "a"',
 				  'FAILED'})
 
-check_eval('(a b)~', "a bx", false, {'SEQUENCE: (a ~ b ~ ~)',
+check_trace('(a b)~', "a bx", false, {'SEQUENCE: (a ~ b ~ ~)',
 				     '1.................LITERAL: "a"',
 				     'FAILED'})
 ----------------------------------------------------------------------------------------
 heading("Eval raw groups")
 ----------------------------------------------------------------------------------------
-check_eval('{a b}', "a b ", false, {'SEQUENCE: (a b)',
+check_trace('{a b}', "a b ", false, {'SEQUENCE: (a b)',
 				    '1........LITERAL: "a"',
 				    'Matched',
 				    '2........LITERAL: "b"',
 				    'FAILED to match'})
 
 
-check_eval('{a b}', "abx", true, {'SEQUENCE: (a b)',
+check_trace('{a b}', "abx", true, {'SEQUENCE: (a b)',
 				  '1........LITERAL: "a"',
 				  'Matched',
 				  '2........LITERAL: "b"',
 				  'Matched'})
 
 
-check_eval('({a b})~', "abx", false, {'SEQUENCE: (a b ~)',
+check_trace('({a b})~', "abx", false, {'SEQUENCE: (a b ~)',
 				     '1..............LITERAL: "a"',
 				     'Matched',
 				     '2..............LITERAL: "b"',
@@ -186,33 +220,33 @@ check_eval('({a b})~', "abx", false, {'SEQUENCE: (a b ~)',
 ----------------------------------------------------------------------------------------
 heading("Eval look-ahead")
 ----------------------------------------------------------------------------------------
-check_eval('a @b', "a b", true, {'SEQUENCE: (a ~ @b)',
+check_trace('a @b', "a b", true, {'SEQUENCE: (a ~ @b)',
 				 '2.....PREDICATE: @b',
 				 'Matched'})
-check_eval('{a @b}', "ab", true, {'SEQUENCE: (a @b)'})
+check_trace('{a @b}', "ab", true, {'SEQUENCE: (a @b)'})
 
-check_eval('{a @b}', "a", false, {'SEQUENCE: (a @b)',
+check_trace('{a @b}', "a", false, {'SEQUENCE: (a @b)',
 				  '2.....PREDICATE: @b',
 				  'FAILED'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval negative look-ahead")
 ----------------------------------------------------------------------------------------
-check_eval('a !b', "ax", false, {'SEQUENCE: (a ~ !b)',
+check_trace('a !b', "ax", false, {'SEQUENCE: (a ~ !b)',
 				 '1...........LITERAL: "a"',
 				 'Matched',
 				 'REFERENCE: ~',
 				 'FAILED to match against input "x"'})
 
-check_eval('{a !b}', "ax", true, {'SEQUENCE: (a !b)',
+check_trace('{a !b}', "ax", true, {'SEQUENCE: (a !b)',
 				  '3...........LITERAL: "b"',
 				  'FAILED to match against input "x"'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval precedence and right association")
 ----------------------------------------------------------------------------------------
-check_eval('a b / c', 'b c', false)
-check_eval('a b / c', 'a c', true, {'SEQUENCE: (a ~ b / c)',
+check_trace('a b / c', 'b c', false)
+check_trace('a b / c', 'a c', true, {'SEQUENCE: (a ~ b / c)',
 				    'Matched "a" (against input "a c")',
 				    'REFERENCE: ~',
 				    'Matched "c" (against input "c")',
@@ -220,10 +254,10 @@ check_eval('a b / c', 'a c', true, {'SEQUENCE: (a ~ b / c)',
 				    'First option failed.  Proceeding to alternative.',
 				    '3...........LITERAL: "c"'})
 
-check_eval('a b / c {3,3}', 'a ccc', true, {'SEQUENCE: (a ~ b / {c}{3,3})'})
+check_trace('a b / c {3,3}', 'a ccc', true, {'SEQUENCE: (a ~ b / {c}{3,3})'})
 
 
-check_eval('a b / c {3,3}', 'a cc', false, {'SEQUENCE: (a ~ b / {c}{3,3})',
+check_trace('a b / c {3,3}', 'a cc', false, {'SEQUENCE: (a ~ b / {c}{3,3})',
 					    'FAILED'})
 
 print("\t ** Need more precedence and right association tests! **")
@@ -231,49 +265,49 @@ print("\t ** Need more precedence and right association tests! **")
 ----------------------------------------------------------------------------------------
 heading("Eval quantified expressions")
 ----------------------------------------------------------------------------------------
-check_eval('a*', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
+check_trace('a*', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
 			    'Matched'})
 
-check_eval('a*', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
+check_trace('a*', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
 				'Matched'})
 
 
-check_eval('a+', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
+check_trace('a+', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
 			     'FAILED'})
 
-check_eval('a+', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
+check_trace('a+', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
 			     'Matched'})
 
-check_eval('{a/b}+', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
+check_trace('{a/b}+', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
 				    'Matched "baaa"'})
 
-check_eval('{a/b}{3,5}', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
+check_trace('{a/b}{3,5}', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 					'Matched'})
 
-check_eval('{a/b}{3,5}', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
+check_trace('{a/b}{3,5}', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 				       'FAILED'})
 
 
-check_eval('(a*)', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
+check_trace('(a*)', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
 			    'Matched'})
 
-check_eval('(a*)', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
+check_trace('(a*)', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
 				'Matched'})
 
 
-check_eval('(a+)', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
+check_trace('(a+)', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
 			     'FAILED'})
 
-check_eval('(a+)', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
+check_trace('(a+)', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
 			     'Matched'})
 
-check_eval('({a/b}+)', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
+check_trace('({a/b}+)', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
 				    'Matched "baaa"'})
 
-check_eval('({a/b}{3,5})', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
+check_trace('({a/b}{3,5})', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 					'Matched'})
 
-check_eval('({a/b}{3,5})', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
+check_trace('({a/b}{3,5})', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
 				       'FAILED'})
 
 ----------------------------------------------------------------------------------------
@@ -291,7 +325,7 @@ ok, msg = e:load(g)
 check(ok)
 check(not msg)
 
-check_eval('S', "aabb", true, {'1..GRAMMAR:',
+check_trace('S', "aabb", true, {'1..GRAMMAR:',
 			       'new_grammar',
 			       'S = CAPTURE as S: {("a" B) / ("b" A) / ""}',
 			       'A = CAPTURE as A: {("a" S) / ("b" A A)}',

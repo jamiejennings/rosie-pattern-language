@@ -209,7 +209,7 @@ function expression(e, a, input, start)
    assert(pattern.is(pat), "no pattern stored in ast node " .. tostring(a))
    local m, nextpos = pat.peg:rmatch(input, start)
    if m and (#m > 0) then m = lpeg.decode(m); end
-   print("*** (trace):", a, start, m, nextpos)
+   print("\n*** (trace):", a, start, m, nextpos)
    
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
