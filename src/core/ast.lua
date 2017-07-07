@@ -772,7 +772,14 @@ function ast.tostring(a)
    elseif list.is(a) then
       return tostring(map(ast.tostring, a))
    else
-      error("do not know how to print this ast: " .. tostring(a))
+      local a_string = tostring(a)
+      if type(a)=="table" and (not recordtype.parent(a)) then
+	 a_string = a_string .. "\n"
+	 for k,v in pairs(a) do
+	    a_string = a_string .. tostring(k) .. ": " .. tostring(v) .. "\n"
+	 end
+      end
+      error("do not know how to print this ast: " .. a_string)
    end
 end
 

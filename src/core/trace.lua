@@ -204,6 +204,21 @@ local function cs_exp(e, a, input, start, expected, nextpos)
    end
 end
       
+local function predicate(e, a, input, start, expected, nextpos)
+   local result = expression(e, a.exp, input, start)
+   if (result.match and (a.type=="@")) or ((not result.match) and (a.type=="!")) then
+      assert(expected, "predicate match differs from expected")
+      -- Cannot compare nextpos to result.nextpos, because 'a.exp' is NOT a predicate (so it
+      -- advances nextpos) whereas 'a' IS a predicate (which does not advance nextpos).
+      assert(nextpos==start, "predicate was evaluated, but nextpos advanced ahead of start???")
+   else
+      assert(not expected,
+	     "predicate non-match differs from expected: " .. ast.tostring(a) ..
+	     " on input: " .. input:sub(start))
+   end
+   return {match=expected, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
+end
+
 function expression(e, a, input, start)
    local pat = a.pat
    assert(pattern.is(pat), "no pattern stored in ast node " .. tostring(a))
@@ -236,8 +251,10 @@ function expression(e, a, input, start)
       return atleast(e, a, input, start, m, nextpos)
    elseif ast.atmost.is(a) then
       return atmost(e, a, input, start, m, nextpos)
+   elseif ast.predicate.is(a) then
+      return predicate(e, a, input, start, m, nextpos)
    else
-      error("Internal error: invalid ast type in eval expression: " .. tostring(a))
+      error("Internal error: invalid ast type in trace.expression: " .. tostring(a))
    end
 end
 

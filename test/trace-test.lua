@@ -60,8 +60,25 @@ function printtrace()
 end
 
 -- Examine the structure in the global lasttrace.
-function check_structure(representation, subs_representation)
-   local actual = ast.tostring(lasttrace.ast)
+-- N.B.  By default, 'check_structure' looks only at the first level of structure in lasttrace.
+-- To check the structure of lasttrace.subs[i], supply that as the first arg.
+function check_structure(arg1, arg2, arg3)
+   local tr, representation, subs_representation
+   if type(arg1)=="string" then
+      tr = lasttrace
+      representation = arg1
+      subs_representation = arg2
+      assert(not arg3, "too many args to check_structure? arg3 is: " .. tostring(arg3))
+   elseif type(arg1)=="table" then
+      -- Assume arg1 is the trace we need to check
+      tr = arg1
+      representation = arg2
+      subs_representation = arg3
+   end
+   assert(type(representation)=="string")
+   assert(subs_representation==nil or (type(subs_representation)=="table"))
+   
+   local actual = ast.tostring(tr.ast)
    check(representation == actual,
 	 "expected ast representation: " .. representation .. " but received: " .. actual,
 	 1)
@@ -84,15 +101,15 @@ function check_structure(representation, subs_representation)
       local max = #subs_representation
       for i = 1, max do
 	 local sub_rep = subs_representation[i]
-	 if not lasttrace.subs[i] then
+	 if not tr.subs[i] then
 	    check(false, "expected sub #" .. tostring(i) .. " but received no value", 1)
 	 else
-	    local actual = ast.tostring(lasttrace.subs[i].ast)
+	    local actual = ast.tostring(tr.subs[i].ast)
 	    check(sub_rep == actual,
 		  "expected ast representation: " .. sub_rep .. " but received: " .. actual,
 		  1)
 	    -- Check the match to see if it jibes with what we expected
-	    local m = lasttrace.subs[i].match
+	    local m = tr.subs[i].match
 	    if (last and (i==max)) then
 	       expected_submatch = not expected_submatch
 	    end
@@ -217,68 +234,60 @@ heading("Eval raw groups")
 check_trace('{a b}', "a b ", false, 1)
 check_structure('{a b}', {true, 'a', 'b', false})
 
---[===[
+check_trace('{a b}', "abx", true, 3)
+check_structure('{a b}', {true, 'a', 'b'})
 
+check_trace('({a b})~', "abx", false, 1)
+check_structure('{{a b} ~ ~}', {true, '{a b}', '~', false})
+check_structure(lasttrace.subs[1], '{a b}', {true, 'a', 'b'})
 
-check_trace('{a b}', "abx", true, {'SEQUENCE: (a b)',
-				  '1........LITERAL: "a"',
-				  'Matched',
-				  '2........LITERAL: "b"',
-				  'Matched'})
-
-
-check_trace('({a b})~', "abx", false, {'SEQUENCE: (a b ~)',
-				     '1..............LITERAL: "a"',
-				     'Matched',
-				     '2..............LITERAL: "b"',
-				     'Matched',
-				     'REFERENCE: ~',
-				     'FAILED'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval look-ahead")
 ----------------------------------------------------------------------------------------
-check_trace('a @b', "a b", true, {'SEQUENCE: (a ~ @b)',
-				 '2.....PREDICATE: @b',
-				 'Matched'})
-check_trace('{a @b}', "ab", true, {'SEQUENCE: (a @b)'})
+check_trace('a @b', "a b", true, 3)
+check_structure('{a ~ @b}', {true, 'a', '~', '@b'})
 
-check_trace('{a @b}', "a", false, {'SEQUENCE: (a @b)',
-				  '2.....PREDICATE: @b',
-				  'FAILED'})
+check_trace('{a @b}', "ab", true, 2)
+check_structure('{a @b}', {true, 'a', '@b'})
+
+check_trace('{a @b}', "a", false, 1)
+check_structure('{a @b}', {true, 'a', '@b', false})
 
 ----------------------------------------------------------------------------------------
 heading("Eval negative look-ahead")
 ----------------------------------------------------------------------------------------
-check_trace('a !b', "ax", false, {'SEQUENCE: (a ~ !b)',
-				 '1...........LITERAL: "a"',
-				 'Matched',
-				 'REFERENCE: ~',
-				 'FAILED to match against input "x"'})
+check_trace('a !b', "ax", false, 1)
+check_structure('{a ~ !b}', {true, 'a', '~', false})
 
-check_trace('{a !b}', "ax", true, {'SEQUENCE: (a !b)',
-				  '3...........LITERAL: "b"',
-				  'FAILED to match against input "x"'})
+check_trace('{a !b}', "ax", true, 2)
+check_structure('{a !b}', {true, 'a', '!b'})
+check_structure(lasttrace.subs[2], '!b', {false, 'b'})
+
 
 ----------------------------------------------------------------------------------------
 heading("Eval precedence and right association")
 ----------------------------------------------------------------------------------------
-check_trace('a b / c', 'b c', false)
-check_trace('a b / c', 'a c', true, {'SEQUENCE: (a ~ b / c)',
-				    'Matched "a" (against input "a c")',
-				    'REFERENCE: ~',
-				    'Matched "c" (against input "c")',
-				    '2...........LITERAL: "b"',
-				    'First option failed.  Proceeding to alternative.',
-				    '3...........LITERAL: "c"'})
+check_trace('a b / c', 'b c', false, 1)
+check_structure('{a ~ {b / c}}', {true, 'a', false})
 
-check_trace('a b / c {3,3}', 'a ccc', true, {'SEQUENCE: (a ~ b / {c}{3,3})'})
+check_trace('a b / c', 'a c', true, 4)
+check_structure('{a ~ {b / c}}', {true, 'a', '~', '{b / c}'})
+check_structure(lasttrace.subs[3], '{b / c}', {false, 'b', 'c', true})
+
+check_trace('a b / c {3,3}', 'a ccc', true, 6)
+check_structure('{a ~ {b / {c c c}}}', {true, 'a', '~', '{b / {c c c}}'})
+
+check_trace('a b / c {3,3}', 'a cc', false, 1)
+check_structure('{a ~ {b / {c c c}}}', {true, 'a', '~', '{b / {c c c}}', false})
+check_structure(lasttrace.subs[3], '{b / {c c c}}', {false, 'b', '{c c c}'})
+check_structure(lasttrace.subs[3].subs[2], '{c c c}', {true, 'c', 'c', 'c', false})
+
+print("\n\t ** Need more precedence and right association tests! **")
 
 
-check_trace('a b / c {3,3}', 'a cc', false, {'SEQUENCE: (a ~ b / {c}{3,3})',
-					    'FAILED'})
+--[===[
 
-print("\t ** Need more precedence and right association tests! **")
 
 ----------------------------------------------------------------------------------------
 heading("Eval quantified expressions")
