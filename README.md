@@ -84,26 +84,35 @@ The rosie executable is in `./bin/rosie`.  More installation information is avai
 * [Windows 10 Anniversary Edition install tips](doc/windows10ae.md)
 * [Sample docker files](docker/) *Note: These may need updating*
 
-## Current status
+## Project status
 
-The current release is the "version 1.0 candidate".  The RPL language syntax and
-semantics are stable, as is the (relatively new) API.  The current release is
-labeled "v0.99x" where x begins with "a" and will be advanced as bugs are fixed
-and small enhancements are made.
+The current release is v0.99k.  The RPL language syntax and semantics have been
+stable for a while now.  In our current work, which is leading up to release
+v1.0, we are doing some refactoring and also adding new features.  Our goal is
+to release v1.0 in the summer of 2017 in a strictly forward-looking way.  That
+is, we want future versions 1.x to be backwards compatible to v1.0.
+
+At the [Rosie Pattern Language blog](http://tiny.cc/rosie), you can find a
+preview of what is coming in v1.0.
+
 
 ## Docs
 
-Rosie documentation:
+The new [Rosie Pattern Language blog](http://tiny.cc/rosie) has a preview of the
+forthcoming version 1.0, and will grow to contain documentation and examples.
+
+Current release documentation:
 * [Command Line Interface documentation](doc/cli.md)
 * [Rosie Pattern Language Reference](doc/rpl.md)
 * [Interactive read-eval-print loop (repl)](doc/repl.md)
 
-Blog posts on Rosie:
-* [Project Overview](https://developer.ibm.com/open/rosie-pattern-language/)
-* [Introduction](https://developer.ibm.com/open/2016/02/20/world-data-science-needs-rosie-pattern-language/)
-* [Parsing Spark logs](https://developer.ibm.com/open/2016/04/26/develop-test-rosie-pattern-language-patterns-part-1-parsing-log-files/)
-* [Parsing CSV files](https://developer.ibm.com/open/2016/10/14/develop-test-rosie-pattern-language-patterns-part-2-csv-data/)
-* Generating patterns automatically (forthcoming)
+Rosie on IBM developerWorks Open:
+* [Rosie blogs and talks](https://developer.ibm.com/open/category/rosie-pattern-language/)
+* Including:
+    * [Project Overview](https://developer.ibm.com/open/rosie-pattern-language/)
+    * [Introduction](https://developer.ibm.com/open/2016/02/20/world-data-science-needs-rosie-pattern-language/)
+    * [Parsing Spark logs](https://developer.ibm.com/open/2016/04/26/develop-test-rosie-pattern-language-patterns-part-1-parsing-log-files/)
+    * [Parsing CSV files](https://developer.ibm.com/open/2016/10/14/develop-test-rosie-pattern-language-patterns-part-2-csv-data/)
 
 For an introduction to Rosie and explanations of the key concepts, see
 [Rosie's _raison d'etre_](doc/raisondetre.md).
