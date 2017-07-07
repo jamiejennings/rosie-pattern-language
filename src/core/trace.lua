@@ -147,7 +147,9 @@ local function atmost(e, a, input, start, expected, nextpos)
    end -- while
    local last = matches[#matches]
    assert(expected, "atmost match differs from expected")
-   assert(last.nextpos==nextpos, "atmost nextpos differs from expected")
+   if last.match then
+      assert(last.nextpos==nextpos, "atmost nextpos differs from expected")
+   end
    return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
 end
 
@@ -219,6 +221,12 @@ local function predicate(e, a, input, start, expected, nextpos)
    return {match=expected, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
 end
 
+local function grammar(e, a, input, start, expected, nextpos)
+   -- FUTURE: Simulate a grammar using its pieces.  This will require some careful bouncing in and
+   -- out of lpeg because we cannot attempt a match against an lpeg.V(rulename) peg.
+   return {match=expected, nextpos=nextpos, ast=a, input=input, start=start}
+end
+
 function expression(e, a, input, start)
    local pat = a.pat
    assert(pattern.is(pat), "no pattern stored in ast node " .. tostring(a))
@@ -235,8 +243,6 @@ function expression(e, a, input, start)
       assert(#m > 0)
       m = lpeg.decode(m)
    end
-   print("\n*** (trace):", ast.tostring(a), a, start, m, nextpos)
-   
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
    elseif ast.cs_exp.is(a) then
@@ -253,7 +259,10 @@ function expression(e, a, input, start)
       return atmost(e, a, input, start, m, nextpos)
    elseif ast.predicate.is(a) then
       return predicate(e, a, input, start, m, nextpos)
+   elseif ast.grammar.is(a) then
+      return grammar(e, a, input, start, m, nextpos)
    else
+      print("\nArguments to trace:", ast.tostring(a), a, start, m, nextpos)
       error("Internal error: invalid ast type in trace.expression: " .. tostring(a))
    end
 end

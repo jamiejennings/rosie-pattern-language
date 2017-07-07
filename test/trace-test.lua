@@ -290,52 +290,52 @@ print("\n\t ** Need more precedence and right association tests! **")
 heading("Eval quantified expressions")
 ----------------------------------------------------------------------------------------
 check_trace('a*', "", true, 1)
-check_structure('{a}*')
+check_structure('{a}*', {true, 'a', false})
 
---[===[
+check_trace('a*', "aaaa", true, 5)
+check_structure('{a}*', {true, 'a', 'a', 'a', 'a'})
 
+check_trace('a+', "", false, 1)
+check_structure('{a}+', {false, 'a'})
 
-check_trace('a*', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
-				'Matched'})
+check_trace('a+', "a", true, 2)
+check_structure('{a}+', {true, 'a', 'a', false})
 
+check_trace('{a/b}+', "baaa", true, 5)
+check_structure('{a / b}+', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}'})
 
-check_trace('a+', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
-			     'FAILED'})
+check_trace('{a/b}{3,5}', "baaa", true, 5)
+check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}{,2}'})
 
-check_trace('a+', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
-			     'Matched'})
+check_trace('{a/b}{3,5}', "ba", false, 1)
+check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', false})
 
-check_trace('{a/b}+', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
-				    'Matched "baaa"'})
+check_trace('(a*)', "", true, 1)
+check_structure('{a}*', {false, 'a'})
 
-check_trace('{a/b}{3,5}', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
-					'Matched'})
+check_trace('(a*)', "aaaa", true, 5)
+check_structure('{a}*', {true, 'a', 'a', 'a', 'a', 'a', false})
 
-check_trace('{a/b}{3,5}', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
-				       'FAILED'})
+check_trace('(a+)', "", false, 1)
+check_structure('{a}+', {false, 'a'})
 
+check_trace('(a+)', "a", true, 2)
+check_structure('{a}+', {true, 'a', 'a', false})
 
-check_trace('(a*)', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
-			    'Matched'})
+check_trace('({a/b}+)', "baaa", true, 5)
+check_structure('{a / b}+', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}', '{a / b}', false})
 
-check_trace('(a*)', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
-				'Matched'})
+check_trace('({a/b}{3,5})', "baaa", true, 5)
+check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}{,2}'})
 
+check_trace('({a/b}{3,5})', "baaabXYZ", true, 6)
+check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}{,2}'})
 
-check_trace('(a+)', "", false, {'1..QUANTIFIED EXP (raw): {a}+',
-			     'FAILED'})
+check_trace('({a/b}{3,5})', "baaabaYZ", true, 6)
+check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}{,2}'})
 
-check_trace('(a+)', "a", true, {'1..QUANTIFIED EXP (raw): {a}+',
-			     'Matched'})
-
-check_trace('({a/b}+)', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}+',
-				    'Matched "baaa"'})
-
-check_trace('({a/b}{3,5})', "baaa", true, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
-					'Matched'})
-
-check_trace('({a/b}{3,5})', "ba", false, {'1..QUANTIFIED EXP (raw): {a / b}{3,5}',
-				       'FAILED'})
+check_trace('({a/b}{3,5})', "ba", false, 1)
+check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', false})
 
 ----------------------------------------------------------------------------------------
 heading("Eval grammar")
@@ -352,15 +352,14 @@ ok, msg = e:load(g)
 check(ok)
 check(not msg)
 
-check_trace('S', "aabb", true, {'1..GRAMMAR:',
-			       'new_grammar',
-			       'S = CAPTURE as S: {("a" B) / ("b" A) / ""}',
-			       'A = CAPTURE as A: {("a" S) / ("b" A A)}',
-			       'B = CAPTURE as B: {("b" S) / ("a" B B)}',
-			       'end',
-			       'Matched "aabb" (against input "aabb")'} )
+check_trace('S', "aabb", true, 5)
+-- {'1..GRAMMAR:',
+-- 			       'new_grammar',
+-- 			       'S = CAPTURE as S: {("a" B) / ("b" A) / ""}',
+-- 			       'A = CAPTURE as A: {("a" S) / ("b" A A)}',
+-- 			       'B = CAPTURE as B: {("b" S) / ("a" B B)}',
+-- 			       'end',
+-- 			       'Matched "aabb" (against input "aabb")'} )
 
-
---]===]
 
 return test.finish()
