@@ -286,14 +286,14 @@ check_structure(lasttrace.subs[3].subs[2], '{c c c}', {true, 'c', 'c', 'c', fals
 print("\n\t ** Need more precedence and right association tests! **")
 
 
---[===[
-
-
 ----------------------------------------------------------------------------------------
 heading("Eval quantified expressions")
 ----------------------------------------------------------------------------------------
-check_trace('a*', "", true, {'1..QUANTIFIED EXP (raw): {a}*',
-			    'Matched'})
+check_trace('a*', "", true, 1)
+check_structure('{a}*')
+
+--[===[
+
 
 check_trace('a*', "aaaa", true, {'1..QUANTIFIED EXP (raw): {a}*',
 				'Matched'})
