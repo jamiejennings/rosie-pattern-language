@@ -31,6 +31,7 @@ local common = require "common"
 local pfunction = common.pfunction
 local macro = common.macro
 
+local map = list.map; apply = list.apply; append = list.append;
 local boundary_ref = ast.ref.new{localname=common.boundary_identifier}
 
 ---------------------------------------------------------------------------------------------------

@@ -88,7 +88,8 @@ end
 ---------------------------------------------------------------------------------------------------
 
 -- 'catch' applies f to args until it returns or yields.
--- Like pcall, return a success code in front of return values.
+-- Like pcall, return a success code in front of return values, and when that code is false, there
+-- was a lua error.
 function violation.catch(f, ...)
    local t = coroutine.create(f)
    return coroutine.resume(t, ...)

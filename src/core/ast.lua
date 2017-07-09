@@ -12,7 +12,7 @@
 local recordtype = require "recordtype"
 local NIL = recordtype.NIL
 local list = require "list"
-map = list.map; apply = list.apply; append = list.append;
+local map = list.map; apply = list.apply; append = list.append;
 --local rpl_parser = require "rpl-parser"
 
 local ast = {}
