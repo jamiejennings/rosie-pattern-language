@@ -130,10 +130,7 @@ local function load_all()
    engine_module = import("engine_module")
    trace = import("trace")
    ui = import("ui")
-
    engine = engine_module.engine
-
-   process_rpl_file = import("process_rpl_file")
 
 end
 
