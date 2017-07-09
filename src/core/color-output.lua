@@ -94,10 +94,10 @@ local map = list.map; apply = list.apply; append = list.append;
 
 co.colormap = {["*"] = "black";			    -- global default
 	       ["net.*"] = "red";
-	       ["net.fqdn"] = "yellow";
-	       ["net.ipv6"] = "magenta";
+	       --["net.fqdn"] = "magenta";
+	       ["net.ipv6"] = "red;underline";
 
-	    -- ["num"] = "underline";
+	       ["num.*"] = "underline";
 
 	       ["word.*"] = "yellow";
 	       ["word.id"] = "cyan";
@@ -124,7 +124,19 @@ if not query(co.colormap, nil, "global_default") then
    co.colormap["*"] = "default"
 end
 
-
+function co.query(pattern_type, db)
+   if not db then db = co.colormap; end
+   if pattern_type=="*" then pattern_type = ""; end
+   local c = query(db, pattern_type, "exact")
+   if c then return c, "exact"; end
+   local match_pkg, match_name = common.split_identifier(pattern_type)
+   if match_pkg then
+      c = query(db, pattern_type, "default")
+      if c then return c, "default"; end
+   end
+   return query(db, nil, "global_default"), "default"
+end
+   
 ---------------------------------------------------------------------------------------------------
 -- Take color and text and generate the ANSI-color output
 ---------------------------------------------------------------------------------------------------
@@ -190,23 +202,13 @@ end
 -- Walk the match structure (a parse tree) and generate the color output
 ---------------------------------------------------------------------------------------------------
 
-local function split(name)
-   local pkgname, localname
-   local start, finish = name:find(".", 1, true)
-   if start then
-      return name:sub(1, finish-1), name:sub(finish+1)
-   else
-      return nil, name
-   end
-end
-
 local function color(match, db, pkgname, pkgcolor, global_default)
    local mtype = (match.type~="*") and match.type
    local c = query(db, mtype, "exact")
    -- Exact match in color database: print in color c
    if c then return list.new{c, match.text}; end
    -- Else, if match is a leaf, then check for a default color
-   local match_pkg, match_name = split(mtype or "")
+   local match_pkg, match_name = common.split_identifier(mtype or "")
    if not match.subs then
       if match_pkg then
 	 if not pkgname then
@@ -248,9 +250,11 @@ local function map_apply(fn, list_of_arglists)
 end
 
 function co.color_match(match, db)
+   if not db then db = co.colormap; end
    local global_default = query(db, nil, "global_default")
    assert(global_default, "no global default color value?")
-   return map_apply(co.color_string, color(match, db, nil, nil, global_default))
+   return table.concat(map_apply(co.color_string, color(match, db, nil, nil, global_default)),
+		       " ")
 end
 
 

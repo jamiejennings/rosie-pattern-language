@@ -87,11 +87,11 @@ results_basic_matchall =
     "\27[31mjjennings@us.ibm.com\27[0m "}
 
 results_common_word =
-   {"[33mdomain[0m ",
-    "[33msearch[0m ",
-    "[33mnameserver[0m ",
-    "[33mnameserver[0m ",
-    "[33mnameserver[0m "}
+   {"[33mdomain[0m",
+    "[33msearch[0m",
+    "[33mnameserver[0m",
+    "[33mnameserver[0m",
+    "[33mnameserver[0m"}
 
 results_common_word_grep = 
    {"# This is an example file, hand-generated for testing rosie.",
@@ -103,11 +103,12 @@ results_common_word_grep =
     "nameserver fde9:4789:96dd:03bd::1"}
 
 results_word_network = 
-   {"[33mdomain[0m [33mabc.aus.example.com[0m ",
-    "[33msearch[0m [33mibm.com[0m ",
-    "[33mnameserver[0m [31m192.9.201.1[0m ",
-    "[33mnameserver[0m [31m192.9.201.2[0m ",
-    "[33mnameserver[0m [35mfde9:4789:96dd:03bd::1[0m "}
+   {"[33mdomain[0m [31mabc.aus.example.com[0m",
+    "[33msearch[0m [31mibm.com[0m",
+    "[33mnameserver[0m [31m192.9.201.1[0m",
+    "[33mnameserver[0m [31m192.9.201.2[0m",
+    "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m"
+   }
 
 results_number_grep =
    {"# Last update: Wed Jun 28 16:58:22 EDT 2017",

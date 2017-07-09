@@ -39,7 +39,7 @@ function ui.print_env(flat_env, filter, skip_header, total)
    for _,v in ipairs(pattern_list) do
       if filter then s, e = string.find(string.lower(tostring(v)), filter); end
       if (not filter) or s then
-	 color = co.colormap[v] or ""
+	 color = co.query(v) or ""
 	 cap = (flat_env[v].capture and "Yes" or "")
 	 print(string.format(fmt, v, cap, flat_env[v].type, color))
 	 filter_total = filter_total + 1

@@ -254,8 +254,8 @@ function create_encoder_table()
       line = 2,
       json = 1,
       byte = 0,
-      color = color_output.color_string_from_leaf_nodes,
-      nocolor = color_output.string_from_leaf_nodes,
+      color = function(m) return color_output.color_match(m, color_output.colormap); end,
+      nocolor = function(m) return color_output.color_match(m, {["*"]="default"}); end,
       fulltext = function(m) return m.text end,
       none = false;
       [false] = false;

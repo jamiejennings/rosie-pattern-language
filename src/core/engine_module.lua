@@ -99,6 +99,7 @@ local bind = environment.bind
 local violation = require "violation"
 local writer = require "writer"
 local loadpkg = require "loadpkg"
+local co = require "color-output"
 --local trace = require "trace"
 
 local engine, rplx				    -- forward reference
@@ -254,9 +255,11 @@ local function properties(name, obj)
    if common.pattern.is(obj) then
       local kind = "pattern"
       local capture = (not obj.alias)
-      local color = (co and co.colormap and co.colormap[item]) or ""
+      local color, reason = co.query(name)
       local binding = reconstitute_pattern_definition(name, obj)
-      return {type=kind, capture=capture, color=color, binding=binding}
+      local color_explanation = color
+      if reason=="default" then color_explanation = color_explanation .. " (default)"; end
+      return {type=kind, capture=capture, color=color_explanation, binding=binding}
    elseif environment.is(obj) then
       return {type="package", color="", binding="<not printable>"}
    elseif pfunction.is(obj) then
@@ -293,12 +296,17 @@ end
 -- Lookup an identifier in the engine's environment, and get a human-readable definition of it
 -- (reconstituted from its ast).  If identifier is null, return the entire environment.
 local function get_environment(en, identifier)
+   local env = en._env
    if identifier then
       local localname, prefix = parse_identifier(en, identifier)
       local val = lookup(en._env, localname, prefix)
-      return val and properties(identifier, val)
+--      if not environment.is(val) then
+	 return val and properties(identifier, val)
+--      else
+--	 env = val
+--      end
    end
-   local flat_env = environment.flatten(en._env)
+   local flat_env = environment.flatten(env)
    -- Rewrite the flat_env table, replacing the pattern with a table of properties
    for id, pat in pairs(flat_env) do flat_env[id] = properties(id, pat); end
    return flat_env

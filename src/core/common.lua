@@ -16,6 +16,16 @@ local table = import "table"
 
 local common = {}				    -- interface
 
+function common.split_identifier(name)
+   local pkgname, localname
+   local start, finish = name:find(".", 1, true)
+   if start then
+      return name:sub(1, finish-1), name:sub(finish+1)
+   else
+      return nil, name
+   end
+end
+
 ----------------------------------------------------------------------------------------
 -- Path handling
 ----------------------------------------------------------------------------------------

@@ -136,6 +136,8 @@ local function run(args)
 
    if args.command == "list" then
       if not args.verbose then greeting(); end
+      -- local name, properties = en:lookup(args.filter)
+      -- if properties.type=="package" then ...
       local env = en:lookup()
       ui.print_env(env, args.filter)
       os.exit()
