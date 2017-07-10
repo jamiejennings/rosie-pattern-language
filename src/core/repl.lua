@@ -202,11 +202,11 @@ function repl.repl(en)
 			else
 			   local m, left = rplx:match(input_text)
 			   --       if debug and (not m) then
-			   -- 	 local match, leftover, trace = en:tracematch(str, input_text)
+			   -- 	 local match, leftover, trace = en:trace(str, input_text)
 			   -- 	 io.write(trace, "\n")
 			   --       end
 			   --    else
-			   --       local match, leftover, trace = en:tracematch(str, input_text)
+			   --       local match, leftover, trace = en:trace(str, input_text)
 			   --       io.write(trace, "\n")
 			   --    end
 			   print_match(m, left, (cname=="trace"))

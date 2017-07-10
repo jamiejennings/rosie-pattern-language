@@ -35,15 +35,10 @@
 --   the rpl_string has "file semantics", i.e. it can be a module.
 --   returns success code and a list of violation objects
 -- 
--- e:compile(expression, flavor) compiles the rpl expression
+-- e:compile(expression) compiles the rpl expression
 --   returns an rplx object or nil, and a list of violation objects
 --   API only: instead of the rplx object, returns the (string) id of an rplx object with
 --   indefinite extent; 
---   The flavor argument, if nil or "match" compiles expression unmodified.  Otherwise:
---     flavor=="search" compiles {{!expression .}* expression}+
---     and more flavors can be added later, e.g.
---     flavor==n, for integer n, compiles {{!expression .}* expression}{0,n}
---   The flavor feature is a convenience function that is a stopgap until we have macros/functions 
 --
 -- r:match(input, optional_start) like e:match but r is a compiled rplx object
 --   returns match or nil, and leftover
@@ -51,17 +46,17 @@
 -- r:trace(input, optional_start) like e:trace but r is a compiled rplx object
 --   returns a trace object
 --
--- e:match(expression, input, optional_start, optional_flavor, optional_acc0, optional_acc1)
---   behaves like: r=e:compile(expression, optional_flavor);
+-- e:match(expression, input, optional_start, optional_acc0, optional_acc1)
+--   behaves like: r=e:compile(expression);
 --                 r:match(input, optional_start, optional_acc0, optional_acc1)
---   optional_acc0 is an integer accumulator of total match time
---   optional_acc1 is an integer accumulator of match time spent in the lpeg vm
+--   optional_start is an integer index into the input (defaults to 1, the first character)
+--   optional_acc0 is an integer accumulator of total match time (defaults to 0)
+--   optional_acc1 is an integer accumulator of match time spent in the lpeg vm (defaults to 0)
 -- ???  API only: expression can be an rplx id, in which case that compiled expression is used
 --   returns ok, match or nil, leftover, time
 --      where ok means "successful compile", and if not ok then match is a table of messages
 -- 
--- e:trace(expression, input, optional_start, optional_flavor) like match, but generates a trace
---   of the entire matching process
+-- e:trace(expression, input, optional_start) like match, but generates a trace of the entire matching process
 --   ??? API only: expression can be an rplx id, in which case that compiled expression is used
 --   returns a trace object
 -- 
@@ -376,7 +371,7 @@ local function open3(e, infilename, outfilename, errfilename)
    return infile, outfile, errfile
 end
 
-local function engine_process_file(e, expression, flavor, trace_flag, infilename, outfilename, errfilename, wholefileflag)
+local function engine_process_file(e, expression, trace_flag, infilename, outfilename, errfilename, wholefileflag)
    if type(trace_flag)~="boolean" then e:_error("bad trace flag"); end
    --
    -- Set up pattern to match.  Always compile it first, even if we are going to call tracematch later.
@@ -387,7 +382,7 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    if engine_module.rplx.is(expression) then
       r = expression
    else
-      r, msgs = e:compile(expression, flavor)
+      r, msgs = e:compile(expression)
       if not r then e:_error(table.concat(msgs, '\n')); end
    end
    assert(engine_module.rplx.is(r))
@@ -420,7 +415,7 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    if not ok then e:_error(l); end
    local _, m, leftover, trace
    while l do
-      if trace_flag then _, _, trace = e:tracematch(expression, l); end
+      if trace_flag then _, _, trace = e:trace(expression, l); end
       m, nextpos = matcher(l);		    -- this is nextpos, NOT leftover
       -- What to do with leftover?  User might want to see it.
       -- local leftover = (#input - nextpos + 1);
@@ -446,12 +441,12 @@ local function engine_process_file(e, expression, flavor, trace_flag, infilename
    return inlines, outlines, errlines
 end
 
-function process_input_file.match(e, expression, flavor, infilename, outfilename, errfilename, wholefileflag)
-   return engine_process_file(e, expression, flavor, false, infilename, outfilename, errfilename, wholefileflag)
+function process_input_file.match(e, expression, infilename, outfilename, errfilename, wholefileflag)
+   return engine_process_file(e, expression, false, infilename, outfilename, errfilename, wholefileflag)
 end
 
-function process_input_file.tracematch(e, expression, flavor, infilename, outfilename, errfilename, wholefileflag)
-   return engine_process_file(e, expression, flavor, true, infilename, outfilename, errfilename, wholefileflag)
+function process_input_file.trace(e, expression, infilename, outfilename, errfilename, wholefileflag)
+   return engine_process_file(e, expression, true, infilename, outfilename, errfilename, wholefileflag)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -507,7 +502,7 @@ engine =
 		     trace=false,
 
 		     matchfile = process_input_file.match,
-		     tracematchfile = process_input_file.tracematch,
+		     tracefile = process_input_file.trace,
 
 		  },
 		  create_engine
@@ -520,6 +515,7 @@ local create_rplx = function(en, pattern)
 					    _pattern=pattern,
 					    match=function(...)
 						     local ok, m, left, t0, t1 = en:match(...)
+						     assert(ok, "precompiled pattern failed to compile?")
 						     return m, left, t0, t1
 						  end,
 					 };

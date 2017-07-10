@@ -59,10 +59,10 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    end
    
    -- Iterate through the lines in the input file
-   local match_function = (args.command=="trace") and en.tracematchfile or en.matchfile
+   local match_function = (args.command=="trace") and en.tracefile or en.matchfile
 
    local ok, cin, cout, cerr =
-      pcall(match_function, en, compiled_pattern, nil, infilename, outfilename, errfilename, args.wholefile)
+      pcall(match_function, en, compiled_pattern, infilename, outfilename, errfilename, args.wholefile)
 
    if not ok then io.write(cin, "\n"); return; end	-- cin is error message (a string) in this case
    
