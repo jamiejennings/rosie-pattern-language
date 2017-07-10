@@ -316,10 +316,10 @@ common.compiler =
 		  })
 
 -- parser operation:
---   parse source to produce original_ast;
---   transform original_ast as needed (e.g. syntax expand), producing ast;
---   return ast, original_ast, table of errors, leftover count
---   if any step fails, generate useful errors and return nil, nil, errors, leftover
+--   parse source to produce parse tree;
+--   transform parse tree as needed (e.g. syntax expand), producing ast;
+--   return ast, table of errors, leftover count
+--   if any step fails, generate useful errors and return nil, errors, leftover
 
 common.parser =
    recordtype.new("parser",
@@ -373,8 +373,6 @@ common.macro =
 		    exported=false;
 		  })
 
--- FUTURE: get rid of original_ast
-
 common.pattern = 
    recordtype.new("pattern",
 		  { name=NIL;            -- for reference, debugging
@@ -383,7 +381,6 @@ common.pattern =
 		    uncap=false;	 -- peg without the top-level capture
 		    alias=false;	 -- is this an alias or not
 		    ast=false;		 -- ast that generated this pattern, for pattern debugging
-		    original_ast=false;	 -- ast after parser, before syntax expansion
 		    extra=false;	 -- extra info that depends on node type
 --                  source=unspecified;  -- source (rpl filename and line)
   }

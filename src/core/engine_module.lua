@@ -238,9 +238,7 @@ local function reconstitute_pattern_definition(id, p)
 	 -- We have an ast, not a parse tree
 	 return ast.tostring(p.ast) or "built-in RPL pattern"
       end
-      return ( (p.original_ast and writer.reveal_ast(p.original_ast)) or
-	    (p.ast and writer.reveal_ast(p.ast)) or
-	 "// built-in RPL pattern //" )
+      return (p.ast and writer.reveal_ast(p.ast)) or "// built-in RPL pattern //" 
    end
    engine_error(e, "undefined identifier: " .. id)
 end
