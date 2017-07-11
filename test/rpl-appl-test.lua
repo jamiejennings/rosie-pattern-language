@@ -236,7 +236,7 @@ ok, m, leftover = e:match(p, "ibM")
 check(ok and m and (leftover==0))
 
 function test_foobar()
-   p = e:compile('ci:foobar')
+   p = e:compile('foobar')
    assert(p)
    m, leftover = p:match("foo")
    check(m and (leftover==0), "failed on foo")
