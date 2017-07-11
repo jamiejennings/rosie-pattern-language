@@ -235,5 +235,35 @@ check(ok and m and (leftover==0))
 ok, m, leftover = e:match(p, "ibM")
 check(ok and m and (leftover==0))
 
+function test_foobar()
+   p = e:compile('ci:foobar')
+   assert(p)
+   m, leftover = p:match("foo")
+   check(m and (leftover==0), "failed on foo")
+   m, leftover = p:match("Foo")
+   check(m and (leftover==0), "failed on Foo")
+   m, leftover = p:match("fOO")
+   check(m and (leftover==0), "failed on fOO")
+   m, leftover = p:match("BAR")
+   check(m and (leftover==0), "failed on BAR")
+   m, leftover = p:match("bar")
+   check(m and (leftover==0), "failed on bar")
+end
+
+ok = e:load('foobar = ci:("foo" / "bar")')
+assert(ok)
+test_foobar()
+
+ok = e:load('foobar = ci:{"foo" / "bar"}')
+assert(ok)
+test_foobar()
+
+ok = e:load('grammar foobar = ci:("foo" / "bar") end')
+assert(ok)
+test_foobar()
+
+ok = e:load('grammar foobar = ci:{"foo" / "bar"} end')
+assert(ok)
+test_foobar()
 
 return test.finish()
