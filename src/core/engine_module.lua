@@ -166,7 +166,7 @@ end
 
 local function loadfile(e, filename, nosearch)
    if type(filename)~="string" then
-      e._engine_error(e, "file name argument not a string: " .. tostring(filename))
+      e.engine_error(e, "file name argument not a string: " .. tostring(filename))
    end
    local actual_path, src, errmsg = get_file_contents(e, filename, nosearch)
    -- TODO: re-work these return values:
@@ -220,7 +220,7 @@ local function match(e, expression, input, start, total_time_accum, lpegvm_time_
       if not expression then return false, msgs; end
    end
    if rplx.is(expression) then
-      return true, _match(e, expression._pattern, input, start, total_time_accum, lpegvm_time_accum)
+      return true, _match(e, expression.pattern, input, start, total_time_accum, lpegvm_time_accum)
    else
       engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
    end
@@ -390,7 +390,7 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
    local encoder = e.encode_function		    -- optimization
    local built_in_encoder = type(encoder)=="number" and encoder
    if built_in_encoder then encoder = false; end
-   local peg = r._pattern.peg			    -- optimization
+   local peg = r.pattern.peg			    -- optimization
    local matcher = function(input, start)
 		      return rmatch(peg, input, start, built_in_encoder)
 		   end                              -- TODO: inline this for performance
@@ -501,8 +501,8 @@ engine =
 ----------------------------------------------------------------------------------------
 
 local create_rplx = function(en, pattern)			    
-		       return rplx.factory{ _engine=en,
-					    _pattern=pattern,
+		       return rplx.factory{ engine=en,
+					    pattern=pattern,
 					    match=function(...)
 						     local ok, m, left, t0, t1 = en:match(...)
 						     assert(ok, "precompiled pattern failed to compile?")
@@ -512,8 +512,8 @@ local create_rplx = function(en, pattern)
 		    end
 
 rplx = recordtype.new("rplx",
-		      { _pattern=recordtype.NIL;
-			_engine=recordtype.NIL;
+		      { pattern=recordtype.NIL;
+			engine=recordtype.NIL;
 			--
 			match=false;
 			trace=false;

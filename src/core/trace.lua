@@ -270,13 +270,13 @@ end
 function trace.expression(r, input, start)
    start = start or 1
    assert(rplx.is(r))
-   assert(engine.is(r._engine))
-   assert(pattern.is(r._pattern))
+   assert(engine.is(r.engine))
+   assert(pattern.is(r.pattern))
    assert(type(input)=="string")
    assert(type(start)=="number")
-   local a = r._pattern.ast
+   local a = r.pattern.ast
    assert(a, "no ast stored for pattern")
-   return expression(r._engine, a, input, start)
+   return expression(r.engine, a, input, start)
 end
 
 return trace
