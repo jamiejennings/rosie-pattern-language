@@ -10,7 +10,7 @@
 
 local ui = {}
 
-local co = require "color-output"
+local co = require "color"
 
 function ui.print_env(flat_env, filter, skip_header, total)
    -- print a sorted list of patterns contained in the flattened table 'flat_env'

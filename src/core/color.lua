@@ -249,7 +249,7 @@ local function map_apply(fn, list_of_arglists)
 	      list_of_arglists)
 end
 
-function co.color_match(match, db)
+function co.match(match, db)
    if not db then db = co.colormap; end
    local global_default = query(db, nil, "global_default")
    assert(global_default, "no global default color value?")

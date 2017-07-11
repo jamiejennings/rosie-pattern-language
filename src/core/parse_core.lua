@@ -1,6 +1,6 @@
 ---- -*- Mode: Lua; -*-                                                                           
 ----
----- parse.lua   parse rosie pattern language: rpl 0.0
+---- parse_core.lua   parse rosie pattern language: rpl 0.0
 ----
 ---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -199,7 +199,7 @@ end
 -- Parser for the Rosie core language, i.e. rpl 0.0
 ----------------------------------------------------------------------------------------
 
-function parse.core_parse(source, origin, errs)
+function parse.rpl(source, origin, errs)
    assert(type(source)=="string", "Core parser: source argument is not a string: "..tostring(source))
    assert(type(errs)=="table")
    local ptlist, leftover = parse_without_error_check(source)
@@ -216,8 +216,8 @@ function parse.core_parse(source, origin, errs)
    end
 end
 
-function parse.core_parse_expression(source, origin, errs)
-   local pt, leftover = parse.core_parse(source, origin, errs)
+function parse.expression(source, origin, errs)
+   local pt, leftover = parse.rpl(source, origin, errs)
    -- syntax errors will be in errs table
    if not pt then return false, leftover; end
    assert(type(pt)=="table" and pt.type=="rpl_core")

@@ -9,7 +9,7 @@
 local common = require "common"
 local decode_match = common.decode_match
 local util = require "util"
-local parse = require "parse"
+local parse_core = require "parse_core"
 
 local p2 = {}
 
@@ -18,7 +18,7 @@ local p2 = {}
 ----------------------------------------------------------------------------------------
 
 local function explain_syntax_error(a, source)
-   local err = parse.syntax_error_check(a)
+   local err = parse_core.syntax_error_check(a)
    assert(err)
    local name, pos, text, subs = common.decode_match(a)
    local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
@@ -57,7 +57,7 @@ local function preparse(rplx_preparse, input)
       assert(false, "preparse called with neither string nor ast as input: " .. tostring(input))
    end
    if language_decl then
-      if parse.syntax_error_check(language_decl) then
+      if parse_core.syntax_error_check(language_decl) then
 	 return false, "Syntax error in language version declaration: " .. language_decl.text
       else
 	 major = tonumber(language_decl.subs[1].subs[1].text) -- major
@@ -108,7 +108,7 @@ local function find_syntax_errors(pt, source)
    -- First look for the syntax error tag(s) in the parse tree
    local errlist = {};
    for _,a in ipairs(pt.subs or {}) do
-      if parse.syntax_error_check(a) then table.insert(errlist, a); end
+      if parse_core.syntax_error_check(a) then table.insert(errlist, a); end
    end
    -- If there were syntax errors, generate readable explanations
    if #errlist~=0 then

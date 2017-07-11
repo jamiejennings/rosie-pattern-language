@@ -94,7 +94,7 @@ local bind = environment.bind
 local violation = require "violation"
 local writer = require "writer"
 local loadpkg = require "loadpkg"
-local co = require "color-output"
+local co = require "color"
 --local trace = require "trace"
 
 local engine, rplx				    -- forward reference

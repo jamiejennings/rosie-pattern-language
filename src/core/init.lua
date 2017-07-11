@@ -118,9 +118,9 @@ local function load_all()
    list = import("list")
    util = import("util")
    common = import("common")
-   color_output = import("color-output")
+   color = import("color")
    writer = import("writer")
-   parse = import("parse")
+   parse_core = import("parse_core")
    p2 = import("p2")
    ast = import("ast")
    environment = import("environment")
@@ -135,10 +135,10 @@ local function load_all()
 end
 
 ---------------------------------------------------------------------------------------------------
--- Bootstrap the rpl parser, which is defined using "rpl 1.0" (defined in parse.lua)
+-- Bootstrap the rpl parser, which is defined using "rpl 1.0" (defined in parse_core.lua)
 ---------------------------------------------------------------------------------------------------
 -- 
--- The engines we create now will use parse.core_parse, which defines "rpl 0.0", i.e. the core
+-- The engines we create now will use parse_core.parse, which defines "rpl 0.0", i.e. the core
 -- language (which has many limitations).
 -- 
 -- An engine that accepts "rpl 0.0" is needed to parse $ROSIE_HOME/rpl/rosie/rpl_1_0.rpl, which defines
@@ -152,15 +152,15 @@ local function announce(name, engine)
 end
 
 function create_core_engine()
-   assert(parse.core_parse, "error while initializing: parse module not loaded?")
+   assert(parse_core.rpl, "error while initializing: parse module not loaded?")
 
    local core_parser = function(src, origin, messages)
-			  local pt = parse.core_parse(src, origin, messages)
+			  local pt = parse_core.rpl(src, origin, messages)
 			  return ast.from_core_parse_tree(pt)
 		       end
 
    local core_expression_parser = function(src, origin, messages)
-				     local pt = parse.core_parse_expression(src, origin, messages)
+				     local pt = parse_core.expression(src, origin, messages)
 				     return ast.from_core_parse_tree(pt)
 				  end
 
@@ -254,8 +254,8 @@ function create_encoder_table()
       line = 2,
       json = 1,
       byte = 0,
-      color = function(m) return color_output.color_match(m, color_output.colormap); end,
-      nocolor = function(m) return color_output.color_match(m, {["*"]="default"}); end,
+      color = function(m) return color.match(m, color.colormap); end,
+      nocolor = function(m) return color.match(m, {["*"]="default"}); end,
       fulltext = function(m) return m.text end,
       none = false;
       [false] = false;
