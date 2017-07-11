@@ -121,11 +121,11 @@ local function load_all()
    color = import("color")
    writer = import("writer")
    parse_core = import("parse_core")
-   p2 = import("p2")
+   parse = import("parse")
    ast = import("ast")
    environment = import("environment")
-   e2 = import("e2")
-   c2 = import("c2")
+   expand = import("expand")
+   compile = import("compile")
    loadpkg = import("loadpkg")
    engine_module = import("engine_module")
    trace = import("trace")
@@ -166,12 +166,12 @@ function create_core_engine()
 
    local COREcompiler2 = { version = common.rpl_version.new(0, 0),
 			   parse_block = core_parser,
-			   expand_block = c2.expand_block,
-			   compile_block = c2.compile_block,
-			   dependencies_of = c2.dependencies_of,
+			   expand_block = compile.expand_block,
+			   compile_block = compile.compile_block,
+			   dependencies_of = compile.dependencies_of,
 			   parse_expression = core_expression_parser,
-			   expand_expression = c2.expand_expression,
-			   compile_expression = c2.compile_expression,
+			   expand_expression = compile.expand_expression,
+			   compile_expression = compile.compile_expression,
 		        }
    -- Create a core engine that loads/compiles rpl 0.0
    local NEWCORE_ENGINE = engine.new("NEW RPL core engine", COREcompiler2, ROSIE_LIB)
@@ -192,13 +192,13 @@ function create_rpl_1_1_engine(e)
    assert(rplx_expression)
 
    compiler2 = { version = version,
-		 parse_block = c2.make_parse_block(rplx_preparse, rplx_statements, version),
-	         expand_block = c2.expand_block,
-	         compile_block = c2.compile_block,
-	         dependencies_of = c2.dependencies_of,
-	         parse_expression = c2.make_parse_expression(rplx_expression),
-	         expand_expression = c2.expand_expression,
-	         compile_expression = c2.compile_expression,
+		 parse_block = compile.make_parse_block(rplx_preparse, rplx_statements, version),
+	         expand_block = compile.expand_block,
+	         compile_block = compile.compile_block,
+	         dependencies_of = compile.dependencies_of,
+	         parse_expression = compile.make_parse_expression(rplx_expression),
+	         expand_expression = compile.expand_expression,
+	         compile_expression = compile.compile_expression,
 	   }
 
    local c2engine = engine.new("NEW RPL 1.1 engine (c2)", compiler2, ROSIE_LIB)

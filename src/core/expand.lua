@@ -1,7 +1,6 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- e2.lua    RPL macro expansion that goes with the p2 parser and the c2 compiler
---           When you see "e2", read it as "expand", e.g. "e2.stmts" == "expand statements"
+-- expand.lua (was e2)  RPL macro expansion that goes with the p2 parser and the c2 compiler
 --
 -- © Copyright IBM Corporation 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)

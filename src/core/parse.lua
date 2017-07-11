@@ -1,6 +1,6 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- p2.lua    parsing functions to support the c2 compiler
+-- parse.lua (was p2)    parsing functions to support the c2 compiler
 --
 -- © Copyright IBM Corporation 2016, 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)

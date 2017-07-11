@@ -1,6 +1,6 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- c2.lua   RPL 1.1 compiler
+-- compile.lua (was c2)   RPL 1.1 compiler
 --
 -- © Copyright Jamie A. Jennings 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -28,7 +28,7 @@ parent = recordtype.parent
 local environment = require "environment"
 lookup = environment.lookup
 bind = environment.bind
-local e2 = require "e2"
+local expand = require "expand"
 
 local function throw(msg, a)
    return violation.throw(violation.compile.new{who='compiler (c2)',
@@ -70,12 +70,12 @@ local function make_parser_from(parse_something, expected_pt_node)
 end
 
 function c2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
-   local parse_block = p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
+   local parse_block = parse.make_parse_block(rplx_preparse, rplx_statements, supported_version)
    return make_parser_from(parse_block, "rpl_statements")
 end
 
 function c2.make_parse_expression(rplx_expression)
-   local parse_expression = p2.make_parse_expression(rplx_expression)
+   local parse_expression = parse.make_parse_expression(rplx_expression)
    return make_parser_from(parse_expression, "rpl_expression")
 end
 
@@ -93,8 +93,8 @@ c2.dependencies_of = ast.dependencies_of
 -- Syntax expander
 ---------------------------------------------------------------------------------------------------
 
-c2.expand_block = e2.block
-c2.expand_expression = e2.expression
+c2.expand_block = expand.block
+c2.expand_expression = expand.expression
 
 ---------------------------------------------------------------------------------------------------
 -- Compile expressions
