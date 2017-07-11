@@ -35,6 +35,7 @@ local dot_id = common.any_char_identifier
 local eol_id = common.end_of_input_identifier
 
 local function macro_find(...)
+   -- return {{! <exp>} .}* <exp> when given <exp> as an arg
    local args = {...}
    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
    local any_char = ast.ref.new{localname="."}
@@ -54,12 +55,12 @@ local function macro_findall(...)
    return ast.repetition.new{min=1, exp=find, cooked=false}
 end
 
--- FUTURE: rewrite this with utf8 support (without relying on literal being valid utf8)
+-- TODO: rewrite this with utf8 support (without relying on every literal being valid utf8)
 local function macro_case_insensitive(...)
    local args = {...}
    if #args~=1 then error("ci takes one argument, " .. tostring(#args) .. " given"); end
    local exp = args[1]
-   if ast.literal.is(exp) then
+   local function xform_literal(exp)
       local lc, uc = string.lower(exp.value), string.upper(exp.value)
       local chars = list.new()
       for i = 1, #exp.value do
@@ -68,10 +69,8 @@ local function macro_case_insensitive(...)
 	 table.insert(chars, ast.choice.new{exps=upper_lower_choices})
       end
       return ast.raw.new{exp=ast.sequence.new{exps=chars, s=exp.s, e=exp.e}}
-   else
-      -- For now, we won't look for other string/char expressions in exp
-      return exp				    
    end
+   return ast.visit_expressions(exp, ast.literal.is, xform_literal)
 end
 
 local function example_first(...)

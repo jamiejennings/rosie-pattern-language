@@ -223,4 +223,17 @@ check(m.type=="*")
 check(m.s==1 and m.e==13)
 check(m.subs and m.subs[1] and m.subs[1].s==12 and m.subs[1].e==13)
 
+subheading("Macro: ci")
+
+p = e:compile('ci:"ibm"')
+ok, m, leftover = e:match(p, "IBM")
+check(ok and m and (leftover==0))
+ok, m, leftover = e:match(p, "ibm")
+check(ok and m and (leftover==0))
+ok, m, leftover = e:match(p, "Ibm")
+check(ok and m and (leftover==0))
+ok, m, leftover = e:match(p, "ibM")
+check(ok and m and (leftover==0))
+
+
 return test.finish()

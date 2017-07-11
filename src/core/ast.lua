@@ -12,7 +12,7 @@
 local recordtype = require "recordtype"
 local NIL = recordtype.NIL
 local list = require "list"
-local map = list.map; apply = list.apply; append = list.append;
+local map = list.map; apply = list.apply; append = list.append; foreach = list.foreach
 --local rpl_parser = require "rpl-parser"
 
 local ast = {}
@@ -212,6 +212,32 @@ ast.atleast = recordtype.new("atleast",
 			      e = NIL;})
 
 ---------------------------------------------------------------------------------------------------
+-- Utility to visit each expression in an AST
+---------------------------------------------------------------------------------------------------
+
+-- When predicate(ex) is true, return fn(ex) else return ex.
+-- Do this over all the general expressions in the ast.  Character set sub-expressions don't count.
+function ast.visit_expressions(ex, predicate, fn)
+   if predicate(ex) then return fn(ex)
+   elseif ast.cooked.is(ex) or ast.raw.is(ex) or ast.predicate.is(ex) or ast.repetition.is(ex) then
+      ex.exp = ast.visit_expressions(ex.exp, predicate, fn)
+   elseif ast.choice.is(ex) or ast.sequence.is(ex) then
+      ex.exps = map(function(ex) return ast.visit_expressions(ex, predicate, fn); end, ex.exps)
+      assert(#ex.exps > 0)
+   elseif ast.grammar.is(ex) then
+      foreach(function(rule)
+		 rule.exp = ast.visit_expressions(rule.exp, predicate, fn)
+	      end,
+	      ex.rules)
+   elseif ast.application.is(ex) then
+      ex.arglist.args = map(function(ex) return ast.visit_expressions(ex, predicate, fn); end,
+			 ex.arglist.args)
+   end
+   -- No other ast type has a sub-expression to process
+   return ex
+end
+
+---------------------------------------------------------------------------------------------------
 -- Convert a parse tree into an ast
 ---------------------------------------------------------------------------------------------------
 
@@ -289,7 +315,6 @@ end
 local function convert_cs_named(pt)
    assert(pt.subs and pt.subs[1])
    local name = pt.subs[1].text
---   print("***", map(function(sub) return sub.type end, pt.subs))
    local compflag = (pt.subs[1].type=="complement")
    if compflag then
       assert(pt.subs[2])
