@@ -280,7 +280,7 @@ end
 
 local rosie_package = {}
 
-rosie_package._env = _ENV
+rosie_package.env = _ENV
 load_all()
 setup_paths()
 CORE_ENGINE = create_core_engine()

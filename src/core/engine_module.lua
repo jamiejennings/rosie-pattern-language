@@ -113,10 +113,10 @@ local function compile_expression(e, input)
    if not recordtype.parent(ast) then
       assert(false, "unexpected input type to compile_expression: " .. tostring(ast))
    end
-   ast = e.compiler.expand_expression(ast, e._env, messages)
+   ast = e.compiler.expand_expression(ast, e.env, messages)
    -- Errors will be in messages table
    if not ast then return false, messages; end
-   local pat = e.compiler.compile_expression(ast, e._env, messages)
+   local pat = e.compiler.compile_expression(ast, e.env, messages)
    if not pat then return false, messages; end
    return rplx.new(e, pat)   
 end
@@ -124,8 +124,8 @@ end
 local function load(e, input, fullpath)
    local messages = {}
    local ok, pkgname, env = loadpkg.source(e.compiler,
-					   e._pkgtable,
-					   e._env,
+					   e.pkgtable,
+					   e.env,
 					   e.searchpath,
 					   input,
 					   fullpath,
@@ -133,11 +133,11 @@ local function load(e, input, fullpath)
    if ok then
       if pkgname then
 	 -- We compiled a module, reified it as the package in 'env'
-	 bind(e._env, pkgname, env)
+	 bind(e.env, pkgname, env)
       else
 	 -- Did not load a module, so the env we passed in was extended with new bindings 
 	 assert(environment.is(env))
-	 e._env = env
+	 e.env = env
       end
    end
    return ok, pkgname, messages
@@ -146,11 +146,11 @@ end
 local function import(e, packagename, as_name)
    local messages = {}
    local ok = loadpkg.import(e.compiler,
-			     e._pkgtable,
+			     e.pkgtable,
 			     e.searchpath,
 			     packagename,	    -- requested importpath
 			     as_name,		    -- requested prefix
-			     e._env,
+			     e.env,
 			     messages)
    return ok, messages
 end
@@ -289,10 +289,10 @@ end
 -- Lookup an identifier in the engine's environment, and get a human-readable definition of it
 -- (reconstituted from its ast).  If identifier is null, return the entire environment.
 local function get_environment(en, identifier)
-   local env = en._env
+   local env = en.env
    if identifier then
       local localname, prefix = parse_identifier(en, identifier)
-      local val = lookup(en._env, localname, prefix)
+      local val = lookup(en.env, localname, prefix)
 --      if not environment.is(val) then
 	 return val and properties(identifier, val)
 --      else
@@ -307,10 +307,10 @@ end
 
 local function clear_environment(en, identifier)
    if identifier then
-      if lookup(en._env, identifier) then bind(en._env, identifier, nil); return true
+      if lookup(en.env, identifier) then bind(en.env, identifier, nil); return true
       else return false; end
    else -- no identifier arg supplied, so wipe the entire env
-      en._env = environment.new()
+      en.env = environment.new()
       return true
    end
 end
@@ -456,8 +456,8 @@ local function create_engine(name, compiler, searchpath)
    return engine.factory { name=function() return name; end,
 			   compiler=compiler,
 			   searchpath=searchpath,
-			   _env=environment.new(),
-			   _pkgtable=environment.make_module_table(),
+			   env=environment.new(),
+			   pkgtable=environment.make_module_table(),
 		        }
 end
 
@@ -470,18 +470,11 @@ engine =
    recordtype.new("engine",
 		  {  name=function() return nil; end, -- for reference, debugging
 		     compiler=false,
-		     _env=false,
-		     _pkgtable=false,
+		     env=false,
+		     pkgtable=false,
 		     _error=engine_error,
 
 		     id=recordtype.id,
-
-		     -- pkgtableref=function(self, path)
-		     -- 		    return common.pkgtableref(self._pkgtable, path)
-		     -- 		 end,
-		     -- pkgtableset=function(self, path, p, e)
-		     -- 		    common.pkgtableset(self._pkgtable, path, nil, p, e)
-		     -- 		 end,
 
 		     encode_function=false,	      -- false or nil ==> use default encoder
 		     output=get_set_encoder_function,
@@ -492,7 +485,6 @@ engine =
 		     load=load,
 		     loadfile=loadfile,
 		     import=import,
---		     dependencies=dependencies,
 		     searchpath="",
 
 		     compile=compile_expression,

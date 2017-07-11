@@ -11,7 +11,7 @@ test.start(test.current_filename())
 -- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
 assert(ROSIE_HOME, "ROSIE_HOME is not set?")
 assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
-import = rosie._env.import
+import = rosie.import
 if not test then
    test = import("test")
 end

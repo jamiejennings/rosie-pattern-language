@@ -13,19 +13,13 @@
 
 io = require "io"
 debug = require "debug"
+
 rosie = require "rosie"
-recordtype = rosie.import "recordtype"
-lpeg = rosie.import "lpeg"
 
-if ROSIE_DEV then
-   -- This file is being loaded into a Rosie development environment, so rosie is available:
-   assert(type(rosie)=="table", "The rosie package is not loaded?!  rosie=" .. tostring(rosie))
-else
-   -- This file is being loaded into a plain vanilla Lua, and we need to load Rosie.
-   rosie = require "rosie"
-end
 
-json = rosie._env.cjson
+recordtype = require "recordtype"
+lpeg = require "lpeg"
+json = require "cjson"
 
 ROSIE_INFO = rosie.info()
 ROSIE_HOME = ROSIE_INFO.ROSIE_HOME

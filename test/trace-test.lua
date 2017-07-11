@@ -10,9 +10,9 @@
 -- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
 assert(ROSIE_HOME, "ROSIE_HOME is not set?")
 assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
-trace = rosie._env.trace
-ast = rosie._env.ast
-import = rosie._env.import
+trace = rosie.env.trace
+ast = rosie.env.ast
+import = rosie.env.import
 if not termcolor then
    import("termcolor")
 end

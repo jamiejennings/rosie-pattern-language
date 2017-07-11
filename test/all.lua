@@ -15,8 +15,8 @@
 --   dofile "test/all.lua"
 
 rosie = rosie or require("rosie")
-import = rosie._env.import
-ROSIE_HOME = rosie._env.ROSIE_HOME
+import = rosie.import
+ROSIE_HOME = rosie.env.ROSIE_HOME
 
 termcolor = import("termcolor")
 test = import("test")
