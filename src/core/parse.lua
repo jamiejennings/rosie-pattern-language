@@ -24,7 +24,7 @@ local function explain_syntax_error(a, source)
 --   local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
 --   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
 
-   local msg = "syntax error"
+   local msg = ""
 --   msg = msg .. "While looking for " .. text .. "\n"
 
 --   local ename, errpos, etext, esubs = common.decode_match(err)
@@ -105,22 +105,18 @@ end -- make_preparser
 ---------------------------------------------------------------------------------------------------
 
 local function find_syntax_errors(pt, source)
-   -- First look for the syntax error tag(s) in the parse tree
+   -- Look for the syntax error node type in the parse tree
    local errlist = {};
    for _,a in ipairs(pt.subs or {}) do
       if parse_core.syntax_error_check(a) then table.insert(errlist, a); end
    end
-   -- If there were syntax errors, generate readable explanations
-   if #errlist~=0 then
-      local msgs = {}
-      -- table.insert(msgs, "Warning: syntax error reporting is limited at this time")
-      for _,e in ipairs(errlist) do
-	 table.insert(msgs, explain_syntax_error(e, source))
-      end
-      return msgs
-   else
-      return nil
+   -- If there were syntax errors, then ...
+   if #errlist==0 then return nil; end
+   local errs = {}
+   for _,e in ipairs(errlist) do
+      table.insert(errs, explain_syntax_error(e, source))
    end
+   return errs
 end
 
 function p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)

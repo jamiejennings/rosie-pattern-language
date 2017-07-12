@@ -73,9 +73,6 @@ function p.run(rosie, en, args, filename)
    local function test_accepts_exp(exp, q)
       if pkgname then exp = pkgname .. "." .. exp; end
       local ok, res, pos = test_engine:match(exp, q)
-      if not ok then
-	 print("***"); table.print(res); print("***")
-      end
       if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
       if (not ok) or (not res) or (pos ~= 0) then return false end
       return true

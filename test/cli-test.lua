@@ -127,6 +127,7 @@ run("import num", "~ num.any ~", true, results_number_grep)
 
 ok, msg = pcall(run, "import word", "foo = word.any", nil, nil)
 check(ok)
+print("***"); table.print(msg, false)
 check(table.concat(msg, "\n"):find("Syntax error"))
 
 ok, msg = pcall(run, "import word", "/foo/", nil, nil)

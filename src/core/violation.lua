@@ -65,11 +65,10 @@ end
 
 function violation.tostring(err)
    local kind = recordtype.typename(err)
-   local str
    if not kind then
       return "UNKNOWN ERROR OBJECT: " .. tostring(err)
    end
-   str = kind .. "\n"
+   local str = kind .. "\n"
    str = str .. " [" .. err.who .. "]: " .. err.message
    if violation.syntax.is(err) then
    local sref = assert(err.sourceref)

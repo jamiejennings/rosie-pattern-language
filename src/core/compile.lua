@@ -45,18 +45,24 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     assert(type(src)=="string", "src is " .. tostring(src))
 	     assert(origin==nil or ast.importrequest.is(origin), "origin is: " .. tostring(origin))
 	     assert(type(messages)=="table", "missing messages arg?")
-	     local pt, warnings, leftover = parse_something(src)
-	     assert(type(warnings)=="table")
+	     local pt, syntax_errors, leftover = parse_something(src)
+	     assert(type(syntax_errors)=="table")
 	     if not pt then
-		local sref = ast.sourceref.new{origin=(origin and origin.packagename),
-					       source=src}
-		local err = violation.syntax.new{who='parser',
-						 message=table.concat(warnings, "\n"),
-					         sourceref=sref}
-		table.insert(messages, err)
+		assert(#syntax_errors > 0)
+		for _, err in ipairs(syntax_errors) do
+		   local sref = ast.sourceref.new{s=err.s,
+						  e=err.e,
+						  origin=(origin and origin.packagename),
+					          source=src}
+		   local v = violation.syntax.new{who='parser',
+						  message="syntax error",
+						  sourceref=sref}
+		   table.insert(messages, v)
+		end
 		return false
 	     end
-	     table.move(warnings, 1, #warnings, #messages+1, messages)
+	     -- TODO: convert each "warning" here into a violation.warning
+	     table.move(syntax_errors, 1, #syntax_errors, #messages+1, messages)
 	     assert(type(pt)=="table")
 	     if expected_pt_node then
 		assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
@@ -85,14 +91,6 @@ function c2.make_parse_expression(rplx_expression)
 end
 
 c2.dependencies_of = ast.dependencies_of
-
--- function c2.make_core_parser(statement_parser)
---    return make_parser_from(statement_parser, "rpl_core")
--- end
-
--- function c2.make_core_expression_parser(exp_parser)
---    return make_parser_from(exp_parser, nil)
--- end
 
 ---------------------------------------------------------------------------------------------------
 -- Syntax expander
