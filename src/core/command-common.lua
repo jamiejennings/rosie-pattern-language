@@ -8,6 +8,10 @@
 
 local p = {}
 
+local violation = require "violation"
+local list = require "list"
+map = list.map
+
 function p.set_encoder(rosie, en, name)
    local encode_fcn = rosie.encoders[name]
    if encode_fcn==nil then
@@ -24,7 +28,7 @@ function p.load_string(en, input)
       if ROSIE_DEV then error(results)
 	 -- TODO: change the tostring below to call an error printing procedure
       else
-	 io.write("Cannot load rpl: \n", util.table_to_pretty_string(messages, false).."\n")
+	 io.write("Cannot load rpl: \n", table.concat(map(violation.tostring, messages), "\n").."\n")
 	 os.exit(-1)
       end
    end
@@ -100,23 +104,21 @@ function p.setup_engine(en, args)
 	 end
 	 expression = "findall:" .. expression
       end
-
       local errs = {}
       local AST = en.compiler.parse_expression(expression, nil, errs)
       if not AST then
-	 table.print(errs, false); print()	  -- TODO: need better printing
+	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 os.exit(-4)
       end
       local ok = import_dependencies(en, AST, errs)
       if not ok then
-	 table.print(errs, false); print()	  -- TODO: need better printing
+	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 os.exit(-4)
       end
-      local ok, msgs
-      compiled_pattern, msgs = en:compile(AST)
+      local ok, errs
+      compiled_pattern, errs = en:compile(AST)
       if not compiled_pattern then
-	 table.print(msgs, false); print()	  -- TODO: need better printing
-	 --	 io.stdout:write(table.concat(msgs, '\n'), '\n')
+	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 os.exit(-4)
       end
    end

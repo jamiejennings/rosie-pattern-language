@@ -17,6 +17,12 @@ local map = list.map; apply = list.apply; append = list.append; foreach = list.f
 
 local ast = {}
 
+ast.sourceref = recordtype.new("sourceref",
+				   {s = NIL;        -- start position (1-based)
+				    e = NIL;	    -- end+1 position (1-based)
+				    origin = NIL;   -- describes where the source code came from
+				    source = NIL;}) -- the source itself
+
 ast.block = recordtype.new("block",
 			   {stmts = {};
 			    request = NIL;	    -- Not a block property, but an importrequest
@@ -27,8 +33,7 @@ ast.block = recordtype.new("block",
 			    pdecl = NIL;	    -- Filled in during expansion
 			    ideclist = NIL;	    -- Filled in during expansion
 			    pat = NIL;
-			    s = NIL;
-			    e = NIL;})
+			    sourceref = NIL;})
 
 ast.importrequest = recordtype.new("importrequest",
 				   {prefix = NIL;        -- Y, when the requestor said "import X as Y"
@@ -41,42 +46,36 @@ ast.binding = recordtype.new("binding",
 			   is_alias = false;
 			   is_local = false;
 			   pat = NIL;
-			   s = NIL;
-			   e = NIL;})
+			   sourceref = NIL;})
 
 -- A grammar is an expression in the ast, despite the fact that in the concrete grammar for rpl
 -- 1.1, the keyword 'grammar' introduces a binding of a name to a 'grammar expression'.
 ast.grammar = recordtype.new("grammar",
 			     {rules = {};
 			      pat = NIL;
-			      s = NIL;
-			      e = NIL;})
+			      sourceref = NIL;})
 
 ast.ref = recordtype.new("ref",
 			 {localname = NIL;
 			  packagename = NIL;
 			  pat = NIL;
-			  s = NIL;
-			  e = NIL;})
+			  sourceref = NIL;})
 
 ast.sequence = recordtype.new("sequence",
 			 {exps = {};
 			  pat = NIL;
-			  s = NIL;
-			  e = NIL;})
+			  sourceref = NIL;})
 
 ast.choice = recordtype.new("choice",
 			    {exps = {};
 			     pat = NIL;
-			     s = NIL;
-			     e = NIL;})
+			     sourceref = NIL;})
 
 ast.predicate = recordtype.new("predicate",
 			  {type = NIL;
 			   exp = NIL;
 			   pat = NIL;
-			   s = NIL;
-			   e = NIL;})
+			   sourceref = NIL;})
 
 ast.repetition = recordtype.new("repetition",
 			 {min = NIL;
@@ -84,114 +83,97 @@ ast.repetition = recordtype.new("repetition",
 			  exp = NIL;
 			  cooked = false;
 			  pat = NIL;
-			  s = NIL;
-			  e = NIL;})
+			  sourceref = NIL;})
 
 ast.cooked = recordtype.new("cooked",
 			  {exp = NIL;
 			   pat = NIL;
-			   s = NIL;
-			   e = NIL;})
+			   sourceref = NIL;})
 
 ast.raw = recordtype.new("raw",
 			 {exp = NIL;
 			  pat = NIL;
-			  s = NIL;
-			  e = NIL;})
+			  sourceref = NIL;})
 
 
 ast.literal = recordtype.new("literal",			    -- interpolated string literals
 			     {value = NIL;		    -- raw value, as seen in rpl source
 			      pat = NIL;
-			      s = NIL;
-			      e = NIL;})
+			      sourceref = NIL;})
 
 ast.cs_exp = recordtype.new("cs_exp",		    -- [ [exp1] ... ]
 			  {complement = false;
 			   cexp = {};
 			   pat = NIL;
-			   s = NIL;
-			   e = NIL;})
+			   sourceref = NIL;})
 
 ast.cs_named = recordtype.new("cs_named",	    -- [:name:]
 			      {complement = false;
 			       name = NIL;
 			       pat = NIL;
-			       s = NIL;
-			       e = NIL;})
+			       sourceref = NIL;})
 
 ast.cs_list = recordtype.new("cs_list",		    -- [abc12$]
 			      {complement = false;
 			       chars = {};
 			       pat = NIL;
-			       s = NIL;
-			       e = NIL;})
+			       sourceref = NIL;})
 
 ast.cs_range = recordtype.new("cs_range",	    -- [a-z]
 			      {complement = false;
 			       first = NIL;
 			       last = NIL;
 			       pat = NIL;
-			       s = NIL;
-			       e = NIL;})
+			       sourceref = NIL;})
 
 ast.cs_union = recordtype.new("cs_union",	    -- [ [exp1] ... ]
 				{cexps = {};
 				 pat = NIL;
-				 s = NIL;
-				 e = NIL;})
+				 sourceref = NIL;})
 
 ast.cs_intersection = recordtype.new("cs_intersection", -- [ [exp1]&&[exp2]&& ... ]
 				       {cexps = {};
 					pat = NIL;
-					s = NIL;
-					e = NIL;})
+					sourceref = NIL;})
 
 ast.cs_difference = recordtype.new("cs_difference",	-- [ [first]-[second] ]
 				     {first = NIL;
 				      second = NIL;
 				      pat = NIL;
-				      s = NIL;
-				      e = NIL;})
+				      sourceref = NIL;})
 
 ast.application = recordtype.new("application",
 				 {ref = NIL;
 				  arglist = NIL;
 				  pat = NIL;
-				  s = NIL;
-				  e = NIL;})
+				  sourceref = NIL;})
 
 ast.arglist = recordtype.new("arglist",
 			     {cooked = true;
 			      args = {};
 			      pat = NIL;
-			      s = NIL;
-			      e = NIL;})
+			      sourceref = NIL;})
 
 ast.int = recordtype.new("int",
 			 {value = NIL;
 			  pat = NIL;
-			  s = NIL;
-			  e = NIL;})
+			  sourceref = NIL;})
 
 ast.pdecl = recordtype.new("pdecl",
 			   {name = NIL;
 			    pat = NIL;
-			    s = NIL;
-			    e = NIL;})
+			    sourceref = NIL;})
 
 ast.idecl = recordtype.new("idecl",
 			   {importpath = NIL;
 			    prefix = NIL;
 			    pat = NIL;
-			    s = NIL;
-			    e = NIL;})
+			    sourceref = NIL;})
 
 ast.ideclist = recordtype.new("ideclist",
 			      {idecls = {};
 			       pat = NIL;
-			       s = NIL;
-			       e = NIL;})
+			       sourceref = NIL;})
 
 -- 'ast.repetition' is transformed during expansion into expressions that use atmost and atleast.
 -- An 'ast.atmost' node compiles to a peg that accepts between 0 and max copies of exp, inclusive.
@@ -199,8 +181,7 @@ ast.atmost = recordtype.new("atmost",
 			    {max = NIL;
 			     exp = NIL;
 			     pat = NIL;
-			     s = NIL;
-			     e = NIL;})
+			     sourceref = NIL;})
 
 -- An 'ast.atleast' node compiles to a peg that accepts at least min copies of exp, with no
 -- maximum limit.
@@ -208,8 +189,7 @@ ast.atleast = recordtype.new("atleast",
 			     {min = NIL;
 			      exp = NIL;
 			      pat = NIL;
-			      s = NIL;
-			      e = NIL;})
+			      sourceref = NIL;})
 
 ---------------------------------------------------------------------------------------------------
 -- Utility to visit each expression in an AST
@@ -292,28 +272,35 @@ end
 
 local convert_char_exp;
 
-local function infix_to_prefix(exps)
+local function infix_to_prefix(exps, sref)
    -- exps := exp (op exp)*
    local rest = list.from(exps)
    local first = rest[1]
    local op = rest[2]
-   if not op then return convert_char_exp(first); end
+   if not op then return convert_char_exp(first, sref); end
    local optype = op.subs[1].type
    assert(optype)
    rest = list.cdr(list.cdr(rest))
    if optype=="intersection" then
-      return ast.cs_intersection.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
+      return ast.cs_intersection.new{cexps = {convert_char_exp(first, sref),
+					      infix_to_prefix(rest, sref)},
+				     sourceref=sref}
    elseif optype=="difference" then
-      return ast.cs_difference.new{first = convert_char_exp(first), second = infix_to_prefix(rest), s=s, e=e}
+      return ast.cs_difference.new{first = convert_char_exp(first, sref),
+				   second = infix_to_prefix(rest, sref),
+				   sourceref=sref}
    elseif optype=="union" then
-      return ast.cs_union.new{cexps = {convert_char_exp(first), infix_to_prefix(rest)}, s=s, e=e}
+      return ast.cs_union.new{cexps = {convert_char_exp(first, sref), 
+				       infix_to_prefix(rest, sref)}, 
+			      sourceref=sref}
    else
       error("Internal error: do not know how to convert charset op " .. tostring(optype))
    end
 end
 
-local function convert_cs_named(pt)
+local function convert_cs_named(pt, sref)
    assert(pt.subs and pt.subs[1])
+   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    local name = pt.subs[1].text
    local compflag = (pt.subs[1].type=="complement")
    if compflag then
@@ -322,10 +309,11 @@ local function convert_cs_named(pt)
    end
    return ast.cs_named.new{name = name,
 			   complement = compflag,
-			   s = pt.s, e = pt.e}
+			   sourceref=sref}
 end
 
-function convert_char_exp(pt)
+function convert_char_exp(pt, sref)
+   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    local exps, compflag
    if pt.type=="charset_exp" then
       assert(pt.subs and pt.subs[1])
@@ -341,42 +329,41 @@ function convert_char_exp(pt)
       exps = list.from(pt.subs)
       compflag = false
    end
-   local s, e = pt.s, pt.e
    if pt.type=="named_charset" then
-      return convert_cs_named(pt)
+      return convert_cs_named(pt, sref)
    elseif pt.type=="charlist" then
       return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
 			     complement = compflag,
-			     s=s, e=e}
+			     sourceref=sref}
    elseif pt.type=="range" then
       return ast.cs_range.new{first = exps[1].text,
 			      last = exps[2].text,
 			      complement = compflag,
-			      s=s, e=e}
+			      sourceref=sref}
    elseif pt.type=="compound_charset" then
       assert(exps[1])
       local prefix_cexp
       if not exps[2] then
 	 -- There is only one charset expression inside the compound charset
-	 local cexp = convert_char_exp(exps[1])
+	 local cexp = convert_char_exp(exps[1], sref)
 	 if compflag then cexp.complement = not cexp.complement; end
 	 return cexp
       end
-      prefix_cexp = infix_to_prefix(exps)
+      prefix_cexp = infix_to_prefix(exps, sref)
       flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
       flatten_cexp_in_place(prefix_cexp, ast.cs_union)
       return ast.cs_exp.new{cexp = prefix_cexp,
 			    complement = compflag,
-			    s=s, e=e}
+			    sourceref=sref}
    else
       error("Internal error: do not know how to convert charset exp type: " .. tostring(pt.type))
    end
 end
 
-local function convert_quantified_exp(pt, exp_converter)
-   local s, e = pt.s, pt.e
+local function convert_quantified_exp(pt, exp_converter, sref)
    local exp, q = pt.subs[1], pt.subs[2]
    local qname = q.type
+   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
    local min, max
    if qname=="repetition" then
@@ -399,11 +386,12 @@ local function convert_quantified_exp(pt, exp_converter)
    return ast.repetition.new{min = min,
 			     max = max,
 			     exp = exp_converter(exp),
-			     s=s, e=e}
+			     sourceref=sref}
 end
 
-local function convert_identifier(pt)
+local function convert_identifier(pt, sref)
    assert(pt.subs and pt.subs[1])
+   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    local localname, packagename
    if pt.subs[1].type=="localname" then
       localname = pt.subs[1].text
@@ -413,7 +401,7 @@ local function convert_identifier(pt)
       packagename = pt.subs[1].text
       localname = pt.subs[2].text
    end
-   return ast.ref.new{localname=localname, packagename=packagename, s=s, e=e}
+   return ast.ref.new{localname=localname, packagename=packagename, sourceref=sref}
 end   
 
 -- The ambient "atmosphere" in rpl is that sequences are cooked unless explicitly marked as raw.
@@ -421,44 +409,53 @@ end
 -- already explicitly cooked or raw.  
 function ast.ambient_cook_exp(ex)
    if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
-      return ast.cooked.new{exp=ex, s=0, e=0}
+      return ast.cooked.new{exp=ex, sourceref=ex.sourceref}
    end
 end
 function ast.ambient_raw_exp(ex)
    if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
-      return ast.raw.new{exp=ex, s=0, e=0}
+      return ast.raw.new{exp=ex, sourceref=ex.sourceref}
    end
 end
 
-function convert_exp(pt)
-   local s, e = pt.s, pt.e
+function convert_exp(pt, sref)
+   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
+   local function convert1(pt)
+      return convert_exp(pt, sref)
+   end
    if pt.type=="capture" then
-      return ast.cap.new{name = pt.subs[1].text, exp = convert_exp(pt.subs[2]), s=s, e=e}
+      return ast.cap.new{name = pt.subs[1].text,
+			 exp = convert_exp(pt.subs[2], sref),
+		         sourceref=sref}
    elseif pt.type=="predicate" then
-      return ast.predicate.new{type = pt.subs[1].text, exp = convert_exp(pt.subs[2]), s=s, e=e}
+      return ast.predicate.new{type = pt.subs[1].text,
+			       exp = convert_exp(pt.subs[2], sref),
+			       sourceref=sref}
    elseif pt.type=="cooked" then
-      return ast.cooked.new{exp = convert_exp(pt.subs[1]), s=s, e=e}
+      return ast.cooked.new{exp = convert_exp(pt.subs[1], sref),
+			    sourceref=sref}
    elseif pt.type=="raw" then
-      return ast.raw.new{exp = convert_exp(pt.subs[1]), s=s, e=e}
+      return ast.raw.new{exp = convert_exp(pt.subs[1], sref), 
+		      sourceref=sref}
    elseif pt.type=="choice" then
-      return ast.choice.new{exps = map(convert_exp, flatten(pt, "choice")), s=s, e=e}
+      return ast.choice.new{exps = map(convert1, flatten(pt, "choice")), sourceref=sref}
    elseif pt.type=="sequence" then
-      return ast.sequence.new{exps = map(convert_exp, flatten(pt, "sequence")), s=s, e=e}
+      return ast.sequence.new{exps = map(convert1, flatten(pt, "sequence")), sourceref=sref}
    elseif pt.type=="identifier" then
-      return convert_identifier(pt)
+      return convert_identifier(pt, sref)
    elseif pt.type=="literal" then
-      return ast.literal.new{value = pt.text, s=s, e=e}
+      return ast.literal.new{value = pt.text, sourceref=sref}
    elseif pt.type=="charset_exp" then
-      return convert_char_exp(pt)
+      return convert_char_exp(pt, sref)
    elseif pt.type=="quantified_exp" then
-      return convert_quantified_exp(pt, convert_exp)
+      return convert_quantified_exp(pt, convert_exp, sref)
 --   elseif pt.type=="arg" then
---      return convert_exp(pt.subs[1])
+--      return convert_exp(pt.subs[1], sref)
    elseif pt.type=="application" then
       local id = pt.subs[1]
       assert(id.type=="identifier")
       local arglist = pt.subs[2]
-      local operands = map(convert_exp, arglist.subs)
+      local operands = map(convert1, arglist.subs)
       if (arglist.type=="arglist") then
 	 operands = map(ast.ambient_cook_exp, operands)
       elseif (arglist.type=="rawarglist") then
@@ -467,18 +464,18 @@ function convert_exp(pt)
 	 assert(arglist.type=="arg")
 	 assert(#arglist.subs==1)
       end
-      return ast.application.new{ref=convert_identifier(id),
+      return ast.application.new{ref=convert_identifier(id, sref),
 			         arglist=operands,
-			         s=s, e=e}
+			         sourceref=sref}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
 end
 
 -- expand_import_decl takes a single import decl parse node and expands it into a list of as many
--- individual import declarations as it contains.  The individual declarations are added to the
--- results table (i.e. that argument is side-effected).
-local function expand_import_decl(decl_parse_node, results)
+-- individual import declarations as it contains.  
+local function expand_import_decl(decl_parse_node)
+   local results = {}
    local decode_match = common.decode_match
    local typ, pos, text, specs, fin = decode_match(decl_parse_node)
    assert(typ=="import_decl")
@@ -497,62 +494,69 @@ local function expand_import_decl(decl_parse_node, results)
       end
       table.insert(results, {importpath=importpath, prefix=prefix})
    end -- for each importspec in the import_decl
+   return results
 end
 
-local function convert_stmt(pt)
-   local s, e = pt.s, pt.e
+local function convert_stmt(pt, sref)
+   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    if pt.type=="assignment_" then
       assert(pt.subs and pt.subs[1] and pt.subs[2])
-      return ast.binding.new{ref = convert_exp(pt.subs[1]),
-			  exp = convert_exp(pt.subs[2]),
+      return ast.binding.new{ref = convert_exp(pt.subs[1], sref),
+			  exp = convert_exp(pt.subs[2], sref),
 			  is_alias = false,
 			  is_local = false,
-			  s=s, e=e}
+		          sourceref = sref}
    elseif pt.type=="alias_" then
-      return ast.binding.new{ref = convert_exp(pt.subs[1]),
-			  exp = convert_exp(pt.subs[2]),
+      return ast.binding.new{ref = convert_exp(pt.subs[1], sref),
+			  exp = convert_exp(pt.subs[2], sref),
 			  is_alias = true,
 			  is_local = false,
-			  s=s, e=e}
+		          sourceref = sref}
    elseif pt.type=="grammar_" then
-      local rules = map(convert_stmt, pt.subs)
+      local rules = map(function(sub)
+			   return convert_stmt(sub, sref)
+			end,
+			pt.subs)
       assert(rules and rules[1])
       local aliasflag = rules[1].is_alias
       local boundref = rules[1].ref
-      local gexp = ast.grammar.new{rules = rules,
-				   s=s, e=e}
+      local gexp = ast.grammar.new{rules = rules, sourceref = sref}
       return ast.binding.new{ref = boundref,
-			  exp = gexp,
-			  is_alias = aliasflag,
-			  is_local = false}
+			     exp = gexp,
+			     is_alias = aliasflag,
+			     is_local = false}
    elseif pt.type=="local_" then
-      local b = convert_stmt(pt.subs[1])
+      local b = convert_stmt(pt.subs[1], sref)
       b.is_local = true
       return b
    elseif pt.type=="package_decl" then
       assert(pt.subs and pt.subs[1])
       local pname = pt.subs[1].text
-      return ast.pdecl.new{name=pname, s=s, e=e}
+      return ast.pdecl.new{name=pname, sourceref=sref}
    elseif pt.type=="import_decl" then
-      local deps = {}
-      expand_import_decl(pt, deps)
+      local deps = expand_import_decl(pt)
       local function to_idecl(dep)
 	 return ast.idecl.new{importpath = dep.importpath,
-			      prefix = dep.prefix}
+			      prefix = dep.prefix,
+			      sourceref = sref}
       end
-      return ast.ideclist.new{idecls = map(to_idecl, deps), s=s, e=e}
+      return ast.ideclist.new{idecls = map(to_idecl, deps), sourceref=sref}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
 end
 
-local function convert(pt)
-   local s, e = pt.s, pt.e
+local function convert(pt, origin, source)
+   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
    if pt.type=="rpl_expression" then
       assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
-      return convert_exp(pt.subs[1])
+      return convert_exp(pt.subs[1], sref)
    elseif pt.type=="rpl_statements" or pt.type=="rpl_core" then
-      return ast.block.new{stmts = map(convert_stmt, pt.subs or {}), s=s, e=e}
+      return ast.block.new{stmts = map(function(sub)
+					  return convert_stmt(sub, sref)
+				       end,
+				       pt.subs or {}),
+			   sourceref = sref}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
@@ -564,28 +568,31 @@ ast.from_parse_tree = convert
 -- Convert a parse tree produced by the rpl core parser
 ---------------------------------------------------------------------------------------------------
 
-function convert_core_exp(pt)
-   local s, e = pt.s, pt.e
+function convert_core_exp(pt, sref)
+   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
+   local function convert1(pt)
+      return convert_core_exp(pt, sref)
+   end
    if pt.type=="capture" then
-      return ast.cap.new{name = pt.subs[1].text, exp = convert_core_exp(pt.subs[2]), s=s, e=e}
+      return ast.cap.new{name = pt.subs[1].text, exp = convert1(pt.subs[2]), sourceref=sref}
    elseif pt.type=="predicate" then
-      return ast.predicate.new{type = pt.subs[1].text, exp = convert_core_exp(pt.subs[2]), s=s, e=e}
+      return ast.predicate.new{type = pt.subs[1].text, exp = convert1(pt.subs[2]), sourceref=sref}
    elseif pt.type=="cooked" then
-      return ast.cooked.new{exp = convert_core_exp(pt.subs[1]), s=s, e=e}
+      return ast.cooked.new{exp = convert1(pt.subs[1]), sourceref=sref}
    elseif pt.type=="raw" then
-      return ast.raw.new{exp = convert_core_exp(pt.subs[1]), s=s, e=e}
+      return ast.raw.new{exp = convert1(pt.subs[1]), sourceref=sref}
    elseif pt.type=="choice" then
-      return ast.choice.new{exps = map(convert_core_exp, flatten(pt, "choice")), s=s, e=e}
+      return ast.choice.new{exps = map(convert1, flatten(pt, "choice")), sourceref=sref}
    elseif pt.type=="sequence" then
-      return ast.sequence.new{exps = map(convert_core_exp, flatten(pt, "sequence")), s=s, e=e}
+      return ast.sequence.new{exps = map(convert1, flatten(pt, "sequence")), sourceref=sref}
    elseif pt.type=="identifier" then
-      return ast.ref.new{localname=pt.text, s=s, e=e}
+      return ast.ref.new{localname=pt.text, sourceref=sref}
    elseif pt.type=="literal0" then
       local text = pt.text
       assert(text:sub(1,1)=='"' and text:sub(-1,-1)=='"', "literal not in quotes: " .. text)
-      return ast.literal.new{value = pt.text:sub(2, -2), s=s, e=e}
+      return ast.literal.new{value = pt.text:sub(2, -2), sourceref=sref}
    elseif pt.type=="charset_exp" then
-      return convert_char_exp(pt)
+      return convert_char_exp(pt, sref)
    elseif pt.type=="named_charset0" then
       local text = pt.text
       assert(text:sub(1,2)=="[:" and text:sub(-2,-1)==":]")
@@ -593,16 +600,16 @@ function convert_core_exp(pt)
       if text:sub(1,1)=="^" then
 	 error("Internal error: rpl core does not support complemented named character sets")
       end
-      return ast.cs_named.new{name = text, complement = compflag, s=s, e=e}      
+      return ast.cs_named.new{name = text, complement = compflag, sourceref=sref}      
    elseif pt.type=="quantified_exp" then
-      return convert_quantified_exp(pt, convert_core_exp)
+      return convert_quantified_exp(pt, convert_core_exp, sref)
 --   elseif pt.type=="arg" then
---      return convert_core_exp(pt.subs[1])
+--      return convert_core_exp(pt.subs[1], sref)
    -- elseif pt.type=="application" then
    --    local id = pt.subs[1]
    --    assert(id.type=="identifier")
    --    local arglist = pt.subs[2]
-   --    local operands = map(convert_core_exp, arglist.subs)
+   --    local operands = map(convert1, arglist.subs)
    --    if (arglist.type=="arglist") then
    -- 	 operands = map(ast.ambient_cook_exp, operands)
    --    elseif (arglist.type=="rawarglist") then
@@ -620,38 +627,41 @@ function convert_core_exp(pt)
    end
 end
 
-local function convert_core_stmt(pt)
-   local s, e = pt.s, pt.e
+local function convert_core_stmt(pt, sref)
+   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    if pt.type=="assignment_" then
       assert(pt.subs and pt.subs[1] and pt.subs[2])
-      return ast.binding.new{ref = convert_core_exp(pt.subs[1]),
-			  exp = convert_core_exp(pt.subs[2]),
+      return ast.binding.new{ref = convert_core_exp(pt.subs[1], sref),
+			  exp = convert_core_exp(pt.subs[2], sref),
 			  is_alias = false,
 			  is_local = false,
-			  s=s, e=e}
+		          sourceref=sref}
    elseif pt.type=="alias_" then
-      return ast.binding.new{ref = convert_core_exp(pt.subs[1]),
-			  exp = convert_core_exp(pt.subs[2]),
+      return ast.binding.new{ref = convert_core_exp(pt.subs[1], sref),
+			  exp = convert_core_exp(pt.subs[2], sref),
 			  is_alias = true,
 			  is_local = false,
-			  s=s, e=e}
+			  sourceref=sref}
    elseif pt.type=="grammar_" then
-      local rules = map(convert_core_stmt, pt.subs)
+      local rules = map(function(sub)
+			   return convert_core_stmt(sub, sref)
+			end,
+			pt.subs)
       assert(rules and rules[1])
       local aliasflag = rules[1].is_alias
       local boundref = rules[1].ref
       local gexp = ast.grammar.new{rules = rules,
-				   s=s, e=e}
+				   sourceref=sref}
       return ast.binding.new{ref = boundref,
 			  exp = gexp,
 			  is_alias = aliasflag,
 			  is_local = false}
    elseif pt.type=="local_" then
-      local b = convert_core_stmt(pt.subs[1])
+      local b = convert_core_stmt(pt.subs[1], sref)
       b.is_local = true
       return b
    elseif pt.type=="fake_package" then
-      return ast.pdecl.new{name=".", s=s, e=e}
+      return ast.pdecl.new{name=".", sourceref=sref}
    elseif pt.type=="import_decl" then
       error("Internal error: core rpl does not support import declarations")
    else
@@ -659,13 +669,17 @@ local function convert_core_stmt(pt)
    end
 end
 
-local function convert_core(pt)
-   local s, e = pt.s, pt.e
+local function convert_core(pt, origin, source)
+   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
    if pt.type=="rpl_expression" then
       assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
-      return convert_core_exp(pt.subs[1])
+      return convert_core_exp(pt.subs[1], sref)
    elseif pt.type=="rpl_core" then
-      return ast.block.new{stmts = map(convert_core_stmt, pt.subs or {}), s=s, e=e}
+      return ast.block.new{stmts = map(function(sub)
+					  return convert_core_stmt(sub, sref)
+				       end,
+				       pt.subs or {}),
+			   sourceref=sref}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
@@ -674,7 +688,7 @@ end
 ast.from_core_parse_tree = convert_core
 
 ---------------------------------------------------------------------------------------------------
--- Find all references in an ast which have a non-nil packagename
+-- Find all references in an ast where the ref has a non-nil packagename
 ---------------------------------------------------------------------------------------------------
 
 function ast.dependencies_of(a)

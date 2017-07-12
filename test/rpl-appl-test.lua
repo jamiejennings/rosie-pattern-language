@@ -225,15 +225,21 @@ check(m.subs and m.subs[1] and m.subs[1].s==12 and m.subs[1].e==13)
 
 subheading("Macro: ci")
 
-p = e:compile('ci:"ibm"')
-ok, m, leftover = e:match(p, "IBM")
-check(ok and m and (leftover==0))
-ok, m, leftover = e:match(p, "ibm")
-check(ok and m and (leftover==0))
-ok, m, leftover = e:match(p, "Ibm")
-check(ok and m and (leftover==0))
-ok, m, leftover = e:match(p, "ibM")
-check(ok and m and (leftover==0))
+p, errs = e:compile('ci:"ibm"')
+check(p)
+if p then
+   ok, m, leftover = e:match(p, "IBM")
+   check(ok and m and (leftover==0))
+   ok, m, leftover = e:match(p, "ibm")
+   check(ok and m and (leftover==0))
+   ok, m, leftover = e:match(p, "Ibm")
+   check(ok and m and (leftover==0))
+   ok, m, leftover = e:match(p, "ibM")
+   check(ok and m and (leftover==0))
+else
+   print("compile failed: ")
+   table.print(errs, false)
+end
 
 function test_foobar()
    p = e:compile('foobar')

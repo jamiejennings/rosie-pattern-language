@@ -68,7 +68,7 @@ local function macro_case_insensitive(...)
 	    { ast.literal.new{value=uc:sub(i,i)}, ast.literal.new{value=lc:sub(i,i)} }
 	 table.insert(chars, ast.choice.new{exps=upper_lower_choices})
       end
-      return ast.raw.new{exp=ast.sequence.new{exps=chars, s=exp.s, e=exp.e}}
+      return ast.raw.new{exp=ast.sequence.new{exps=chars, sourceref=exp.sourceref}}
    end
    return ast.visit_expressions(exp, ast.literal.is, xform_literal)
 end

@@ -58,17 +58,19 @@ violation.info = recordtype.new(
 
 function violation.tostring(err)
    local kind = recordtype.typename(err)
+   local str
    if not kind then
       return "UNKNOWN ERROR OBJECT: " .. tostring(err)
    else
-      local str = kind .. "\n"
-      str = str .. " [" .. err.who .. "]: " .. err.message .. "\n"
+      str = kind .. "\n"
+      str = str .. " [" .. err.who .. "]: " .. err.message
       if err.ast then
-	 -- TODO: use something better than the default tostring for ast objects
-	 str = str .. tostring(err.ast) .. "\n"
+	 -- TODO: use something better than the default tostring for ast objects?
+	 str = str .. " " .. ast.tostring(err.ast)
       end
+      str = str .. "\n"
       if line then
-	 str = str .. string.format("At line %d", line)
+	 str = str .. string.format(" At line %d", line)
 	 if charpos then
 	    str = str .. string.format(", position %d", charpos)
 	 end

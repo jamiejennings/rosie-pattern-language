@@ -31,7 +31,7 @@ bind = environment.bind
 local expand = require "expand"
 
 local function throw(msg, a)
-   return violation.throw(violation.compile.new{who='compiler (c2)',
+   return violation.throw(violation.compile.new{who='compiler',
 						message=msg,
 						ast=a})
 end
@@ -48,7 +48,7 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     local pt, warnings, leftover = parse_something(src)
 	     assert(type(warnings)=="table")
 	     if not pt then
-		local err = violation.syntax.new{who='rpl parser', message=table.concat(warnings, "\n")}
+		local err = violation.syntax.new{who='parser', message=table.concat(warnings, "\n")}
 		err.src = src; err.origin = origin and origin.packagename
 		table.insert(messages, err)
 		return false
@@ -60,12 +60,12 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     end
 	     if leftover~=0 then
 		local msg = "extraneous input after expression: " .. src:sub(-leftover)
-		local err = violation.syntax.new{who='rpl parser', message=msg}
+		local err = violation.syntax.new{who='parser', message=msg}
 		err.src = src; err.origin = origin and origin.packagename
 		table.insert(messages, err)
 		return false
 	     end
-	     return ast.from_parse_tree(pt)
+	     return ast.from_parse_tree(pt, origin, src)
 	  end
 end
 
@@ -397,7 +397,7 @@ function c2.compile_expression(a, env, messages)
       local msg =
 	 "type error: expression did not compile to a pattern, instead got " .. tostring(pat)
       table.insert(messages,
-		   violation.compile.new{who='compile expression', message=msg, ast=a})
+		   violation.compile.new{who='expression compiler', message=msg, ast=a})
       return false
    end
    local peg, name = pat.peg, pat.name

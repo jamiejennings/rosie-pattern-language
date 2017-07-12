@@ -156,12 +156,12 @@ function create_core_engine()
 
    local core_parser = function(src, origin, messages)
 			  local pt = parse_core.rpl(src, origin, messages)
-			  return ast.from_core_parse_tree(pt)
+			  return ast.from_core_parse_tree(pt, origin, src)
 		       end
 
    local core_expression_parser = function(src, origin, messages)
 				     local pt = parse_core.expression(src, origin, messages)
-				     return ast.from_core_parse_tree(pt)
+				     return ast.from_core_parse_tree(pt, origin, src)
 				  end
 
    local COREcompiler2 = { version = common.rpl_version.new(0, 0),

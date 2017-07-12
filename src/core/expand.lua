@@ -43,18 +43,18 @@ local function remove_raw_exp(ex)
    if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
    elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
    elseif ast.predicate.is(ex) then
-      return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), s=ex.s, e=ex.e}
+      return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
-      return ast.choice.new{exps=map(remove_raw_exp, ex.exps), s=ex.s, e=ex.e}
+      return ast.choice.new{exps=map(remove_raw_exp, ex.exps), sourceref=ex.sourceref}
    elseif ast.sequence.is(ex) then
       -- do not introduce boundary references between the exps
       local exps = map(remove_raw_exp, ex.exps)
       assert(#exps > 0, "received an empty sequence")
-      return ast.sequence.new{exps=exps, s=ex.s, e=ex.e}
+      return ast.sequence.new{exps=exps, sourceref=ex.sourceref}
    elseif ast.repetition.is(ex) then 
       local flag = ast.cooked.is(ex.exp)
       local new = remove_raw_exp(ex.exp)
-      return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
+      return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, sourceref=ex.sourceref}
    elseif ast.grammar.is(ex) then
       -- An explicit 'raw' syntax cannot appear around a grammar in the current syntax
       assert(false, "rpl 1.1 grammar should not allow raw syntax surrounding a grammar")
@@ -75,9 +75,9 @@ function remove_cooked_exp(ex)
    if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
    elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
    elseif ast.predicate.is(ex) then
-      return ast.predicate.new{type=ex.type, exp=remove_cooked_exp(ex.exp), s=ex.s, e=ex.e}
+      return ast.predicate.new{type=ex.type, exp=remove_cooked_exp(ex.exp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
-      return ast.choice.new{exps=map(remove_cooked_exp, ex.exps), s=ex.s, e=ex.e}
+      return ast.choice.new{exps=map(remove_cooked_exp, ex.exps), sourceref=ex.sourceref}
    elseif ast.sequence.is(ex) then
       local exps = map(remove_cooked_exp, ex.exps)
       assert(#exps > 0, "received an empty sequence")
@@ -89,7 +89,7 @@ function remove_cooked_exp(ex)
 	 end
 	 table.insert(new, exps[i])
       end -- for
-      return ast.sequence.new{exps=new, s=ex.s, e=ex.e}
+      return ast.sequence.new{exps=new, sourceref=ex.sourceref}
    elseif ast.grammar.is(ex) then
       -- ambience has no effect on a grammar expression
       remove_cooked_raw_from_stmts(ex.rules) 
@@ -101,7 +101,7 @@ function remove_cooked_exp(ex)
       -- if it were raw; if not explicitly cooked, then treat ex.exp it as if it is raw.
       local flag = ast.cooked.is(ex.exp)
       local new = remove_raw_exp(ex.exp)
-      return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
+      return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, sourceref=ex.sourceref}
    elseif ast.application.is(ex) then
       assert(false, "pattern function encountered (feature not supported)")
    else
@@ -131,7 +131,7 @@ local function xrepetition(a, env, messages)
    local min, max, exp = (a.min or 0), a.max, remove_repetition(a.exp)
    local boundary_exp, final
    if a.cooked then
-      boundary_exp = ast.sequence.new{exps={boundary_ref, exp}}
+      boundary_exp = ast.sequence.new{exps={boundary_ref, exp}, sourceref=a.sourceref}
    end
    if (not max) then
       if (min==0) then				    -- *
@@ -141,26 +141,29 @@ local function xrepetition(a, env, messages)
 			      exp=ast.sequence.new{exps=
 						   {exp,
 						    ast.atleast.new{min=0,
-								    exp=boundary_exp}}}}
+								    exp=boundary_exp}}},
+			   sourceref=a.sourceref}
 	 else
-	    final = ast.atleast.new{min=0, exp=exp}
+	    final = ast.atleast.new{min=0, exp=exp, sourceref=a.sourceref}
 	 end
       elseif (min==1) then			    -- +
 	 if boundary_exp then
 	    final = ast.sequence.new{exps={exp,
 					   ast.atleast.new{min=0,
-							   exp=boundary_exp}}}
+							   exp=boundary_exp}},
+				     sourceref=a.sourceref}
 	 else
-	    final = ast.atleast.new{min=1, exp=exp}
+	    final = ast.atleast.new{min=1, exp=exp, sourceref=a.sourceref}
 	 end
       else
 	 assert(min > 1)			    -- {min,}
 	 if boundary_exp then
 	    final = ast.sequence.new{exps={exp,
 					   ast.atleast.new{min=(min-1),
-							   exp=boundary_exp}}}
+							exp=boundary_exp}},
+				     sourceref=a.sourceref}
 	 else
-	    final = ast.atleast.new{min=min, exp=exp}
+	    final = ast.atleast.new{min=min, exp=exp, sourceref=a.sourceref}
 	 end
       end -- switch on min where (not max)
    else -- have both min and max values
@@ -174,13 +177,14 @@ local function xrepetition(a, env, messages)
       -- Here's where things get interesting, because we must match at least min copies of 
       -- exp, and at most max.
       if (min==0) then				    -- {,max} and ?
-	 final = ast.atmost.new{max=max, exp=exp}
+	 final = ast.atmost.new{max=max, exp=exp, sourceref=a.sourceref}
 	 if boundary_exp and (max > 1) then
 	    final =
 	       ast.atmost.new{max=1,
 			      exp=ast.sequence.new{exps={exp,
 							 ast.atmost.new{max=(max-1),
-								        exp=boundary_exp}}}}
+								        exp=boundary_exp}}},
+			      sourceref=a.sourceref}
 	 end
       else
 	 assert(min > 0)			    -- {min,max}
@@ -193,11 +197,12 @@ local function xrepetition(a, env, messages)
 	 if (min < max) then
 	    table.insert(exps,
 			 ast.atmost.new{max=(max-min),
-				        exp=(boundary_exp or exp)})
+				        exp=(boundary_exp or exp),
+				        sourceref=a.sourceref})
 	 else
 	    assert(min==max)
 	 end
-	 final = ast.sequence.new{exps=exps}
+	 final = ast.sequence.new{exps=exps, sourceref=a.sourceref}
       end -- switch on min
    end -- switch on max
    assert(final)
@@ -286,22 +291,22 @@ function apply_macros(ex, env, messages)
       return apply_macro(ex, env, messages)
    elseif ast.cooked.is(ex) then
       return ast.cooked.new{exp=apply_macros(ex.exp, env, messages),
-			    s=ex.s, e=ex.e}
+			    sourceref=ex.sourceref}
    elseif ast.raw.is(ex) then
       return ast.raw.new{exp=apply_macros(ex.exp, env, messages),
-		         s=ex.s, e=ex.e}
+		         sourceref=ex.sourceref}
    elseif ast.sequence.is(ex) then
       return ast.sequence.new{exps=map(map_apply_macros, ex.exps),
-			      s=ex.s, e=ex.e}
+			      sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
       return ast.choice.new{exps=map(map_apply_macros, ex.exps),
-			    s=ex.s, e=ex.e}
+			    sourceref=ex.sourceref}
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=apply_macros(ex.exp, env, messages),
-			       s=ex.s, e=ex.e}
+			       sourceref=ex.sourceref}
    elseif ast.repetition.is(ex) then 
       return ast.repetition.new{exp=apply_macros(ex.exp, env, messages),
-			        cooked=ex.cooked, max=ex.max, min=ex.min, s=ex.s, e=ex.e}
+			        cooked=ex.cooked, max=ex.max, min=ex.min, sourceref=ex.sourceref}
    elseif ast.grammar.is(ex) then
       local newrules = {}
       local new
@@ -313,10 +318,10 @@ function apply_macros(ex, env, messages)
 			       exp=apply_macros(rule.exp, env, messages),
 			       is_alias=rule.is_alias,
 			       is_local=rule.is_local,
-			       s=rule.s, e=rule.e}
+			       sourceref=rule.sourceref}
 	 table.insert(newrules, new)
       end -- for
-      return ast.grammar.new{rules=newrules, s=ex.s, e=ex.e}
+      return ast.grammar.new{rules=newrules, sourceref=ex.sourceref}
    else
       -- finally, return expressions that do not have sub-expressions to process
       return ex

@@ -64,18 +64,18 @@ local function validate_block(a)
    assert(ast.block.is(a))
    local stmts = a.stmts
    if not stmts[1] then
-      return true, {violation.warning.new{who='load package', message="Empty input", ast=a}}
+      return true, {violation.warning.new{who='loader', message="Empty input", ast=a}}
    elseif ast.pdecl.is(stmts[1]) then
       a.pdecl = table.remove(stmts, 1)
       common.note("load: in package " .. a.pdecl.name)
    end
    if not stmts[1] then
       return true,
-	 {violation.warning.new{who='load package',
+	 {violation.warning.new{who='loader',
 				message="Empty module (nothing after package declaration)",
 				ast=a}}
    elseif not ast.ideclist.is(stmts[1]) then
-      return true, {violation.info.new{who='load package',
+      return true, {violation.info.new{who='loader',
 				       message="Module consists only of import declarations",
 				       ast=a}}
    end
@@ -84,7 +84,7 @@ local function validate_block(a)
    end
    for _, s in ipairs(stmts) do
       if not ast.binding.is(s) then
-	 return false, {violation.compile.new{who='load package',
+	 return false, {violation.compile.new{who='loader',
 					      message="Declarations must appear before assignments",
 					      ast=s}}
       end
@@ -122,7 +122,7 @@ end
 local load_dependencies;
 
 local function parse_block(compiler, src, request, fullpath, messages)
-   local a = compiler.parse_block(src, request, messages)
+   local a = compiler.parse_block(src, request, messages) -- fullpath or request???
    if not a then return false; end		    -- errors will be in messages table
    a.request = request
    a.filename = fullpath
@@ -204,10 +204,10 @@ local function find_module_source(compiler, pkgtable, searchpath, request, messa
    if src then
       return src, fullpath
    end
-   local msg = ("load: cannot find module source for '" .. request.importpath ..
+   local msg = ("cannot find module source for '" .. request.importpath ..
 		"' needed by module '" .. (importpath or "<top level>") .. 
 	        "': " .. msg)
-   table.insert(messages, violation.compile.new{who='import package', message=msg, ast=decl})
+   table.insert(messages, violation.compile.new{who='loader', message=msg, ast=decl})
    return false
 end
 
