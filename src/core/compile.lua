@@ -429,7 +429,7 @@ end
 function c2.compile_block(a, pkgenv, request, messages)
    assert(ast.block.is(a))
    assert(environment.is(pkgenv))
-   assert(request==nil or ast.importrequest.is(request))
+   assert(ast.importrequest.is(request))
    assert(type(messages)=="table")
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    -- TODO: Ensure each lhs appears only once in a.stmts.
@@ -458,8 +458,8 @@ function c2.compile_block(a, pkgenv, request, messages)
 	 end
 	 if (not b.is_alias) then
 	    local fullname = ref.localname
-	    if request and (request.prefix~=".") then
-	       assert(type(request.packagename)=="string")
+	    if request.importpath and (request.prefix~=".") then
+	       assert(request.packagename==nil or type(request.packagename)=="string")
 	       assert(request.prefix==nil or type(request.prefix=="string"))
 	       fullname = (request.prefix or request.packagename) .. "." .. fullname
 	    end
@@ -474,6 +474,8 @@ function c2.compile_block(a, pkgenv, request, messages)
 	    common.note("request.prefix=", request.prefix)
 	    common.note("request.packagename=", request.packagename)
 	    common.note("request.importpath=", request.importpath)
+	    common.note("request.filename=", request.filename)
+	    common.note("request.parent=", tostring(request.parent))
 	 end
 
 	 bind(pkgenv, ref.localname, pat)

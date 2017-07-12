@@ -21,14 +21,14 @@ local function explain_syntax_error(a, source)
    local err = parse_core.syntax_error_check(a)
    assert(err)
    local name, pos, text, subs = common.decode_match(a)
-   local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
+--   local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
+--   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
 
-   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
+   local msg = "syntax error"
+--   msg = msg .. "While looking for " .. text .. "\n"
 
-   msg = msg .. "While looking for " .. name .. "\n"
-
-   local ename, errpos, etext, esubs = common.decode_match(err)
-   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
+--   local ename, errpos, etext, esubs = common.decode_match(err)
+--   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
 
    if esubs then
       -- We only examine the first sub for now, assuming there are no others.  

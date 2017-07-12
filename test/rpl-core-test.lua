@@ -1336,7 +1336,7 @@ check(not success)
 check(not pkgname)
 check(type(msg)=="table" and msg[1])
 check(violation.syntax.is(msg[1]))
-check(msg[1].message:find("Syntax error"))
+check(msg[1].message:find("syntax error"))
 
 g_left_recursion = [[grammar
   g1 = S ~

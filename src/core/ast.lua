@@ -25,20 +25,20 @@ ast.sourceref = recordtype.new("sourceref",
 
 ast.block = recordtype.new("block",
 			   {stmts = {};
-			    request = NIL;	    -- Not a block property, but an importrequest
-			                            -- that explains WHY we are compiling this block
-			                            -- (nil indicates a top-level block)
-			    filename = NIL;	    -- Origin of this block from file system
-			                            -- or nil, e.g. for user input in CLI or REPL
 			    pdecl = NIL;	    -- Filled in during expansion
 			    ideclist = NIL;	    -- Filled in during expansion
 			    pat = NIL;
 			    sourceref = NIL;})
 
+-- An importrequest explains WHY we are compiling something.  When importpath is present, then we
+-- are compiling some source code in order to 'import <importpath>'.  And when we are compiling
+-- user input, importpath will be nil.
 ast.importrequest = recordtype.new("importrequest",
-				   {prefix = NIL;        -- Y, when the requestor said "import X as Y"
-				    importpath = NIL;	 -- X
-				    packagename = NIL;}) -- filled in from the rpl source during load
+				   {importpath = NIL;  -- X, when the requestor said "import X as Y"
+				    prefix = NIL;      -- Y
+				    packagename = NIL; -- filled in from the module source at load time
+				    filename = NIL;    -- filled in at load time, nil for "user input"
+				    parent = NIL;})    -- could have a tree of these
 
 ast.binding = recordtype.new("binding",
 			  {ref = NIL;
