@@ -19,70 +19,68 @@ violation.syntax = recordtype.new(
    "Syntax error",
    { who = NIL,
      message = NIL, 
-     src = NIL,
-     ast = false;				    -- unused. here for duck typing.
-     origin = NIL,
-     line = NIL,
-     charpos = NIL})
+     sourceref = NIL,
+  })
 
 violation.compile = recordtype.new(
    "Compile error",
    { who = NIL,
      message = NIL, 
      ast = NIL,
-     origin = NIL,
-     line = NIL,
-     charpos = NIL})
+  })
 
 violation.warning = recordtype.new(
    "Warning",
    { who = NIL,
      message = NIL, 
      ast = NIL,
-     origin = NIL,
-     line = NIL,
-     charpos = NIL})
+  })
 
 violation.info = recordtype.new(
    "Info",
    { who = NIL,
      message = NIL, 
      ast = NIL,
-     origin = NIL,
-     line = NIL,
-     charpos = NIL})
+  })
 
 ---------------------------------------------------------------------------------------------------
 -- Formatting messages
 ---------------------------------------------------------------------------------------------------
+
+function violation.sourceref_tostring(sref)
+   local s, e = sref.s or 1, sref.e or #sref.source
+   local origin = "user input "
+   if ast.importrequest.is(sref.origin) then
+      origin = "package " .. sref.origin.importpath
+   end
+   assert(type(sref.source)=="string")
+   local str = ""
+   local source_line, line_pos, line_no = util.extract_source_line_from_pos(sref.source, s)
+   str = str .. "\n"
+   str = str .. " In " .. tostring(origin)
+   str = str .. ":" .. tostring(line_no) .. ":" .. tostring(line_pos) .. ": "
+   str = str .. source_line
+   return str
+end
 
 function violation.tostring(err)
    local kind = recordtype.typename(err)
    local str
    if not kind then
       return "UNKNOWN ERROR OBJECT: " .. tostring(err)
-   else
-      str = kind .. "\n"
-      str = str .. " [" .. err.who .. "]: " .. err.message
-      if err.ast then
-	 -- TODO: use something better than the default tostring for ast objects?
-	 str = str .. " " .. ast.tostring(err.ast)
-      end
-      str = str .. "\n"
-      if line then
-	 str = str .. string.format(" At line %d", line)
-	 if charpos then
-	    str = str .. string.format(", position %d", charpos)
-	 end
-	 if origin then
-	    str = str .. " of " .. origin
-	 end
-	 str = str .. "\n"
-      elseif origin then
-	 str = str .. "In " .. origin .. "\n"
-      end
    end
-   return str
+   str = kind .. "\n"
+   str = str .. " [" .. err.who .. "]: " .. err.message
+   if violation.syntax.is(err) then
+   local sref = assert(err.sourceref)
+      return str .. violation.sourceref_tostring(sref)
+   else
+      local a = assert(err.ast)
+      local sref = assert(a.sourceref)
+      -- TODO: use something better than the default tostring for ast objects?
+      str = str .. " " .. ast.tostring(a)
+      return str .. violation.sourceref_tostring(sref)
+   end -- if syntax error or other kind
 end
 
 ---------------------------------------------------------------------------------------------------

@@ -48,8 +48,11 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     local pt, warnings, leftover = parse_something(src)
 	     assert(type(warnings)=="table")
 	     if not pt then
-		local err = violation.syntax.new{who='parser', message=table.concat(warnings, "\n")}
-		err.src = src; err.origin = origin and origin.packagename
+		local sref = ast.sourceref.new{origin=(origin and origin.packagename),
+					       source=src}
+		local err = violation.syntax.new{who='parser',
+						 message=table.concat(warnings, "\n"),
+					         sourceref=sref}
 		table.insert(messages, err)
 		return false
 	     end
@@ -59,9 +62,11 @@ local function make_parser_from(parse_something, expected_pt_node)
 		assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
 	     end
 	     if leftover~=0 then
-		local msg = "extraneous input after expression: " .. src:sub(-leftover)
-		local err = violation.syntax.new{who='parser', message=msg}
-		err.src = src; err.origin = origin and origin.packagename
+		local msg = "extraneous input"
+		local sref = ast.sourceref.new{s=#src-leftover+1,
+					       origin=(origin and origin.packagename),
+					       source=src}
+		local err = violation.syntax.new{who='parser', message=msg, sourceref=sref}
 		table.insert(messages, err)
 		return false
 	     end

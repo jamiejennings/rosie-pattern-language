@@ -68,7 +68,8 @@ function p.setup_engine(en, args)
 	 -- nosearch is true so that files given on command line are not searched for
 	 local success, pkgname, msg, actual_path = en.loadfile(en, filename, true)
 	 if not success then
-	    io.stdout:write(msg, "\n")
+	    table.print(msg, false)			    -- TEMPORARY
+	    io.stdout:write(tostring(msg), "\n")
 	    os.exit(-4)
 	 end
       end

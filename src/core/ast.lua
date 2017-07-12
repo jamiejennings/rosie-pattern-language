@@ -385,7 +385,7 @@ local function convert_quantified_exp(pt, exp_converter, sref)
    end
    return ast.repetition.new{min = min,
 			     max = max,
-			     exp = exp_converter(exp),
+			     exp = exp_converter(exp, sref),
 			     sourceref=sref}
 end
 
@@ -419,7 +419,7 @@ function ast.ambient_raw_exp(ex)
 end
 
 function convert_exp(pt, sref)
-   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
+   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    local function convert1(pt)
       return convert_exp(pt, sref)
    end
@@ -547,6 +547,9 @@ local function convert_stmt(pt, sref)
 end
 
 local function convert(pt, origin, source)
+   assert(type(pt)=="table")
+   assert(origin==nil or ast.importrequest.is(origin))
+   assert(type(source)=="string")
    local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
    if pt.type=="rpl_expression" then
       assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
@@ -569,7 +572,7 @@ ast.from_parse_tree = convert
 ---------------------------------------------------------------------------------------------------
 
 function convert_core_exp(pt, sref)
-   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
+   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    local function convert1(pt)
       return convert_core_exp(pt, sref)
    end
@@ -670,6 +673,9 @@ local function convert_core_stmt(pt, sref)
 end
 
 local function convert_core(pt, origin, source)
+   assert(type(pt)=="table")
+   assert(origin==nil or ast.importrequest.is(origin))
+   assert(type(source)=="string")
    local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
    if pt.type=="rpl_expression" then
       assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
