@@ -38,21 +38,30 @@ local function macro_find(...)
    -- return {{! <exp>} .}* <exp> when given <exp> as an arg
    local args = {...}
    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
-   local any_char = ast.ref.new{localname="."}
    local exp = args[1]
-   local not_exp = ast.predicate.new{type="!", exp=exp}
-   local advance = ast.repetition.new{min=0,
-				      exp=ast.raw.new{exp=ast.sequence.new{exps={not_exp, any_char}}}}
-   local wrapper = ast.cooked.is(args[1]) and ast.cooked or ast.raw
-   return wrapper.new{exp=ast.sequence.new{exps={advance, exp}}}
+   assert(exp.sourceref)
+   local any_char = ast.ref.new{localname=".", sourceref=exp.sourceref}
+   local not_exp = ast.predicate.new{type="!", exp=exp, sourceref=exp.sourceref}
+   local advance =
+      ast.repetition.new{min=0,
+			 exp=ast.raw.new{exp=ast.sequence.new{exps={not_exp, any_char},
+							   sourceref=exp.sourceref},
+				         sourceref=exp.sourceref},
+		         sourceref=exp.sourceref}
+   local wrapper = ast.cooked.is(exp) and ast.cooked or ast.raw
+   return wrapper.new{exp=ast.sequence.new{exps={advance, exp}, sourceref=exp.sourceref},
+		      sourceref=exp.sourceref}
 end
 				    
 -- grep
 local function macro_findall(...)
    local args = {...}
    if #args~=1 then error("findall takes one argument, " .. tostring(#args) .. " given"); end
-   local find = macro_find(args[1])
-   return ast.repetition.new{min=1, exp=find, cooked=false}
+   local exp = args[1]
+   assert(exp.sourceref)
+   local find = macro_find(exp)
+   assert(find.sourceref)
+   return ast.repetition.new{min=1, exp=find, cooked=false, sourceref=exp.sourceref}
 end
 
 -- TODO: rewrite this with utf8 support (without relying on every literal being valid utf8)
@@ -65,10 +74,11 @@ local function macro_case_insensitive(...)
       local chars = list.new()
       for i = 1, #exp.value do
 	 local upper_lower_choices =
-	    { ast.literal.new{value=uc:sub(i,i)}, ast.literal.new{value=lc:sub(i,i)} }
-	 table.insert(chars, ast.choice.new{exps=upper_lower_choices})
+	    { ast.literal.new{value=uc:sub(i,i), sourceref=exp.sourceref},
+	      ast.literal.new{value=lc:sub(i,i), sourceref=exp.sourceref} }
+	 table.insert(chars, ast.choice.new{exps=upper_lower_choices, sourceref=exp.sourceref})
       end
-      return ast.raw.new{exp=ast.sequence.new{exps=chars, sourceref=exp.sourceref}}
+      return ast.raw.new{exp=ast.sequence.new{exps=chars, sourceref=exp.sourceref}, sourceref=exp.sourceref}
    end
    return ast.visit_expressions(exp, ast.literal.is, xform_literal)
 end

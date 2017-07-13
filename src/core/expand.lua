@@ -31,7 +31,10 @@ local pfunction = common.pfunction
 local macro = common.macro
 
 local map = list.map; apply = list.apply; append = list.append;
-local boundary_ref = ast.ref.new{localname=common.boundary_identifier}
+local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
+				 sourceref=ast.sourceref.new{s=1, e=1,
+							     origin="built-in",
+							     source=common.boundary_identifier}}
 
 ---------------------------------------------------------------------------------------------------
 -- Transform AST to remove cooked and raw nodes
@@ -40,6 +43,7 @@ local boundary_ref = ast.ref.new{localname=common.boundary_identifier}
 local remove_cooked_exp;
 
 local function remove_raw_exp(ex)
+   assert(ex.sourceref)
    if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
    elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
    elseif ast.predicate.is(ex) then
@@ -62,6 +66,7 @@ local function remove_raw_exp(ex)
       assert(false, "pattern function encountered (feature not supported)")
    else
       -- finally, return expressions that do not have sub-expressions to process
+      assert(ex.sourceref)
       return ex
    end
 end
@@ -72,6 +77,7 @@ local remove_cooked_raw_from_stmts;
 -- structures are removed here, where we implement the notion that the ambience is, by default,
 -- "cooked".
 function remove_cooked_exp(ex)
+   assert(ex.sourceref)
    if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
    elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
    elseif ast.predicate.is(ex) then
@@ -107,6 +113,7 @@ function remove_cooked_exp(ex)
    else
       -- There are no sub-expressions to process in the rest of the expression types, such as
       -- refs, literals, and character set expressions.
+      assert(ex.sourceref)
       return ex
    end -- switch on kind of ex
 end
@@ -128,6 +135,7 @@ end
 local remove_repetition;
 
 local function xrepetition(a, env, messages)
+   assert(a.sourceref)
    local min, max, exp = (a.min or 0), a.max, remove_repetition(a.exp)
    local boundary_exp, final
    if a.cooked then
@@ -141,7 +149,8 @@ local function xrepetition(a, env, messages)
 			      exp=ast.sequence.new{exps=
 						   {exp,
 						    ast.atleast.new{min=0,
-								    exp=boundary_exp}}},
+								    exp=boundary_exp,
+								    sourceref=a.sourceref}}},
 			   sourceref=a.sourceref}
 	 else
 	    final = ast.atleast.new{min=0, exp=exp, sourceref=a.sourceref}
@@ -150,8 +159,9 @@ local function xrepetition(a, env, messages)
 	 if boundary_exp then
 	    final = ast.sequence.new{exps={exp,
 					   ast.atleast.new{min=0,
-							   exp=boundary_exp}},
-				     sourceref=a.sourceref}
+							   exp=boundary_exp,
+							   sourceref=a.sourceref}},
+				  sourceref=a.sourceref}
 	 else
 	    final = ast.atleast.new{min=1, exp=exp, sourceref=a.sourceref}
 	 end
@@ -160,8 +170,9 @@ local function xrepetition(a, env, messages)
 	 if boundary_exp then
 	    final = ast.sequence.new{exps={exp,
 					   ast.atleast.new{min=(min-1),
-							exp=boundary_exp}},
-				     sourceref=a.sourceref}
+							exp=boundary_exp,
+							sourceref=a.sourceref}},
+				  sourceref=a.sourceref}
 	 else
 	    final = ast.atleast.new{min=min, exp=exp, sourceref=a.sourceref}
 	 end
@@ -183,8 +194,9 @@ local function xrepetition(a, env, messages)
 	       ast.atmost.new{max=1,
 			      exp=ast.sequence.new{exps={exp,
 							 ast.atmost.new{max=(max-1),
-								        exp=boundary_exp}}},
-			      sourceref=a.sourceref}
+								     exp=boundary_exp,
+								     sourceref=a.sourceref}}},
+			   sourceref=a.sourceref}
 	 end
       else
 	 assert(min > 0)			    -- {min,max}
@@ -206,10 +218,12 @@ local function xrepetition(a, env, messages)
       end -- switch on min
    end -- switch on max
    assert(final)
+   assert(final.sourceref)
    return final
 end
 
 function remove_repetition(ex)
+   assert(ex.sourceref)
    if ast.predicate.is(ex) then
       ex.exp = remove_repetition(ex.exp)
       return ex
@@ -228,6 +242,7 @@ function remove_repetition(ex)
       ex.arglist = map(remove_repetition, ex.arglist)
       return ex
    else
+      assert(ex.sourceref)
       return ex
    end
 end
@@ -247,6 +262,7 @@ local apply_macros;
 local function apply_macro(ex, env, messages)
    assert(ast.application.is(ex))
    assert(ast.ref.is(ex.ref))
+   assert(ex.sourceref)
    local m = environment.lookup(env, ex.ref.localname, ex.ref.packagename)
    local refname = ex.ref.packagename and (ex.ref.packagename .. ".") or ""
    refname = refname .. ex.ref.localname
@@ -280,10 +296,12 @@ local function apply_macro(ex, env, messages)
 					    message=msg,
 					    ast=ex})
    end
+   assert(new.sourceref)
    return new
 end
    
 function apply_macros(ex, env, messages)
+   assert(ex.sourceref)
    local map_apply_macros = function(exp)
 			       return apply_macros(exp, env, messages)
 			    end
@@ -324,6 +342,7 @@ function apply_macros(ex, env, messages)
       return ast.grammar.new{rules=newrules, sourceref=ex.sourceref}
    else
       -- finally, return expressions that do not have sub-expressions to process
+      assert(ex.sourceref)
       return ex
    end
 end
@@ -334,6 +353,7 @@ end
 -- namespace for macros, functions, and other values, and (3) macro expansion requires a syntactic
 -- environment in which (at least) references to macros can be resolved.
 local function expression(ex, env, messages)
+   assert(ex.sourceref)
    local cooked = ast.ambient_cook_exp(ex)
    if cooked then ex = cooked; end
 
@@ -346,6 +366,7 @@ local function expression(ex, env, messages)
 
    ex = apply_macros(ex, env, messages)
    -- TODO: check for valid AST here
+   assert(ex.sourceref)
 
 
    -- The final steps in processing the ast are purely syntactic.  Here, we simplify the ast to
@@ -354,6 +375,7 @@ local function expression(ex, env, messages)
    -- know about.
    ex = remove_cooked_raw_from_exp(ex)
    ex = remove_repetition(ex)
+   assert(ex.sourceref)
    return ex
 end
 
@@ -372,6 +394,7 @@ local function statements(stmts, env, messages)
 end
 
 function e2.expression(ex, env, messages)
+   assert(ex.sourceref)
    local ok, result, err = violation.catch(expression, ex, env, messages)
    if not ok then error("Internal error in e2: " .. tostring(result)); end
    if not result then table.insert(messages, err); end

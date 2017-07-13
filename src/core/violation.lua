@@ -75,7 +75,13 @@ function violation.tostring(err)
       return str .. violation.sourceref_tostring(sref)
    else
       local a = assert(err.ast)
-      local sref = assert(a.sourceref)
+      local items = {"'" .. ast.tostring(a) .. "' did not have a sourceref!"}
+      for k,v in pairs(a) do
+	 table.insert(items, "a." .. k .. " = " .. tostring(v))
+      end
+
+      local sref = assert(a.sourceref, table.concat(items, "\n"))
+		       
       -- TODO: use something better than the default tostring for ast objects?
       str = str .. " " .. ast.tostring(a)
       return str .. violation.sourceref_tostring(sref)

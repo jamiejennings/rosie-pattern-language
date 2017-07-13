@@ -274,6 +274,7 @@ local convert_char_exp;
 
 local function infix_to_prefix(exps, sref)
    -- exps := exp (op exp)*
+   assert(sref)
    local rest = list.from(exps)
    local first = rest[1]
    local op = rest[2]
@@ -299,6 +300,7 @@ local function infix_to_prefix(exps, sref)
 end
 
 local function convert_cs_named(pt, sref)
+   assert(sref)
    assert(pt.subs and pt.subs[1])
    sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
    local name = pt.subs[1].text
@@ -408,11 +410,13 @@ end
 -- 'ambient_cook' wraps the rhs of bindings in an explicit 'cooked' ast unless the expression is
 -- already explicitly cooked or raw.  
 function ast.ambient_cook_exp(ex)
+   assert(ex.sourceref)
    if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
       return ast.cooked.new{exp=ex, sourceref=ex.sourceref}
    end
 end
 function ast.ambient_raw_exp(ex)
+   assert(ex.sourceref)
    if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
       return ast.raw.new{exp=ex, sourceref=ex.sourceref}
    end
@@ -720,6 +724,8 @@ function ast.dependencies_of(a)
    elseif (ast.literal.is(a) or
 	   ast.cs_exp.is(a) or 
 	   ast.cs_named.is(a) or
+	   ast.cs_list.is(a) or
+	   ast.cs_range.is(a) or
 	   ast.cs_union.is(a) or
 	   ast.cs_intersection.is(a) or
 	   ast.cs_difference.is(a)) then
