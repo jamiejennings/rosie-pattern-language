@@ -71,7 +71,7 @@ function violation.tostring(err)
    local str = kind .. "\n"
    str = str .. " [" .. err.who .. "]: " .. err.message
    if violation.syntax.is(err) then
-   local sref = assert(err.sourceref)
+      local sref = assert(err.sourceref)
       return str .. violation.sourceref_tostring(sref)
    else
       local a = assert(err.ast)

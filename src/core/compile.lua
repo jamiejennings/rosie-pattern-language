@@ -43,7 +43,8 @@ end
 local function make_parser_from(parse_something, expected_pt_node)
    return function(src, origin, messages)
 	     assert(type(src)=="string", "src is " .. tostring(src))
-	     assert(origin==nil or ast.importrequest.is(origin), "origin is: " .. tostring(origin))
+	     if not origin then origin = ast.importrequest.new{}; end
+	     assert(ast.importrequest.is(origin), "origin is: " .. tostring(origin))
 	     assert(type(messages)=="table", "missing messages arg?")
 	     local pt, syntax_errors, leftover = parse_something(src)
 	     assert(type(syntax_errors)=="table")
