@@ -49,15 +49,22 @@ violation.info = recordtype.new(
 
 function violation.sourceref_tostring(sref)
    local s, e = sref.s or 1, sref.e or #sref.source
-   local origin = "user input "
+   local origin_desc = "user input "
    if ast.importrequest.is(sref.origin) then
-      origin = "package " .. sref.origin.importpath
+      if sref.origin.importpath then
+	 origin_desc = "package " .. sref.origin.importpath
+      elseif sref.origin.filename then
+	 assert(type(sref.origin.filename)=="string")
+	 origin_desc = sref.origin.filename
+      end
+   elseif sref.origin ~= nil then
+      assert(false, "sref.origin is neither nil nor an importrequest: " .. tostring(sref.origin))
    end
    assert(type(sref.source)=="string")
-   local str = ""
    local source_line, line_pos, line_no = util.extract_source_line_from_pos(sref.source, s)
+   local str = ""
    str = str .. "\n"
-   str = str .. " In " .. tostring(origin)
+   str = str .. " In " .. tostring(origin_desc)
    str = str .. ":" .. tostring(line_no) .. ":" .. tostring(line_pos) .. ": "
    str = str .. source_line
    return str

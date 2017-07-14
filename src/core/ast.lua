@@ -13,7 +13,6 @@ local recordtype = require "recordtype"
 local NIL = recordtype.NIL
 local list = require "list"
 local map = list.map; apply = list.apply; append = list.append; foreach = list.foreach
---local rpl_parser = require "rpl-parser"
 
 local ast = {}
 
@@ -21,6 +20,7 @@ ast.sourceref = recordtype.new("sourceref",
 				   {s = NIL;        -- start position (1-based)
 				    e = NIL;	    -- end+1 position (1-based)
 				    origin = NIL;   -- describes where the source code came from
+				                    -- (nil for user input, else an importrequest
 				    source = NIL;}) -- the source itself
 
 ast.block = recordtype.new("block",

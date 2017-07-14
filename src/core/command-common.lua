@@ -36,7 +36,7 @@ function p.load_string(en, input)
 end
 
 function p.load_file(en, filename)
-   local ok, pkgname, messages, actual_path = en.loadfile(en, filename)
+   local ok, pkgname, messages, actual_path = en:loadfile(filename)
    if not ok then
       if ROSIE_DEV then error("Cannot load file: \n" .. messages)
       else io.write("Cannot load file: \n", messages); os.exit(-1); end

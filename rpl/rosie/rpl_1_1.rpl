@@ -39,8 +39,13 @@ alias id = { [[:alpha:]] id_char* }
 
 alias id_symbol = [[.$~]]
 
+-- It is important that an error consume at least one character here.
+-- As a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
+rest_of_line = { {!newline .}+ ignore }
+syntax_error = { rest_of_line }
+
 localname = {id_symbol !id} / {id !id_symbol}
-packagename = id
+packagename = id --/ syntax_error
 identifier = { {packagename [[.]]}? localname }
 
 alias dquote = { [[\"]] }
@@ -55,11 +60,6 @@ plus =     { [[+]] }
 alias end_token = { "end" !id_char }
 alias keyword_list = "local" / "alias" / "grammar" / "end"
 keyword = { keyword_list !id_char }
-
--- it is important that an error consume at least one character here.
--- as a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
-rest_of_line = { {!newline .}+ ignore }
-syntax_error = { rest_of_line }
 
 complement = "^"
 character = { {!esc !"[" !"^" !"]" .} / {esc .} }

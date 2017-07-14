@@ -47,31 +47,43 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     assert(ast.importrequest.is(origin), "origin is: " .. tostring(origin))
 	     assert(type(messages)=="table", "missing messages arg?")
 	     local pt, syntax_errors, leftover = parse_something(src)
-	     assert(type(syntax_errors)=="table")
-	     if not pt then
-		assert(#syntax_errors > 0)
+	     if #syntax_errors > 0 then
+		-- TODO: Use the parse tree, pt, to help pinpoint the error
+		-- OR, go directly to using the 'trace' capability for this, since that's the
+		-- future solution anyway.
 		for _, err in ipairs(syntax_errors) do
-		   local sref = ast.sourceref.new{s=err.s,
-						  e=err.e,
-						  origin=(origin and origin.packagename),
-					          source=src}
-		   local v = violation.syntax.new{who='parser',
-						  message="syntax error",
-						  sourceref=sref}
-		   table.insert(messages, v)
-		end
+		   if err.type=="syntax_error" then
+		      assert(false, "** NEED TO DECIDE WHAT TO DO IN THIS CASE **")
+		   else
+		      for _, sub in ipairs(err.subs or {}) do
+			 if sub.type=="syntax_error" then
+			    local sref = ast.sourceref.new{s=sub.s,
+							   e=sub.e,
+							   origin=origin,
+							   source=src}
+			    local v = violation.syntax.new{who='parser',
+							   message="syntax error",
+							   sourceref=sref}
+			    table.insert(messages, v)
+			 end
+		      end -- for each sub
+		   end -- for either the root or one of its subs are syntax errors
+		end -- for each syntax error node found 
 		return false
-	     end
+	     end -- if syntax errors were returned
+
 	     -- TODO: convert each "warning" here into a violation.warning
-	     table.move(syntax_errors, 1, #syntax_errors, #messages+1, messages)
+	     -- table.move(syntax_errors, 1, #syntax_errors, #messages+1, messages)
+
 	     assert(type(pt)=="table")
+
 	     if expected_pt_node then
 		assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
 	     end
 	     if leftover~=0 then
 		local msg = "extraneous input"
 		local sref = ast.sourceref.new{s=#src-leftover+1,
-					       origin=(origin and origin.packagename),
+					       origin=origin,
 					       source=src}
 		local err = violation.syntax.new{who='parser', message=msg, sourceref=sref}
 		table.insert(messages, err)

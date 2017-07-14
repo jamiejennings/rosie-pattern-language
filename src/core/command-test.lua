@@ -110,8 +110,11 @@ function p.run(rosie, en, args, filename)
    end
    local test_funcs = {rejects=test_rejects_exp,accepts=test_accepts_exp}
    local failures, total = 0, 0
-   local test_rplx, msg = en:compile("test_line")
-   assert(test_rplx, "internal error: test_line failed to compile")
+   local test_rplx, errs = en:compile("test_line")
+   if errs then
+      errs = table.concat(map(violation.tostring, errs), "\n");
+      assert(test_rplx, "internal error: test_line failed to compile: " .. errs)
+   end
    for _,p in pairs(test_lines) do
       local m, left = test_rplx:match(p)
       if not m then

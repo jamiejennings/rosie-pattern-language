@@ -25,18 +25,18 @@ local function explain_syntax_error(a, source)
 --   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
 
    local msg = ""
---   msg = msg .. "While looking for " .. text .. "\n"
+   msg = msg .. "While looking for " .. name .. "\n"
 
 --   local ename, errpos, etext, esubs = common.decode_match(err)
 --   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
 
-   if esubs then
-      -- We only examine the first sub for now, assuming there are no others.  
-      local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
-      if etname=="statement_prefix" then
-	 msg = msg .. "Found start of a new statement inside an expression.\n"
-      end
-   end -- if esubs
+   -- if esubs then
+   --    -- We only examine the first sub for now, assuming there are no others.  
+   --    local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
+   --    if etname=="statement_prefix" then
+   -- 	 msg = msg .. "Found start of a new statement inside an expression.\n"
+   --    end
+   -- end -- if esubs
    return msg
 end
 
@@ -104,21 +104,37 @@ end -- make_preparser
 -- Parse block
 ---------------------------------------------------------------------------------------------------
 
-local function find_syntax_errors(pt, source)
-   -- Look for the syntax error node type in the parse tree
-   local errlist = {};
+local function collect_syntax_error_nodes(pt, syntax_errors)
+   -- Find all the syntax error nodes in the parse tree, and make a list of their parents.  The
+   -- root is handled by the caller.
    for _,a in ipairs(pt.subs or {}) do
-      if parse_core.syntax_error_check(a) then table.insert(errlist, a); end
+      if a.type=="syntax_error" then
+	 table.insert(syntax_errors, pt)
+      else
+	 collect_syntax_error_nodes(a, syntax_errors)
+      end
    end
-   -- If there were syntax errors, then ...
-   if #errlist==0 then return nil; end
-   local errs = {}
-   for _,e in ipairs(errlist) do
-      table.insert(errs, explain_syntax_error(e, source))
-   end
-   return errs
+   return syntax_errors
 end
 
+local function find_syntax_errors(pt, source)
+   local err_nodes
+   if pt.type=="syntax_error" then
+      err_nodes = {pt}
+   else
+      err_nodes = collect_syntax_error_nodes(pt, {})
+   end
+   -- local err_messages = {}
+   -- for _,e in ipairs(err_nodes) do
+   --    table.insert(err_messages, explain_syntax_error(e, source))
+   -- end
+   -- return err_messages
+   return err_nodes
+end
+
+-- 'parse_block' returns: parse tree, syntax error list, leftover chars
+-- The caller must check whether the parse is successful by examining the error list (which should
+-- be empty) and the leftover value (which should be 0).
 function p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
    -- The preparser function uses rplx_preparse to look for a rpl language version declaration,
    -- and, if found, ensures that it is compatible with supported_version.
@@ -132,11 +148,9 @@ function p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
 	     -- Input is compatible with what is supported, so we continue parsing
 	     local pt, leftover = rplx_statements:match(src, start)
 	     local syntax_errors = find_syntax_errors(pt, src)
-	     if syntax_errors then return nil, syntax_errors, leftover; end
-	     -- Otherwise, we had a successful parse
-	     -- FUTURE: do a 'lint' pass to produce warnings, and return them in place of the
-	     --         empty error list in the return values
-	     return pt, {}, leftover
+	     -- FUTURE: If successful, we could do a 'lint' pass to produce warnings, and return
+	     -- them in place of the empty error list in the return values.
+	     return pt, syntax_errors, leftover
 	  end -- parse_block
 end -- make_parse_block
 
@@ -147,10 +161,7 @@ function p2.make_parse_expression(rplx_expression)
 		    "\n" .. debug.traceback())
 	     local pt, leftover = rplx_expression:match(src)
 	     local syntax_errors = find_syntax_errors(pt, src)
-	     if syntax_errors then return nil, syntax_errors, leftover; end
-	     -- FUTURE: do a 'lint' pass to produce warnings, and return them in place of the
-	     --         empty error list in the return values
-	     return pt, {}, leftover
+	     return pt, syntax_errors, leftover
 	  end -- parse_expression
 end -- make_parse_expression
 

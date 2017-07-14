@@ -175,11 +175,6 @@ local function loadfile(e, filename, nosearch)
    return ok, pkgname, messages, actual_path
 end
 
--- local dependencies =
---   function(e, AST)
---      return e.compiler.dependencies_of(AST)
---   end
-
 ----------------------------------------------------------------------------------------
 
 -- N.B. The _match code is essentially duplicated (for speed, to avoid a function call) in
