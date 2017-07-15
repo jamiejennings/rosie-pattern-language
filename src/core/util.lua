@@ -329,8 +329,9 @@ function util.extract_source_line_from_pos(source, pos)
 	 candidate = string.find(source, "\n", candidate+1, true)
       end
    end
-   -- return the line, and the new position of pos in the line, and the number of this line
-   return string.sub(source, start, eol), pos-start, count
+   -- Return the line, and the new position of pos in the line, and the number of this line.  Both
+   -- the line number and the pos in the line are 1-based.
+   return string.sub(source, start, eol), pos-start+1, count
 end
       
 function util.split_path(path, separator)

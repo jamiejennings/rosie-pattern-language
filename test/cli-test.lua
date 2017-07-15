@@ -199,11 +199,20 @@ test.heading("Help command")
 cmd = rosie_cmd .. " help"
 print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
-check(results, "command succeeded")
+check(results, "command failed")
 check(code==0, "Return code is zero")
 check(results[1]:find("Usage:"))
 check(results[1]:find("Options:"))
 check(results[1]:find("Commands:"))
+
+---------------------------------------------------------------------------------------------------
+test.heading("Error reporting")
+
+cmd = rosie_cmd .. "-f test/nested-test.rpl grep foo test/resolv.conf"
+print(); print(cmd)
+results, status, code = util.os_execute_capture(cmd, nil)
+check(results, "command failed")
+check(code ~= 0, "return code should not be zero")
 
 
 return test.finish()

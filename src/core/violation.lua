@@ -47,19 +47,28 @@ violation.info = recordtype.new(
 -- Formatting messages
 ---------------------------------------------------------------------------------------------------
 
+function violation.loadrequest_tostring(origin)
+   if not origin then return "in user input "; end
+   local origin_desc
+   if ast.loadrequest.is(origin) then
+      if origin.importpath then
+	 origin_desc = "while trying to import " .. origin.importpath
+      elseif origin.filename then
+	 assert(type(origin.filename)=="string")
+	 origin_desc = "while trying to load " .. origin.filename
+      end
+   else
+      assert(origin==nil, "origin is neither nil nor a loadrequest: " .. tostring(origin))
+   end
+   if origin then
+      origin_desc = origin_desc .. "\n " .. violation.loadrequest_tostring(origin.parent)
+   end
+   return origin_desc
+end
+
 function violation.sourceref_tostring(sref)
    local s, e = sref.s or 1, sref.e or #sref.source
-   local origin_desc = "user input "
-   if ast.loadrequest.is(sref.origin) then
-      if sref.origin.importpath then
-	 origin_desc = "package " .. sref.origin.importpath
-      elseif sref.origin.filename then
-	 assert(type(sref.origin.filename)=="string")
-	 origin_desc = sref.origin.filename
-      end
-   elseif sref.origin ~= nil then
-      assert(false, "sref.origin is neither nil nor a loadrequest: " .. tostring(sref.origin))
-   end
+   local origin_desc = violation.loadrequest_tostring(sref.origin)
    assert(type(sref.source)=="string")
    local source_line, line_pos, line_no = util.extract_source_line_from_pos(sref.source, s)
    local str = ""
@@ -67,31 +76,36 @@ function violation.sourceref_tostring(sref)
    str = str .. " In " .. tostring(origin_desc)
    str = str .. ":" .. tostring(line_no) .. ":" .. tostring(line_pos) .. ": "
    str = str .. source_line
-   return str
+   if sref.origin and sref.origin.parent then
+      return str .. "\n" .. violation.loadrequest_tostring(sref.origin.parent)
+   else
+      return str
+   end
 end
 
 function violation.tostring(err)
    local kind = recordtype.typename(err)
    if not kind then
-      return "UNKNOWN ERROR OBJECT: " .. tostring(err)
+      return "Unexpected error type: " .. tostring(err)
    end
    local str = kind .. "\n"
-   str = str .. " [" .. err.who .. "]: " .. err.message
+   str = str .. " [" .. err.who .. "]: " .. err.message .. "\n "
    if violation.syntax.is(err) then
       local sref = assert(err.sourceref)
       return str .. violation.sourceref_tostring(sref)
    else
+      -- Except for syntax errors, other violations have an associated ast
       local a = assert(err.ast, util.table_to_pretty_string(err, false))
-      local items = {"'" .. ast.tostring(a) .. "' did not have a sourceref!"}
-      for k,v in pairs(a) do
-	 table.insert(items, "a." .. k .. " = " .. tostring(v))
+      -- And that ast is sometimes a loadrequest, when the violation occurred directly from a
+      -- request to load code, e.g. from loadpkg.source().
+      if ast.loadrequest.is(a) then
+	 return str .. violation.loadrequest_tostring(a)
+      else
+	 local sref = assert(a.sourceref, tostring(a) .. " does not have a sourceref!")
+	 -- TODO: use something better than the default tostring for ast objects?
+--	 str = str .. " " .. ast.tostring(a)
+	 return str .. violation.sourceref_tostring(sref)
       end
-
-      local sref = assert(a.sourceref, table.concat(items, "\n"))
-		       
-      -- TODO: use something better than the default tostring for ast objects?
-      str = str .. " " .. ast.tostring(a)
-      return str .. violation.sourceref_tostring(sref)
    end -- if syntax error or other kind
 end
 

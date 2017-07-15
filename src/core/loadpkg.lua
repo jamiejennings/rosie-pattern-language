@@ -202,9 +202,7 @@ local function find_module_source(compiler, pkgtable, searchpath, request, messa
    if src then
       return src, fullpath
    end
-   local msg = ("cannot find module source for '" .. request.importpath ..
-		"' needed by module '" .. (importpath or "<top level>") .. 
-	        "': " .. msg)
+--   local msg = ("cannot find module source for '" .. request.importpath .. "': " .. msg)
    table.insert(messages, violation.compile.new{who='loader', message=msg, ast=request})
    return false
 end
