@@ -121,26 +121,31 @@ local function compile_expression(e, input)
    return rplx.new(e, pat)   
 end
 
-local function load(e, input, fullpath)
+local function really_load(e, source, origin)
    local messages = {}
    local ok, pkgname, env = loadpkg.source(e.compiler,
 					   e.pkgtable,
 					   e.env,
 					   e.searchpath,
-					   input,
-					   fullpath,
+					   source,
+					   origin,
 					   messages)
    if ok then
+      assert(environment.is(env))
       if pkgname then
 	 -- We compiled a module, reified it as the package in 'env'
 	 bind(e.env, pkgname, env)
       else
 	 -- Did not load a module, so the env we passed in was extended with new bindings 
-	 assert(environment.is(env))
 	 e.env = env
       end
    end
    return ok, pkgname, messages
+end
+
+local function load(e, input, fullpath)
+   local origin = (fullpath and ast.loadrequest.new{filename=fullpath}) or nil
+   return really_load(e, input, origin)
 end
 
 local function import(e, packagename, as_name)
@@ -164,14 +169,15 @@ local function get_file_contents(e, filename, nosearch)
   end
 end
 
+-- FUTURE: re-work the return values?
 local function loadfile(e, filename, nosearch)
    if type(filename)~="string" then
       e.engine_error(e, "file name argument not a string: " .. tostring(filename))
    end
-   local actual_path, src, errmsg = get_file_contents(e, filename, nosearch)
-   -- TODO: re-work these return values:
-   if not src then return false, nil, {errmsg}, actual_path; end
-   local ok, pkgname, messages = load(e, src, actual_path)
+   local actual_path, source, errmsg = get_file_contents(e, filename, nosearch)
+   if not source then return false, nil, {errmsg}, actual_path; end
+   local origin = ast.loadrequest.new{filename=actual_path}
+   local ok, pkgname, messages = really_load(e, source, origin)
    return ok, pkgname, messages, actual_path
 end
 

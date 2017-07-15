@@ -50,7 +50,7 @@ violation.info = recordtype.new(
 function violation.sourceref_tostring(sref)
    local s, e = sref.s or 1, sref.e or #sref.source
    local origin_desc = "user input "
-   if ast.importrequest.is(sref.origin) then
+   if ast.loadrequest.is(sref.origin) then
       if sref.origin.importpath then
 	 origin_desc = "package " .. sref.origin.importpath
       elseif sref.origin.filename then
@@ -58,7 +58,7 @@ function violation.sourceref_tostring(sref)
 	 origin_desc = sref.origin.filename
       end
    elseif sref.origin ~= nil then
-      assert(false, "sref.origin is neither nil nor an importrequest: " .. tostring(sref.origin))
+      assert(false, "sref.origin is neither nil nor a loadrequest: " .. tostring(sref.origin))
    end
    assert(type(sref.source)=="string")
    local source_line, line_pos, line_no = util.extract_source_line_from_pos(sref.source, s)
@@ -81,7 +81,7 @@ function violation.tostring(err)
       local sref = assert(err.sourceref)
       return str .. violation.sourceref_tostring(sref)
    else
-      local a = assert(err.ast)
+      local a = assert(err.ast, util.table_to_pretty_string(err, false))
       local items = {"'" .. ast.tostring(a) .. "' did not have a sourceref!"}
       for k,v in pairs(a) do
 	 table.insert(items, "a." .. k .. " = " .. tostring(v))

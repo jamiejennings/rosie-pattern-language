@@ -43,8 +43,8 @@ end
 local function make_parser_from(parse_something, expected_pt_node)
    return function(src, origin, messages)
 	     assert(type(src)=="string", "src is " .. tostring(src))
-	     if not origin then origin = ast.importrequest.new{}; end
-	     assert(ast.importrequest.is(origin), "origin is: " .. tostring(origin))
+	     if not origin then origin = ast.loadrequest.new{}; end
+	     assert(ast.loadrequest.is(origin), "origin is: " .. tostring(origin))
 	     assert(type(messages)=="table", "missing messages arg?")
 	     local pt, syntax_errors, leftover = parse_something(src)
 	     if #syntax_errors > 0 then
@@ -440,7 +440,7 @@ end
 function c2.compile_block(a, pkgenv, request, messages)
    assert(ast.block.is(a))
    assert(environment.is(pkgenv))
-   assert(ast.importrequest.is(request))
+   assert(request==nil or ast.loadrequest.is(request))
    assert(type(messages)=="table")
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    -- TODO: Ensure each lhs appears only once in a.stmts.
@@ -469,7 +469,7 @@ function c2.compile_block(a, pkgenv, request, messages)
 	 end
 	 if (not b.is_alias) then
 	    local fullname = ref.localname
-	    if request.importpath and (request.prefix~=".") then
+	    if request and request.importpath and (request.prefix~=".") then
 	       assert(request.packagename==nil or type(request.packagename)=="string")
 	       assert(request.prefix==nil or type(request.prefix=="string"))
 	       fullname = (request.prefix or request.packagename) .. "." .. fullname

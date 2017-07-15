@@ -20,7 +20,7 @@ ast.sourceref = recordtype.new("sourceref",
 				   {s = NIL;        -- start position (1-based)
 				    e = NIL;	    -- end+1 position (1-based)
 				    origin = NIL;   -- describes where the source code came from
-				                    -- (nil for user input, else an importrequest
+				                    -- (nil for user input, else a loadrequest
 				    source = NIL;}) -- the source itself
 
 ast.block = recordtype.new("block",
@@ -30,10 +30,15 @@ ast.block = recordtype.new("block",
 			    pat = NIL;
 			    sourceref = NIL;})
 
--- An importrequest explains WHY we are compiling something.  When importpath is present, then we
--- are compiling some source code in order to 'import <importpath>'.  And when we are compiling
--- user input, importpath will be nil.
-ast.importrequest = recordtype.new("importrequest",
+-- A loadrequest explains WHY we are compiling something, as follows:
+-- 
+-- (0) If there is no loadrequest object, then the source came from user input.
+-- (1) When importpath is present, then we are compiling in order to 'import <importpath>'.
+--     If prefix is present, we are trying to 'import <importpath> as <prefix>'.
+--     If filename is present, the code we are compiling was found in '<filename>'.
+--     If packagename is present, the code we are compiling declared 'package <packagename>'.
+-- (2) When importpath is nil, the code we are compiling comes from '<filename>'.
+ast.loadrequest = recordtype.new("loadrequest",
 				   {importpath = NIL;  -- X, when the requestor said "import X as Y"
 				    prefix = NIL;      -- Y
 				    packagename = NIL; -- filled in from the module source at load time
@@ -552,7 +557,7 @@ end
 
 local function convert(pt, origin, source)
    assert(type(pt)=="table")
-   assert(origin==nil or ast.importrequest.is(origin))
+   assert(origin==nil or ast.loadrequest.is(origin))
    assert(type(source)=="string")
    local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
    if pt.type=="rpl_expression" then
@@ -678,7 +683,7 @@ end
 
 local function convert_core(pt, origin, source)
    assert(type(pt)=="table")
-   assert(origin==nil or ast.importrequest.is(origin))
+   assert(origin==nil or ast.loadrequest.is(origin))
    assert(type(source)=="string")
    local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
    if pt.type=="rpl_expression" then
