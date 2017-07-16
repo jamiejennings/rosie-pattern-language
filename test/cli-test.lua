@@ -230,5 +230,17 @@ check(results_table[2]:find("parser"))
 check(results_table[3]:find("while trying to import mod4"))
 check(results_table[4]:find("in test/nested-test2.rpl:5:3:", 1, true))
 
+cmd = rosie_cmd .. " -f test/mod1.rpl grep foonet.any /etc/resolv.conf"
+print(); print(cmd)
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command failed")
+check(code ~= 0, "return code should not be zero")
+_,_,results_table = util.split_path(results[1], "\n")
+check(results_table[1]:find("error"))
+check(results_table[2]:find("compiler"))
+check(results_table[2]:find("unbound identifier"))
+check(results_table[2]:find("foonet.any"))
+check(results_table[3]:find("in user input :1:10"))
+
 
 return test.finish()
