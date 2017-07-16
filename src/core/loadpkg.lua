@@ -202,13 +202,13 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
    return true, a.pdecl.name, env
 end
 
-local function find_module_source(compiler, pkgtable, searchpath, request, messages)
-   local fullpath, src, msg = common.get_file(request.importpath, searchpath)
+local function find_module_source(compiler, pkgtable, searchpath, source_record, messages)
+   local fullpath, src, msg = common.get_file(source_record.origin.importpath, searchpath)
    if src then
       return src, fullpath
    end
 --   local msg = ("cannot find module source for '" .. request.importpath .. "': " .. msg)
-   table.insert(messages, violation.compile.new{who='loader', message=msg, ast=request})
+   table.insert(messages, violation.compile.new{who='loader', message=msg, ast=source_record}) -- ast? Hmmm... 
    return false
 end
 
@@ -252,7 +252,7 @@ local function import_one(compiler, pkgtable, searchpath, source_record, message
    -- FUTURE: Next, look for a compiled version of the file to load
    -- ...
    -- Finally, look for a source file to compile and load
-   local src, fullpath = find_module_source(compiler, pkgtable, searchpath, origin, messages)
+   local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, messages)
    if not src then return false; end 		    -- message already in 'messages'
    common.note("load: loading ", origin.importpath, " from ", fullpath)
    source_record.text = src
@@ -290,10 +290,11 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
    local idecls = a.ideclist and a.ideclist.idecls or {}
    if #idecls==0 then common.note("load: no imports to load"); end
    for _, decl in ipairs(idecls) do
+      assert(decl.sourceref)
       local sref = common.source.new{text=source_record.text,
 				     origin=common.loadrequest.new{importpath=decl.importpath,
 								   prefix=decl.prefix},
-				     parent=source_record}
+				     parent=decl.sourceref} -- source_record?
       local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, messages)
       if not ok then
 	 common.note("FAILED to import from path " .. tostring(decl.importpath))

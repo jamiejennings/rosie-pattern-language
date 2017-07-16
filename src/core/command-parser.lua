@@ -52,6 +52,10 @@ function p.create(rosie)
       output_choices_string = output_choices_string .. ", " .. output_choices[i]
    end
 
+   parser:option("--libpath", "Directories to search for rpl modules")
+   :args(1)
+   :target("libpath")				    -- args.libpath
+
    parser:option("-o --output", "Output style, one of: " .. output_choices_string)
    :convert(function(a)
 	       -- validation of argument, will fail if not in choices array

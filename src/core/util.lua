@@ -334,6 +334,11 @@ function util.extract_source_line_from_pos(source, pos)
    return string.sub(source, start, eol), pos-start+1, count
 end
       
+function util.trim(str)
+   -- remove whitespace from beginning and end of str
+   return str:match("%s*(.-)%s*$")
+end
+
 function util.split_path(path, separator)
    -- separator is typically common.dirsep
    if #separator~=1 then

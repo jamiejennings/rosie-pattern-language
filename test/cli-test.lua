@@ -127,7 +127,6 @@ run("import num", "~ num.any ~", true, results_number_grep)
 
 ok, msg = pcall(run, "import word", "foo = word.any", nil, nil)
 check(ok)
-print("***"); table.print(msg, false)
 check(table.concat(msg, "\n"):find("Syntax error"))
 
 ok, msg = pcall(run, "import word", "/foo/", nil, nil)
@@ -142,7 +141,7 @@ print("\nChecking that the command line expression can contain [[...]] per Issue
 cmd = rosie_cmd .. " list --rpl 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+'"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
-check(results, "Expression on command line can contain [[.,.]]") -- command succeeded
+check(#results>0, "Expression on command line can contain [[.,.]]") -- command succeeded
 check(code==0, "Return code is zero")
 check(results[#results]:find("names\n"))
 
@@ -154,14 +153,14 @@ print("\nSniff test of the lightweight test facility (MORE TESTS LIKE THIS ARE N
 cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-pass.rpl"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
-check(results)
+check(#results>0)
 check(code==0, "Return code is zero")
 check(results[#results]:find("tests passed"))
 -- Failing tests
 cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-fail.rpl"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
-check(results)
+check(#results>0)
 check(type(results[1])=="string")
 check(code~=0, "Return code not zero")
 -- The last two output lines explain the test failures in our sample input file
@@ -183,7 +182,7 @@ test.heading("Info command")
 cmd = rosie_cmd .. " info"
 print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
-check(results, "info command succeeded")
+check(#results>0, "info command succeeded")
 check(code==0, "Return code is zero")
 -- check for a few of the items displayed by the info command
 check(results[1]:find("ROSIE_HOME"))      
@@ -199,7 +198,7 @@ test.heading("Help command")
 cmd = rosie_cmd .. " help"
 print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
-check(results, "command failed")
+check(#results>0, "command failed")
 check(code==0, "Return code is zero")
 check(results[1]:find("Usage:"))
 check(results[1]:find("Options:"))
@@ -208,10 +207,17 @@ check(results[1]:find("Commands:"))
 ---------------------------------------------------------------------------------------------------
 test.heading("Error reporting")
 
-cmd = rosie_cmd .. "-f test/nested-test.rpl grep foo test/resolv.conf"
+cmd = rosie_cmd .. " -f test/nested-test.rpl grep foo test/resolv.conf"
 print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
-check(results, "command failed")
+check(#results>0, "command failed")
+check(code ~= 0, "return code should not be zero")
+
+
+cmd = rosie_cmd .. " --libpath " .. ROSIE_HOME .. "/test -f test/nested-test2.rpl grep foo test/resolv.conf"
+print(); print(cmd)
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command failed")
 check(code ~= 0, "return code should not be zero")
 
 

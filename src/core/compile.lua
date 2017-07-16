@@ -343,9 +343,9 @@ end
 
 local function ref(a, env, messages)
    local pat = lookup(env, a.localname, a.packagename)
-   if (not pat) then throw("unbound identifier", a); end
+   local name = (a.packagename and (a.packagename .. ".") or "") .. a.localname
+   if (not pat) then throw("unbound identifier: " .. name, a); end
    if not(pattern.is(pat)) then
-      local name = (a.packagename and (a.packagename .. ".") or "") .. a.localname
       throw("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
    end
    a.pat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, uncap=pat.uncap}

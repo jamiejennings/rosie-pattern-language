@@ -54,14 +54,15 @@ cli_common = assert(rosie.import("command-common"), "failed to open command-comm
 
 parser = argparser.create(rosie)
 
-function create_cl_engine()
+function create_cl_engine(args)
    CL_ENGINE = rosie.engine.new("command line engine")
    if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
-   CL_ENGINE.searchpath = rosie.info().ROSIE_PATH
+   if args.libpath then
+      CL_ENGINE.searchpath = args.libpath
+   else
+      CL_ENGINE.searchpath = rosie.info().ROSIE_PATH
+   end
 end
-
-ok, msg = pcall(create_cl_engine)
-if not ok then print("Error in cli when creating cli engine: " .. msg); end
 
 local function print_rosie_info()
    local function printf(fmt, ...)
@@ -87,6 +88,9 @@ end
 
 local function run(args)
    if args.verbose then ROSIE_VERBOSE = true; end
+
+   ok, msg = pcall(create_cl_engine, args)
+   if not ok then print("Error in cli when creating cli engine: " .. msg); end
 
    local en = CL_ENGINE
    
