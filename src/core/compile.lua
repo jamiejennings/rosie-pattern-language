@@ -43,8 +43,7 @@ end
 local function make_parser_from(parse_something, expected_pt_node)
    return function(src, origin, messages)
 	     assert(type(src)=="string", "src is " .. tostring(src))
-	     if not origin then origin = ast.loadrequest.new{}; end
-	     assert(ast.loadrequest.is(origin), "origin is: " .. tostring(origin))
+	     assert(origin==nil or ast.loadrequest.is(origin), "origin is: " .. tostring(origin))
 	     assert(type(messages)=="table", "missing messages arg?")
 	     local pt, syntax_errors, leftover = parse_something(src)
 	     if #syntax_errors > 0 then
@@ -395,7 +394,7 @@ local function compile_expression(exp, env, messages)
       end
       assert(false, full_message)
    elseif not value then
-      assert(recordtype.parent(err))
+      assert(parent(err))
       table.insert(messages, err)		    -- enqueue violation object
       return false
    end

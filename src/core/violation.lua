@@ -49,21 +49,17 @@ violation.info = recordtype.new(
 
 function violation.loadrequest_tostring(origin)
    if not origin then return "in user input "; end
+   assert(ast.loadrequest.is(origin), "origin is neither nil nor a loadrequest: " .. tostring(origin))
    local origin_desc
-   if ast.loadrequest.is(origin) then
-      if origin.importpath then
-	 origin_desc = "while trying to import " .. origin.importpath
-      elseif origin.filename then
-	 assert(type(origin.filename)=="string")
-	 origin_desc = "while trying to load " .. origin.filename
-      end
+   if origin.importpath then
+      origin_desc = "while trying to import " .. origin.importpath
+   elseif origin.filename then
+      assert(type(origin.filename)=="string")
+      origin_desc = "while trying to load " .. origin.filename
    else
-      assert(origin==nil, "origin is neither nil nor a loadrequest: " .. tostring(origin))
+      assert(false, "origin has neither importpath nor filename set")
    end
-   if origin then
-      origin_desc = origin_desc .. "\n " .. violation.loadrequest_tostring(origin.parent)
-   end
-   return origin_desc
+   return origin_desc .. "\n " .. violation.loadrequest_tostring(origin.parent)
 end
 
 function violation.sourceref_tostring(sref)
@@ -72,8 +68,8 @@ function violation.sourceref_tostring(sref)
    assert(type(sref.source)=="string")
    local source_line, line_pos, line_no = util.extract_source_line_from_pos(sref.source, s)
    local str = ""
-   str = str .. "\n"
-   str = str .. " In " .. tostring(origin_desc)
+--   str = str .. "\n"
+   str = str .. tostring(origin_desc)
    str = str .. ":" .. tostring(line_no) .. ":" .. tostring(line_pos) .. ": "
    str = str .. source_line
    if sref.origin and sref.origin.parent then
