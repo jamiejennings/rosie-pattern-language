@@ -172,7 +172,7 @@ function repl.repl(en)
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
 		     local errs = {}
-		     local a = en.compiler.parse_expression(exp_string, nil, errs)
+		     local a = en.compiler.parse_expression(common.source.new{text=exp_string}, errs)
 		     if not a then
 			print("*** These will be printed in full later:")
 			table.print(errs, false)	    -- TODO: print actual messages

@@ -105,7 +105,7 @@ function p.setup_engine(en, args)
 	 expression = "findall:" .. expression
       end
       local errs = {}
-      local AST = en.compiler.parse_expression(expression, nil, errs)
+      local AST = en.compiler.parse_expression(common.source.new{text=expression}, errs)
       if not AST then
 	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 os.exit(-4)

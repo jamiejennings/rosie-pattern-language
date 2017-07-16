@@ -16,34 +16,12 @@ local map = list.map; apply = list.apply; append = list.append; foreach = list.f
 
 local ast = {}
 
-ast.sourceref = recordtype.new("sourceref",
-				   {s = NIL;        -- start position (1-based)
-				    e = NIL;	    -- end+1 position (1-based)
-				    origin = NIL;   -- describes where the source code came from
-				                    -- (nil for user input, else a loadrequest
-				    source = NIL;}) -- the source itself
-
 ast.block = recordtype.new("block",
 			   {stmts = {};
 			    pdecl = NIL;	    -- Filled in during expansion
 			    ideclist = NIL;	    -- Filled in during expansion
 			    pat = NIL;
 			    sourceref = NIL;})
-
--- A loadrequest explains WHY we are compiling something, as follows:
--- 
--- (0) If there is no loadrequest object, then the source came from user input.
--- (1) When importpath is present, then we are compiling in order to 'import <importpath>'.
---     If prefix is present, we are trying to 'import <importpath> as <prefix>'.
---     If filename is present, the code we are compiling was found in '<filename>'.
---     If packagename is present, the code we are compiling declared 'package <packagename>'.
--- (2) When importpath is nil, the code we are compiling comes from '<filename>'.
-ast.loadrequest = recordtype.new("loadrequest",
-				   {importpath = NIL;  -- X, when the requestor said "import X as Y"
-				    prefix = NIL;      -- Y
-				    packagename = NIL; -- filled in from the module source at load time
-				    filename = NIL;    -- filled in at load time, nil for "user input"
-				    parent = NIL;})    -- could have a tree of these
 
 ast.binding = recordtype.new("binding",
 			  {ref = NIL;
@@ -307,7 +285,7 @@ end
 local function convert_cs_named(pt, sref)
    assert(sref)
    assert(pt.subs and pt.subs[1])
-   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
+   sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local name = pt.subs[1].text
    local compflag = (pt.subs[1].type=="complement")
    if compflag then
@@ -320,7 +298,7 @@ local function convert_cs_named(pt, sref)
 end
 
 function convert_char_exp(pt, sref)
-   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
+   sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local exps, compflag
    if pt.type=="charset_exp" then
       assert(pt.subs and pt.subs[1])
@@ -370,7 +348,7 @@ end
 local function convert_quantified_exp(pt, exp_converter, sref)
    local exp, q = pt.subs[1], pt.subs[2]
    local qname = q.type
-   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
+   sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
    local min, max
    if qname=="repetition" then
@@ -398,7 +376,7 @@ end
 
 local function convert_identifier(pt, sref)
    assert(pt.subs and pt.subs[1])
-   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
+   sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local localname, packagename
    if pt.subs[1].type=="localname" then
       localname = pt.subs[1].text
@@ -428,7 +406,7 @@ function ast.ambient_raw_exp(ex)
 end
 
 function convert_exp(pt, sref)
-   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
+   local sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local function convert1(pt)
       return convert_exp(pt, sref)
    end
@@ -507,7 +485,7 @@ local function expand_import_decl(decl_parse_node)
 end
 
 local function convert_stmt(pt, sref)
-   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
+   sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    if pt.type=="assignment_" then
       assert(pt.subs and pt.subs[1] and pt.subs[2])
       return ast.binding.new{ref = convert_exp(pt.subs[1], sref),
@@ -555,20 +533,22 @@ local function convert_stmt(pt, sref)
    end
 end
 
-local function convert(pt, origin, source)
+local function convert(pt, source_record)
    assert(type(pt)=="table")
-   assert(origin==nil or ast.loadrequest.is(origin))
+   assert(common.source.is(source_record))
+   local source = source_record.text
+   local origin = source_record.origin
    assert(type(source)=="string")
-   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
+   assert(origin==nil or common.loadrequest.is(origin))
    if pt.type=="rpl_expression" then
       assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
-      return convert_exp(pt.subs[1], sref)
+      return convert_exp(pt.subs[1], source_record)
    elseif pt.type=="rpl_statements" or pt.type=="rpl_core" then
       return ast.block.new{stmts = map(function(sub)
-					  return convert_stmt(sub, sref)
+					  return convert_stmt(sub, source_record)
 				       end,
 				       pt.subs or {}),
-			   sourceref = sref}
+			   sourceref = sourceref}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
@@ -581,7 +561,7 @@ ast.from_parse_tree = convert
 ---------------------------------------------------------------------------------------------------
 
 function convert_core_exp(pt, sref)
-   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
+   local sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local function convert1(pt)
       return convert_core_exp(pt, sref)
    end
@@ -615,32 +595,13 @@ function convert_core_exp(pt, sref)
       return ast.cs_named.new{name = text, complement = compflag, sourceref=sref}      
    elseif pt.type=="quantified_exp" then
       return convert_quantified_exp(pt, convert_core_exp, sref)
---   elseif pt.type=="arg" then
---      return convert_core_exp(pt.subs[1], sref)
-   -- elseif pt.type=="application" then
-   --    local id = pt.subs[1]
-   --    assert(id.type=="identifier")
-   --    local arglist = pt.subs[2]
-   --    local operands = map(convert1, arglist.subs)
-   --    if (arglist.type=="arglist") then
-   -- 	 operands = map(ast.ambient_cook_exp, operands)
-   --    elseif (arglist.type=="rawarglist") then
-   -- 	 operands = map(ast.ambient_raw_exp, operands)
-   --    else
-   -- 	 assert(arglist.type=="arg")
-   -- 	 assert(#arglist.subs==1)
-   --    end
-   --    local id_ast = ast.ref.new{localname=id.text, s=id.s, e=id.e}
-   --    return ast.application.new{ref=id_ast,
-   -- 			         arglist=operands,
-   -- 			         s=s, e=e}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
 end
 
 local function convert_core_stmt(pt, sref)
-   sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=sref.origin, source=sref.source}
+   sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    if pt.type=="assignment_" then
       assert(pt.subs and pt.subs[1] and pt.subs[2])
       return ast.binding.new{ref = convert_core_exp(pt.subs[1], sref),
@@ -681,20 +642,22 @@ local function convert_core_stmt(pt, sref)
    end
 end
 
-local function convert_core(pt, origin, source)
+local function convert_core(pt, source_record)
    assert(type(pt)=="table")
-   assert(origin==nil or ast.loadrequest.is(origin))
+   assert(common.source.is(source_record))
+   local source = source_record.text
+   local origin = source_record.origin
    assert(type(source)=="string")
-   local sref = ast.sourceref.new{s=pt.s, e=pt.e, origin=origin, source=source}
+   assert(origin==nil or common.loadrequest.is(origin))
    if pt.type=="rpl_expression" then
       assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
-      return convert_core_exp(pt.subs[1], sref)
+      return convert_core_exp(pt.subs[1], source_record)
    elseif pt.type=="rpl_core" then
       return ast.block.new{stmts = map(function(sub)
-					  return convert_core_stmt(sub, sref)
+					  return convert_core_stmt(sub, source_record)
 				       end,
 				       pt.subs or {}),
-			   sourceref=sref}
+			   sourceref=source_record}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end

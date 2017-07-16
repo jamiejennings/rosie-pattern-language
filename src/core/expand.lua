@@ -32,9 +32,10 @@ local macro = common.macro
 
 local map = list.map; apply = list.apply; append = list.append;
 local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
-				 sourceref=ast.sourceref.new{s=1, e=1,
-							     origin="built-in",
-							     source=common.boundary_identifier}}
+				 sourceref=
+				    common.source.new{s=1, e=1,
+						      origin=common.loadrequest.new{importpath="<built-ins>"},
+						      text=common.boundary_identifier}}
 
 ---------------------------------------------------------------------------------------------------
 -- Transform AST to remove cooked and raw nodes

@@ -199,9 +199,13 @@ end
 -- Parser for the Rosie core language, i.e. rpl 0.0
 ----------------------------------------------------------------------------------------
 
-function parse.rpl(source, origin, errs)
-   assert(type(source)=="string", "Core parser: source argument is not a string: "..tostring(source))
+function parse.rpl(source_record, errs)
+   assert(common.source.is(source_record))
    assert(type(errs)=="table")
+   local source = source_record.text
+   local origin = source_record.origin
+   assert(origin==nil or common.loadrequest.is(origin))
+   assert(type(source)=="string", "Core parser: source argument is not a string: "..tostring(source))
    local ptlist, leftover = parse_without_error_check(source)
    assert(type(ptlist)=="table")
    assert(type(leftover)=="number")
@@ -216,8 +220,8 @@ function parse.rpl(source, origin, errs)
    end
 end
 
-function parse.expression(source, origin, errs)
-   local pt, leftover = parse.rpl(source, origin, errs)
+function parse.expression(source_record, errs)
+   local pt, leftover = parse.rpl(source_record, errs)
    -- syntax errors will be in errs table
    if not pt then return false, leftover; end
    assert(type(pt)=="table" and pt.type=="rpl_core")

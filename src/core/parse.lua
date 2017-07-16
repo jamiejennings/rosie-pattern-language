@@ -118,18 +118,11 @@ local function collect_syntax_error_nodes(pt, syntax_errors)
 end
 
 local function find_syntax_errors(pt, source)
-   local err_nodes
    if pt.type=="syntax_error" then
-      err_nodes = {pt}
+      return {pt}
    else
-      err_nodes = collect_syntax_error_nodes(pt, {})
+      return collect_syntax_error_nodes(pt, {})
    end
-   -- local err_messages = {}
-   -- for _,e in ipairs(err_nodes) do
-   --    table.insert(err_messages, explain_syntax_error(e, source))
-   -- end
-   -- return err_messages
-   return err_nodes
 end
 
 -- 'parse_block' returns: parse tree, syntax error list, leftover chars

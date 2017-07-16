@@ -41,10 +41,13 @@ end
 ---------------------------------------------------------------------------------------------------
 
 local function make_parser_from(parse_something, expected_pt_node)
-   return function(src, origin, messages)
-	     assert(type(src)=="string", "src is " .. tostring(src))
-	     assert(origin==nil or ast.loadrequest.is(origin), "origin is: " .. tostring(origin))
+   return function(source_record, messages)
+	     assert(common.source.is(source_record))
 	     assert(type(messages)=="table", "missing messages arg?")
+	     local src = source_record.text
+	     local origin = source_record.origin
+	     assert(type(src)=="string", "src is " .. tostring(src))
+	     assert(origin==nil or common.loadrequest.is(origin), "origin is: " .. tostring(origin))
 	     local pt, syntax_errors, leftover = parse_something(src)
 	     if #syntax_errors > 0 then
 		-- TODO: Use the parse tree, pt, to help pinpoint the error
@@ -52,17 +55,13 @@ local function make_parser_from(parse_something, expected_pt_node)
 		-- future solution anyway.
 		for _, err in ipairs(syntax_errors) do
 		   if err.type=="syntax_error" then
-		      assert(false, "** NEED TO DECIDE WHAT TO DO IN THIS CASE **")
+		      assert(false, "** TODO: DECIDE WHAT TO DO IN THIS CASE **")
 		   else
 		      for _, sub in ipairs(err.subs or {}) do
 			 if sub.type=="syntax_error" then
-			    local sref = ast.sourceref.new{s=sub.s,
-							   e=sub.e,
-							   origin=origin,
-							   source=src}
 			    local v = violation.syntax.new{who='parser',
 							   message="syntax error",
-							   sourceref=sref}
+							   sourceref=source_record}
 			    table.insert(messages, v)
 			 end
 		      end -- for each sub
@@ -83,12 +82,13 @@ local function make_parser_from(parse_something, expected_pt_node)
 		local msg = "extraneous input"
 		local sref = ast.sourceref.new{s=#src-leftover+1,
 					       origin=origin,
-					       source=src}
+					       source=src,
+					       parent=source_record}
 		local err = violation.syntax.new{who='parser', message=msg, sourceref=sref}
 		table.insert(messages, err)
 		return false
 	     end
-	     return ast.from_parse_tree(pt, origin, src)
+	     return ast.from_parse_tree(pt, source_record)
 	  end
 end
 
@@ -439,7 +439,7 @@ end
 function c2.compile_block(a, pkgenv, request, messages)
    assert(ast.block.is(a))
    assert(environment.is(pkgenv))
-   assert(request==nil or ast.loadrequest.is(request))
+   assert(request==nil or common.loadrequest.is(request))
    assert(type(messages)=="table")
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    -- TODO: Ensure each lhs appears only once in a.stmts.
@@ -485,7 +485,7 @@ function c2.compile_block(a, pkgenv, request, messages)
 	    common.note("request.packagename=", request.packagename)
 	    common.note("request.importpath=", request.importpath)
 	    common.note("request.filename=", request.filename)
-	    common.note("request.parent=", tostring(request.parent))
+--	    common.note("request.parent=", tostring(request.parent))
 	 end
 
 	 bind(pkgenv, ref.localname, pat)

@@ -63,10 +63,10 @@ function violation.loadrequest_tostring(origin)
 end
 
 function violation.sourceref_tostring(sref)
-   local s, e = sref.s or 1, sref.e or #sref.source
+   local s, e = sref.s or 1, sref.e or #sref.text
    local origin_desc = violation.loadrequest_tostring(sref.origin)
-   assert(type(sref.source)=="string")
-   local source_line, line_pos, line_no = util.extract_source_line_from_pos(sref.source, s)
+   assert(type(sref.text)=="string")
+   local source_line, line_pos, line_no = util.extract_source_line_from_pos(sref.text, s)
    local str = ""
 --   str = str .. "\n"
    str = str .. tostring(origin_desc)

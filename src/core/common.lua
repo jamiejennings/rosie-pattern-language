@@ -231,6 +231,28 @@ function common.walk_parse_tree(a, functions, ...)
    return f(a, ...)
 end
 
+common.source = recordtype.new("source",
+			       {s = NIL;        -- start position (1-based), defaults to 1
+				e = NIL;	-- end+1 position (1-based), defaults to #text
+				text = NIL;	-- the source itself
+				origin = NIL;   -- describes where the source code came from
+				                -- (nil for user input, else a loadrequest)
+				parent = NIL;})
+
+-- A loadrequest explains WHY we are compiling something, as follows:
+-- 
+-- (0) If there is no loadrequest object, then the source came from user input.
+-- (1) When importpath is present, then we are compiling in order to 'import <importpath>'.
+--     If prefix is present, we are trying to 'import <importpath> as <prefix>'.
+--     If filename is present, the code we are compiling was found in '<filename>'.
+--     If packagename is present, the code we are compiling declared 'package <packagename>'.
+-- (2) When importpath is nil, the code we are compiling comes from '<filename>'.
+common.loadrequest = recordtype.new("loadrequest",
+				    {importpath = NIL;  -- X, when the requestor said "import X as Y"
+				     prefix = NIL;      -- Y
+				     packagename = NIL; -- filled in from the module source at load time
+				     filename = NIL;})  -- filled in at load time
+
 ----------------------------------------------------------------------------------------
 -- Matches
 ----------------------------------------------------------------------------------------

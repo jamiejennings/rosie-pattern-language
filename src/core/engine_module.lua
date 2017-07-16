@@ -106,7 +106,7 @@ local function compile_expression(e, input)
    local messages = {}
    local ast = input
    if type(input)=="string" then
-      ast = e.compiler.parse_expression(input, nil, messages)
+      ast = e.compiler.parse_expression(common.source.new{text=input}, messages)
       -- Syntax errors will be in messages table
       if not ast then return false, messages; end
    end
@@ -144,7 +144,7 @@ local function really_load(e, source, origin)
 end
 
 local function load(e, input, fullpath)
-   local origin = (fullpath and ast.loadrequest.new{filename=fullpath}) or nil
+   local origin = (fullpath and common.loadrequest.new{filename=fullpath}) or nil
    return really_load(e, input, origin)
 end
 
@@ -176,7 +176,7 @@ local function loadfile(e, filename, nosearch)
    end
    local actual_path, source, errmsg = get_file_contents(e, filename, nosearch)
    if not source then return false, nil, {errmsg}, actual_path; end
-   local origin = ast.loadrequest.new{filename=actual_path}
+   local origin = common.loadrequest.new{filename=actual_path}
    local ok, pkgname, messages = really_load(e, source, origin)
    return ok, pkgname, messages, actual_path
 end
@@ -268,7 +268,7 @@ end
 
 local function parse_identifier(en, str)
    local msgs = {}
-   local m = en.compiler.parse_expression(str, nil, msgs)
+   local m = en.compiler.parse_expression(common.source.new{text=str}, msgs)
    if ast.ref.is(m) then
       -- using the new parser
       return m.localname, m.packagename

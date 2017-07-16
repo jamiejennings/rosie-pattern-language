@@ -154,14 +154,14 @@ end
 function create_core_engine()
    assert(parse_core.rpl, "error while initializing: parse module not loaded?")
 
-   local core_parser = function(src, origin, messages)
-			  local pt = parse_core.rpl(src, origin, messages)
-			  return ast.from_core_parse_tree(pt, origin, src)
+   local core_parser = function(source_record, messages)
+			  local pt = parse_core.rpl(source_record, messages)
+			  return ast.from_core_parse_tree(pt, source_record)
 		       end
 
-   local core_expression_parser = function(src, origin, messages)
-				     local pt = parse_core.expression(src, origin, messages)
-				     return ast.from_core_parse_tree(pt, origin, src)
+   local core_expression_parser = function(source_record, messages)
+				     local pt = parse_core.expression(source_record, messages)
+				     return ast.from_core_parse_tree(pt, source_record)
 				  end
 
    local COREcompiler2 = { version = common.rpl_version.new(0, 0),
