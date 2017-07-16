@@ -79,12 +79,8 @@ local function make_parser_from(parse_something, expected_pt_node)
 		assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
 	     end
 	     if leftover~=0 then
-		local msg = "extraneous input"
-		local sref = ast.sourceref.new{s=#src-leftover+1,
-					       origin=origin,
-					       source=src,
-					       parent=source_record}
-		local err = violation.syntax.new{who='parser', message=msg, sourceref=sref}
+		local msg = "extraneous input: " .. src:sub(#src-leftover+1)
+		local err = violation.syntax.new{who='parser', message=msg, sourceref=source_record}
 		table.insert(messages, err)
 		return false
 	     end
