@@ -148,7 +148,6 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    --     (a) origin.importpath == nil, and
    --     (b) origin.filename ~= nil
    if origin then assert(origin.importpath==nil); assert(origin.filename); end
-
    local source_record = common.source.new{text=source, origin=origin}
    local a = parse_block(compiler, source_record, messages)
    if not a then return false; end		    -- errors will be in messages table
@@ -294,7 +293,9 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
       local sref = common.source.new{text=source_record.text,
 				     origin=common.loadrequest.new{importpath=decl.importpath,
 								   prefix=decl.prefix},
-				     parent=decl.sourceref} -- source_record?
+				     parent=decl.sourceref}
+				     -- parent=common.source.new{text=decl.sourceref.text,
+				     -- 			      parent=source_record}}
       local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, messages)
       if not ok then
 	 common.note("FAILED to import from path " .. tostring(decl.importpath))

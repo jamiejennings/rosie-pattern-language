@@ -55,13 +55,20 @@ local function make_parser_from(parse_something, expected_pt_node)
 		-- future solution anyway.
 		for _, err in ipairs(syntax_errors) do
 		   if err.type=="syntax_error" then
+		      -- In this case, the pt root is the syntax error.
 		      assert(false, "** TODO: DECIDE WHAT TO DO IN THIS CASE **")
 		   else
 		      for _, sub in ipairs(err.subs or {}) do
 			 if sub.type=="syntax_error" then
+			    local origin = origin and common.loadrequest.new{filename=origin.filename}
+			    local sref = common.source.new{text=pt.text,
+							   s=sub.s,
+							   e=sub.e,
+							   origin=origin,
+							   parent=source_record}
 			    local v = violation.syntax.new{who='parser',
 							   message="syntax error",
-							   sourceref=source_record}
+							   sourceref=sref}
 			    table.insert(messages, v)
 			 end
 		      end -- for each sub
