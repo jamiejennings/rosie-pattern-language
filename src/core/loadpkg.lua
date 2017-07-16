@@ -254,9 +254,14 @@ local function import_one(compiler, pkgtable, searchpath, source_record, message
    local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, messages)
    if not src then return false; end 		    -- message already in 'messages'
    common.note("load: loading ", origin.importpath, " from ", fullpath)
-   source_record.text = src
-   origin.filename = fullpath
-   return import_from_source(compiler, pkgtable, searchpath, source_record, messages)
+   local sref = common.source.new{text=src,
+				  origin=common.loadrequest.new{importpath=origin.importpath,
+								prefix=origin.prefix,
+								filename=fullpath},
+				  parent=source_record}
+--   source_record.text = src
+--   origin.filename = fullpath
+   return import_from_source(compiler, pkgtable, searchpath, sref, messages)
 end
 
 function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, env, messages)
@@ -295,6 +300,7 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
 								   prefix=decl.prefix},
 				     parent=decl.sourceref}
 				     -- parent=common.source.new{text=decl.sourceref.text,
+				     -- 			      origin=source_record.origin,
 				     -- 			      parent=source_record}}
       local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, messages)
       if not ok then

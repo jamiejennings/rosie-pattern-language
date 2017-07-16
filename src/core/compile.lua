@@ -245,6 +245,7 @@ function cs_exp(a, env, messages)
 end
 
 local function wrap_pattern(pat, name)
+   assert(name:sub(1,1)~=".")
    if pat.uncap then
       -- If pat.uncap exists, then pat.peg is already wrapped in a capture.  In order to wrap pat
       -- with a capture called 'name', we start with pat.uncap.  Here's a case where this happens:
@@ -346,7 +347,7 @@ end
 
 local function ref(a, env, messages)
    local pat = lookup(env, a.localname, a.packagename)
-   local name = (a.packagename and (a.packagename .. ".") or "") .. a.localname
+   local name = (a.packagename and (a.packagename~=".") and (a.packagename .. ".") or "") .. a.localname
    if (not pat) then throw("unbound identifier: " .. name, a); end
    if not(pattern.is(pat)) then
       throw("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
@@ -357,7 +358,7 @@ local function ref(a, env, messages)
       -- rewrap using the fully qualified name, because the code we are now compiling uses the
       -- fully qualified name to refer to this value.
       assert(pat.uncap)
-      a.pat.peg = common.match_node_wrap(pat.uncap, a.packagename .. "." .. a.localname)
+      a.pat.peg = common.match_node_wrap(pat.uncap, name) --a.packagename .. "." .. a.localname)
    end
    return a.pat
 end

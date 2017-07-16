@@ -548,7 +548,7 @@ local function convert(pt, source_record)
 					  return convert_stmt(sub, source_record)
 				       end,
 				       pt.subs or {}),
-			   sourceref = sourceref}
+			   sourceref = source_record}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
@@ -711,8 +711,7 @@ function ast.tostring(a)
    if ast.block.is(a) then
       return ( (a.pdecl and (ast.tostring(a.pdecl) .. "\n") or "") ..
 	       (a.ideclist and ast.tostring(a.ideclist) or "") ..
-	       "RAW: " ..
-	       table.concat(map(ast.tostring, a.stmts), "\nRAW: ") )
+	       table.concat(map(ast.tostring, a.stmts), "\n") )
    elseif ast.pdecl.is(a) then
       return "package " .. a.name .. "\n"
    elseif ast.idecl.is(a) then
@@ -728,7 +727,7 @@ function ast.tostring(a)
 	       table.concat(map(ast.tostring, a.rules), "\t\n") ..
 	       "end" )
    elseif ast.ref.is(a) then
-      return ( (a.packagename and (a.packagename .. ".") or "") .. a.localname )
+      return ( (a.packagename and (a.packagename ~= ".") and (a.packagename .. ".") or "") .. a.localname )
    elseif ast.sequence.is(a) then
       return "{" .. table.concat(map(ast.tostring, a.exps), " ") .. "}"
    elseif ast.choice.is(a) then

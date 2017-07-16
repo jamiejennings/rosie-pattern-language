@@ -204,7 +204,7 @@ function parse.rpl(source_record, errs)
    assert(type(errs)=="table")
    local source = source_record.text
    local origin = source_record.origin
-   assert(origin==nil or common.loadrequest.is(origin))
+   assert(origin==nil or common.loadrequest.is(origin), "origin is: " .. tostring(origin))
    assert(type(source)=="string", "Core parser: source argument is not a string: "..tostring(source))
    local ptlist, leftover = parse_without_error_check(source)
    assert(type(ptlist)=="table")

@@ -265,7 +265,7 @@ local function apply_macro(ex, env, messages)
    assert(ast.ref.is(ex.ref))
    assert(ex.sourceref)
    local m = environment.lookup(env, ex.ref.localname, ex.ref.packagename)
-   local refname = ex.ref.packagename and (ex.ref.packagename .. ".") or ""
+   local refname = ex.ref.packagename and (ex.ref.packagename~=".") and (ex.ref.packagename .. ".") or ""
    refname = refname .. ex.ref.localname
    if not m then
       violation.throw(violation.compile.new{who='macro expander',
@@ -385,7 +385,7 @@ local function statements(stmts, env, messages)
       assert(ast.binding.is(stmt))
       local ref = stmt.ref
       common.note("expanding " ..
-		  (ref.packagename and (ref.packagename .. ".") or "") ..
+		  (ref.packagename and (ref.packagename~=".") and (ref.packagename .. ".") or "") ..
 	       ref.localname ..
 	       " = " ..
 	       tostring(stmt.exp))
