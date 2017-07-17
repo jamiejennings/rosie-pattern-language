@@ -26,21 +26,21 @@ violation.compile = recordtype.new(
    "Compile error",
    { who = NIL,
      message = NIL, 
-     ast = NIL,
+     ast = NIL,					    -- really: an ast or a sourceref (a common.source record)
   })
 
 violation.warning = recordtype.new(
    "Warning",
    { who = NIL,
      message = NIL, 
-     ast = NIL,
+     ast = NIL,					    -- really: an ast or a sourceref (a common.source record)
   })
 
 violation.info = recordtype.new(
    "Info",
    { who = NIL,
      message = NIL, 
-     ast = NIL,
+     ast = NIL,					    -- really: an ast or a sourceref (a common.source record)
   })
 
 ---------------------------------------------------------------------------------------------------
@@ -48,17 +48,16 @@ violation.info = recordtype.new(
 ---------------------------------------------------------------------------------------------------
 
 function origin_tostring(sref)
---   local s, e = sref.s or 1, sref.e or #sref.text
    local s, e = sref.s, sref.e
    local origin = sref.origin
    assert(origin==nil or common.loadrequest.is(origin),
 	  "origin is neither nil nor a loadrequest: " .. tostring(origin))
    local filename = "user input "
    if origin then
-      if origin.importpath then
-	 return "while trying to import " .. origin.importpath
-      else
+      if origin.filename then
 	 filename = origin.filename
+      else
+	 return "while trying to import " .. assert(origin.importpath)
       end
    end
    assert(filename, "origin has neither importpath nor filename set")
@@ -72,12 +71,16 @@ function origin_tostring(sref)
 end
 
 function violation.sourceref_tostring(sref)
-   local str = origin_tostring(sref)
-   if sref.parent then
-      return str .. "\n\t" .. violation.sourceref_tostring(sref.parent)
-   else
-      return str
-   end
+   local str
+   while sref do
+      if (not sref.origin) or sref.origin.filename then
+	 local new = origin_tostring(sref)
+	 if not str then str = new
+	 else str = str .. "\n\t" .. new; end
+      end
+      sref = sref.parent
+   end -- while
+   return str or ""
 end
 
 function violation.tostring(err)

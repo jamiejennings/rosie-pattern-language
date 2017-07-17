@@ -1,5 +1,6 @@
 -- Assumes that 'mod4' has an error and cannot load.
 -- And that mod4.rpl can be found on the search path.
 -- Note that the location of the offending source code in the error message should
--- be nested-test2.rpl:5:3 due to the 2 spaces of indentation below, on line 5.
+-- be nested-test2.rpl:6:3 due to the 2 spaces of indentation below.
+--package nested_test2
   import mod4
