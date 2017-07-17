@@ -153,8 +153,25 @@ local function atmost(e, a, input, start, expected, nextpos)
    return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
 end
 
+local function cs_simple(e, a, input, start, expected, nextpos, complement)
+   local simple = a.pat
+   assert(pattern.is(simple))
+   local m, nextstart = simple.peg:rmatch(input, start)
+   if (m and (not complement)) or ((not m) and complement) then
+      assert(expected, "simple character set match differs from expected")
+      if m then
+	 assert(nextstart==nextpos, "simple character set nextpos differs from expected")
+      end
+   else
+      assert(not expected, "simple character set non-match differs from expected")
+   end
+   return {match=expected, nextpos=nextpos, ast=a, input=input, start=start}
+end
+
 local function cs_exp(e, a, input, start, expected, nextpos)
-   if ast.cs_exp.is(a.cexp) then
+   if ast.simple_charset_p(a) then
+      return cs_simple(e, a, input, start, expected, nextpos, false)
+   elseif ast.cs_exp.is(a.cexp) then
       local result = cs_exp(e, a.exp, input, nextstart)
       if (result.match and (not a.complement)) or ((not result.match) and a.complement) then
 	 assert(expected, "cs_exp match differs from expected")
@@ -188,19 +205,6 @@ local function cs_exp(e, a, input, start, expected, nextpos)
       throw("character set intersection is not implemented", a)
    elseif ast.cs_difference.is(a.cexp) then
       throw("character set difference is not implemented", a)
-   elseif ast.simple_charset_p(a.cexp) then
-      local simple = a.cexp.pat
-      assert(pattern.is(simple))
-      local m, nextstart = simple.peg:rmatch(input, start)
-      if (m and (not a.complement)) or ((not m) and a.complement) then
-	 assert(expected, "simple character set match differs from expected")
-	 if m then
-	    assert(nextstart==nextpos, "simple character set nextpos differs from expected")
-	 end
-      else
-	 assert(not expected, "simple character set non-match differs from expected")
-      end
-      return {match=expected, nextpos=nextpos, ast=a, input=input, start=start}
    else
       assert(false, "trace: unknown cexp inside cs_exp", a)
    end
@@ -247,6 +251,8 @@ function expression(e, a, input, start)
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
    elseif ast.cs_exp.is(a) then
       return cs_exp(e, a, input, start, m, nextpos)
+   elseif ast.simple_charset_p(a) then
+      return cs_simple(e, a, input, start, m, nextpos, false)
    elseif ast.sequence.is(a) then
       return sequence(e, a, input, start, m, nextpos)
    elseif ast.choice.is(a) then
@@ -262,7 +268,8 @@ function expression(e, a, input, start)
    elseif ast.grammar.is(a) then
       return grammar(e, a, input, start, m, nextpos)
    else
-      print("\nArguments to trace:", ast.tostring(a), a, start, m, nextpos)
+      print("\nError:")
+      print("Arguments to trace:", ast.tostring(a), a, start, m, nextpos)
       error("Internal error: invalid ast type in trace.expression: " .. tostring(a))
    end
 end

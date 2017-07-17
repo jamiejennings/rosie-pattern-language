@@ -167,9 +167,6 @@ function repl.repl(en)
 		  if (not m) or (not msubs) or (not msubs[1]) then
 		     io.write("Expected a match expression followed by a quoted input string\n")
 		  elseif (not msubs[2]) or (not msubs[2].type=="literal") then
-
-		     print("***", util.table_to_pretty_string(m, false))
-
 		     io.write("Missing quoted string (after the match expression)\n")
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
@@ -189,7 +186,7 @@ function repl.repl(en)
 			-- needs them there.  This is inelegant.  <sigh>
 			local str
 			if ast.literal.is(a) then
-			   str = '"' .. a.value .. '"'
+			   str = '"' .. common.escape_string(a.value) .. '"'
 			else
 			   str = exp_string
 			end
@@ -201,17 +198,12 @@ function repl.repl(en)
 			local rplx, msgs = en:compile(str)
 			if not rplx then
 			   table.print(msgs, false); print() -- TODO: print actual messages
-			   --io.write(rplx, "\n") -- syntax and compile errors
 			else
 			   local m, left = rplx:match(input_text)
-			   --       if debug and (not m) then
-			   -- 	 local match, leftover, trace = en:trace(str, input_text)
-			   -- 	 io.write(trace, "\n")
-			   --       end
-			   --    else
-			   --       local match, leftover, trace = en:trace(str, input_text)
-			   --       io.write(trace, "\n")
-			   --    end
+			   if (debug and (not m)) or cname=="trace" then
+			      local ok, tr = en:trace(str, input_text)
+			      print(trace.tostring(tr))
+			   end
 			   print_match(m, left, (cname=="trace"))
 			end -- did exp compile
 		     end -- could not parse out the expression and input string from the repl input

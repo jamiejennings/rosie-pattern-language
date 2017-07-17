@@ -190,6 +190,7 @@ end
 --   Close over the peg itself to avoid looking it up in pat.
 local function _match(rplx_exp, input, start, total_time_accum, lpegvm_time_accum)
    local result, nextpos
+   local encode = rplx_exp.engine.encode_function
    result, nextpos, total_time_accum, lpegvm_time_accum =
       rmatch(rplx_exp.pattern.peg,
 	     input,
@@ -198,7 +199,6 @@ local function _match(rplx_exp, input, start, total_time_accum, lpegvm_time_accu
 	     total_time_accum,
 	     lpegvm_time_accum)
    if result then
-      local encode = rplx_exp.engine.encode_function
       return (type(encode)=="function") and encode(result) or result,
              #input - nextpos + 1, 
              total_time_accum, 
