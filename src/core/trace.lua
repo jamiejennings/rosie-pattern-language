@@ -10,9 +10,9 @@
 local ast = require "ast"
 local common = require "common"
 local pattern = common.pattern
-local engine_module = require "engine_module"
-local engine = engine_module.engine
-local rplx = engine_module.rplx
+--local engine_module = require "engine_module"
+--local engine = engine_module.engine
+--local rplx = engine_module.rplx
 
 local trace = {}
 
@@ -269,11 +269,10 @@ end
 
 function trace.expression(r, input, start)
    start = start or 1
-   assert(rplx.is(r))
-   assert(engine.is(r.engine))
-   assert(pattern.is(r.pattern))
    assert(type(input)=="string")
    assert(type(start)=="number")
+   assert(r.pattern and r.engine)		    -- quack
+   assert((pcall(rawget, r.pattern, "ast")))	    -- quack: "is ast a valid key in r.pattern?"
    local a = r.pattern.ast
    assert(a, "no ast stored for pattern")
    return expression(r.engine, a, input, start)

@@ -95,7 +95,7 @@ local violation = require "violation"
 local writer = require "writer"
 local loadpkg = require "loadpkg"
 local co = require "color"
---local trace = require "trace"
+local trace = require "trace"
 
 local engine, rplx				    -- forward reference
 local engine_error				    -- forward reference
@@ -188,17 +188,17 @@ end
 --   Create a closure over the encode function to avoid looking it up in e.
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
-local function _match(e, pat, input, start, total_time_accum, lpegvm_time_accum)
+local function _match(rplx_exp, input, start, total_time_accum, lpegvm_time_accum)
    local result, nextpos
-   local encode = e.encode_function
    result, nextpos, total_time_accum, lpegvm_time_accum =
-      rmatch(pat.peg,
+      rmatch(rplx_exp.pattern.peg,
 	     input,
 	     start,
 	     type(encode)=="number" and encode,
 	     total_time_accum,
 	     lpegvm_time_accum)
    if result then
+      local encode = rplx_exp.engine.encode_function
       return (type(encode)=="function") and encode(result) or result,
              #input - nextpos + 1, 
              total_time_accum, 
@@ -208,9 +208,15 @@ local function _match(e, pat, input, start, total_time_accum, lpegvm_time_accum)
    return false, #input, total_time_accum, lpegvm_time_accum;
 end
 
+local function _trace(r, input, start)
+   local tr = trace.expression(r, input, start)
+   -- to string here, or more?
+   return tr
+end
+   
 -- FUTURE: Maybe cache expressions?
 -- returns matches, leftover, total match time, total spent in lpeg vm
-local function match(e, expression, input, start, total_time_accum, lpegvm_time_accum)
+local function engine_match_trace(e, match_trace_fn, expression, input, start, total_time_accum, lpegvm_time_accum)
    if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
    if start and type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
    if type(expression)=="string" then
@@ -221,15 +227,19 @@ local function match(e, expression, input, start, total_time_accum, lpegvm_time_
       if not expression then return false, msgs; end
    end
    if rplx.is(expression) then
-      return true, _match(e, expression.pattern, input, start, total_time_accum, lpegvm_time_accum)
+      return true, match_trace_fn(expression, input, start, total_time_accum, lpegvm_time_accum)
    else
       engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
    end
 end
 
--- returns trace object
-local engine_tracematch = false;
+local function engine_match(e, expression, input, start, t0, t1)
+   return engine_match_trace(e, _match, expression, input, start, t0, t1)
+end
 
+local function engine_trace(e, expression, input, start)
+   return engine_match_trace(e, _trace, expression, input, start)
+end
 
 ----------------------------------------------------------------------------------------
 
@@ -270,7 +280,6 @@ local function parse_identifier(en, str)
    local msgs = {}
    local m = en.compiler.parse_expression(common.source.new{text=str}, msgs)
    if ast.ref.is(m) then
-      -- using the new parser
       return m.localname, m.packagename
    end
    if m and m.subs and m.subs[1] then
@@ -357,21 +366,21 @@ engine_module.post_create_hook = function(e, ...) end
 local process_input_file = {}
 
 local function open3(e, infilename, outfilename, errfilename)
-   if type(infilename)~="string" then e:_error("bad input file name"); end
-   if type(outfilename)~="string" then e:_error("bad output file name"); end
-   if type(errfilename)~="string" then e:_error("bad error file name"); end   
+   if type(infilename)~="string" then e:error("bad input file name"); end
+   if type(outfilename)~="string" then e:error("bad output file name"); end
+   if type(errfilename)~="string" then e:error("bad error file name"); end   
    local infile, outfile, errfile, msg
    if #infilename==0 then infile = io.stdin;
-   else infile, msg = io.open(infilename, "r"); if not infile then e:_error(msg); end; end
+   else infile, msg = io.open(infilename, "r"); if not infile then e:error(msg); end; end
    if #outfilename==0 then outfile = io.stdout
-   else outfile, msg = io.open(outfilename, "w"); if not outfile then e:_error(msg); end; end
+   else outfile, msg = io.open(outfilename, "w"); if not outfile then e:error(msg); end; end
    if #errfilename==0 then errfile = io.stderr;
-   else errfile, msg = io.open(errfilename, "w"); if not errfile then e:_error(msg); end; end
+   else errfile, msg = io.open(errfilename, "w"); if not errfile then e:error(msg); end; end
    return infile, outfile, errfile
 end
 
 local function engine_process_file(e, expression, trace_flag, infilename, outfilename, errfilename, wholefileflag)
-   if type(trace_flag)~="boolean" then e:_error("bad trace flag"); end
+   if type(trace_flag)~="boolean" then e:error("bad trace flag"); end
    --
    -- Set up pattern to match.  Always compile it first, even if we are going to call tracematch later.
    -- This is so that we report errors uniformly at this point in the process, instead of after
@@ -382,7 +391,7 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
       r = expression
    else
       r, msgs = e:compile(expression)
-      if not r then e:_error(table.concat(msgs, '\n')); end
+      if not r then e:error(table.concat(msgs, '\n')); end
    end
    assert(engine_module.rplx.is(r))
 
@@ -411,7 +420,7 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
    end
    local o_write, e_write = outfile.write, errfile.write
    local ok, l = pcall(nextline);
-   if not ok then e:_error(l); end
+   if not ok then e:error(l); end
    local _, m, leftover, trace
    while l do
       if trace_flag then _, _, trace = e:trace(expression, l); end
@@ -473,7 +482,7 @@ engine =
 		     compiler=false,
 		     env=false,
 		     pkgtable=false,
-		     _error=engine_error,
+		     error=engine_error,
 
 		     id=recordtype.id,
 
@@ -489,8 +498,8 @@ engine =
 		     searchpath="",
 
 		     compile=compile_expression,
-		     match=match,
-		     trace=false,
+		     match=engine_match,
+		     trace=engine_trace,
 
 		     matchfile = process_input_file.match,
 		     tracefile = process_input_file.trace,

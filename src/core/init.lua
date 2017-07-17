@@ -127,10 +127,10 @@ local function load_all()
    expand = import("expand")
    compile = import("compile")
    loadpkg = import("loadpkg")
-   engine_module = import("engine_module")
    trace = import("trace")
-   ui = import("ui")
+   engine_module = import("engine_module")
    engine = engine_module.engine
+   ui = import("ui")
 
 end
 

@@ -49,8 +49,8 @@ local repl_patterns = [==[
 
 local repl_engine = rosie.engine.new("repl")
 repl.repl_engine = repl_engine
-repl_engine:load("import rosie/rpl_1_1 as rpl, word")
-repl_engine:load(repl_patterns)
+assert(repl_engine:load("import rosie/rpl_1_1 as rpl, word"))
+assert(repl_engine:load(repl_patterns))
 input_rplx = repl_engine:compile("input")
 assert(input_rplx, "internal error: input_rplx failed to compile")
 pargs_rplx = repl_engine:compile("parsed_args")
@@ -165,8 +165,11 @@ function repl.repl(en)
 		  assert(m.type=="parsed_args")
 		  local msubs = m and m.subs
 		  if (not m) or (not msubs) or (not msubs[1]) then
-		     io.write("Expected a match expression follwed by a quoted input string\n")
+		     io.write("Expected a match expression followed by a quoted input string\n")
 		  elseif (not msubs[2]) or (not msubs[2].type=="literal") then
+
+		     print("***", util.table_to_pretty_string(m, false))
+
 		     io.write("Missing quoted string (after the match expression)\n")
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
