@@ -42,8 +42,10 @@ local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 ---------------------------------------------------------------------------------------------------
 
 local remove_cooked_exp;
+local remove_cooked_raw_from_stmts;
 
 local function remove_raw_exp(ex)
+   assert(ex)
    assert(ex.sourceref)
    if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
    elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
@@ -61,8 +63,11 @@ local function remove_raw_exp(ex)
       local new = remove_raw_exp(ex.exp)
       return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, sourceref=ex.sourceref}
    elseif ast.grammar.is(ex) then
-      -- An explicit 'raw' syntax cannot appear around a grammar in the current syntax
-      assert(false, "rpl 1.1 grammar should not allow raw syntax surrounding a grammar")
+      -- An explicit 'raw' syntax cannot appear around a grammar in the current syntax.  But a
+      -- macro can create a grammar expression.  Note that ambience has no effect on a grammar
+      -- expression.
+      remove_cooked_raw_from_stmts(ex.rules) 
+      return ex
    elseif ast.application.is(ex) then
       assert(false, "pattern function encountered (feature not supported)")
    else
@@ -71,8 +76,6 @@ local function remove_raw_exp(ex)
       return ex
    end
 end
-
-local remove_cooked_raw_from_stmts;
 
 -- The compiler does not know about cooked/raw expressions.  Both ast.cooked and ast.raw
 -- structures are removed here, where we implement the notion that the ambience is, by default,

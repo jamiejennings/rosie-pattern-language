@@ -34,25 +34,65 @@ local b_id = common.boundary_identifier
 local dot_id = common.any_char_identifier
 local eol_id = common.end_of_input_identifier
 
+-- local function macro_find(...)
+--    -- return {{! <exp>} .}* <exp> when given <exp> as an arg
+--    local args = {...}
+--    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
+--    local exp = args[1]
+--    assert(exp.sourceref)
+--    local any_char = ast.ref.new{localname=".", sourceref=exp.sourceref}
+--    local not_exp = ast.predicate.new{type="!", exp=exp, sourceref=exp.sourceref}
+--    local advance =
+--       ast.repetition.new{min=0,
+-- 			 exp=ast.raw.new{exp=ast.sequence.new{exps={not_exp, any_char},
+-- 							   sourceref=exp.sourceref},
+-- 				         sourceref=exp.sourceref},
+-- 		         sourceref=exp.sourceref}
+--    local wrapper = ast.cooked.is(exp) and ast.cooked or ast.raw
+--    return wrapper.new{exp=ast.sequence.new{exps={advance, exp}, sourceref=exp.sourceref},
+-- 		      sourceref=exp.sourceref}
+-- end
+
 local function macro_find(...)
-   -- return {{! <exp>} .}* <exp> when given <exp> as an arg
+    -- grammar
+    --    find = {search capture}
+    --    alias search = {!<exp> .}*
+    --    capture = <exp>
+    -- end
    local args = {...}
    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
    local exp = args[1]
-   assert(exp.sourceref)
-   local any_char = ast.ref.new{localname=".", sourceref=exp.sourceref}
-   local not_exp = ast.predicate.new{type="!", exp=exp, sourceref=exp.sourceref}
-   local advance =
+   local sref = exp.sourceref
+   assert(sref)
+   local any_char = ast.ref.new{localname=".", sourceref=sref}
+   local not_exp = ast.predicate.new{type="!", exp=exp, sourceref=sref}
+   local search_exp =
       ast.repetition.new{min=0,
 			 exp=ast.raw.new{exp=ast.sequence.new{exps={not_exp, any_char},
-							   sourceref=exp.sourceref},
-				         sourceref=exp.sourceref},
-		         sourceref=exp.sourceref}
+							      sourceref=sref},
+				         sourceref=sref},
+		         sourceref=sref}
+   local search_ref = ast.ref.new{localname="search", sourceref=sref}
+   local search_rule =
+      ast.binding.new{ref=search_ref,
+		      exp=search_exp,
+		      is_alias=true,
+		      sourceref=sref}
+   local capture_ref = ast.ref.new{localname="capture", sourceref=sref}
+   local capture_rule =
+      ast.binding.new{ref=capture_ref,
+		      exp=exp,
+		      sourceref=sref}
    local wrapper = ast.cooked.is(exp) and ast.cooked or ast.raw
-   return wrapper.new{exp=ast.sequence.new{exps={advance, exp}, sourceref=exp.sourceref},
-		      sourceref=exp.sourceref}
+   local start_rule =
+      ast.binding.new{ref=ast.ref.new{localname="find", sourceref=sref},
+		      exp=wrapper.new{exp=ast.sequence.new{exps={search_ref, capture_ref}, sourceref=sref},
+				      sourceref=sref},
+		      sourceref=sref}
+   local rules = {start_rule, capture_rule, search_rule}
+   return ast.grammar.new{rules=rules, sourceref=sref}
 end
-				    
+
 -- grep
 local function macro_findall(...)
    local args = {...}
