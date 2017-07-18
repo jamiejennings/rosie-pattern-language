@@ -355,8 +355,7 @@ end
 -- environment in which (at least) references to macros can be resolved.
 local function expression(ex, env, messages)
    assert(ex.sourceref)
-   local cooked = ast.ambient_cook_exp(ex)
-   if cooked then ex = cooked; end
+   local ex = ast.ambient_cook_exp(ex)
 
    -- Now we have an ast that a user should recognize as a parsing of their rpl source code, with
    -- the minor addition of a 'cooked' wrapper which makes the ambient/default mode of 'cooked'
@@ -402,13 +401,12 @@ function e2.expression(ex, env, messages)
    return result				    -- if false, errors in messages tables
 end
 
-function e2.stmts(stmts, env, messages)
-   local ok, result, err = violation.catch(statements, stmts, env, messages)
-   if not ok then error("Internal error in e2: " .. tostring(result)); end
-   if not result then table.insert(messages, err); end
-   return result				    -- if false, errors in messages tables
-end   
-
+-- function e2.stmts(stmts, env, messages)
+--    local ok, result, err = violation.catch(statements, stmts, env, messages)
+--    if not ok then error("Internal error in e2: " .. tostring(result)); end
+--    if not result then table.insert(messages, err); end
+--    return result				    -- if false, errors in messages tables
+-- end   
 
 function e2.block(a, env, messages)
    assert(ast.block.is(a))

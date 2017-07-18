@@ -191,6 +191,8 @@ function create_rpl_1_1_engine(e)
    local rplx_expression = e:compile("rpl_expression")
    assert(rplx_expression)
 
+FOO = rplx_expression
+
    compiler2 = { version = version,
 		 parse_block = compile.make_parse_block(rplx_preparse, rplx_statements, version),
 	         expand_block = compile.expand_block,

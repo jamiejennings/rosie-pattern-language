@@ -239,7 +239,7 @@ check(results_table[1]:find("error"))
 check(results_table[2]:find("compiler"))
 check(results_table[2]:find("unbound identifier"))
 check(results_table[2]:find("foonet.any"))
-check(results_table[3]:find("in user input :1:10"))
+check(results_table[3]:find("in user input :1:1"))
 
 cmd = rosie_cmd .. " -f test/mod4.rpl grep foonet.any /etc/resolv.conf "
 print(); print(cmd)

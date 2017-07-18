@@ -97,19 +97,27 @@ function p.setup_engine(en, args)
       else
 	 expression = args.pattern
       end
-      if (args.command=="grep") then
-	 -- FUTURE: rosie.expr.apply_macro("findall", exp)
-	 if expression:sub(1,1) ~= "{" then
-	    expression = "(" .. expression .. ")"
-	 end
-	 expression = "findall:" .. expression
-      end
       local errs = {}
+
+      -- AST MUST BE ABLE TO REPRESENT AN ARGLIST THAT IS NEITHER COOKED NOR RAW (because it is a
+      -- single arg).
+      
+
       local AST = en.compiler.parse_expression(common.source.new{text=expression}, errs)
       if not AST then
 	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 os.exit(-4)
       end
+
+      if (args.command=="grep") then
+	 -- FUTURE: rosie.expr.apply_macro("findall", exp)
+	 local findall = ast.ref.new{localname="findall"}
+	 AST = ast.application.new{ref=findall,
+				   arglist={ast.ambient_cook_exp(AST)},
+				   sourceref=AST.sourceref}
+      end
+
+      io.stderr:write("***", ast.tostring(AST), "\n")
       local ok = import_dependencies(en, AST, errs)
       if not ok then
 	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")

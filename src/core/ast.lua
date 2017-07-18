@@ -131,11 +131,11 @@ ast.application = recordtype.new("application",
 				  pat = NIL;
 				  sourceref = NIL;})
 
-ast.arglist = recordtype.new("arglist",
-			     {cooked = true;
-			      args = {};
-			      pat = NIL;
-			      sourceref = NIL;})
+-- ast.arglist = recordtype.new("arglist",
+-- 			     {cooked = true;
+-- 			      args = {};
+-- 			      pat = NIL;
+-- 			      sourceref = NIL;})
 
 ast.int = recordtype.new("int",
 			 {value = NIL;
@@ -396,12 +396,17 @@ function ast.ambient_cook_exp(ex)
    assert(ex.sourceref)
    if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
       return ast.cooked.new{exp=ex, sourceref=ex.sourceref}
+   else
+      return ex
    end
 end
+
 function ast.ambient_raw_exp(ex)
    assert(ex.sourceref)
    if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
       return ast.raw.new{exp=ex, sourceref=ex.sourceref}
+   else
+      return ex
    end
 end
 
@@ -436,8 +441,6 @@ function convert_exp(pt, sref)
       return convert_char_exp(pt, sref)
    elseif pt.type=="quantified_exp" then
       return convert_quantified_exp(pt, convert_exp, sref)
---   elseif pt.type=="arg" then
---      return convert_exp(pt.subs[1], sref)
    elseif pt.type=="application" then
       local id = pt.subs[1]
       assert(id.type=="identifier")
@@ -707,7 +710,7 @@ end
 -- Reconstruct valid RPL from an ast
 ---------------------------------------------------------------------------------------------------
 
-function ast.tostring(a)
+function ast.tostring(a, already_grouped)
    if ast.block.is(a) then
       return ( (a.pdecl and (ast.tostring(a.pdecl) .. "\n") or "") ..
 	       (a.ideclist and ast.tostring(a.ideclist) or "") ..
@@ -729,11 +732,15 @@ function ast.tostring(a)
    elseif ast.ref.is(a) then
       return ( (a.packagename and (a.packagename ~= ".") and (a.packagename .. ".") or "") .. a.localname )
    elseif ast.sequence.is(a) then
-      return "{" .. table.concat(map(ast.tostring, a.exps), " ") .. "}"
+      local pre = already_grouped and "" or "{"
+      local post = already_grouped and "" or "}"
+      return pre .. table.concat(map(ast.tostring, a.exps), " ") .. post
    elseif ast.choice.is(a) then
+      local pre = already_grouped and "" or "{"
+      local post = already_grouped and "" or "}"
       local choices = map(ast.tostring, a.exps)
       assert(#choices > 0, "empty choice ast?")
-      return "{" .. table.concat(choices, " / ") .. "}"
+      return pre .. table.concat(choices, " / ") .. post
    elseif ast.predicate.is(a) then
       return a.type .. ast.tostring(a.exp)
    elseif ast.repetition.is(a) then
@@ -749,9 +756,9 @@ function ast.tostring(a)
       end
       return ast.tostring(a.exp) .. postfix
    elseif ast.cooked.is(a) then
-      return "(" .. ast.tostring(a.exp) .. ")"
+      return "(" .. ast.tostring(a.exp, true) .. ")"
    elseif ast.raw.is(a) then
-      return "{" .. ast.tostring(a.exp) .. "}"
+      return "{" .. ast.tostring(a.exp, true) .. "}"
    elseif ast.literal.is(a) then
       return '"' .. a.value .. '"'
    elseif ast.cs_exp.is(a) then
@@ -774,7 +781,9 @@ function ast.tostring(a)
    elseif ast.cs_difference.is(a) then
       return ast.tostring(a.first) .. "-" .. ast.tostring(a.second)
    elseif ast.application.is(a) then
-      return ast.tostring(a.ref) .. ":" .. tostring(map(ast.tostring, a.arglist))
+      return (ast.tostring(a.ref) .. ":(" ..
+	   tostring(table.concat(map(ast.tostring, a.arglist), ", "))
+	   .. ")")
    elseif ast.atleast.is(a) then
       local quantifier
       if a.min==0 then quantifier = "*"
