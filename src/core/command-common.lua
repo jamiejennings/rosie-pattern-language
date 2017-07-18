@@ -117,7 +117,7 @@ function p.setup_engine(en, args)
 				   sourceref=AST.sourceref}
       end
 
-      io.stderr:write("***", ast.tostring(AST), "\n")
+--      io.stderr:write("***", ast.tostring(AST), "\n")
       local ok = import_dependencies(en, AST, errs)
       if not ok then
 	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
