@@ -95,7 +95,15 @@ function violation.tostring(err)
       return str .. violation.sourceref_tostring(sref)
    else
       -- Except for syntax errors, other violations have an associated ast
-      local a = assert(err.ast, util.table_to_pretty_string(err, false))
+      local a = err.ast
+      if not a then
+	 local details = {}
+	 for k,v in pairs(err) do
+	    table.insert(details, tostring(k) .. ": " .. tostring(v))
+	 end
+	 assert(false, "violation record does not have an ast/sourceref field: " ..
+		table.concat(details, "\n"))
+      end
       -- And that ast is sometimes a loadrequest, when the violation occurred directly from a
       -- request to load code, e.g. from loadpkg.source().
       local sref

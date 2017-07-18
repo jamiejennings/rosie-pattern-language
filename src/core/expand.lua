@@ -334,8 +334,10 @@ function apply_macros(ex, env, messages)
       local new
       for _, rule in ipairs(ex.rules) do
 	 assert(ast.binding.is(rule))
-	 -- N.B. If in future we ever allow macro definitions within a grammar, then the 'env'
-	 -- passed to apply_macros below will have to be the grammar environment.
+	 -- N.B. If in future we ever allow macro DEFINITIONS within a grammar, then the 'env'
+	 -- passed to apply_macros below will have to be the grammar environment.  Currently,
+	 -- macro definitions are written in Lua and loaded separately from RPL code, so this is
+	 -- not an issue.
 	 new = ast.binding.new{ref=rule.ref,
 			       exp=apply_macros(rule.exp, env, messages),
 			       is_alias=rule.is_alias,
@@ -368,7 +370,11 @@ local function expression(ex, env, messages)
    -- validity and then further processed before compilation.
 
    ex = apply_macros(ex, env, messages)
-   -- TODO: check for valid AST here
+   -- TODO: Validate the AST that the macro returned!
+   -- - Ensure each AST node has the right kind of data in each slot.
+   -- - Enforce that a grammar expression cannot contain another grammar expression. 
+   -- - Enforce that each node has a sourceref (or insert one as needed?)
+   -- - Maybe produce all the sourcerefs programmatically for the produced AST?
    assert(ex.sourceref)
 
 
