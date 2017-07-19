@@ -132,7 +132,7 @@ local function run(args)
       print("Parses as: ", ast.tostring(a, true))
       a = ast.ambient_cook_exp(a)
       print("At top level: ", ast.tostring(a, true))
-      local aa, errs = expand.expression(a, CL_ENGINE.env, errs)
+      local aa = expand.expression(a, CL_ENGINE.env, errs)
       if not aa then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
 	 os.exit(-1)

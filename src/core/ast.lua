@@ -394,7 +394,8 @@ end
 -- already explicitly cooked or raw.  
 function ast.ambient_cook_exp(ex)
    assert(ex.sourceref)
-   if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
+--   if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
+   if ast.sequence.is(ex) then
       return ast.cooked.new{exp=ex, sourceref=ex.sourceref}
    else
       return ex
@@ -782,9 +783,16 @@ function ast.tostring(a, already_grouped)
    elseif ast.cs_difference.is(a) then
       return ast.tostring(a.first) .. "-" .. ast.tostring(a.second)
    elseif ast.application.is(a) then
-      return (ast.tostring(a.ref) .. ":(" ..
-	   tostring(table.concat(map(ast.tostring, a.arglist), ", "))
-	   .. ")")
+      local argstring
+      if ( #a.arglist==1 and
+	   (ast.ref.is(a.arglist[1]) or
+	    ast.cooked.is(a.arglist[1]) or
+	    ast.raw.is(a.arglist[1])) )	then
+	 argstring = ast.tostring(a.arglist[1])
+      else
+	 argstring = "(" .. table.concat(map(ast.tostring, a.arglist), ", ") .. ")"
+      end
+      return ast.tostring(a.ref) .. ":" .. argstring
    elseif ast.atleast.is(a) then
       local quantifier
       if a.min==0 then quantifier = "*"

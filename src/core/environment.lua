@@ -72,7 +72,7 @@ local function macro_find(...)
 							      sourceref=sref},
 				         sourceref=sref},
 		         sourceref=sref}
-   local search_ref = ast.ref.new{localname="search", sourceref=sref}
+   local search_ref = ast.ref.new{localname="<search>", sourceref=sref}
    local search_rule =
       ast.binding.new{ref=search_ref,
 		      exp=search_exp,
@@ -93,7 +93,7 @@ local function macro_find(...)
    end
    local wrapper = ast.cooked.is(exp) and ast.cooked or ast.raw
    local start_rule =
-      ast.binding.new{ref=ast.ref.new{localname="find", sourceref=sref},
+      ast.binding.new{ref=ast.ref.new{localname="<find>", sourceref=sref},
 		      exp=wrapper.new{exp=ast.sequence.new{exps={search_ref, capture_ref}, sourceref=sref},
 				      sourceref=sref},
 		      is_alias=true,
