@@ -79,11 +79,15 @@ local function macro_find(...)
 		      is_alias=true,
 		      sourceref=sref}
    local capture_rule, capture_ref
-   if ast.ref.is(exp) then
+   if ( ast.ref.is(exp) or
+        (ast.cooked.is(exp) and ast.ref.is(exp.exp)) or
+        (ast.raw.is(exp) and ast.ref.is(exp.exp)) ) then
       capture_ref = exp
    else
       capture_ref = ast.ref.new{localname="*", sourceref=sref}
       capture_rule = ast.binding.new{ref=capture_ref,
+				     -- We wrap exp in a sequence so that the sequence is named
+				     -- "*", and exp keeps its name.
 				     exp=ast.sequence.new{exps={exp}, sourceref=sref},
 				     sourceref=sref}
    end
