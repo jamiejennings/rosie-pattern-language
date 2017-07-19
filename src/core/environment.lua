@@ -79,7 +79,7 @@ local function macro_find(...)
 		      is_alias=true,
 		      sourceref=sref}
    local capture_ref = ast.ref.new{localname="*", sourceref=sref}
-   if ast.ref.is(exp) then
+--   if ast.ref.is(exp) then
       -- Each grammar rule is a binding with a ref and an exp.  RPL does not allow a binding to a
       -- ref that has a packagename (i.e. a qualified reference).  The RPL syntax prevents this,
       -- and the compiler will fail.  However, there is no reason that match returned when using
@@ -87,17 +87,18 @@ local function macro_find(...)
       -- construct the match data structure using that name.  We just have to put the entire name
       -- into the localname slot in the ref record.
 --      capture_ref.localname = (exp.packagename and (exp.packagename .. "." ) or "") .. exp.localname
-   else
-      -- Normally, the RPL binding 'x=y' will produce a capture named x.  If y was a capture, then
-      -- the y pattern is RENAMED as x.  Here, we have an anonymous expression which is not a
-      -- reference, and if that expression is {y} or (y), then we must remember that the
-      -- raw/cooked-ness will be removed during syntax expansion.  So the compiler will see merely
-      -- y when compiling 'x=y'.  This is unfortunate because, assuming y was a capture, y had a
-      -- useful and necessary name.  E.g. it could be net.ipv4 and exp could be {net.ipv4}.  We
-      -- don't want our net.ipv4 capture to be renamed to the anonymous "*".  It's easy to prevent
-      -- that by wrapping exp in a sequence.
-      exp = ast.sequence.new{exps={exp}, sourceref=sref}
-   end
+--   end
+
+   -- Normally, the RPL binding 'x=y' will produce a capture named x.  If y was a capture, then
+   -- the y pattern is RENAMED as x.  Here, we have an anonymous expression which is not a
+   -- reference, and if that expression is {y} or (y), then we must remember that the
+   -- raw/cooked-ness will be removed during syntax expansion.  So the compiler will see merely
+   -- y when compiling 'x=y'.  This is unfortunate because, assuming y was a capture, y had a
+   -- useful and necessary name.  E.g. it could be net.ipv4 and exp could be {net.ipv4}.  We
+   -- don't want our net.ipv4 capture to be renamed to the anonymous "*".  It's easy to prevent
+   -- that by wrapping exp in a sequence.
+   exp = ast.sequence.new{exps={exp}, sourceref=sref}
+
    local capture_rule =
       ast.binding.new{ref=capture_ref,
 		      exp=exp,
