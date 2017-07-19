@@ -112,6 +112,35 @@ local function run(args)
    
    if args.verbose then greeting(); end
 
+   -- TODO:
+   -- (1) expose plain parser (with/without ambient cooking) at engine/compiler level
+   -- (2) expose macro expander at engine/comiler level
+   -- (3) expose a print routine for violations
+   
+   if args.command == "expand" then
+      print("Expression: ", args.expression)
+      local common = assert(rosie.env.common)			    -- TODO: MOVE THIS!
+      local ast = assert(rosie.env.ast)				    -- TODO: MOVE THIS!
+      local expand = assert(rosie.env.expand)			    -- TODO: MOVE THIS!
+      local violation = assert(rosie.env.violation)		    -- TODO: MOVE THIS!
+      local errs = {}
+      local a = CL_ENGINE.compiler.parse_expression(common.source.new{text=args.expression}, errs)
+      if not a then
+	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
+	 os.exit(-1)
+      end
+      print("Parses as: ", ast.tostring(a, true))
+      a = ast.ambient_cook_exp(a)
+      print("At top level: ", ast.tostring(a, true))
+      local aa, errs = expand.expression(a, CL_ENGINE.env, errs)
+      if not aa then
+	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
+	 os.exit(-1)
+      end
+      print("Expands to: ", ast.tostring(aa, true))
+      os.exit()
+   end
+   
    if args.command == "test" then
       -- lightweight pattern test framework does a custom setup:
       -- for each file being tested

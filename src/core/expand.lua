@@ -403,7 +403,9 @@ local function statements(stmts, env, messages)
 end
 
 function e2.expression(ex, env, messages)
-   assert(ex.sourceref)
+   assert(recordtype.parent(ex) and ex.sourceref)
+   assert(environment.is(env))
+   assert(type(messages)=="table")
    local ok, result, err = violation.catch(expression, ex, env, messages)
    if not ok then error("Internal error in e2: " .. tostring(result)); end
    if not result then table.insert(messages, err); end

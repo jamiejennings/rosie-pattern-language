@@ -66,8 +66,15 @@ local function make_parser_from(parse_something, expected_pt_node)
 							   e=sub.e,
 							   origin=origin,
 							   parent=source_record}
+			    local message = "syntax error"
+			    if sub.subs and sub.subs[1] then
+			       if sub.subs[1].type=="stmnt_prefix" then
+				  message = "Expected expression but found assignment"
+				  -- ... to identifier sub.subs[1].subs[1]--> localname/packagename
+			       end
+			    end
 			    local v = violation.syntax.new{who='parser',
-							   message="syntax error",
+							   message=message,
 							   sourceref=sref}
 			    table.insert(messages, v)
 			 end

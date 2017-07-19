@@ -17,29 +17,6 @@ local p2 = {}
 -- Syntax error reporting (this is a very basic capability, which could be much better)
 ----------------------------------------------------------------------------------------
 
-local function explain_syntax_error(a, source)
-   local err = parse_core.syntax_error_check(a)
-   assert(err)
-   local name, pos, text, subs = common.decode_match(a)
---   local line, pos, lnum = util.extract_source_line_from_pos(source, pos)
---   local msg = string.format("Syntax error at line %d: %s\n", lnum, text) .. string.format("%s\n", line)
-
-   local msg = ""
-   msg = msg .. "While looking for " .. name .. "\n"
-
---   local ename, errpos, etext, esubs = common.decode_match(err)
---   msg = msg .. (string.rep(" ", errpos-1).."^".."\n")
-
-   -- if esubs then
-   --    -- We only examine the first sub for now, assuming there are no others.  
-   --    local etname, etpos, ettext, etsubs = common.decode_match(esubs[1])
-   --    if etname=="statement_prefix" then
-   -- 	 msg = msg .. "Found start of a new statement inside an expression.\n"
-   --    end
-   -- end -- if esubs
-   return msg
-end
-
 local function preparse(rplx_preparse, input)
    local major, minor
    local language_decl, leftover

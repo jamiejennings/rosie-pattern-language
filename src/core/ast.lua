@@ -726,11 +726,12 @@ function ast.tostring(a, already_grouped)
 	       (a.is_alias and "alias " or "") ..
 	       ast.tostring(a.ref) .. " = " .. ast.tostring(a.exp) )
    elseif ast.grammar.is(a) then
-      return ( "grammar\n\t" ..
-	       table.concat(map(ast.tostring, a.rules), "\t\n") ..
-	       "end" )
+      return ( "\ngrammar\n\t" ..
+	       table.concat(map(ast.tostring, a.rules), "\n\t") ..
+	       "\nend\n" )
    elseif ast.ref.is(a) then
-      return ( (a.packagename and (a.packagename ~= ".") and (a.packagename .. ".") or "") .. a.localname )
+      local lname = (a.localname ~= "*" and a.localname) or "<anonymous>"
+      return ( (a.packagename and (a.packagename ~= ".") and (a.packagename .. ".") or "") .. lname )
    elseif ast.sequence.is(a) then
       local pre = already_grouped and "" or "{"
       local post = already_grouped and "" or "}"
