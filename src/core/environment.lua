@@ -34,6 +34,7 @@ local b_id = common.boundary_identifier
 local dot_id = common.any_char_identifier
 local eol_id = common.end_of_input_identifier
 
+-- This version of 'find' matches all the text up to and including the target exp.
 -- local function macro_find(...)
 --    -- return {{! <exp>} .}* <exp> when given <exp> as an arg
 --    local args = {...}
@@ -55,9 +56,8 @@ local eol_id = common.end_of_input_identifier
 
 local function macro_find(...)
     -- grammar
-    --    alias find = {search capture}
+    --    alias find = {search <exp>}
     --    alias search = {!<exp> .}*
-    --    capture = <exp>
     -- end
    local args = {...}
    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
@@ -78,31 +78,15 @@ local function macro_find(...)
 		      exp=search_exp,
 		      is_alias=true,
 		      sourceref=sref}
-   local capture_ref = ast.ref.new{localname="*", sourceref=sref}
---   if ast.ref.is(exp) then
-      -- Each grammar rule is a binding with a ref and an exp.  RPL does not allow a binding to a
-      -- ref that has a packagename (i.e. a qualified reference).  The RPL syntax prevents this,
-      -- and the compiler will fail.  However, there is no reason that match returned when using
-      --'find' has be anonymous.  If we are 'finding' an expression that has a name, then we can
-      -- construct the match data structure using that name.  We just have to put the entire name
-      -- into the localname slot in the ref record.
---      capture_ref.localname = (exp.packagename and (exp.packagename .. "." ) or "") .. exp.localname
---   end
-
-   -- Normally, the RPL binding 'x=y' will produce a capture named x.  If y was a capture, then
-   -- the y pattern is RENAMED as x.  Here, we have an anonymous expression which is not a
-   -- reference, and if that expression is {y} or (y), then we must remember that the
-   -- raw/cooked-ness will be removed during syntax expansion.  So the compiler will see merely
-   -- y when compiling 'x=y'.  This is unfortunate because, assuming y was a capture, y had a
-   -- useful and necessary name.  E.g. it could be net.ipv4 and exp could be {net.ipv4}.  We
-   -- don't want our net.ipv4 capture to be renamed to the anonymous "*".  It's easy to prevent
-   -- that by wrapping exp in a sequence.
-   exp = ast.sequence.new{exps={exp}, sourceref=sref}
-
-   local capture_rule =
-      ast.binding.new{ref=capture_ref,
-		      exp=exp,
-		      sourceref=sref}
+   local capture_rule, capture_ref
+   if ast.ref.is(exp) then
+      capture_ref = exp
+   else
+      capture_ref = ast.ref.new{localname="*", sourceref=sref}
+      capture_rule = ast.binding.new{ref=capture_ref,
+				     exp=ast.sequence.new{exps={exp}, sourceref=sref},
+				     sourceref=sref}
+   end
    local wrapper = ast.cooked.is(exp) and ast.cooked or ast.raw
    local start_rule =
       ast.binding.new{ref=ast.ref.new{localname="find", sourceref=sref},
@@ -110,7 +94,8 @@ local function macro_find(...)
 				      sourceref=sref},
 		      is_alias=true,
 		      sourceref=sref}
-   local rules = {start_rule, capture_rule, search_rule}
+   -- By putting capture_rule last, it will be omitted if nil
+   local rules = {start_rule, search_rule, capture_rule}
    return ast.grammar.new{rules=rules, sourceref=sref}
 end
 
