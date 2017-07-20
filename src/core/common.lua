@@ -292,7 +292,7 @@ end
 function common.rmatch(peg, input, start, encode, total_time, lpegvm_time)
    local Cencoder = encode or 0			    -- default is compact byte encoding
    if encode==-1 then Cencoder = 0; end		    -- -1 ==> no output
-   local m, nextpos, t1, t2 = peg:rmatch(input, start, Cencoder, total_time, lpegvm_time)
+   local m, nextpos, abend, t1, t2 = peg:rmatch(input, start, Cencoder, total_time, lpegvm_time)
    if not m then return nil, nil, t1, t2; end
    if not encode then return insert_input_text(lpeg.decode(m), input), nextpos, t1, t2
    elseif encode==-1 then return nil, nextpos, t1, t2

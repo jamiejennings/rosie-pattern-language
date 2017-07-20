@@ -10,6 +10,7 @@
 local ast = require "ast"
 local common = require "common"
 local pattern = common.pattern
+local rmatch = common.rmatch
 --local engine_module = require "engine_module"
 --local engine = engine_module.engine
 --local rplx = engine_module.rplx
@@ -156,7 +157,7 @@ end
 local function cs_simple(e, a, input, start, expected, nextpos, complement)
    local simple = a.pat
    assert(pattern.is(simple))
-   local m, nextstart = simple.peg:rmatch(input, start)
+   local m, nextstart = rmatch(simple.peg, input, start)
    if (m and (not complement)) or ((not m) and complement) then
       assert(expected, "simple character set match differs from expected")
       if m then
@@ -235,17 +236,13 @@ function expression(e, a, input, start)
    local pat = a.pat
    assert(pattern.is(pat), "no pattern stored in ast node " .. tostring(a))
    local peg = lpeg.rcap(pat.peg, "*")
-   local ok, m, nextpos = pcall(pat.peg.rmatch, peg, input, start)
+   local ok, m, nextpos = pcall(rmatch, peg, input, start, 1)
    if not ok then
       print("\n\n\nTrace failed while working on: ", a)
       if a.exps then print("a.exps: " .. tostring(list.from(a.exps))); end
       print("ast.tostring(a) is: " .. ast.tostring(a))
       print("start is: " .. tostring(start) .. " and input is: |" ..  input .. "|")
       error("rmatch failed: " .. m)
-   end
-   if m then
-      assert(#m > 0)
-      m = lpeg.decode(m)
    end
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
