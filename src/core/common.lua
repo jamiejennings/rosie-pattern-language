@@ -411,5 +411,6 @@ common.pattern =
 common.boundary_identifier = "~"
 common.any_char_identifier = "."
 common.end_of_input_identifier = "$"
+common.halt_pattern_identifier = "halt"
 
 return common

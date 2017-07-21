@@ -131,12 +131,6 @@ ast.application = recordtype.new("application",
 				  pat = NIL;
 				  sourceref = NIL;})
 
--- ast.arglist = recordtype.new("arglist",
--- 			     {cooked = true;
--- 			      args = {};
--- 			      pat = NIL;
--- 			      sourceref = NIL;})
-
 ast.int = recordtype.new("int",
 			 {value = NIL;
 			  pat = NIL;

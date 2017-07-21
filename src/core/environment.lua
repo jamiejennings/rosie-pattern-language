@@ -25,14 +25,11 @@ local recordtype = require "recordtype"
 local lpeg = require "lpeg"
 local locale = lpeg.locale()
 local list = require "list"
+local builtins = require "builtins"
 
 ---------------------------------------------------------------------------------------------------
 -- Items for the initial environment
 ---------------------------------------------------------------------------------------------------
-
-local b_id = common.boundary_identifier
-local dot_id = common.any_char_identifier
-local eol_id = common.end_of_input_identifier
 
 -- This version of 'find' matches all the text up to and including the target exp.
 -- local function macro_find(...)
@@ -134,21 +131,9 @@ local function macro_case_insensitive(...)
 end
 
 local function macro_error(...)
-   local args = {...}
-   if #args~=1 then error("macro takes one argument, " .. tostring(#args) .. " given"); end
-   local exp = args[1]
-   local sref = assert(exp.sourceref)
-   if not ast.literal.is(exp) then error('error macro takes a string argument'); end
-   assert(type(exp.value)=="string")
-
--- !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# 
 -- fail compiles to a new pattern type that bails out of the match (like a failtwice), but keeps
-   -- the captures:  lpeg.Cc(exp.value) * lpeg.<stop matching as if at end of input>
-   local fail = ast.halt.new{text=exp.value, sourceref=sref}
--- !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# !@# 
-
-
-   return fail
+-- the captures:  lpeg.Cc(exp.value) * lpeg.<stop matching as if at end of input>
+--   local fail = ast.halt.new{text=exp.value, sourceref=sref}
 end
 
 local function example_first(...)
@@ -178,10 +163,17 @@ local utf8_char_peg = common.utf8_char_peg
 -- because it is shared between match engines.  Eventually, it will be replaced by a "standard
 -- prelude", a la Haskell.  :-)
 
+local b_id = common.boundary_identifier
+local dot_id = common.any_char_identifier
+local eol_id = common.end_of_input_identifier
+local halt_id = common.halt_pattern_identifier
+
 local ENV =
     {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true};  -- any single character
      [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true};	  -- end of input
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true};		  -- token boundary
+     [halt_id] = pattern.new{name=halt_id; peg=lpeg.Halt()};
+     ["message"] = pfunction.new{primop=builtins.message};
      ["find"] = macro.new{primop=macro_find};
      ["findall"] = macro.new{primop=macro_findall};
      ["error"] = macro.new{primop=macro_error};

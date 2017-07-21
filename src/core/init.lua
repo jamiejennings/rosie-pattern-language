@@ -123,6 +123,7 @@ local function load_all()
    parse_core = import("parse_core")
    parse = import("parse")
    ast = import("ast")
+   builtins = import("builtins")
    environment = import("environment")
    expand = import("expand")
    compile = import("compile")
@@ -190,8 +191,6 @@ function create_rpl_1_1_engine(e)
    assert(rplx_statements)
    local rplx_expression = e:compile("rpl_expression")
    assert(rplx_expression)
-
-FOO = rplx_expression
 
    compiler2 = { version = version,
 		 parse_block = compile.make_parse_block(rplx_preparse, rplx_statements, version),
