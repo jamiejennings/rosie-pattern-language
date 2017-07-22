@@ -46,7 +46,7 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    if args.all then errfilename = ""; end	            -- stderr
    
    -- Set up what kind of encoding we want done on the output
-   local default_encoder = (args.command=="grep") and "line" or "color"
+   local default_encoder = (args.command=="grep") and "subs" or "color"
    cli_common.set_encoder(rosie, en, args.encoder or default_encoder)
    
    local ok, msg = readable_file(infilename)
