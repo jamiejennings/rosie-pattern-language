@@ -24,9 +24,9 @@ local ok, HOMEDIR = pcall(os.getenv, "HOME")
 if (not ok) or (type(HOMEDIR)~="string") then HOMEDIR = ""; end
 
 local repl_patterns = [==[
-      comma_or_quoted_string = ","? word.dqstring
+      comma_or_quoted_string = ","? word.dq
       rpl_exp_placeholder = {!{comma_or_quoted_string $} .}+
-      parsed_args = rpl_exp_placeholder? ","? word.dqstring?
+      parsed_args = rpl_exp_placeholder? ","? word.dq?
       path = {![[:space:]] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path?
       args = .*
@@ -191,7 +191,7 @@ function repl.repl(en)
 			   str = exp_string
 			end
 			local tname, tpos, input_text = common.decode_match(msubs[2])
-			assert(tname=="word.dqstring")
+			assert(tname=="word.dq")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
 			input_text = common.unescape_string(input_text:sub(2, -2))
 			-- Compile the expression given in the command
