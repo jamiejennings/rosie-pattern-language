@@ -8,17 +8,21 @@
 
 local builtins = {}
 
+local common = import "common"
+local pattern = common.pattern
 local ast = import "ast"
-
+local lpeg = import "lpeg"
 
 function builtins.message(...)
    local args = {...}
-   if #args~=1 then error("macro takes one argument, " .. tostring(#args) .. " given"); end
-   local exp = args[1]
-   local sref = assert(exp.sourceref)
-   if not ast.literal.is(exp) then error('message macro takes a string argument'); end
-   assert(type(exp.value)=="string")
-   return ast.message.new{value=exp.value, sourceref=sref}
+   if #args~=1 then
+      error("function takes one argument, " .. tostring(#args) .. " given")
+   end
+   local msg = args[1]
+   if type(msg)~="string" then
+      error("function takes a string argument, " .. type(msg) .. " given")
+   end
+   return lpeg.Cc(msg)
 end
 
 return {}

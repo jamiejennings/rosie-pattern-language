@@ -370,6 +370,48 @@ local function ref(a, env, messages)
    return a.pat
 end
 
+-- Types: We need a string type in order to implement the 'message' function.
+--   * Need a syntax to differentiate string literals from patterns that recognize strings
+--     Could use #"...".  This syntax could be used for tags, which we can define as strings that
+--     meet the requirements of identifiers, e.g. #foo_bar99.
+--   * Or, have a macro that takes an ast.literal and returns an ast.string
+--     But then we have the issue of how to reconstruct the text from the ast...
+--     We would have to know that the ast.string was created by invoking a macro,
+--     and display the macro invocation.
+--     string:"..."  or  quote:"..."
+--     This could be extended to work on patterns made from literals, providing a consistent
+--     definition: The _string_ macro coerces a literal pattern to the string that it matches. 
+--   * I would like to avoid implicit coercion.  So we will not silently convert "foo" (which is a
+--     pattern expression) into a string when a string is called for.
+--   * Implicit coercion would require static typing, anyway.
+--   * But we have static typing!  It's polymorphic and not declarative:.  Given a
+--     pfunction, which is itself fixed and deterministic, any invocation of that function will
+--     accept some argument types and reject others --- at compile time!
+--   * 
+
+local function application(a, env, messages)
+   local ref = a.ref
+   local fn = lookup(env, ref.localname, ref.packagename)
+   local name = (ref.packagename and (ref.packagename~=".") and (ref.packagename .. ".") or "") .. ref.localname
+   if (not ref) then throw("unbound identifier: " .. name, ref); end
+   if not pfunction.is(fn) then
+      throw("type mismatch: expected a function, but '" .. name .. "' is bound to " .. tostring(fn), a)
+   end
+   if not fn.primop then
+      assert(false, "user-defined functions are currently not supported")
+   end
+   common.note("applying built-in function '" .. name .. "'")
+   local operands = map(function(exp)
+			   return compile_expression(exp, env, messages)
+			end,
+			a.arglist)
+   local ok, peg, uncap = pcall(fn, operands)
+--   if ok ...
+
+   a.pat = pattern.new{name=name, peg=peg, ast=a, uncap=uncap}
+   return a.pat
+end
+
 local dispatch = { [ast.literal] = literal,
 		   [ast.sequence] = sequence,
 		   [ast.choice] = choice,
@@ -382,6 +424,7 @@ local dispatch = { [ast.literal] = literal,
 		   [ast.atleast] = rep,
 		   [ast.predicate] = predicate,
 		   [ast.grammar] = grammar,
+		   [ast.application] = application,
 		}
 
 -- the forward reference declares 'expression' to be local

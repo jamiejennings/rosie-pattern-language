@@ -30,7 +30,8 @@ local common = require "common"
 local pfunction = common.pfunction
 local macro = common.macro
 
-local map = list.map; apply = list.apply; append = list.append;
+local map = list.map; apply = list.apply; append = list.append; foreach = list.foreach;
+
 local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 				 sourceref=
 				    common.source.new{s=1, e=1,
@@ -69,7 +70,8 @@ local function remove_raw_exp(ex)
       remove_cooked_raw_from_stmts(ex.rules) 
       return ex
    elseif ast.application.is(ex) then
-      assert(false, "pattern function encountered (feature not supported)")
+      foreach(remove_raw_exp, ex.arglist)
+      return ex
    else
       -- finally, return expressions that do not have sub-expressions to process
       assert(ex.sourceref)
@@ -113,7 +115,8 @@ function remove_cooked_exp(ex)
       local new = remove_raw_exp(ex.exp)
       return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, sourceref=ex.sourceref}
    elseif ast.application.is(ex) then
-      assert(false, "pattern function encountered (feature not supported)")
+      foreach(remove_raw_exp, ex.arglist)
+      return ex
    else
       -- There are no sub-expressions to process in the rest of the expression types, such as
       -- refs, literals, and character set expressions.
@@ -275,14 +278,21 @@ local function apply_macro(ex, env, messages)
 					    message='undefined operator: ' .. refname,
 					    ast=ex})
    elseif pfunction.is(m) then
-      return ex				    -- pfunctions applied later
+      local expanded_args = map(function(arg)
+				   return apply_macros(arg, env, messages)
+				end,
+				ex.arglist)
+      local new = ast.application.new{ref=ex.ref,
+				      arglist=expanded_args,
+				      sourceref=ex.sourceref}
+      return new				    -- pfunctions are processed during compilation
    elseif not macro.is(m) then
       local msg = 'type mismatch: ' .. refname .. " is not a macro/function"
       violation.throw(violation.compile.new{who='macro expander',
 					    message=msg,
 					    ast=ex})
    end
-   -- Have a macro to expand!
+   -- We have a macro to expand!
    if not m.primop then
       assert(false, "user-defined macros are currently not supported")
    end
