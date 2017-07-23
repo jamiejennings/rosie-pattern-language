@@ -1842,18 +1842,24 @@ check_idem_etc_raw('{(c){2,4}}', "c c c c c c", true, 4)
 subheading("Hash tags and string literals")
 
 r, err = e:compile("#x")
-check(not r)
+check(not r)					    -- not a pattern
 
-r, err = e:compile("message:#x")
-check(r)
+function check_message(msg_text)
+   r, err = e:compile("message:#" .. msg_text)
+   check(r, "did not compile", 1)
+   m, last = r:match("")
+   check(m, "did not match", 1)
+   check(m.type=="*", "type not anon", 1)
+   check(m.subs and m.subs[1], "no subs???", 1)
+   check(m.subs[1].type=="message", "sub not called 'message'", 1)
+   -- strip quotes off
+   if msg_text:sub(1,1)=='"' then msg_text = msg_text:sub(2, -2); end
+   check(m.subs[1].data==msg_text, "data not '" .. msg_text .. "' (was '" .. m.subs[1].data .. "')")
+end
 
-m, last = r:match("")
-check(m)
-print("***");table.print(m)
-check(m.type=="*")
-check(m.subs and m.subs[1])
-check(m.subs[1].type=="message")
-check(m.subs[1].data=="x")
+check_message("x")
+check_message("xyz_123")
+check_message('"This is a long message!"')
 
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
