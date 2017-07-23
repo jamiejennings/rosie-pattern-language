@@ -125,9 +125,6 @@ results_common_word_grep =
     "nameserver",
     "nameserver",
     "nameserver",
-    "fde",
-    "dd",
-    "bd",
     }
 
 results_word_network = 
@@ -139,22 +136,22 @@ results_word_network =
    }
 
 results_number_grep =
-   {"28 ",
+   {" 28 ",
     "16",
     "58",
     "22 ",
-    "2017",
-    "abc",
-    "192.9",
+    " 2017",
+    " abc",
+    " 192.9",
     "201.1",
-    "192.9",
+    " 192.9",
     "201.2",
-    "fde9",
+    " fde9",
     "4789",
     "96dd",
     "03bd",
     "1",
- }
+    }
 
 -- FIXME: add basic.matchall back in when we have the equivalent pattern written for rpl 1.1
 --run("basic.matchall", nil, results_basic_matchall)
