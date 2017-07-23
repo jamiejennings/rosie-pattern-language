@@ -168,6 +168,16 @@ ast.atleast = recordtype.new("atleast",
 			      pat = NIL;
 			      sourceref = NIL;})
 
+ast.string = recordtype.new("string",			    -- interpolated string literals
+			    {value = NIL;		    -- raw value, before interpolation
+			     pat = NIL;
+			     sourceref = NIL;})
+
+ast.hashtag = recordtype.new("hashtag",
+			      {value = NIL;
+			       pat = NIL;
+			       sourceref = NIL;})
+
 ---------------------------------------------------------------------------------------------------
 -- Utility to visit each expression in an AST
 ---------------------------------------------------------------------------------------------------
@@ -432,6 +442,15 @@ function convert_exp(pt, sref)
       return convert_identifier(pt, sref)
    elseif pt.type=="literal" then
       return ast.literal.new{value = pt.text, sourceref=sref}
+   elseif pt.type=="hash_exp" then
+      local val_ast = assert(pt.subs and pt.subs[1])
+      if val_ast.type=="tag" then
+	 return ast.hashtag.new{value = val_ast.text, sourceref=sref}
+      elseif val_ast.type=="literal" then
+	 return ast.string.new{value = val_ast.text, sourceref=sref}
+      else
+	 assert(false, "unexpected sub-match in hash_exp parse tree")
+      end
    elseif pt.type=="charset_exp" then
       return convert_char_exp(pt, sref)
    elseif pt.type=="quantified_exp" then

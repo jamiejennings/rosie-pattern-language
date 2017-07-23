@@ -50,9 +50,9 @@ alias esc =    [[\\]]
 literal = { {!{esc/dquote} .} / {esc .} }* 
 alias quoted_string = { dquote literal dquote }
 
--- alias hash_mark = [[#]]
--- tag = localname
--- hash_exp = {hash_mark {tag / literal}}
+alias hash_mark = [[#]]
+tag = localname
+hash_exp = {hash_mark {tag / quoted_string}}
 
 star =     [[*]]
 question = [[?]]
@@ -118,7 +118,14 @@ grammar
    choice = { {quantified_exp / plain_exp} ignore slash exp }
    sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }
    alias plain_exp = { ignore 
-		       { application / identifier / quoted_string / raw / cooked / charset_exp / predicate } }
+		        {application /
+		         identifier /
+		         quoted_string /
+		         raw /
+		         cooked /
+		         charset_exp /
+		         predicate /
+		         hash_exp} }
    quantified_exp = { plain_exp ignore quantifier }
    cooked = { open exp ignore close }
    raw = { openraw exp ignore closeraw }
