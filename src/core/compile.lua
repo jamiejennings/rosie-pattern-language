@@ -423,11 +423,10 @@ local function application(a, env, messages)
 				return expression(exp, env, messages)
 			     end,
 			     a.arglist)
-   local peg, uncap = fn_ast.primop(table.unpack(operands))
-   -- local ok, peg, uncap = pcall(fn, table.unpack(operands))
-   -- print("***", type(error), error, type(peg), peg)
-   -- if not ok then error(peg); end
-
+   local ok, peg, uncap = pcall(fn_ast.primop, table.unpack(operands))
+   if not ok then
+      throw("error in function: '" .. tostring(peg), a)
+   end
    a.pat = pattern.new{name=name, peg=peg, ast=a, uncap=uncap}
    return a.pat
 end

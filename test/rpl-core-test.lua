@@ -1861,6 +1861,36 @@ check_message("x")
 check_message("xyz_123")
 check_message('"This is a long message!"')
 
+data = 'abcdef123ghi'
+-- COOKED
+r, err = e:compile("message:(#" .. data .. ")")
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="message")
+check(m.subs[1].data==data)
+-- RAW
+r, err = e:compile("message:{#" .. data .. "}")
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="message")
+check(m.subs[1].data==data)
+
+r, err = e:compile("message:foo")
+check(not r)					    -- foo is undefined
+check(violation.tostring(err[1]):find("undefined"))
+r, err = e:compile('message:("hi", "bye")')
+check(not r)					    -- too many args
+check(violation.tostring(err[1]):find("2 given"))
+r, err = e:compile('message:()')
+check(not r)					    -- too few args
+print(violation.tostring(err[1]):find("extraneous input"))
+r, err = e:compile('message:(message)')
+check(not r)					    -- wrong arg type (pfunction, not pattern)
+
+
+
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
 return test.finish()
