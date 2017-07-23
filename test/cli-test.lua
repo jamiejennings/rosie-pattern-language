@@ -243,7 +243,7 @@ check(results[1]:find("Commands:"))
 ---------------------------------------------------------------------------------------------------
 test.heading("Error reporting")
 
-cmd = rosie_cmd .. " -f test/nested-test.rpl grep foo test/resolv.conf 2>1"
+cmd = rosie_cmd .. " -f test/nested-test.rpl grep foo test/resolv.conf"
 print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
