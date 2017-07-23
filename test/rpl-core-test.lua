@@ -1839,6 +1839,22 @@ check_idem_etc_raw('{(c){2,4}}', "cc", false)
 check_idem_etc_raw('{(c){2,4}}', "c c", true)
 check_idem_etc_raw('{(c){2,4}}', "c c c c c c", true, 4)
 
+subheading("Hash tags and string literals")
+
+r, err = e:compile("#x")
+check(not r)
+
+r, err = e:compile("message:#x")
+check(r)
+
+m, last = r:match("")
+check(m)
+print("***");table.print(m)
+check(m.type=="*")
+check(m.subs and m.subs[1])
+check(m.subs[1].type=="message")
+check(m.subs[1].data=="x")
+
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
 return test.finish()

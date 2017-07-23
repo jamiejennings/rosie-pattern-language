@@ -206,7 +206,7 @@ local function color(match, db, pkgname, pkgcolor, global_default)
    local mtype = (match.type~="*") and match.type
    local c = query(db, mtype, "exact")
    -- Exact match in color database: print in color c
-   if c then return list.new{c, match.text}; end
+   if c then return list.new{c, match.data}; end
    -- Else, if match is a leaf, then check for a default color
    local match_pkg, match_name = common.split_identifier(mtype or "")
    if not match.subs then
@@ -216,17 +216,17 @@ local function color(match, db, pkgname, pkgcolor, global_default)
 	    -- look for one.
 	    pkgcolor = query(db, match_pkg, "default")
 	    if pkgcolor then
-	       return list.new{pkgcolor, match.text}
+	       return list.new{pkgcolor, match.data}
 	    else
-	       return list.new{global_default, match.text}
+	       return list.new{global_default, match.data}
 	    end
 	 elseif (match_pkg==pkgname) then
-	    return list.new{pkgcolor, match.text}
+	    return list.new{pkgcolor, match.data}
 	 end
       else
 	 -- The match does not have a pkg prefix (only a local name, match_name).  And we know
 	 -- also that there is no assigned color for this exact match type.
-	 return list.new{global_default, match.text}
+	 return list.new{global_default, match.data}
       end
    else
       -- Else, there are sub-matches.  Print each sub-match in its own color.  Start by looking

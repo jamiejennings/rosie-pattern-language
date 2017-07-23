@@ -122,20 +122,20 @@ function p.run(rosie, en, args, filename)
 	 failures = failures + 1
 	 break
       end
-      local testIdentifier = m.subs[1].text
+      local testIdentifier = m.subs[1].data
       local testType = m.subs[2].type
       local literals = 3 -- literals will start at subs offset 3
       if testType == "includesClause" then
          -- test includes
 	 local t = m.subs[2]
 	 assert(t.subs and t.subs[1] and t.subs[1].type=="includesKeyword")
-	 local testing_excludes = (t.subs[1].text=="excludes")
+	 local testing_excludes = (t.subs[1].data=="excludes")
 	 assert(t.subs[2] and t.subs[2].type=="identifier",
 		"not an identifier: " .. tostring(t.subs[2].type))
-         local containedIdentifier = t.subs[2].text
+         local containedIdentifier = t.subs[2].data
          for i = literals, #m.subs do
             total = total + 1
-            local teststr = m.subs[i].text
+            local teststr = m.subs[i].data
             teststr = common.unescape_string(teststr)
 	    local includes = test_includes_ident(testIdentifier, teststr, containedIdentifier)
 	    local msg
@@ -156,11 +156,11 @@ function p.run(rosie, en, args, filename)
          -- test accepts/rejects
          for i = literals, #m.subs do
             total = total + 1
-            local teststr = m.subs[i].text
+            local teststr = m.subs[i].data
             teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
-            if not test_funcs[m.subs[2].text](testIdentifier, teststr) then
+            if not test_funcs[m.subs[2].data](testIdentifier, teststr) then
                if #teststr==0 then teststr = "the empty string"; end -- for display purposes
-               print(filename .. ": FAIL: " .. testIdentifier .. " did not " .. m.subs[2].text:sub(1,-2) .. " " .. teststr)
+               print(filename .. ": FAIL: " .. testIdentifier .. " did not " .. m.subs[2].data:sub(1,-2) .. " " .. teststr)
                failures = failures + 1
             end
          end

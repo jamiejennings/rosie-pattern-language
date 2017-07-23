@@ -257,9 +257,9 @@ function create_encoder_table()
       byte = 0,
       color = function(m) return color.match(m, color.colormap); end,
       nocolor = function(m) return color.match(m, {["*"]="default"}); end,
-      text = function(m) return m.text end,	    -- "only match text"
+      text = function(m) return m.data end,	    -- "only match text"
       subs = function(m)
-		return table.concat(list.map(function(sub) return sub.text end,
+		return table.concat(list.map(function(sub) return sub.data end,
 					     m.subs),
 				    "\n")
 	        end;

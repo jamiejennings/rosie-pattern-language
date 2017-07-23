@@ -18,11 +18,14 @@ function builtins.message(...)
    if #args~=1 then
       error("function takes one argument, " .. tostring(#args) .. " given")
    end
-   local msg = args[1]
-   if type(msg)~="string" then
+   local arg = args[1]
+   if common.taggedvalue.is(arg) and (arg.type=="string" or arg.type=="hashtag") then
+      assert(type(arg.value)=="string")
+      return lpeg.rconstcap(arg.value, "message")
+   else
       error("function takes a string argument, " .. type(msg) .. " given")
    end
-   return lpeg.Cc(msg)
 end
 
-return {}
+return builtins
+

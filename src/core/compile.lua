@@ -20,7 +20,9 @@ local P, V, C, S, R, Cmt, B =
 
 local common = require "common"
 local novalue = common.novalue
+local taggedvalue = common.taggedvalue
 local pattern = common.pattern
+local pfunction = common.pfunction
 local violation = require "violation"
 local apply_catch = violation.catch
 local recordtype = require "recordtype"
@@ -61,7 +63,7 @@ local function make_parser_from(parse_something, expected_pt_node)
 		      for _, sub in ipairs(err.subs or {}) do
 			 if sub.type=="syntax_error" then
 			    local origin = origin and common.loadrequest.new{filename=origin.filename}
-			    local sref = common.source.new{text=pt.text,
+			    local sref = common.source.new{text=pt.data,
 							   s=sub.s,
 							   e=sub.e,
 							   origin=origin,
@@ -133,6 +135,22 @@ local function literal(a, env, messages)
       throw("invalid escape sequence in literal: \\" .. offense, a)
    end
    a.pat = pattern.new{name="literal"; peg=P(str); ast=a}
+   return a.pat
+end
+
+local function rpl_string(a, env, messages)
+   local str, offense = common.unescape_string(a.value)
+   if not str then
+      throw("invalid escape sequence in string: \\" .. offense, a)
+   end
+   a.pat = taggedvalue.new{type="string"; value=str; ast=a}
+   return a.pat
+end
+
+local function hashtag(a, env, messages)
+   local str = a.value
+   assert(type(str)=="string")
+   a.pat = taggedvalue.new{type="hashtag"; value=str; ast=a}
    return a.pat
 end
 
@@ -391,28 +409,32 @@ end
 
 local function application(a, env, messages)
    local ref = a.ref
-   local fn = lookup(env, ref.localname, ref.packagename)
+   local fn_ast = lookup(env, ref.localname, ref.packagename)
    local name = (ref.packagename and (ref.packagename~=".") and (ref.packagename .. ".") or "") .. ref.localname
    if (not ref) then throw("unbound identifier: " .. name, ref); end
-   if not pfunction.is(fn) then
-      throw("type mismatch: expected a function, but '" .. name .. "' is bound to " .. tostring(fn), a)
+   if not pfunction.is(fn_ast) then
+      throw("type mismatch: expected a function, but '" .. name .. "' is bound to " .. tostring(fn_ast), a)
    end
-   if not fn.primop then
+   if not fn_ast.primop then
       assert(false, "user-defined functions are currently not supported")
    end
    common.note("applying built-in function '" .. name .. "'")
-   local operands = map(function(exp)
-			   return compile_expression(exp, env, messages)
-			end,
-			a.arglist)
-   local ok, peg, uncap = pcall(fn, operands)
---   if ok ...
+   local operands = list.map(function(exp)
+				return expression(exp, env, messages)
+			     end,
+			     a.arglist)
+   local peg, uncap = fn_ast.primop(table.unpack(operands))
+   -- local ok, peg, uncap = pcall(fn, table.unpack(operands))
+   -- print("***", type(error), error, type(peg), peg)
+   -- if not ok then error(peg); end
 
    a.pat = pattern.new{name=name, peg=peg, ast=a, uncap=uncap}
    return a.pat
 end
 
-local dispatch = { [ast.literal] = literal,
+local dispatch = { [ast.string] = rpl_string,
+		   [ast.hashtag] = hashtag,
+		   [ast.literal] = literal,
 		   [ast.sequence] = sequence,
 		   [ast.choice] = choice,
 		   [ast.ref] = ref,
