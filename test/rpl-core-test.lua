@@ -1879,7 +1879,16 @@ check(m.subs and m.subs[1] and m.subs[1].type=="message")
 check(m.subs[1].data==data)
 
 r, err = e:compile('message:(#"", #msg_name)')
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="msg_name")
+check(m.subs[1].data=="")
+
+r, err = e:compile('message:(#"hello world", #"")')
 check(not r, "should not have compiled")
+check(violation.tostring(err[1]):find("not a tag"))
+check(violation.tostring(err[1]):find("string value"))
 
 r, err = e:compile('message:(#"message text here", #msg_name)')
 check(r, "did not compile")
