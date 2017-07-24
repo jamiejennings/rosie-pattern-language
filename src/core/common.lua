@@ -275,6 +275,7 @@ end
 common.create_match = create_match
 
 assert(lpeg.rcap, "lpeg.rcap not defined: wrong version of lpeg???")
+assert(lpeg.rconstcap, "lpeg.rconstcap not defined: wrong version of lpeg???")
 common.match_node_wrap = lpeg.rcap
 
 -- This could be done in C

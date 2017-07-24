@@ -1846,16 +1846,16 @@ check(not r)					    -- not a pattern
 
 function check_message(msg_text)
    r, err = e:compile("message:#" .. msg_text)
-   check(r, "did not compile", 2)
+   check(r, "did not compile", 1)
    if not r then return; end
    m, last = r:match("")
-   check(m, "did not match", 2)
-   check(m.type=="*", "type not anon", 2)
-   check(m.subs and m.subs[1], "no subs???", 2)
-   check(m.subs[1].type=="message", "sub not called 'message'", 2)
+   check(m, "did not match", 1)
+   check(m.type=="*", "type not anon", 1)
+   check(m.subs and m.subs[1], "no subs???", 1)
+   check(m.subs[1].type=="message", "sub not called 'message'", 1)
    -- strip quotes off
    if msg_text:sub(1,1)=='"' then msg_text = msg_text:sub(2, -2); end
-   check(m.subs[1].data==msg_text, "data not '" .. msg_text .. "' (was '" .. m.subs[1].data .. "')", 2)
+   check(m.subs[1].data==msg_text, "data not '" .. msg_text .. "' (was '" .. m.subs[1].data .. "')", 1)
 end
 
 check_message("x")
@@ -1878,12 +1878,22 @@ check(m, "did not match")
 check(m.subs and m.subs[1] and m.subs[1].type=="message")
 check(m.subs[1].data==data)
 
+r, err = e:compile('message:(#"message text here", #msg_name)')
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="msg_name")
+check(m.subs[1].data=="message text here")
+
+r, err = e:compile('message:(#msg_text, #"message name")')
+check(not r, "should not compile because second arg not a tag")
+
 r, err = e:compile("message:abc")
 check(not r)					    -- abc is undefined
 check(violation.tostring(err[1]):find("unbound identifier: abc"))
-r, err = e:compile('message:("hi", "bye")')
+r, err = e:compile('message:("hi", "bye", "three")')
 check(not r)					    -- too many args
-check(violation.tostring(err[1]):find("2 given"))
+check(violation.tostring(err[1]):find("3 given"))
 r, err = e:compile('message:()')
 check(not r)					    -- too few args
 print(violation.tostring(err[1]):find("extraneous input"))
