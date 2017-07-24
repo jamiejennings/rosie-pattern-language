@@ -60,7 +60,7 @@ rfc3339 = { strict_year "-" strict_month "-" strict_day }
 
 -- RFC2822 + alternatives
 day_shortname = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
-day_longname = "Monstrict_day" / "Tuesstrict_day" / "Wendesstrict_day" / "Thursstrict_day" / "Fristrict_day" / "Saturstrict_day" / "Sunstrict_day"
+day_longname = "Monday" / "Tuesday" / "Wednesday" / "Thursday" / "Friday" / "Saturday" / "Sunday"
 day_name = { day_shortname / day_longname }
 month_shortname = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
 month_longname = "January" / "February" / "March" / "April" / "May" / "June" / "July" / "August" / "September" / "October" / "November" / "December"
