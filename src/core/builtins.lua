@@ -24,7 +24,11 @@ function builtins.message(...)
       error("first argument to function not a string or tag: " .. tostring(arg))
    elseif (optional_name and
 	   not (common.taggedvalue.is(optional_name) and optional_name.type=="hashtag")) then
-      error("second argument to function not a tag: " .. tostring(optional_name))
+      local thing = tostring(optional_name)
+      if common.taggedvalue.is(optional_name) then
+	 thing = thing .. ", holding a " .. tostring(optional_name.type) .. " value"
+      end
+      error("second argument to function not a tag: " .. thing)
    end
    assert(type(arg.value)=="string")
    if optional_name then assert(type(optional_name.value)=="string"); end

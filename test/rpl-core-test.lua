@@ -1887,6 +1887,8 @@ check(m.subs[1].data=="message text here")
 
 r, err = e:compile('message:(#msg_text, #"message name")')
 check(not r, "should not compile because second arg not a tag")
+check(violation.tostring(err[1]):find("not a tag"))
+check(violation.tostring(err[1]):find("string value"))
 
 r, err = e:compile("message:abc")
 check(not r)					    -- abc is undefined
