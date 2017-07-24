@@ -26,21 +26,6 @@ uc = [:upper:]+						    -- upper case
 lc = [:lower:]+						    -- lower case
 tc = {[:upper:] [:lower:]*}				    -- title case
 
-id1 = { [:alpha:] [[_][:alnum:]]* }			    -- allows dashes
-id2 = { [:alpha:] [[_-][:alnum:]]* }			    -- ... and underscores
-id3 = { [:alpha:] [[$_-][:alnum:]]* }			    -- ... and dollar signs
-
-id = id3
-dotted_id = { id { "." id}+ }
-
--- test id1 accepts "h", "www", "w1", "w_", "w_w"
--- test id1 rejects "1h", "_www", "w-1", "w$"
--- test id2 accepts "h", "www", "w1", "w_", "w_w", "w-", "w-w", "w-9"
--- test id2 rejects "1h", "_www", "w$"
--- test id3 accepts "h", "www", "w1", "w_", "w_w", "w-", "w-w", "w-9", "w$", "a$b", "a54$d"
--- test id3 rejects "1h", "_www"
-
-
 -- Quoted strings, using single or double quote.
 -- Within a string, the quote character can be escaped using a backslash.
 
