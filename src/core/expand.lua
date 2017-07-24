@@ -278,6 +278,7 @@ local function apply_macro(ex, env, messages)
 					    message='undefined operator: ' .. refname,
 					    ast=ex})
    elseif pfunction.is(m) then
+      common.note("expanding args of call to built-in function '" .. refname .. "'")
       local expanded_args = map(function(arg)
 				   return apply_macros(arg, env, messages)
 				end,
@@ -287,7 +288,7 @@ local function apply_macro(ex, env, messages)
 				      sourceref=ex.sourceref}
       return new				    -- pfunctions are processed during compilation
    elseif not macro.is(m) then
-      local msg = 'type mismatch: ' .. refname .. " is not a macro/function"
+      local msg = 'type mismatch: ' .. refname .. " is not a macro or function"
       violation.throw(violation.compile.new{who='macro expander',
 					    message=msg,
 					    ast=ex})
@@ -310,7 +311,7 @@ local function apply_macro(ex, env, messages)
 					    message=msg,
 					    ast=ex})
    end
-   assert(new.sourceref)
+   assert(new and new.sourceref)
    return new
 end
    

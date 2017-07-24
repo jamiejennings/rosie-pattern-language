@@ -137,12 +137,6 @@ local function macro_case_insensitive(...)
    return ast.visit_expressions(exp, ast.literal.is, xform_literal)
 end
 
-local function macro_error(...)
--- fail compiles to a new pattern type that bails out of the match (like a failtwice), but keeps
--- the captures:  lpeg.Cc(exp.value) * lpeg.<stop matching as if at end of input>
---   local fail = ast.halt.new{text=exp.value, sourceref=sref}
-end
-
 local function example_first(...)
    local args = {...}
    return args[1]
@@ -181,9 +175,9 @@ local ENV =
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true};		  -- token boundary
      [halt_id] = pattern.new{name=halt_id; peg=lpeg.Halt()};
      ["message"] = pfunction.new{primop=builtins.message};
+     ["error"] = pfunction.new{primop=builtins.error};
      ["find"] = macro.new{primop=macro_find};
      ["findall"] = macro.new{primop=macro_findall};
-     ["error"] = macro.new{primop=macro_error};
      ["ci"] = macro.new{primop=macro_case_insensitive};
 --     ["cs"] = macro.new{primop=macro_case_sensitive};
      ["last"] = macro.new{primop=example_last};

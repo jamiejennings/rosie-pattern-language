@@ -13,7 +13,7 @@ local pattern = common.pattern
 local ast = import "ast"
 local lpeg = import "lpeg"
 
-function builtins.message(...)
+local function check_message_args(...)
    local args = {...}
    if #args~=1 and #args~=2 then
       error("function takes one or two arguments: " .. tostring(#args) .. " given")
@@ -32,7 +32,17 @@ function builtins.message(...)
    end
    assert(type(arg.value)=="string")
    if optional_name then assert(type(optional_name.value)=="string"); end
-   return lpeg.rconstcap(arg.value, optional_name and optional_name.value or "message")
+   return arg.value, optional_name and optional_name.value
+end
+
+function builtins.message(...)
+   local message_text, message_typename = check_message_args(...)
+   return lpeg.rconstcap(message_text, message_typename or "message")
+end
+
+function builtins.error(...)
+   local message_text, message_typename = check_message_args(...)
+   return lpeg.rconstcap(message_text, message_typename or "error") * lpeg.Halt()
 end
 
 return builtins
