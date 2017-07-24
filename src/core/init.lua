@@ -256,15 +256,18 @@ function create_encoder_table()
       json = 1,
       byte = 0,
       color = function(m) return color.match(m, color.colormap); end,
+
+   -- FIXME: the nocolor option does output codes for the default color.  fix this! 
       nocolor = function(m) return color.match(m, {["*"]="default"}); end,
-      text = function(m) return m.text end,	    -- "only match text"
+
+      text = function(m) return m.text end,	    -- "only the match text"
       subs = function(m)
 		return table.concat(list.map(function(sub) return sub.text end,
 					     m.subs),
 				    "\n")
-	        end;
-      none = false;
-      [false] = false;
+	     end,
+      none = false,
+      [false] = false,
    }
 end
 
