@@ -25,10 +25,11 @@ end
 function p.load_string(en, input)
    local ok, pkgname, messages = en:load(input)
    if not ok then
-      if ROSIE_DEV then error(results)
-	 -- TODO: change the tostring below to call an error printing procedure
+      local err_string = table.concat(map(violation.tostring, messages), "\n") .. "\n"
+      if ROSIE_DEV then
+	 error(err_string)
       else
-	 io.write("Cannot load rpl: \n", table.concat(map(violation.tostring, messages), "\n").."\n")
+	 io.write("Cannot load rpl: \n", err_string)
 	 os.exit(-1)
       end
    end

@@ -6,9 +6,6 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- TODO: a Lua-module-aware version of strict.lua that works with _ENV and not _G
--- require "strict"
-
 -- The two principle use case categories for Rosie may be characterized as Interactive and
 -- Production, where the latter includes big data scenarios in which performance is paramount and
 -- functions like compiling, tracing, and generating human-readable output are not needed.
@@ -403,7 +400,7 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
    local peg = r.pattern.peg			    -- optimization
    local matcher = function(input, start)
 		      return rmatch(peg, input, start, built_in_encoder)
-		   end                              -- TODO: inline this for performance
+		   end                              -- FUTURE: inline this for performance
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
    local inlines, outlines, errlines = 0, 0, 0;

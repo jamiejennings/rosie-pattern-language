@@ -174,11 +174,8 @@ function repl.repl(en)
 		     local errs = {}
 		     local a = en.compiler.parse_expression(common.source.new{text=exp_string}, errs)
 		     if not a then
-			print("*** These will be printed in full later:")
-			table.print(errs, false)	    -- TODO: print actual messages
-			io.write("\n")
-		     -- elseif not ast.subs then
-		     -- 	io.write("Syntax error\n")  -- no other info???
+			local err_string = table.concat(map(violation.tostring, errs), "\n")
+			io.write(err_string, "\n")
 		     else
 			-- Assert that 'a' is a record, and assume it's an AST record
 			assert(recordtype.parent(a))
@@ -195,9 +192,10 @@ function repl.repl(en)
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
 			input_text = common.unescape_string(input_text:sub(2, -2))
 			-- Compile the expression given in the command
-			local rplx, msgs = en:compile(str)
+			local rplx, errs = en:compile(str)
 			if not rplx then
-			   table.print(msgs, false); print() -- TODO: print actual messages
+			   local err_string = table.concat(map(violation.tostring, errs), "\n")
+			   io.write(err_string, "\n")
 			else
 			   local m, left = rplx:match(input_text)
 			   if (debug and (not m)) or cname=="trace" then
@@ -216,8 +214,8 @@ function repl.repl(en)
 	    end -- switch on command
 	 elseif name=="statements" then
 	    local ok, pkg, messages = en:load(text);
-	    table.print(messages, false)		    -- TODO: print actual messages
---	    io.write(messages, "\n")
+	    local err_string = table.concat(map(violation.tostring, messages), "\n")
+	    io.write(err_string, "\n")
 	 else
 	    io.write("Repl: internal error (name was '" .. tostring(name) .. "')\n")
 	 end -- switch on type of input received

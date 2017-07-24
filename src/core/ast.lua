@@ -6,9 +6,6 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
--- TODO: Save the source along with the ast (it already has start/end)
-
-
 local recordtype = require "recordtype"
 local NIL = recordtype.NIL
 local list = require "list"
