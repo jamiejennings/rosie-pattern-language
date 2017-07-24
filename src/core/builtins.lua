@@ -31,6 +31,11 @@ local function check_message_args(...)
       error("second argument to function not a tag: " .. thing)
    end
    assert(type(arg.value)=="string")
+   if #arg.value==0 then
+      error("first argument cannot be a null string")
+   elseif optional_name and #optional_name.value==0 then
+      error("second argument cannot be a null string")
+   end
    if optional_name then assert(type(optional_name.value)=="string"); end
    return arg.value, optional_name and optional_name.value
 end
