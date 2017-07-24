@@ -1846,15 +1846,16 @@ check(not r)					    -- not a pattern
 
 function check_message(msg_text)
    r, err = e:compile("message:#" .. msg_text)
-   check(r, "did not compile", 1)
+   check(r, "did not compile", 2)
+   if not r then return; end
    m, last = r:match("")
-   check(m, "did not match", 1)
-   check(m.type=="*", "type not anon", 1)
-   check(m.subs and m.subs[1], "no subs???", 1)
-   check(m.subs[1].type=="message", "sub not called 'message'", 1)
+   check(m, "did not match", 2)
+   check(m.type=="*", "type not anon", 2)
+   check(m.subs and m.subs[1], "no subs???", 2)
+   check(m.subs[1].type=="message", "sub not called 'message'", 2)
    -- strip quotes off
    if msg_text:sub(1,1)=='"' then msg_text = msg_text:sub(2, -2); end
-   check(m.subs[1].data==msg_text, "data not '" .. msg_text .. "' (was '" .. m.subs[1].data .. "')")
+   check(m.subs[1].data==msg_text, "data not '" .. msg_text .. "' (was '" .. m.subs[1].data .. "')", 2)
 end
 
 check_message("x")
