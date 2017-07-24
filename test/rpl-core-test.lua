@@ -1878,9 +1878,9 @@ check(m, "did not match")
 check(m.subs and m.subs[1] and m.subs[1].type=="message")
 check(m.subs[1].data==data)
 
-r, err = e:compile("message:foo")
-check(not r)					    -- foo is undefined
-check(violation.tostring(err[1]):find("undefined"))
+r, err = e:compile("message:abc")
+check(not r)					    -- abc is undefined
+check(violation.tostring(err[1]):find("unbound identifier: abc"))
 r, err = e:compile('message:("hi", "bye")')
 check(not r)					    -- too many args
 check(violation.tostring(err[1]):find("2 given"))
