@@ -24,9 +24,6 @@
 --    .~ is NOT a parse error.
 --    .$ is NOT a parse error.  
 
-
---rpl 1.0
-
 package rpl_1_1
 
 alias newline = [[\n]]
@@ -42,21 +39,24 @@ alias id_symbol = [[.$~]]
 -- It is important that an error consume at least one character here.
 -- As a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
 rest_of_line = { {!newline .}+ ignore }
-syntax_error = { rest_of_line }
+syntax_error = rest_of_line
 
 localname = {id_symbol !id} / {id !id_symbol}
 packagename = id --/ syntax_error
 identifier = { {packagename [[.]]}? localname }
 
-alias dquote = { [[\"]] }
-alias esc =    { [[\\]] }
+alias dquote = [[\"]]
+alias esc =    [[\\]]
 literal = { {!{esc/dquote} .} / {esc .} }* 
 alias quoted_string = { dquote literal dquote }
 
+alias hash_mark = [[#]]
+tag = localname
+hash_exp = {hash_mark {tag / quoted_string}}
 
-star =     { [[*]] }
-question = { [[?]] }
-plus =     { [[+]] }
+star =     [[*]]
+question = [[?]]
+plus =     [[+]]
 alias end_token = { "end" !id_char }
 alias keyword_list = "local" / "alias" / "grammar" / "end"
 keyword = { keyword_list !id_char }
@@ -93,15 +93,15 @@ alias quantifier = star / question / plus / repetition
 assignment_prefix = identifier ignore "="
 stmnt_prefix = {keyword / assignment_prefix}
 
-alias slash =         { [[/]] }
-alias open =          { [[(]] }
-alias openraw =       { [[{]] }
-alias close =         { [[)]] }
-alias closeraw =      { [[}]] }
+alias slash =         [[/]]
+alias open =          [[(]]
+alias openraw =       [[{]]
+alias close =         [[)]]
+alias closeraw =      [[}]]
 
-negation = { [[!]] }
-lookat = { [[@]] }
-alias predicate_symbol = { negation / lookat }
+negation = [[!]]
+lookat = [[@]]
+alias predicate_symbol = negation / lookat
 	    
 grammar
    alias exp = {ignore { syntax_error /
@@ -118,7 +118,14 @@ grammar
    choice = { {quantified_exp / plain_exp} ignore slash exp }
    sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }
    alias plain_exp = { ignore 
-		       { application / identifier / quoted_string / raw / cooked / charset_exp / predicate } }
+		        {application /
+		         identifier /
+		         quoted_string /
+		         raw /
+		         cooked /
+		         charset_exp /
+		         predicate /
+		         hash_exp} }
    quantified_exp = { plain_exp ignore quantifier }
    cooked = { open exp ignore close }
    raw = { openraw exp ignore closeraw }

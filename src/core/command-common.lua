@@ -80,6 +80,20 @@ function p.setup_engine(en, args)
 	 if args.verbose then
 	    io.stdout:write(string.format("Compiling additional rpl code %q\n", stm))
 	 end
+
+	 -- local errs = {}
+	 -- local AST = en.compiler.parse_block(common.source.new{text=stm}, errs)
+	 -- if not AST then
+	 --    io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	 --    os.exit(-4)
+	 -- end
+	 
+	 -- local ok = import_dependencies(en, AST, errs)
+	 -- if not ok then
+	 --    io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	 --    os.exit(-4)
+	 -- end
+
 	 local success, msg = p.load_string(en, stm)
 	 if not success then
 	    io.stdout:write(msg, "\n")
@@ -98,10 +112,6 @@ function p.setup_engine(en, args)
 	 expression = args.pattern
       end
       local errs = {}
-
-      -- AST MUST BE ABLE TO REPRESENT AN ARGLIST THAT IS NEITHER COOKED NOR RAW (because it is a
-      -- single arg).
-      
 
       local AST = en.compiler.parse_expression(common.source.new{text=expression}, errs)
       if not AST then

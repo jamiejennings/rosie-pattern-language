@@ -35,10 +35,10 @@ local function preparse(rplx_preparse, input)
    end
    if language_decl then
       if parse_core.syntax_error_check(language_decl) then
-	 return false, "Syntax error in language version declaration: " .. language_decl.text
+	 return false, "Syntax error in language version declaration: " .. language_decl.data
       else
-	 major = tonumber(language_decl.subs[1].subs[1].text) -- major
-	 minor = tonumber(language_decl.subs[1].subs[2].text) -- minor
+	 major = tonumber(language_decl.subs[1].subs[1].data) -- major
+	 minor = tonumber(language_decl.subs[1].subs[2].data) -- minor
 	 return major, minor, #input-leftover+1
       end
    else

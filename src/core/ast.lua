@@ -168,6 +168,16 @@ ast.atleast = recordtype.new("atleast",
 			      pat = NIL;
 			      sourceref = NIL;})
 
+ast.string = recordtype.new("string",			    -- interpolated string literals
+			    {value = NIL;		    -- raw value, before interpolation
+			     pat = NIL;
+			     sourceref = NIL;})
+
+ast.hashtag = recordtype.new("hashtag",
+			      {value = NIL;
+			       pat = NIL;
+			       sourceref = NIL;})
+
 ---------------------------------------------------------------------------------------------------
 -- Utility to visit each expression in an AST
 ---------------------------------------------------------------------------------------------------
@@ -280,11 +290,11 @@ local function convert_cs_named(pt, sref)
    assert(sref)
    assert(pt.subs and pt.subs[1])
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
-   local name = pt.subs[1].text
+   local name = pt.subs[1].data
    local compflag = (pt.subs[1].type=="complement")
    if compflag then
       assert(pt.subs[2])
-      name = pt.subs[2].text
+      name = pt.subs[2].data
    end
    return ast.cs_named.new{name = name,
 			   complement = compflag,
@@ -311,12 +321,12 @@ function convert_char_exp(pt, sref)
    if pt.type=="named_charset" then
       return convert_cs_named(pt, sref)
    elseif pt.type=="charlist" then
-      return ast.cs_list.new{chars = map(function(sub) return sub.text; end, exps),
+      return ast.cs_list.new{chars = map(function(sub) return sub.data; end, exps),
 			     complement = compflag,
 			     sourceref=sref}
    elseif pt.type=="range" then
-      return ast.cs_range.new{first = exps[1].text,
-			      last = exps[2].text,
+      return ast.cs_range.new{first = exps[1].data,
+			      last = exps[2].data,
 			      complement = compflag,
 			      sourceref=sref}
    elseif pt.type=="compound_charset" then
@@ -346,11 +356,11 @@ local function convert_quantified_exp(pt, exp_converter, sref)
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
    local min, max
    if qname=="repetition" then
-      min = tonumber(q.subs[1].text)
+      min = tonumber(q.subs[1].data)
       if #q.subs==1 then
 	 max = min
       else
-	 max = tonumber(q.subs[2].text)
+	 max = tonumber(q.subs[2].data)
       end
    elseif qname=="question" then
       min = 0
@@ -373,12 +383,12 @@ local function convert_identifier(pt, sref)
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local localname, packagename
    if pt.subs[1].type=="localname" then
-      localname = pt.subs[1].text
+      localname = pt.subs[1].data
    else
       assert(pt.subs[1].type=="packagename")
       assert(pt.subs[2] and pt.subs[2].type=="localname")
-      packagename = pt.subs[1].text
-      localname = pt.subs[2].text
+      packagename = pt.subs[1].data
+      localname = pt.subs[2].data
    end
    return ast.ref.new{localname=localname, packagename=packagename, sourceref=sref}
 end   
@@ -411,11 +421,11 @@ function convert_exp(pt, sref)
       return convert_exp(pt, sref)
    end
    if pt.type=="capture" then
-      return ast.cap.new{name = pt.subs[1].text,
+      return ast.cap.new{name = pt.subs[1].data,
 			 exp = convert_exp(pt.subs[2], sref),
 		         sourceref=sref}
    elseif pt.type=="predicate" then
-      return ast.predicate.new{type = pt.subs[1].text,
+      return ast.predicate.new{type = pt.subs[1].data,
 			       exp = convert_exp(pt.subs[2], sref),
 			       sourceref=sref}
    elseif pt.type=="cooked" then
@@ -431,7 +441,16 @@ function convert_exp(pt, sref)
    elseif pt.type=="identifier" then
       return convert_identifier(pt, sref)
    elseif pt.type=="literal" then
-      return ast.literal.new{value = pt.text, sourceref=sref}
+      return ast.literal.new{value = pt.data, sourceref=sref}
+   elseif pt.type=="hash_exp" then
+      local val_ast = assert(pt.subs and pt.subs[1])
+      if val_ast.type=="tag" then
+	 return ast.hashtag.new{value = val_ast.data, sourceref=sref}
+      elseif val_ast.type=="literal" then
+	 return ast.string.new{value = val_ast.data, sourceref=sref}
+      else
+	 assert(false, "unexpected sub-match in hash_exp parse tree")
+      end
    elseif pt.type=="charset_exp" then
       return convert_char_exp(pt, sref)
    elseif pt.type=="quantified_exp" then
@@ -516,7 +535,7 @@ local function convert_stmt(pt, sref)
       return b
    elseif pt.type=="package_decl" then
       assert(pt.subs and pt.subs[1])
-      local pname = pt.subs[1].text
+      local pname = pt.subs[1].data
       return ast.pdecl.new{name=pname, sourceref=sref}
    elseif pt.type=="import_decl" then
       local deps = expand_import_decl(pt)
@@ -564,9 +583,9 @@ function convert_core_exp(pt, sref)
       return convert_core_exp(pt, sref)
    end
    if pt.type=="capture" then
-      return ast.cap.new{name = pt.subs[1].text, exp = convert1(pt.subs[2]), sourceref=sref}
+      return ast.cap.new{name = pt.subs[1].data, exp = convert1(pt.subs[2]), sourceref=sref}
    elseif pt.type=="predicate" then
-      return ast.predicate.new{type = pt.subs[1].text, exp = convert1(pt.subs[2]), sourceref=sref}
+      return ast.predicate.new{type = pt.subs[1].data, exp = convert1(pt.subs[2]), sourceref=sref}
    elseif pt.type=="cooked" then
       return ast.cooked.new{exp = convert1(pt.subs[1]), sourceref=sref}
    elseif pt.type=="raw" then
@@ -576,15 +595,15 @@ function convert_core_exp(pt, sref)
    elseif pt.type=="sequence" then
       return ast.sequence.new{exps = map(convert1, flatten(pt, "sequence")), sourceref=sref}
    elseif pt.type=="identifier" then
-      return ast.ref.new{localname=pt.text, sourceref=sref}
+      return ast.ref.new{localname=pt.data, sourceref=sref}
    elseif pt.type=="literal0" then
-      local text = pt.text
+      local text = pt.data
       assert(text:sub(1,1)=='"' and text:sub(-1,-1)=='"', "literal not in quotes: " .. text)
-      return ast.literal.new{value = pt.text:sub(2, -2), sourceref=sref}
+      return ast.literal.new{value = pt.data:sub(2, -2), sourceref=sref}
    elseif pt.type=="charset_exp" then
       return convert_char_exp(pt, sref)
    elseif pt.type=="named_charset0" then
-      local text = pt.text
+      local text = pt.data
       assert(text:sub(1,2)=="[:" and text:sub(-2,-1)==":]")
       text = text:sub(3,-3)
       if text:sub(1,1)=="^" then

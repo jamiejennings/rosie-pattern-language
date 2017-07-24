@@ -373,12 +373,12 @@ end
 function util.readfile(fullpath)
    local ok, f = pcall(io.open, fullpath);
    if (not ok) or (not f) then
-      return false, string.format('Error: cannot open file %q', tostring(fullpath))
+      return false, string.format('Error: cannot open file %s', tostring(fullpath))
    end
    local data = f:read("a")
    f:close()
    if (not data) then
-      return false, string.format('Error: cannot read file %q', tostring(fullpath))
+      return false, string.format('Error: cannot read file %s', tostring(fullpath))
    end
    return data
 end

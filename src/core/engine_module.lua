@@ -286,12 +286,12 @@ local function parse_identifier(en, str)
       assert(m.type=="rpl_expression")
       m = m.subs[1]
       if m.type=="ref" then
-	 return m.text, nil
+	 return m.data, nil
       elseif m.type=="extref" then
 	 assert(m.subs and m.subs[1] and m.subs[2])
 	 assert(m.subs[1].type=="packagename")
 	 assert(m.subs[2].type=="localname")
-	 return m.subs[2].text, m.subs[1].text
+	 return m.subs[2].data, m.subs[1].data
       end -- is there a packagename in the identifier?
    end -- did we get an identifier?
 end

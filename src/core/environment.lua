@@ -51,9 +51,15 @@ local builtins = require "builtins"
 -- 		      sourceref=exp.sourceref}
 -- end
 
+local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
+				 sourceref=
+				    common.source.new{s=1, e=1,
+						      origin=common.loadrequest.new{importpath="<built-ins>"},
+						      text=common.boundary_identifier}}
+
 local function macro_find(...)
     -- grammar
-    --    alias find = {search <exp>}
+    --    alias find = {search <exp>}  OR  {search <exp> ~}
     --    alias search = {!<exp> .}*
     -- end
    local args = {...}
@@ -88,10 +94,11 @@ local function macro_find(...)
 				     exp=ast.sequence.new{exps={exp}, sourceref=sref},
 				     sourceref=sref}
    end
-   local wrapper = ast.cooked.is(exp) and ast.cooked or ast.raw
+   local trailing_boundary = ast.cooked.is(exp) and boundary_ref or nil
    local start_rule =
       ast.binding.new{ref=ast.ref.new{localname="<find>", sourceref=sref},
-		      exp=wrapper.new{exp=ast.sequence.new{exps={search_ref, capture_ref}, sourceref=sref},
+		      exp=ast.raw.new{exp=ast.sequence.new{exps={search_ref, capture_ref, boundary_ref}, 
+							   sourceref=sref},
 				      sourceref=sref},
 		      is_alias=true,
 		      sourceref=sref}

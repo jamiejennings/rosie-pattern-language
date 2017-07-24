@@ -1839,6 +1839,58 @@ check_idem_etc_raw('{(c){2,4}}', "cc", false)
 check_idem_etc_raw('{(c){2,4}}', "c c", true)
 check_idem_etc_raw('{(c){2,4}}', "c c c c c c", true, 4)
 
+subheading("Hash tags and string literals")
+
+r, err = e:compile("#x")
+check(not r)					    -- not a pattern
+
+function check_message(msg_text)
+   r, err = e:compile("message:#" .. msg_text)
+   check(r, "did not compile", 1)
+   m, last = r:match("")
+   check(m, "did not match", 1)
+   check(m.type=="*", "type not anon", 1)
+   check(m.subs and m.subs[1], "no subs???", 1)
+   check(m.subs[1].type=="message", "sub not called 'message'", 1)
+   -- strip quotes off
+   if msg_text:sub(1,1)=='"' then msg_text = msg_text:sub(2, -2); end
+   check(m.subs[1].data==msg_text, "data not '" .. msg_text .. "' (was '" .. m.subs[1].data .. "')")
+end
+
+check_message("x")
+check_message("xyz_123")
+check_message('"This is a long message!"')
+
+data = 'abcdef123ghi'
+-- COOKED
+r, err = e:compile("message:(#" .. data .. ")")
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="message")
+check(m.subs[1].data==data)
+-- RAW
+r, err = e:compile("message:{#" .. data .. "}")
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="message")
+check(m.subs[1].data==data)
+
+r, err = e:compile("message:foo")
+check(not r)					    -- foo is undefined
+check(violation.tostring(err[1]):find("undefined"))
+r, err = e:compile('message:("hi", "bye")')
+check(not r)					    -- too many args
+check(violation.tostring(err[1]):find("2 given"))
+r, err = e:compile('message:()')
+check(not r)					    -- too few args
+print(violation.tostring(err[1]):find("extraneous input"))
+r, err = e:compile('message:(message)')
+check(not r)					    -- wrong arg type (pfunction, not pattern)
+
+
+
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
 return test.finish()

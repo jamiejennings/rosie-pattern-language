@@ -70,7 +70,7 @@ local function remove_raw_exp(ex)
       remove_cooked_raw_from_stmts(ex.rules) 
       return ex
    elseif ast.application.is(ex) then
-      foreach(remove_raw_exp, ex.arglist)
+      ex.arglist = map(remove_raw_exp, ex.arglist)
       return ex
    else
       -- finally, return expressions that do not have sub-expressions to process
@@ -115,7 +115,7 @@ function remove_cooked_exp(ex)
       local new = remove_raw_exp(ex.exp)
       return ast.repetition.new{exp=new, cooked=flag, max=ex.max, min=ex.min, sourceref=ex.sourceref}
    elseif ast.application.is(ex) then
-      foreach(remove_raw_exp, ex.arglist)
+      ex.arglist = map(remove_cooked_exp, ex.arglist)
       return ex
    else
       -- There are no sub-expressions to process in the rest of the expression types, such as

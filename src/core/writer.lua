@@ -111,7 +111,7 @@ local function reveal_predicate(a)
    local name, pos, text, subs = common.decode_match(a)
    local pred_type = subs[1].type
    local exp = subs[2]
-   return subs[1].text .. writer.reveal_exp(subs[2])
+   return subs[1].data .. writer.reveal_exp(subs[2])
 end
 
 local function reveal_repetition(a)

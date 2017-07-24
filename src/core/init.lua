@@ -259,10 +259,9 @@ function create_encoder_table()
 
    -- FIXME: the nocolor option does output codes for the default color.  fix this! 
       nocolor = function(m) return color.match(m, {["*"]="default"}); end,
-
-      text = function(m) return m.text end,	    -- "only the match text"
+      text = function(m) return m.data end,	    -- "only match text"
       subs = function(m)
-		return table.concat(list.map(function(sub) return sub.text end,
+		return table.concat(list.map(function(sub) return sub.data end,
 					     m.subs),
 				    "\n")
 	     end,

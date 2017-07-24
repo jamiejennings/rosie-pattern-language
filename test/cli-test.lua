@@ -94,13 +94,38 @@ results_common_word =
     "[33mnameserver[0m"}
 
 results_common_word_grep = 
-   {"# This is an example file, hand-generated for testing rosie.",
-    "# Last update: Wed Jun 28 16:58:22 EDT 2017",
-    "domain abc.aus.example.com",
-    "search ibm.com mylocaldomain.myisp.net example.com",
-    "nameserver 192.9.201.1",
-    "nameserver 192.9.201.2",
-    "nameserver fde9:4789:96dd:03bd::1"}
+   {"This",
+    "is",
+    "an",
+    "example",
+    "file",
+    "hand",
+    "generated",
+    "for",
+    "testing",
+    "rosie",
+    "Last",
+    "update",
+    "Wed",
+    "Jun",
+    "EDT",
+    "domain",
+    "abc",
+    "aus",
+    "example",
+    "com",
+    "search",
+    "ibm",
+    "com",
+    "mylocaldomain",
+    "myisp",
+    "net",
+    "example",
+    "com",
+    "nameserver",
+    "nameserver",
+    "nameserver",
+    }
 
 results_word_network = 
    {"[33mdomain[0m [31mabc.aus.example.com[0m",
@@ -111,11 +136,22 @@ results_word_network =
    }
 
 results_number_grep =
-   {"# Last update: Wed Jun 28 16:58:22 EDT 2017",
-    "domain abc.aus.example.com",
-    "nameserver 192.9.201.1",
-    "nameserver 192.9.201.2",
-    "nameserver fde9:4789:96dd:03bd::1"}
+   {" 28 ",
+    "16",
+    "58",
+    "22 ",
+    " 2017",
+    " abc",
+    " 192.9",
+    "201.1",
+    " 192.9",
+    "201.2",
+    " fde9",
+    "4789",
+    "96dd",
+    "03bd",
+    "1",
+    }
 
 -- FIXME: add basic.matchall back in when we have the equivalent pattern written for rpl 1.1
 --run("basic.matchall", nil, results_basic_matchall)
@@ -207,7 +243,7 @@ check(results[1]:find("Commands:"))
 ---------------------------------------------------------------------------------------------------
 test.heading("Error reporting")
 
-cmd = rosie_cmd .. " -f test/nested-test.rpl grep foo test/resolv.conf 2>1"
+cmd = rosie_cmd .. " -f test/nested-test.rpl grep foo test/resolv.conf"
 print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")

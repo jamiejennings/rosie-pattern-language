@@ -279,13 +279,14 @@ common.match_node_wrap = lpeg.rcap
 
 -- This could be done in C
 local function insert_input_text(m, input)
-   local name, s, text, subs, e = common.decode_match(m)
+   local name, s, data, subs, e = common.decode_match(m)
+   if data then return m; end			    -- const capture will have data already
    assert(type(e)=="number", "expected an end position, got: " .. tostring(text))
-   m.text = input:sub(s, e-1)
+   m.data = input:sub(s, e-1)
    if subs then
       for i = 1, #subs do insert_input_text(subs[i], input); end
    end
-   assert(type(m.text)=="string")
+   assert(type(m.data)=="string")
    return m
 end
 
@@ -303,7 +304,7 @@ end
 -- subs and the index of first sub.  (because there used to be other things in the sub table)
 
 function common.decode_match(t)
-   return t.type, t.s, t.text, t.subs, t.e
+   return t.type, t.s, t.data, t.subs, t.e
 end
 
 ----------------------------------------------------------------------------------------
@@ -372,7 +373,7 @@ function common.pkgtableset(tbl, importpath, prefix, p, e)
 end
 
 ----------------------------------------------------------------------------------------
--- Binding types: novalue, pattern, macro, pfunction, environment
+-- Binding types: novalue, pattern, macro, pfunction, value, environment
 ----------------------------------------------------------------------------------------
 
 -- environment is defined in environment.lua
@@ -382,6 +383,14 @@ common.novalue =
 		  {exported=false;
 		   ast=NIL;
 		})
+
+common.taggedvalue =
+   recordtype.new("taggedvalue",		    -- tagged values that are not patterns
+		  { type=NIL;
+		    value=NIL;
+		    exported=false;
+		    ast=NIL;
+		 })
 
 common.pfunction =
    recordtype.new("pfunction",
