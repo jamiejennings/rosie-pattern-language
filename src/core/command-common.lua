@@ -82,18 +82,18 @@ function p.setup_engine(en, args)
 	    io.stdout:write(string.format("Compiling additional rpl code %q\n", stm))
 	 end
 
-	 -- local errs = {}
-	 -- local AST = en.compiler.parse_block(common.source.new{text=stm}, errs)
-	 -- if not AST then
-	 --    io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
-	 --    os.exit(-4)
-	 -- end
+	 local errs = {}
+	 local AST = en.compiler.parse_block(common.source.new{text=stm}, errs)
+	 if not AST then
+	    io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	    os.exit(-4)
+	 end
 	 
-	 -- local ok = import_dependencies(en, AST, errs)
-	 -- if not ok then
-	 --    io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
-	 --    os.exit(-4)
-	 -- end
+	 local ok = import_dependencies(en, AST, errs)
+	 if not ok then
+	    io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	    os.exit(-4)
+	 end
 
 	 local success, msg = p.load_string(en, stm)
 	 if not success then

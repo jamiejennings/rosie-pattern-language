@@ -686,7 +686,13 @@ ast.from_core_parse_tree = convert_core
 function ast.dependencies_of(a)
    -- Until we have new use cases, this only works on non-grammar expressions.  And it only works
    -- on pre-expansion ASTs, i.e. those produced by the compiler's parse_expression function.
-   if ast.ref.is(a) then
+   if ast.block.is(a) then
+      return apply(append, map(ast.dependencies_of, a.stmts))
+   elseif ast.grammar.is(a) then
+      return apply(append, map(ast.dependencies_of, a.rules))
+   elseif ast.binding.is(a) then
+      return ast.dependencies_of(a.exp)
+   elseif ast.ref.is(a) then
       if a.packagename then
 	 return {a.packagename}
       else
