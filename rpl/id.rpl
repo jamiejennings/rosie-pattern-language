@@ -18,7 +18,7 @@ dotted = { id {"." id}+ }
 local alias h = [:xdigit:]
 guid = {h{8} "-" {h{4} "-"}{3} h{12}}
 
-any = id / dotted / guid
+any = dotted / id / guid
 
 -- test id1 accepts "h", "www", "w1", "w_", "w_w"
 -- test id1 rejects "1h", "_www", "w-1", "w$"
@@ -31,6 +31,7 @@ any = id / dotted / guid
 -- test dotted rejects "a", "a..", ".", "_abc", "3x", "abc."
 
 -- test guid accepts "b7ffaed1-a372-4119-bd19-324c7ba52f6a", "aae02a32-fcd1-4fac-9be7-c6d3936b9c51"
+-- test guid accepts "b7ffAED1-a372-4119-bd19-324c7ba52f6a"  uppercase hex chars are OK
 -- test guid rejects "b7ffaed1X-a372-4119-bd19-324c7ba52f6a" extra char in first group
 -- test guid rejects "b7ffaed1-a372-4119X-bd19-324c7ba52f6a" extra char in third group
 -- test guid rejects "b7ffaed1-a372-4119-bd1-324c7ba52f6a"   missing char in fourth group

@@ -66,13 +66,15 @@ month_shortname = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / "Jul" / "Aug" 
 month_longname = "January" / "February" / "March" / "April" / "May" / "June" / "July" / "August" / "September" / "October" / "November" / "December"
 month_name = { month_longname / month_shortname }
 
--- non-strict patterns for matching numeric date components:
 day = {"3" [01]} /
       {[12] [0-9]} /
       {"0"? [1-9]}
+
 month = {"1" [0-2]} /
 	{"0"? [1-9]}
+
 year = d{4,4}
+
 -- test day accepts "09", "1", "01", "22", "30", "31"
 -- test day rejects "", "100", "1111", "32", "0", "50"
 
@@ -89,9 +91,21 @@ slashed = { year "/" month "/" day }
 -- test slashed accepts "2017/04/28", "1999/10/31"
 -- test slashed rejects "77899/01/01", "2010/15/03", "1999/12/32"
 
-std_US = month_name day ","? year?
--- test std_US accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
+us_dashed = { month "-" day "-" year }
+-- test us_dashed accepts "4-28-2017", "04-28-2017", "10-31-1999"
+-- test us_dashed rejects "01-01-77899", "15-03-2010", "12-32-1999"
 
-any = dashed / slashed / std_US / alt / rfc3339
+us_slashed = { month "/" day "/" year }
+-- test us_slashed accepts "04/28/2017", "10/31/1999"
+-- test us_slashed rejects "01/01/77899", "15/03/2010", "12/32/1999"
+
+eur = { day "." month "." year }
+--test eur accepts “31.12.1991”, “15.4.74”
+--test eur rejects “1.13.1991”, “45.4.74”
+
+us_std = month_name day ","? year?
+-- test us_std accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
+
+any = us_std / us_dashed / dashed / us_slashed / slashed / eur / alt / rfc3339
 
 
