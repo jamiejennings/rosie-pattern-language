@@ -37,6 +37,10 @@ print("Found rosie executable: " .. rosie_cmd)
 
 infilename = ROSIE_HOME .. "/test/resolv.conf"
 
+-- N.B. grep_flag does double duty:
+-- false  ==> use the match command
+-- true   ==> use the grep command
+-- string ==> use the grep command and add this string to the command (e.g. to set the output encoder)
 function run(import, expression, grep_flag, expectations)
    test.heading(expression)
    test.subheading((grep_flag and "Using grep command") or "Using match command")
@@ -44,7 +48,8 @@ function run(import, expression, grep_flag, expectations)
    print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
    local import_option = ""
    if import then import_option = " --rpl '" .. import .. "' "; end
-   local cmd = rosie_cmd .. import_option ..
+   local grep_extra_options = type(grep_flag)=="string" and (" " .. grep_flag .. " ") or ""
+   local cmd = rosie_cmd .. grep_extra_options .. import_option ..
       (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
    cmd = cmd .. " 2>/dev/null"
    print(cmd)
@@ -94,6 +99,16 @@ results_common_word =
     "[33mnameserver[0m"}
 
 results_common_word_grep = 
+   {"# This is an example file, hand-generated for testing rosie.",
+    "# Last update: Wed Jun 28 16:58:22 EDT 2017",
+    "domain abc.aus.example.com",
+    "search ibm.com mylocaldomain.myisp.net example.com",
+    "nameserver 192.9.201.1",
+    "nameserver 192.9.201.2",
+    "nameserver fde9:4789:96dd:03bd::1",
+    }
+
+results_common_word_grep_matches_only = 
    {"This",
     "is",
     "an",
@@ -159,7 +174,7 @@ results_number_grep =
 run("import word", "word.any", false, results_common_word)
 run("import word", "word.any", true, results_common_word_grep)
 run("import word, net", "word.any net.any", false, results_word_network)
-run("import num", "~ num.any ~", true, results_number_grep)
+run("import num", "~ num.any ~", "-o subs", results_number_grep)
 
 ok, msg = pcall(run, "import word", "foo = word.any", nil, nil)
 check(ok)
