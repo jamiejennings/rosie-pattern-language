@@ -692,6 +692,8 @@ function ast.dependencies_of(a)
       return apply(append, map(ast.dependencies_of, a.rules))
    elseif ast.binding.is(a) then
       return ast.dependencies_of(a.exp)
+   elseif ast.ideclist.is(a) then
+      return {}
    elseif ast.ref.is(a) then
       if a.packagename then
 	 return {a.packagename}
