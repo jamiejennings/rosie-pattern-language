@@ -31,11 +31,10 @@ local builtins = require "builtins"
 -- Items for the initial environment
 ---------------------------------------------------------------------------------------------------
 
--- This version of 'find' matches all the text up to and including the target exp.
--- local function macro_find(...)
+-- local function macro_keep_to(...)
 --    -- return {{! <exp>} .}* <exp> when given <exp> as an arg
 --    local args = {...}
---    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
+--    if #args~=1 then error("function takes one argument, " .. tostring(#args) .. " given"); end
 --    local exp = args[1]
 --    assert(exp.sourceref)
 --    local any_char = ast.ref.new{localname=".", sourceref=exp.sourceref}
@@ -57,11 +56,12 @@ local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 						      origin=common.loadrequest.new{importpath="<built-ins>"},
 						      text=common.boundary_identifier}}
 
-local function macro_find(...)
+local function internal_macro_find(capture_flag, ...)
     -- grammar
     --    alias find = {search <exp>}  OR  {search <exp> ~}
     --    alias search = {!<exp> .}*
     -- end
+   assert(type(capture_flag)=="boolean")
    local args = {...}
    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
    local exp = args[1]
@@ -79,7 +79,7 @@ local function macro_find(...)
    local search_rule =
       ast.binding.new{ref=search_ref,
 		      exp=search_exp,
-		      is_alias=true,
+		      is_alias=(not capture_flag),
 		      sourceref=sref}
    local capture_rule, capture_ref
    if ( ast.ref.is(exp) or
@@ -97,7 +97,7 @@ local function macro_find(...)
    local trailing_boundary = ast.cooked.is(exp) and boundary_ref or nil
    local start_rule =
       ast.binding.new{ref=ast.ref.new{localname="<find>", sourceref=sref},
-		      exp=ast.raw.new{exp=ast.sequence.new{exps={search_ref, capture_ref, boundary_ref}, 
+		      exp=ast.raw.new{exp=ast.sequence.new{exps={search_ref, capture_ref, trailing_boundary}, 
 							   sourceref=sref},
 				      sourceref=sref},
 		      is_alias=true,
@@ -105,6 +105,14 @@ local function macro_find(...)
    -- By putting capture_rule last, it will be omitted if nil
    local rules = {start_rule, search_rule, capture_rule}
    return ast.grammar.new{rules=rules, sourceref=sref}
+end
+
+local function macro_find(...)
+   return internal_macro_find(false, ...)		    -- do not capture the text before the match
+end
+
+local function macro_keep_to(...)
+   return internal_macro_find(true, ...)		    -- capture the text before the match
 end
 
 -- grep
@@ -176,6 +184,7 @@ local ENV =
      [halt_id] = pattern.new{name=halt_id; peg=lpeg.Halt()};
      ["message"] = pfunction.new{primop=builtins.message};
      ["error"] = pfunction.new{primop=builtins.error};
+     ["keep_to"] = macro.new{primop=macro_keep_to};
      ["find"] = macro.new{primop=macro_find};
      ["findall"] = macro.new{primop=macro_findall};
      ["ci"] = macro.new{primop=macro_case_insensitive};
