@@ -70,7 +70,7 @@ host = fqdn
 
 -- EMAIL ADDRESSES
 -- Per RFC3696, the specification for the alias part of an email address is considerably more
--- involved than this simple pattern, which will may accept some invalid addresses and may reject
+-- involved than this simple pattern, which can accept some invalid addresses and may reject
 -- some valid ones.
 
 alias email_char = { [:alnum:] / [!#$%\^&*()_-+=|\\'`~?/{}{}:;] }

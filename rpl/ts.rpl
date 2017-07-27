@@ -1,0 +1,62 @@
+-- -*- Mode: rpl; -*-                                                                               
+--
+-- ts.rpl         timestamps
+--
+-- © Copyright IBM Corporation 2017.
+-- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+-- AUTHOR: Jamie A. Jennings
+
+package ts
+
+import date, time
+
+--	  Format                          Example
+--
+--	  dd/MMM/yyyy:HH:mm:ss ZZZZ       19/Dec/2010:06:36:15 -0700
+--	  dd/MMM/yyyy HH:mm:ss            09/Mar/2004 22:02:40 08691
+--	  dd/MMM HH:mm:ss,sss             23/Dec 11:42:35,342
+--	  dd/MMM/yyyy:HH:mm:ss            23/Dec/2015:11:42:35
+--	  dd/MMM/yyyy HH:mm:ss            23/Dec/2015 11:42:35
+--	  dd-MMM-yyyy HH:mm:ss            23-Dec-2015 11:42:35
+--	  dd-MMM-yyyy HH:mm:ss.sss        23-Apr-2015 11:42:35.883
+--	  dd MMM yyyy HH:mm:ss            23 Apr 2015 11:42:35
+--	  dd MMM yyyy HH:mm:ss.sss        23 Apr 2015 11:42:35.883
+--	  MMM dd, yyyy hh:mm:ss am/pm     Dec 2, 2010 2:39:58 AM
+--	  MMM dd yyyy HH:mm:ss            Jun 09 2011 15:28:14
+--	  MMM dd HH:mm:ss yyyy            Apr 20 00:00:35 2010
+--	  MMM dd HH:mm:ss ZZZZ yyyy       Feb 07 15:22:31 -0700 2016
+--	  MMM dd HH:mm:ss ZZZZ            Sep 28 19:00:00 +0000
+--	  MMM dd HH:mm:ss                 Mar 16 08:12:04
+--	  yy-MM-dd HH:mm:ss,sss ZZZZ      11-02-11 16:47:35,985 +0000
+--	  yy-MM-dd HH:mm:ss,sss           10-06-26 02:31:29,573
+--	  yy-MM-dd HH:mm:ss               10-04-19 12:00:17
+--	  yy/MM/dd HH:mm:ss               06/01/22 04:09:05
+--	  yyyy MMM dd HH:mm:ss.sss zzz    2017 Jun 19 13:16:49.194 EST
+--	  yyyy-MM-dd HH:mm:ss,sss ZZZZ    2011-02-11 16:47:35,985 +0000
+--	  yyyy-MM-dd'T'HH:mm:ss,sssZZZZ   2015-10-02T23:59:59.573+02:00
+--	  yyyy-MM-dd'T'HH:mm:ssZZZZ       2015-10-14T22:11:20+00:00
+--	  yyyy-MM-dd'T'HH:mm:ss.sssZ      2014-07-01T14:59:55.711Z
+--	  yyyy-MM-dd HH:mm:ss ZZZZ        2011-08-19 12:17:55 -0400
+--	  yyyy-MM-dd HH:mm:ssZZZZ         2011-08-19 12:17:55-0400
+--	  yyyy-MM-dd HH:mm:ss zzz         2016-09-06 10:51:18 PDT
+--	  yyyy-MM-dd HH:mm:ss,sss         2010-06-26 02:31:29,573
+--	  yyyy-MM-dd HH:mm:ss             2010-04-19 12:00:17
+--	  yyyy-MM-dd HH:mm:ss:sss         2010-04-19 12:00:17:552
+--	  yyyy/MM/dd HH:mm:ss             2006/01/22 04:11:05
+--	  MMdd_HH:mm:ss                   0423_11:42:35
+--	  MMdd_HH:mm:ss.sss               0423_11:42:35.883
+--	  MM/dd/yy HH:mm:ss               04/23/15 11:42:35
+--	  MM/dd/yyyy HH:mm:ss             04/23/2015 11:42:35
+--	  MM/dd/yyyy HH:mm:ss.sss         04/23/2015 11:42:35.883
+--	  MM/dd/yyyy hh:mm:ss a:sss       8/5/2009 3:31:18 AM:234
+--	  MM/dd/yyyy hh:mm:ss am/pm       9/28/2009 2:23:15 PM
+--
+--
+--	  HH:mm:ss                        09:42:35
+--	  HH:mm:ss.sss                    09:42:35.342
+--	  HH:mm:ss,sss                    09:42:35,342
+--
+--
+--	  yyMMdd HH:mm:ss                 150423 11:42:35
+--	  yyyyMMdd HH:mm:ss.sss           20150423 11:42:35.342
+--

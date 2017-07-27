@@ -87,5 +87,7 @@ alttimeofday = { althour ":" altminute { ":" altsecond }? }
 alttime = alttimeofday altzone
 -- the above tests should handle this
 
-time = { partial offset? }
+
+-- 'std' is the rfc3339 standard, but relaxed to make the time zone information optional.
+std = { partial offset? }
 

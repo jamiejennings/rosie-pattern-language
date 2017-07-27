@@ -111,7 +111,7 @@ local function macro_find(...)
    return internal_macro_find(false, ...)		    -- do not capture the text before the match
 end
 
-local function macro_keep_to(...)
+local function macro_keepto(...)
    return internal_macro_find(true, ...)		    -- capture the text before the match
 end
 
@@ -184,7 +184,7 @@ local ENV =
      [halt_id] = pattern.new{name=halt_id; peg=lpeg.Halt()};
      ["message"] = pfunction.new{primop=builtins.message};
      ["error"] = pfunction.new{primop=builtins.error};
-     ["keep_to"] = macro.new{primop=macro_keep_to};
+     ["keepto"] = macro.new{primop=macro_keepto};
      ["find"] = macro.new{primop=macro_find};
      ["findall"] = macro.new{primop=macro_findall};
      ["ci"] = macro.new{primop=macro_case_insensitive};

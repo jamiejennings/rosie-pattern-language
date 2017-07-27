@@ -78,6 +78,8 @@ year = d{4,4}
 -- test day accepts "09", "1", "01", "22", "30", "31"
 -- test day rejects "", "100", "1111", "32", "0", "50"
 
+unix = day_shortname month_shortname day year?
+
 alt = ( day_name "," )? day month_name year
 -- test alt accepts "Fri, 28 Apr 2017", "Fri, 31 Dec 1999", "31 Dec 2001"
 -- test alt rejects "Dec 31 2001", "Monday, May 22, 2017"
@@ -103,9 +105,9 @@ eur = { day "." month "." year }
 --test eur accepts “31.12.1991”, “15.4.74”
 --test eur rejects “1.13.1991”, “45.4.74”
 
-us_std = month_name day ","? year?
+us = month_name day ","? year?
 -- test us_std accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
 
-any = us_std / us_dashed / dashed / us_slashed / slashed / eur / alt / rfc3339
+any = us / us_dashed / dashed / us_slashed / slashed / eur / unix / alt / rfc3339
 
 
