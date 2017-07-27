@@ -23,8 +23,8 @@ package json
 
 import word, num
 
-local key = word.dqstring
-local string = word.dqstring
+local key = word.dq
+local string = word.dq
 local number = num.signed_number
 
 local true = "true"

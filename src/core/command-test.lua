@@ -10,6 +10,7 @@ local p = {}
 local cli_common = import("command-common")
 local io = import("io")
 local common = import("common")
+local violation = import("violation")
 
 local function startswith(str,sub)
   return string.sub(str,1,string.len(sub))==sub
@@ -54,11 +55,17 @@ function p.run(rosie, en, args, filename)
    local test_engine = rosie.engine.new()
    -- set it up using whatever rpl strings or files were given on the command line
    cli_common.setup_engine(test_engine, args)
+   io.stdout:write(filename, string.rep(".", 24-#filename))
    -- load the rpl code we are going to test (second arg true means "do not search")
    local ok, pkgname, msgs, actual_path = test_engine:loadfile(filename, true)
    if not ok then
-      io.write("Error: rpl file did not compile\n", util.table_to_pretty_string(msgs), "\n")
-      return 0, 0
+      io.write("Error: rpl file did not compile\n",
+	       table.concat(list.map(violation.tostring, msgs), "\n"),
+	       "\n")
+      return false, 0, 0
+   end
+   if args.verbose then
+      io.stdout:write("compiled, ")
    end
    cli_common.set_encoder(rosie, test_engine, false)
    -- read the tests out of the file and run each one
@@ -67,8 +74,8 @@ function p.run(rosie, en, args, filename)
    local num_patterns, test_lines = find_test_lines(f:read('*a'))
    f:close()
    if num_patterns == 0 then
-      print(filename .. ": No tests found")
-      return 0, 0
+      print("no tests found")
+      return true, 0, 0
    end
    local function test_accepts_exp(exp, q)
       if pkgname then exp = pkgname .. "." .. exp; end
@@ -169,11 +176,11 @@ function p.run(rosie, en, args, filename)
       end
    end
    if failures == 0 then
-      print(filename .. ": All " .. tostring(total) .. " tests passed")
+      print("all " .. tostring(total) .. " tests passed")
    else
-      print(filename .. ": " .. tostring(failures) .. " tests failed out of " .. tostring(total) .. " attempted")
+      print(tostring(failures) .. " tests failed out of " .. tostring(total) .. " attempted")
    end
-   return failures, total
+   return true, failures, total
 end
 
 return p

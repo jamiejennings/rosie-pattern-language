@@ -37,7 +37,7 @@ print("Found rosie executable: " .. rosie_cmd)
 libdir = ROSIE_HOME .. "/rpl"
 
 test.heading("Running self-tests on standard library")
-cmd = rosie_cmd .. " test " .. libdir .. "/*.rpl 2>/dev/null"
+cmd = rosie_cmd .. " test --verbose " .. libdir .. "/*.rpl 2>/dev/null"
 print()
 print(cmd)
 results, status, code = util.os_execute_capture(cmd)

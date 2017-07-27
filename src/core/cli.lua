@@ -149,17 +149,27 @@ local function run(args)
       --     call the test procedure
       cli_test.setup(en)
       local total_failures, total_tests = 0, 0
+      local total_files, total_compiled = 0, 0
       for _, fn in ipairs(args.filenames) do
-	 local failures, total = cli_test.run(rosie, en, args, fn)
+	 local ok, failures, total = cli_test.run(rosie, en, args, fn)
+	 total_files = total_files + 1
+	 if ok then total_compiled = total_compiled + 1; end
 	 total_failures = total_failures + failures
 	 total_tests = total_tests + total
       end
-      if #args.filenames > 1 then
-	 if total_failures~=0 then
-	    print("Total of " .. tostring(total_failures) ..
-	       " tests failed out of " .. tostring(total_tests) .. " attempted")
+      if args.verbose and (#args.filenames > 1) then
+	 print("TOTALS:")
+	 io.stdout:write(tostring(#args.filenames), " files, ")
+	 if total_files == total_compiled then
+	    io.stdout:write("all compiled successfully\n")
 	 else
-	    print("All " .. tostring(total_tests) .. " tests passed")
+	    io.stdout:write(tostring(total_files-total_compiled), " failed to compile\n")
+	 end
+	 io.stdout:write(tostring(total_tests), " tests attempted, ")
+	 if total_failures~=0 then
+	    io.stdout:write(tostring(total_failures), " tests failed")
+	 else
+	    io.stdout:write("all " .. tostring(total_tests) .. " tests passed\n")
 	 end
       end
       os.exit((total_failures==0) and 0 or -1)

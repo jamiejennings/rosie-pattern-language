@@ -106,7 +106,7 @@ eur = { day "." month "." year }
 --test eur rejects “1.13.1991”, “45.4.74”
 
 us = month_name day ","? year?
--- test us_std accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
+-- test us accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
 
 any = us / us_dashed / dashed / us_slashed / slashed / eur / unix / alt / rfc3339
 
