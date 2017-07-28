@@ -41,7 +41,7 @@
 		  "\\(\\sw+\\)"		                     ; identifier being bound
 		  rpl-any-space "[=]" rpl-any-space	     ; the key element is the '=' sign
 		  )
-	 (1 font-lock-function-name-face))))
+	 (1 font-lock-variable-name-face))))
 
 (setq rpl-font-lock-keywords-declarations
       (list
@@ -51,14 +51,14 @@
 		  "\\(\\S-+\\)"		; package name or rpl version spec
                   rpl-any-space "$"	; stop at EOL
 		  )
-	 (1 font-lock-keyword-face)) ;(2 font-lock-constant-face))
+	 (1 font-lock-preprocessor-face)) ;(2 font-lock-constant-face))
        ;; below is an "anchored match": (anchor-pat (item-pat pre-form post-form face-spec))
        `(,(concat "^" rpl-any-space
 		  "\\(\\<import\\>\\)"
 		  rpl-some-space)
 	 ;; above is the anchor, and scope is from end of anchor to the end of the line
 	 ;; pre-form below moves to start of line so we catch the anchor, i.e. "import"
-	 ("\\<as\\>\\|\\<import\\>" (beginning-of-line) nil (0 font-lock-keyword-face)))
+	 ("\\<as\\>\\|\\<import\\>" (beginning-of-line) nil (0 font-lock-preprocessor-face)))
        ))
 
 (setq rpl-font-lock-keywords-ALL
