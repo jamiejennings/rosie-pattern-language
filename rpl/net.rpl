@@ -18,10 +18,12 @@ package net
 -- IP ADDRESSES
 local alias ipv4_component = [:digit:]{1,3}
 local alias ip_address_v4 = { ipv4_component "." ipv4_component "." ipv4_component "." ipv4_component }
+
 local alias ipv6_component = [:xdigit:]{1,4}
 local alias ipv6_rest = { ":" ipv6_component }
--- ipv6 is complex, but we don't need to be as exact as rfc3986 is.  We might add the mixed
--- syntax (ipv6/ipv4) for ipv4 addresses that are mapped into ipv6.
+
+-- ipv6 per RFC5952 (https://tools.ietf.org/html/rfc5952)
+-- FUTURE: add the mixed syntax (ipv6/ipv4) for ipv4 addresses that are mapped into ipv6.
 local alias ip_address_v6 = {
 	{ ipv6_component ipv6_rest{7,7} } /
 	{ ipv6_component "::" ipv6_component ipv6_rest{0,4} } /
@@ -38,6 +40,7 @@ ipv4 = ip_address_v4
 -- test ipv4 accepts "0.0.0.0", "1.2.234.123", "999.999.999.999"
 -- test ipv4 rejects "1234.1.2.3"
 -- TODO: add some more rejecting tests
+
 ipv6 = ip_address_v6
 -- test ipv6 accepts "::", "::1", "::face:b00c"
 -- test ipv6 accepts "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8:0:0:0:ff00:42:8329", "2001:db8::ff00:42:8329"
