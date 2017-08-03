@@ -11,9 +11,6 @@ local ast = require "ast"
 local common = require "common"
 local pattern = common.pattern
 local rmatch = common.rmatch
---local engine_module = require "engine_module"
---local engine = engine_module.engine
---local rplx = engine_module.rplx
 
 local trace = {}
 
@@ -157,7 +154,8 @@ end
 local function cs_simple(e, a, input, start, expected, nextpos, complement)
    local simple = a.pat
    assert(pattern.is(simple))
-   local m, nextstart = rmatch(simple.peg, input, start)
+   local wrapped_peg = common.match_node_wrap(simple.peg, "*")
+   local m, nextstart = rmatch(wrapped_peg, input, start)
    if (m and (not complement)) or ((not m) and complement) then
       assert(expected, "simple character set match differs from expected")
       if m then
@@ -235,7 +233,7 @@ end
 function expression(e, a, input, start)
    local pat = a.pat
    assert(pattern.is(pat), "no pattern stored in ast node " .. tostring(a))
-   local peg = lpeg.rcap(pat.peg, "*")
+   local peg = common.match_node_wrap(pat.peg, "*")
    local ok, m, nextpos = pcall(rmatch, peg, input, start, 1)
    if not ok then
       print("\n\n\nTrace failed while working on: ", a)
@@ -265,6 +263,7 @@ function expression(e, a, input, start)
    elseif ast.grammar.is(a) then
       return grammar(e, a, input, start, m, nextpos)
    else
+      -- TODO: Change this to throw a proper error
       print("\nError:")
       print("Arguments to trace:", ast.tostring(a), a, start, m, nextpos)
       error("Internal error: invalid ast type in trace.expression: " .. tostring(a))

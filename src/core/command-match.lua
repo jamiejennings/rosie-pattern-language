@@ -50,11 +50,12 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    cli_common.set_encoder(rosie, en, args.encoder or default_encoder)
    
    local ok, msg = readable_file(infilename)
+   local printable_infilename = (infilename ~= "") and infilename or "stdin"
    if (args.verbose) or (#args.filename > 1) then
-      if ok then io.write(infilename, ":\n"); end    -- print name of file before its output
+      if ok then io.write(printable_infilename, ":\n"); end    -- print name of file before its output
    end
    if not ok then
-      io.stderr:write(infilename, ": ", msg, "\n")
+      io.stderr:write(printable_infilename, ": ", msg, "\n")
       return
    end
    
@@ -68,8 +69,10 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    
    -- (6) Print summary
    if args.verbose then
-      local fmt = "Rosie: %d input items processed (%d matches, %d items unmatched)\n"
-      io.stderr:write(string.format(fmt, cin, cout, cerr))
+      local fmt = "Rosie: %d input item%s processed (%d matched, %d item%s unmatched)\n"
+      local cin_plural = (cin ~= 1) and "s" or ""
+      local cerr_plural = (cerr ~= 1) and "s" or ""
+      io.stderr:write(string.format(fmt, cin, cin_plural, cout, cerr, cerr_plural))
    end
 end
 

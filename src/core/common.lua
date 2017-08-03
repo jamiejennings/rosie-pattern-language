@@ -259,6 +259,12 @@ common.loadrequest = recordtype.new("loadrequest",
 -- Matches are the data structure of the ASTs produced by the parser,
 -- as well as the data structures produced by matching rpl expressions.
 
+function common.create_match(name, pos, capture, ...)
+   local subs = {...};
+   if (not subs[1]) then subs=nil; end
+   return {type = name, s = pos, data = capture, subs = subs};
+end
+
 -- Wrap a peg such that the resulting peg creates a match (AST) node that has this form:
 -- {name = {text=<string>, pos=<int>}}
 -- E.g.
@@ -266,19 +272,10 @@ common.loadrequest = recordtype.new("loadrequest",
 --     [text: "Hello", 
 --      pos: 1]]
 
-local function create_match(name, pos, capture, ...)
-   local subs = {...};
-   if (not subs[1]) then subs=nil; end
-   return {type = name, s = pos, text = capture, subs = subs};
-end
-
-common.create_match = create_match
-
 assert(lpeg.rcap, "lpeg.rcap not defined: wrong version of lpeg???")
 assert(lpeg.rconstcap, "lpeg.rconstcap not defined: wrong version of lpeg???")
 common.match_node_wrap = lpeg.rcap
 
--- This could be done in C
 local function insert_input_text(m, input)
    local name, s, data, subs, e = common.decode_match(m)
    if data then return m; end			    -- const capture will have data already

@@ -206,9 +206,7 @@ local function _match(rplx_exp, input, start, total_time_accum, lpegvm_time_accu
 end
 
 local function _trace(r, input, start)
-   local tr = trace.expression(r, input, start)
-   -- to string here, or more?
-   return tr
+   return trace.expression(r, input, start)
 end
    
 -- FUTURE: Maybe cache expressions?
@@ -418,13 +416,13 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
    local o_write, e_write = outfile.write, errfile.write
    local ok, l = pcall(nextline);
    if not ok then e:error(l); end
-   local _, m, leftover, trace
+   local _, m, leftover, trace_record
    while l do
-      if trace_flag then _, _, trace = e:trace(expression, l); end
+      if trace_flag then _, trace_record = e:trace(expression, l); end
       m, nextpos = matcher(l);		    -- this is nextpos, NOT leftover
       -- What to do with leftover?  User might want to see it.
       -- local leftover = (#input - nextpos + 1);
-      if trace then o_write(outfile, trace, "\n"); end
+      if trace_record then o_write(outfile, trace.tostring(trace_record), "\n"); end
       if m then
 	 if type(m)=="userdata" then
 	    lpeg.writedata(outfile, m)
@@ -438,7 +436,7 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
 	 e_write(errfile, l, "\n")
 	 errlines = errlines + 1
       end
-      if trace then o_write(outfile, "\n"); end
+      if trace_record then o_write(outfile, "\n"); end
       inlines = inlines + 1
       l = nextline(); 
    end -- while
