@@ -18,29 +18,67 @@ local trace = {}
 -- Print a trace
 ---------------------------------------------------------------------------------------------------
 
-local function tab(n)
-   return string.rep(" ", n)
+local node_marker_string = utf8.char(0x251c) .. utf8.char(0x2500) .. utf8.char(0x2500) .. " "
+local last_node_marker_string = utf8.char(0x2514) .. utf8.char(0x2500) .. utf8.char(0x2500) .. " "
+local node_marker_len = utf8.len(node_marker_string)
+assert(utf8.len(last_node_marker_string) == node_marker_len)
+
+local vertical_bar = utf8.char(0x2502)
+
+local function node_marker(last_node_flag)
+   return (last_node_flag and last_node_marker_string or node_marker_string)
 end
 
-function trace.tostring(t, indent)
-   indent = indent or 0
-   local delta = 2
-   assert(t.ast)
-   local str = tab(indent) .. "Expression: " .. ast.tostring(t.ast) .. "\n"
-   indent = indent + 2
-   str = str .. tab(indent) .. "Looking at: |" .. t.input:sub(t.start) .. "| (input pos = "
-   str = str .. tostring(t.start) .. ")\n"
-   str = str .. tab(indent)
-   if t.match then
-      str = str .. "Matched " .. tostring(t.nextpos - t.start) .. " chars"
+local function node(n, last_node_flag)
+   if n == 0 then
+      return ""
    else
-      str = str .. "No match"
+      return (string.rep(" ", (n-1) * node_marker_len) .. node_marker(last_node_flag))
    end
-   str = str .. "\n"
-   for _, sub in ipairs(t.subs or {}) do
-      str = str .. trace.tostring(sub, indent+delta)
+end
+
+-- local function tab(n)
+--  return string.rep(" ", 2*n + 2 + node_marker_len)
+-- end
+
+   -- if false then
+   --    table.insert(lines,
+   -- 		   tab(level) .. "Looking at: |" .. t.input:sub(t.start) ..
+   -- 		   "| (input pos = " .. tostring(t.start) .. ")")
+   --    if t.match then
+   -- 	 table.insert(lines,
+   -- 		      tab(level) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
+   --    else
+   -- 	 table.insert(lines, tab(level) .. "No match")
+   --    end
+   -- end
+
+
+-- - Compress a sequence of simple charset matches to one trace entry
+-- - Draw the tree using codepoints 2500-257F
+-- - Show sequences different from branching due to choices
+
+local function node_tostrings(t, is_last_node)
+   local lines = { node_marker(is_last_node) .. "Expression: " .. ast.tostring(t.ast) }
+   local sublines = {}
+   for i = 1, #(t.subs or {}) do
+      local onesublines = node_tostrings(t.subs[i], (i==#t.subs))
+      table.move(onesublines, 1, #onesublines, #sublines+1, sublines)      
    end
-   return str
+   for i = 1, #sublines do
+      local prefix = (is_last_node and " " or vertical_bar) .. string.rep(" ", node_marker_len-1)
+      sublines[i] = prefix .. sublines[i]
+   end
+   table.move(sublines, 1, #sublines, #lines+1, lines)      
+   return lines
+end
+
+
+function trace.tostring(t)
+   assert(t.ast)
+   local lines = node_tostrings(t)
+
+   return table.concat(lines, "\n")
 end
       
 ---------------------------------------------------------------------------------------------------
