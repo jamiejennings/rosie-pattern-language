@@ -38,19 +38,8 @@ local function tab(is_last_node)
    end
 end
 
--- local function node(n, is_last_node)
---    if n == 0 then
---       return ""
---    else
---       return (string.rep(" ", (n-1) * node_marker_len) .. node_marker(is_last_node))
---    end
--- end
-
-
-   -- if false then
-   -- end
-
-
+-- TODO:
+-- - Include in the trace all the components of a sequence, incl the ones after a failure?
 -- - Compress a sequence of simple charset matches to one trace entry
 -- - Draw the tree using codepoints 2500-257F
 -- - Show sequences different from branching due to choices
@@ -66,8 +55,11 @@ local function node_tostrings(t, is_last_node)
 	        "| (input pos = " .. tostring(t.start) .. ")")
    if t.match then
       table.insert(lines, tab(is_last_node) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
-   else
+   elseif t.match == false then
       table.insert(lines, tab(is_last_node) .. "No match")
+   else
+      assert(t.match==nil)
+      table.insert(lines, tab(is_last_node) .. "Not attempted")
    end
    local sublines = {}
    for i = 1, #(t.subs or {}) do
@@ -104,9 +96,16 @@ local function sequence(e, a, input, start, expected, nextpos)
       if not result.match then break
       else nextstart = result.nextpos; end
    end -- for
-   if (#matches==#a.exps) and (matches[#matches].match) then
+   local n = #matches
+   -- Append a trace record for each item in the sequence that we didn't even try, because they
+   -- occurred after a match failure.
+   if not matches[n].match then
+      for i = n+1, #a.exps do
+	 table.insert(matches, {ast=a.exps[i], input=input, start=nextstart})
+      end
+   end
+   if (n==#a.exps) and (matches[n].match) then
       assert(expected, "sequence match differs from expected")
-      local last = matches[#matches]
       assert(last.nextpos==nextpos, "sequence nextpos differs from expected")
       return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
    else
@@ -288,6 +287,7 @@ function expression(e, a, input, start)
       print("start is: " .. tostring(start) .. " and input is: |" ..  input .. "|")
       error("rmatch failed: " .. m)
    end
+   if not m then m = false; end
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
    elseif ast.cs_exp.is(a) then
