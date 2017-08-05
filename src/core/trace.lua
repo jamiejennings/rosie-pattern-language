@@ -23,34 +23,31 @@ local last_node_marker_string = utf8.char(0x2514) .. utf8.char(0x2500) .. utf8.c
 local node_marker_len = utf8.len(node_marker_string)
 assert(utf8.len(last_node_marker_string) == node_marker_len)
 
+local tab_string = string.rep(" ", node_marker_len-1)
 local vertical_bar = utf8.char(0x2502)
 
-local function node_marker(last_node_flag)
-   return (last_node_flag and last_node_marker_string or node_marker_string)
-end
-
-local function node(n, last_node_flag)
-   if n == 0 then
-      return ""
-   else
-      return (string.rep(" ", (n-1) * node_marker_len) .. node_marker(last_node_flag))
+local function node_marker(is_last_node)
+   if is_last_node == nil then return ""
+   else return (is_last_node and last_node_marker_string or node_marker_string)
    end
 end
 
--- local function tab(n)
---  return string.rep(" ", 2*n + 2 + node_marker_len)
+local function tab(is_last_node)
+   if is_last_node == nil then return ""
+   else return (is_last_node and " " or vertical_bar) .. tab_string
+   end
+end
+
+-- local function node(n, is_last_node)
+--    if n == 0 then
+--       return ""
+--    else
+--       return (string.rep(" ", (n-1) * node_marker_len) .. node_marker(is_last_node))
+--    end
 -- end
 
+
    -- if false then
-   --    table.insert(lines,
-   -- 		   tab(level) .. "Looking at: |" .. t.input:sub(t.start) ..
-   -- 		   "| (input pos = " .. tostring(t.start) .. ")")
-   --    if t.match then
-   -- 	 table.insert(lines,
-   -- 		      tab(level) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
-   --    else
-   -- 	 table.insert(lines, tab(level) .. "No match")
-   --    end
    -- end
 
 
@@ -58,26 +55,37 @@ end
 -- - Draw the tree using codepoints 2500-257F
 -- - Show sequences different from branching due to choices
 
+-- 'node_tostrings' returns a table of strings, one per line of output.  The first time it is
+-- called, the is_last_node argument should be nil.  Subsequent (recursive) calls will supply a
+-- boolean value.
+
 local function node_tostrings(t, is_last_node)
    local lines = { node_marker(is_last_node) .. "Expression: " .. ast.tostring(t.ast) }
+   table.insert(lines,
+		tab(is_last_node) .. "Looking at: |" .. t.input:sub(t.start) ..
+	        "| (input pos = " .. tostring(t.start) .. ")")
+   if t.match then
+      table.insert(lines, tab(is_last_node) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
+   else
+      table.insert(lines, tab(is_last_node) .. "No match")
+   end
    local sublines = {}
    for i = 1, #(t.subs or {}) do
       local onesublines = node_tostrings(t.subs[i], (i==#t.subs))
       table.move(onesublines, 1, #onesublines, #sublines+1, sublines)      
    end
    for i = 1, #sublines do
-      local prefix = (is_last_node and " " or vertical_bar) .. string.rep(" ", node_marker_len-1)
-      sublines[i] = prefix .. sublines[i]
+      if is_last_node ~= nil then
+	 sublines[i] = tab(is_last_node) .. sublines[i]
+      end
    end
    table.move(sublines, 1, #sublines, #lines+1, lines)      
    return lines
 end
 
-
 function trace.tostring(t)
    assert(t.ast)
    local lines = node_tostrings(t)
-
    return table.concat(lines, "\n")
 end
       
