@@ -87,6 +87,14 @@ end
 
 local expression;
 
+-- Append to 'matches' a trace record for each item in 'exps' that we didn't even try to match,
+-- which are those beginning at index 'start'.
+local function append_unattempted(exps, start, matches, input, nextstart)
+   for i = start, #exps do
+      table.insert(matches, {ast=exps[i], input=input, start=nextstart})
+   end
+end
+
 local function sequence(e, a, input, start, expected, nextpos)
    local matches = {}
    local nextstart = start
@@ -97,16 +105,12 @@ local function sequence(e, a, input, start, expected, nextpos)
       else nextstart = result.nextpos; end
    end -- for
    local n = #matches
-   -- Append a trace record for each item in the sequence that we didn't even try, because they
-   -- occurred after a match failure.
-   if not matches[n].match then
-      for i = n+1, #a.exps do
-	 table.insert(matches, {ast=a.exps[i], input=input, start=nextstart})
-      end
+   if n < #a.exps then
+      append_unattempted(a.exps, n+1, matches, input, nextstart)
    end
    if (n==#a.exps) and (matches[n].match) then
       assert(expected, "sequence match differs from expected")
-      assert(last.nextpos==nextpos, "sequence nextpos differs from expected")
+      assert(matches[n].nextpos==nextpos, "sequence nextpos differs from expected")
       return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
    else
       assert(not expected, "sequence non-match differs from expected")
@@ -121,10 +125,13 @@ local function choice(e, a, input, start, expected, nextpos)
       table.insert(matches, result)
       if result.match then break; end
    end -- for
-   local last = matches[#matches]
-   if (last.match) then
+   local n = #matches
+   if n < #a.exps then
+      append_unattempted(a.exps, n+1, matches, input, matches[n].nextpos)
+   end
+   if matches[n].match then
       assert(expected, "choice match differs from expected")
-      assert(last.nextpos==nextpos, "choice nextpos differs from expected")
+      assert(matches[n].nextpos==nextpos, "choice nextpos differs from expected")
       return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
    else
       assert(not expected, "choice non-match differs from expected")
