@@ -45,9 +45,12 @@ end
 -- + Include in the trace ALL the components of a sequence/choice
 -- + Draw the tree using codepoints 2500-257F
 -- - Compress a sequence of simple charset matches to one trace entry
+-- - Print a statement about leftover characters after the tree
 -- 
--- - Show the "best guess" as to what went wrong by focusing on the path in the trace (tree) that
+-- + Show the "best guess" as to what went wrong by focusing on the path in the trace (tree) that
 --   went the furthest in the input.  (This is a heuristic.)
+-- 
+-- - Maybe add color to highlight where branches fail?
 -- 
 -- - Show sequences different from branching due to choices
 -- 
@@ -66,6 +69,80 @@ end
 --     Other non-printable  white box          U+25A1
 
 
+-- 'node_tostrings' returns a table of strings, one per line of output.  The first time it is
+-- called, the is_last_node argument should be nil.  Subsequent (recursive) calls will supply a
+-- boolean value.
+
+local function one_node_tostrings(t, is_last_node)
+   local lines = { node_marker(is_last_node) .. "Expression: " .. ast.tostring(t.ast) }
+   table.insert(lines,
+		tab(is_last_node) .. "Looking at: " .. left_delim .. t.input:sub(t.start) ..
+	        right_delim .. " (input pos = " .. tostring(t.start) .. ")")
+   if t.match then
+      table.insert(lines, tab(is_last_node) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
+   elseif t.match == false then
+      table.insert(lines, tab(is_last_node) .. "No match")
+   else
+      assert(t.match==nil)
+      table.insert(lines, tab(is_last_node) .. "Not attempted")
+   end
+   return lines
+end
+
+local function select_subs_to_show(node, sub_on_path)
+   assert(node.ast)
+   if not sub_on_path then
+      -- If we are not following a path, then we are showing the entire tree
+      return node.subs or {}
+   end
+   local subs = list.new()
+   if (not node.subs) or not list.member(sub_on_path, list.from(node.subs)) then
+      -- Trace trees are fuller than ASTs, i.e. they have sub-traces where identifiers are
+      -- referenced and where quantified expressions are unrolled.  So there are times when we
+      -- show a node but not its subs because the path did not include one of the subs.
+      return subs
+   elseif ast.sequence.is(node.ast) or ast.choice.is(node.ast) then
+      local i = 1
+      while node.subs[i] and (node.subs[i].match ~= nil) do
+	 table.insert(subs, node.subs[i])	    -- FUTURE: write list.insert?
+	 i = i+1
+      end
+      return subs
+   else
+      return list.new(sub_on_path)
+   end
+end
+
+local function node_tostrings(t, is_last_node, path)
+   local lines = one_node_tostrings(t, is_last_node)
+   local sublines = {}
+   if path and list.null(path) then
+      return lines
+   end
+   local subs_to_show = select_subs_to_show(t, path and list.car(path))
+   local next_path = path and list.cdr(path)
+
+   local last = #subs_to_show
+   for i = 1, last do
+      local onesublines = node_tostrings(subs_to_show[i], (i==last), next_path)
+      table.move(onesublines, 1, #onesublines, #sublines+1, sublines)      
+   end
+   
+   for i = 1, #sublines do
+      if is_last_node ~= nil then
+	 sublines[i] = tab(is_last_node) .. sublines[i]
+      end
+   end
+   table.move(sublines, 1, #sublines, #lines+1, lines)      
+   return lines
+end
+
+function trace.tostring(t)
+   assert(t.ast)
+   local lines = node_tostrings(t)
+   return table.concat(lines, "\n")
+end
+      
 -- Return the trace leaf that has the larger value of nextpos, i.e. the leaf that consumed more of
 -- the input string.  
 local function better_of(leaf1, leaf2)
@@ -107,43 +184,12 @@ function trace.max_path(t)
    return path
 end
 
--- 'node_tostrings' returns a table of strings, one per line of output.  The first time it is
--- called, the is_last_node argument should be nil.  Subsequent (recursive) calls will supply a
--- boolean value.
-
-local function node_tostrings(t, is_last_node)
-   local lines = { node_marker(is_last_node) .. "Expression: " .. ast.tostring(t.ast) }
-   table.insert(lines,
-		tab(is_last_node) .. "Looking at: " .. left_delim .. t.input:sub(t.start) ..
-	        right_delim .. " (input pos = " .. tostring(t.start) .. ")")
-   if t.match then
-      table.insert(lines, tab(is_last_node) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
-   elseif t.match == false then
-      table.insert(lines, tab(is_last_node) .. "No match")
-   else
-      assert(t.match==nil)
-      table.insert(lines, tab(is_last_node) .. "Not attempted")
-   end
-   local sublines = {}
-   for i = 1, #(t.subs or {}) do
-      local onesublines = node_tostrings(t.subs[i], (i==#t.subs))
-      table.move(onesublines, 1, #onesublines, #sublines+1, sublines)      
-   end
-   for i = 1, #sublines do
-      if is_last_node ~= nil then
-	 sublines[i] = tab(is_last_node) .. sublines[i]
-      end
-   end
-   table.move(sublines, 1, #sublines, #lines+1, lines)      
-   return lines
-end
-
-function trace.tostring(t)
-   assert(t.ast)
-   local lines = node_tostrings(t)
+function trace.path_tostring(p)
+   assert(p and p[1] and p[1].ast)
+   local lines = node_tostrings(list.car(p), nil, list.cdr(p))
    return table.concat(lines, "\n")
 end
-      
+
 ---------------------------------------------------------------------------------------------------
 -- Trace functions for each expression type
 ---------------------------------------------------------------------------------------------------
