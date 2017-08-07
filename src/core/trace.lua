@@ -18,6 +18,9 @@ local trace = {}
 -- Print a trace
 ---------------------------------------------------------------------------------------------------
 
+local left_delim = utf8.char(0x300A)
+local right_delim = utf8.char(0x300B)
+
 local node_marker_string = utf8.char(0x251c) .. utf8.char(0x2500) .. utf8.char(0x2500) .. " "
 local last_node_marker_string = utf8.char(0x2514) .. utf8.char(0x2500) .. utf8.char(0x2500) .. " "
 local node_marker_len = utf8.len(node_marker_string)
@@ -39,10 +42,70 @@ local function tab(is_last_node)
 end
 
 -- TODO:
--- - Include in the trace all the components of a sequence, incl the ones after a failure?
+-- + Include in the trace ALL the components of a sequence/choice
+-- + Draw the tree using codepoints 2500-257F
 -- - Compress a sequence of simple charset matches to one trace entry
--- - Draw the tree using codepoints 2500-257F
+-- 
+-- - Show the "best guess" as to what went wrong by focusing on the path in the trace (tree) that
+--   went the furthest in the input.  (This is a heuristic.)
+-- 
 -- - Show sequences different from branching due to choices
+-- 
+-- - Make this [below] convention a configuration option with display settings like:
+--   "none" - output the bytes in the input as-is
+--   "hex" - translate each byte into its 2-char hex representation
+--   "ascii" - translate 0-31 to ^@^A-^Z^[^\^]^^^_ and 127-255 into \x##
+--   "utf8" - translate as follows
+--                          utf8               utf8     
+--     CHAR                 GLYPH              CODEPOINT    
+--     Space                dot                U+00B7       
+--     Tab                  right arrow        U+2192       
+--     Newline              down arrow         U+2193
+--     Return               solid bent arrow   U+21B5
+--     Other whitespace     white dot          U+25E6 
+--     Other non-printable  white box          U+25A1
+
+
+-- Return the trace leaf that has the larger value of nextpos, i.e. the leaf that consumed more of
+-- the input string.  
+local function better_of(leaf1, leaf2)
+   assert((not leaf2) or leaf2.nextpos)
+   if (leaf1 and
+       leaf1.nextpos and
+       ((not leaf2) or (leaf1.nextpos > leaf2.nextpos))) then
+      return leaf1
+   end
+   return leaf2
+end
+
+-- When a match fails, all of the leaves in the trace tree will indicate a match failure.  We
+-- cannot be sure about which path through the tree is the one that the user *thought* would match
+-- the input, but we can guess.  A reasonable guess is the path from the root to the leaf that
+-- consumed the most input characters.  In the case of a tie, we will choose the path we encounter
+-- first. 
+local function max_input_path(t, max_node)
+   if t.subs then
+      for _, sub in ipairs(t.subs) do
+	 local local_max = max_input_path(sub)
+	 max_node = better_of(local_max, max_node)
+	 sub.parent = t				    -- establish a path going UP the tree
+      end
+      return max_node
+   else
+      -- no subs, so t is a leaf node
+      return better_of(t, max_node) 
+   end
+end
+
+function trace.max_path(t)
+   local leaf = max_input_path(t)
+   local path = list.new(leaf)
+   while leaf.parent do
+      path = list.cons(leaf.parent, path)
+      leaf = leaf.parent
+   end
+   return path
+end
 
 -- 'node_tostrings' returns a table of strings, one per line of output.  The first time it is
 -- called, the is_last_node argument should be nil.  Subsequent (recursive) calls will supply a
@@ -51,8 +114,8 @@ end
 local function node_tostrings(t, is_last_node)
    local lines = { node_marker(is_last_node) .. "Expression: " .. ast.tostring(t.ast) }
    table.insert(lines,
-		tab(is_last_node) .. "Looking at: |" .. t.input:sub(t.start) ..
-	        "| (input pos = " .. tostring(t.start) .. ")")
+		tab(is_last_node) .. "Looking at: " .. left_delim .. t.input:sub(t.start) ..
+	        right_delim .. " (input pos = " .. tostring(t.start) .. ")")
    if t.match then
       table.insert(lines, tab(is_last_node) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
    elseif t.match == false then
