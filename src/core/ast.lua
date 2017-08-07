@@ -763,18 +763,31 @@ function ast.tostring(a, already_grouped)
       return pre .. table.concat(choices, " / ") .. post
    elseif ast.predicate.is(a) then
       return a.type .. ast.tostring(a.exp)
-   elseif ast.repetition.is(a) then
-      local postfix
+   elseif ast.repetition.is(a) then		    -- Before syntax expansion,
+      local postfix				    -- this ast can be seen.
       if (not a.max) then
 	 if a.min==0 then postfix = "*"
 	 elseif a.min==1 then postfix = "+"
-	 else postfix = "{" .. tostring(a.max) .. ",}"
+	 else postfix = "{" .. tostring(a.min) .. ",}"
 	 end
-      elseif a.min==0 then postfix = "?"
+      elseif (not a.min) and (a.max==1) then postfix = "?"
       else
 	 postfix = "{" .. tostring(a.min) .. "," .. tostring(a.max) .. "}"
       end
       return ast.tostring(a.exp) .. postfix
+   elseif ast.atleast.is(a) then		    -- After syntax expansion,
+      local quantifier				    -- this ast can be seen.
+      if a.min==0 then quantifier = "*"
+      elseif a.min==1 then quantifier = "+"
+      else quantifier = "{" .. tostring(a.min) .. ",}"; end
+      local exp = ast.tostring(a.exp)
+      if exp:sub(1,1)~="{" then exp = "{" .. exp .. "}"; end
+      return exp .. quantifier
+   elseif ast.atmost.is(a) then			    -- After syntax expansion,
+      local exp = ast.tostring(a.exp)		    -- this ast can be seen.
+      if exp:sub(1,1)~="{" then exp = "{" .. exp .. "}"; end
+      local postfix = (a.max==1) and "?" or "{," .. tostring(a.max) .. "}"
+      return exp .. postfix
    elseif ast.cooked.is(a) then
       return "(" .. ast.tostring(a.exp, true) .. ")"
    elseif ast.raw.is(a) then
@@ -811,18 +824,6 @@ function ast.tostring(a, already_grouped)
 	 argstring = "(" .. table.concat(map(ast.tostring, a.arglist), ", ") .. ")"
       end
       return ast.tostring(a.ref) .. ":" .. argstring
-   elseif ast.atleast.is(a) then
-      local quantifier
-      if a.min==0 then quantifier = "*"
-      elseif a.min==1 then quantifier = "+"
-      else quantifier = "{" .. tostring(a.min) .. ",}"; end
-      local exp = ast.tostring(a.exp)
-      if exp:sub(1,1)~="{" then exp = "{" .. exp .. "}"; end
-      return exp .. quantifier
-   elseif ast.atmost.is(a) then
-      local exp = ast.tostring(a.exp)
-      if exp:sub(1,1)~="{" then exp = "{" .. exp .. "}"; end
-      return exp .. "{," .. tostring(a.max) .. "}"
    elseif list.is(a) then
       return tostring(map(ast.tostring, a))
    else

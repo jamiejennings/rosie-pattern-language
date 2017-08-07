@@ -106,10 +106,8 @@ email = { name "@" host }
 -- test email accepts "me@here.com", "you+filter@somewhere.org"
 -- TODO: add rejecting email strings
 
----------------------------------------------------------------------------------------------------
--- URI
----------------------------------------------------------------------------------------------------
 
+-- URI
 -- URI syntax highly simplified here (e.g. no query parms)
 protocol = {{[:alpha:]+} "://"}
 local alias path_char = [:alpha:] / [:digit:] / [-._~!$&'()*+,;=:@] / { "%" [:xdigit:] [:xdigit:] }
@@ -119,19 +117,21 @@ url = {protocol {host / ipv4}? rooted_path?}
 -- test url accepts "https://www.github.com/jamiejennings/rosie-pattern-language"
 -- test url accepts "ftp://some.ftp.net/path/to/file.zip"
 
----------------------------------------------------------------------------------------------------
--- HTTP commands
----------------------------------------------------------------------------------------------------
+-- test url accepts "@#!@#!#@"
+-- test foo accepts bar
+-- test foo rejects "123"
 
+-- test url includes host "http://ibm.com"      This will pass
+-- test url excludes host "http://ibm.com"      This will fail
+-- Xtest url includes host "//example.com"           This will fail
+
+-- HTTP commands
 -- Some very simple HTTP patterns
 http_command_name = "GET" / "HEAD" / "PUT" / "POST" / "DELETE" / 
                     "TRACE" / "OPTIONS" / "CONNECT" / "PATCH"
 http_command = http_command_name (url / rooted_path)
 http_version = {"HTTP" "/" [:digit:]+ "." [:digit:]+}     -- e.g. "HTTP1.1"
 
----------------------------------------------------------------------------------------------------
--- net.any will match common network patterns (but not http commands or paths)
----------------------------------------------------------------------------------------------------
-
--- Match an IP, Host, Email, URL
-any = ip / host / email / url
+-- ANY pattern
+-- Match an IP, Host, Email, URL, or HTTP Command
+any = ip / host / email / url / http_command

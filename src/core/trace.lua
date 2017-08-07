@@ -121,13 +121,11 @@ local function node_tostrings(t, is_last_node, path)
    end
    local subs_to_show = select_subs_to_show(t, path and list.car(path))
    local next_path = path and list.cdr(path)
-
    local last = #subs_to_show
    for i = 1, last do
       local onesublines = node_tostrings(subs_to_show[i], (i==last), next_path)
       table.move(onesublines, 1, #onesublines, #sublines+1, sublines)      
    end
-   
    for i = 1, #sublines do
       if is_last_node ~= nil then
 	 sublines[i] = tab(is_last_node) .. sublines[i]
@@ -174,6 +172,18 @@ local function max_input_path(t, max_node)
    end
 end
 
+local function trim_matches(path)
+   local last_match_index = 1
+   for i = #path, 2, -1 do
+      if not path[i].match then break; end
+      last_match_index = i
+   end
+   for i = last_match_index + 1, #path do
+      path[i] = nil
+   end
+   return path
+end
+
 function trace.max_path(t)
    local leaf = max_input_path(t)
    local path = list.new(leaf)
@@ -181,7 +191,7 @@ function trace.max_path(t)
       path = list.cons(leaf.parent, path)
       leaf = leaf.parent
    end
-   return path
+   return trim_matches(path)
 end
 
 function trace.path_tostring(p)

@@ -51,11 +51,12 @@ end
 
 
 function p.run(rosie, en, args, filename)
+   local right_column = 24
    -- fresh engine for testing this file
    local test_engine = rosie.engine.new()
    -- set it up using whatever rpl strings or files were given on the command line
    cli_common.setup_engine(test_engine, args)
-   io.stdout:write(filename, string.rep(".", 24-#filename))
+   io.stdout:write(filename, string.rep(".", right_column-#filename))
    -- load the rpl code we are going to test (second arg true means "do not search")
    local ok, pkgname, msgs, actual_path = test_engine:loadfile(filename, true)
    if not ok then
@@ -64,8 +65,18 @@ function p.run(rosie, en, args, filename)
 	       "\n")
       return false, 0, 0
    end
+   local first_error = true
+   local function write_error(...)
+      if not first_error then
+	 io.write(string.rep(" ", right_column))
+      else
+	 first_error = false;
+      end
+      for _,item in ipairs{...} do io.write(item); end
+      io.write("\n")
+   end
    if args.verbose then
-      io.stdout:write("compiled, ")
+      write_error("File compiled successfully")
    end
    cli_common.set_encoder(rosie, test_engine, false)
    -- read the tests out of the file and run each one
@@ -77,17 +88,20 @@ function p.run(rosie, en, args, filename)
       print("no tests found")
       return true, 0, 0
    end
+   local function write_compilation_error(exp)
+      write_error("ERROR: test expression did not compile: ", tostring(exp))
+   end
    local function test_accepts_exp(exp, q)
       if pkgname then exp = pkgname .. "." .. exp; end
       local ok, res, pos = test_engine:match(exp, q)
-      if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
+      if (not ok) then write_compilation_error(exp); end
       if (not ok) or (not res) or (pos ~= 0) then return false end
       return true
    end
    local function test_rejects_exp(exp, q)
       if pkgname then exp = pkgname .. "." .. exp; end
       local ok, res, pos = test_engine:match(exp, q)
-      if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
+      if (not ok) then write_compilation_error(exp); end
       if (not ok) or (res and (pos == 0)) then return false end
       return true
    end
@@ -110,9 +124,9 @@ function p.run(rosie, en, args, filename)
       end
       if pkgname then exp = pkgname .. "." .. exp; end
       local ok, res, leftover = test_engine:match(exp, q)
-      if (not ok) then io.write("Error: test expression did not compile: ", tostring(exp), "\n"); end
+      if (not ok) then write_compilation_error(exp); end
       -- check for match error, which prevents testing containment
-      if (not ok) or (not res) or (leftover~=0) then return nil; end
+      if (not res) or (leftover~=0) then return nil; end
       return searchForID(res.subs, id)
    end
    local test_funcs = {rejects=test_rejects_exp,accepts=test_accepts_exp}
@@ -125,60 +139,63 @@ function p.run(rosie, en, args, filename)
    for _,p in pairs(test_lines) do
       local m, left = test_rplx:match(p)
       if not m then
-	 print(filename .. ": FAIL: invalid test syntax: " .. p)
+	 write_error("FAIL: invalid test syntax: ", p)
 	 failures = failures + 1
-	 break
-      end
-      local testIdentifier = m.subs[1].data
-      local testType = m.subs[2].type
-      local literals = 3 -- literals will start at subs offset 3
-      if testType == "includesClause" then
-         -- test includes
-	 local t = m.subs[2]
-	 assert(t.subs and t.subs[1] and t.subs[1].type=="includesKeyword")
-	 local testing_excludes = (t.subs[1].data=="excludes")
-	 assert(t.subs[2] and t.subs[2].type=="identifier",
-		"not an identifier: " .. tostring(t.subs[2].type))
-         local containedIdentifier = t.subs[2].data
-         for i = literals, #m.subs do
-            total = total + 1
-            local teststr = m.subs[i].data
-            teststr = common.unescape_string(teststr)
-	    local includes = test_includes_ident(testIdentifier, teststr, containedIdentifier)
-	    local msg
-	    if includes==nil then
-	       msg = " did not accept " .. teststr ..
-		  " (blocked includes/excludes test of " .. containedIdentifier .. ")"
-	    elseif (not testing_excludes and not includes) then
-	       msg = " did not include " .. containedIdentifier .. " with input " .. teststr
-	    elseif (testing_excludes and includes) then
-	       msg = " did not exclude " .. containedIdentifier .. " with input " .. teststr
+      else
+	 local testIdentifier = m.subs[1].data
+	 local testType = m.subs[2].type
+	 local literals = 3 -- literals will start at subs offset 3
+	 if testType == "includesClause" then
+	    -- test includes
+	    local t = m.subs[2]
+	    assert(t.subs and t.subs[1] and t.subs[1].type=="includesKeyword")
+	    local testing_excludes = (t.subs[1].data=="excludes")
+	    assert(t.subs[2] and t.subs[2].type=="identifier",
+		   "not an identifier: " .. tostring(t.subs[2].type))
+	    local containedIdentifier = t.subs[2].data
+	    for i = literals, #m.subs do
+	       total = total + 1
+	       local teststr = m.subs[i].data
+	       teststr = common.unescape_string(teststr)
+	       local includes = test_includes_ident(testIdentifier, teststr, containedIdentifier)
+	       local msg
+	       if includes==nil then
+		  msg = "cannot test if " .. testIdentifier ..
+		     " includes/excludes " .. containedIdentifier ..
+		     " because " .. testIdentifier .. " did not accept " .. teststr
+	       elseif (not testing_excludes and not includes) then
+		  msg = testIdentifier .. " did not include " .. containedIdentifier ..
+		     " with input " .. teststr
+	       elseif (testing_excludes and includes) then
+		  msg = testIdentifier .. " did not exclude " .. containedIdentifier ..
+		     " with input " .. teststr
+	       end
+	       if msg then
+		  write_error(includes==nil and "BLOCKED: " or "FAIL: ", msg)
+		  failures = failures + 1
+	       end
 	    end
-	    if msg then
-               print(filename .. ((includes==nil and ": BLOCKED: ") or ": FAIL: ") .. testIdentifier .. msg)
-               failures = failures + 1
-            end
-         end
-      elseif testType == "testKeyword" then
-         -- test accepts/rejects
-         for i = literals, #m.subs do
-            total = total + 1
-            local teststr = m.subs[i].data
-            teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
-            if not test_funcs[m.subs[2].data](testIdentifier, teststr) then
-               if #teststr==0 then teststr = "the empty string"; end -- for display purposes
-               print(filename .. ": FAIL: " .. testIdentifier .. " did not " .. m.subs[2].data:sub(1,-2) .. " " .. teststr)
-               failures = failures + 1
-            end
-         end
-      else -- unknown test type
-	 assert(false, "parser for test expressions produced unexpected test type: " .. tostring(testType))
-      end
+	 elseif testType == "testKeyword" then
+	    -- test accepts/rejects
+	    for i = literals, #m.subs do
+	       total = total + 1
+	       local teststr = m.subs[i].data
+	       teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
+	       if not test_funcs[m.subs[2].data](testIdentifier, teststr) then
+		  if #teststr==0 then teststr = "the empty string"; end -- for display purposes
+		  write_error("FAIL: ", testIdentifier, " did not ", m.subs[2].data:sub(1,-2), " ", teststr)
+		  failures = failures + 1
+	       end
+	    end
+	 else -- unknown test type
+	    assert(false, "parser for test expressions produced unexpected test type: " .. tostring(testType))
+	 end
+      end -- for each test line
    end
    if failures == 0 then
-      print("all " .. tostring(total) .. " tests passed")
+      write_error("all ", tostring(total), " tests passed")
    else
-      print(tostring(failures) .. " tests failed out of " .. tostring(total) .. " attempted")
+      write_error(tostring(failures), " tests failed out of ", tostring(total), " attempted")
    end
    return true, failures, total
 end
