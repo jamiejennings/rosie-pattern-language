@@ -95,6 +95,7 @@ local map = list.map; apply = list.apply; append = list.append;
 co.colormap = {["*"] = "black";			    -- global default
 	       ["net.*"] = "red";
 	       ["net.host"] = "red";		    -- show host, not its constituent parts
+	       ["net.fqdn"] = "red";		    -- show fqdn, not its constituent parts
 	       ["net.ipv6"] = "red;underline";
 
 	       ["num.*"] = "underline";

@@ -103,7 +103,7 @@ local function select_subs_to_show(node, sub_on_path)
       return subs
    elseif ast.sequence.is(node.ast) or ast.choice.is(node.ast) then
       local i = 1
-      while node.subs[i] and (node.subs[i].match ~= nil) do
+      while node.subs[i] do --and (node.subs[i].match ~= nil) do
 	 table.insert(subs, node.subs[i])	    -- FUTURE: write list.insert?
 	 i = i+1
       end
@@ -425,7 +425,8 @@ end
 
 function expression(e, a, input, start)
    local pat = a.pat
-   assert(pattern.is(pat), "no pattern stored in ast node " .. tostring(a))
+   assert(pattern.is(pat),
+	  "no pattern stored in ast node " .. tostring(a) .. " (found " .. tostring(pat) .. ")")
    local peg = common.match_node_wrap(pat.peg, "*")
    local ok, m, nextpos = pcall(rmatch, peg, input, start, 1)
    if not ok then
@@ -464,7 +465,7 @@ function expression(e, a, input, start)
    end
 end
 
-function trace.expression(r, input, start)
+function trace.internal(r, input, start)
    start = start or 1
    assert(type(input)=="string")
    assert(type(start)=="number")
@@ -472,7 +473,18 @@ function trace.expression(r, input, start)
    assert((pcall(rawget, r.pattern, "ast")))	    -- quack: "is ast a valid key in r.pattern?"
    local a = r.pattern.ast
    assert(a, "no ast stored for pattern")
-   return expression(r.engine, a, input, start)
+   return expression(en, a, input, start)
+end
+
+function trace.expression(r, input, start, style)
+   local tr = trace.internal(r, input, start)
+   if style == "full" then
+      return trace.tostring(tr)
+   elseif style == "condensed" then
+      return trace.path_tostring(trace.max_path(tr))
+   else
+      error("Invalid trace style: " .. tostring(style))
+   end
 end
 
 return trace

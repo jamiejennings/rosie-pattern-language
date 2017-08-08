@@ -205,8 +205,8 @@ local function _match(rplx_exp, input, start, total_time_accum, lpegvm_time_accu
    return false, #input, total_time_accum, lpegvm_time_accum;
 end
 
-local function _trace(r, input, start)
-   return trace.expression(r, input, start)
+local function _trace(r, input, start, style)
+   return trace.expression(r, input, start, style)
 end
    
 -- FUTURE: Maybe cache expressions?
@@ -232,8 +232,8 @@ local function engine_match(e, expression, input, start, t0, t1)
    return engine_match_trace(e, _match, expression, input, start, t0, t1)
 end
 
-local function engine_trace(e, expression, input, start)
-   return engine_match_trace(e, _trace, expression, input, start)
+local function engine_trace(e, expression, input, start, style)
+   return engine_match_trace(e, _trace, expression, input, start, style)
 end
 
 ----------------------------------------------------------------------------------------
@@ -374,8 +374,9 @@ local function open3(e, infilename, outfilename, errfilename)
    return infile, outfile, errfile
 end
 
-local function engine_process_file(e, expression, trace_flag, infilename, outfilename, errfilename, wholefileflag)
-   if type(trace_flag)~="boolean" then e:error("bad trace flag"); end
+local operation = {match=1, trace=2, fulltrace=3}
+
+local function engine_process_file(e, expression, op, infilename, outfilename, errfilename, wholefileflag)
    --
    -- Set up pattern to match.  Always compile it first, even if we are going to call tracematch later.
    -- This is so that we report errors uniformly at this point in the process, instead of after
@@ -416,13 +417,15 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
    local o_write, e_write = outfile.write, errfile.write
    local ok, l = pcall(nextline);
    if not ok then e:error(l); end
-   local _, m, leftover, trace_record
+   local _, m, leftover, trace_string
+   local trace_flag = (op == operation.trace) or (op == operation.fulltrace)
+   local trace_style = (op == operation.fulltrace) and "full" or "condensed"
    while l do
-      if trace_flag then _, trace_record = e:trace(expression, l); end
+      if trace_flag then _, trace_string = e:trace(expression, l, 1, trace_style); end
       m, nextpos = matcher(l);		    -- this is nextpos, NOT leftover
       -- What to do with leftover?  User might want to see it.
       -- local leftover = (#input - nextpos + 1);
-      if trace_record then o_write(outfile, trace.tostring(trace_record), "\n"); end
+      if trace_string then o_write(outfile, trace_string, "\n"); end
       if m then
 	 if type(m)=="userdata" then
 	    lpeg.writedata(outfile, m)
@@ -436,7 +439,7 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
 	 e_write(errfile, l, "\n")
 	 errlines = errlines + 1
       end
-      if trace_record then o_write(outfile, "\n"); end
+      if trace_string then o_write(outfile, "\n"); end
       inlines = inlines + 1
       l = nextline(); 
    end -- while
@@ -445,11 +448,11 @@ local function engine_process_file(e, expression, trace_flag, infilename, outfil
 end
 
 function process_input_file.match(e, expression, infilename, outfilename, errfilename, wholefileflag)
-   return engine_process_file(e, expression, false, infilename, outfilename, errfilename, wholefileflag)
+   return engine_process_file(e, expression, operation.match, infilename, outfilename, errfilename, wholefileflag)
 end
 
 function process_input_file.trace(e, expression, infilename, outfilename, errfilename, wholefileflag)
-   return engine_process_file(e, expression, true, infilename, outfilename, errfilename, wholefileflag)
+   return engine_process_file(e, expression, operation.trace, infilename, outfilename, errfilename, wholefileflag)
 end
 
 ---------------------------------------------------------------------------------------------------

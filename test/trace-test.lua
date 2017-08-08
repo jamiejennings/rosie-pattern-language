@@ -35,7 +35,7 @@ function check_trace(exp, input, expectation, expected_nextpos, expected_content
    if not rplx then
       error("this expression failed to compile: " .. exp)
    end
-   local t = trace.expression(rplx, input)
+   local t = trace.internal(rplx, input)
    lasttrace = t				    -- GLOBAL
    check(( (expectation and t.match) or ((not expectation) and (not t.match)) ),
          "t.match was not as expected",

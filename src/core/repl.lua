@@ -200,7 +200,8 @@ function repl.repl(en)
 			   local m, left = rplx:match(input_text)
 			   if (debug and (not m)) or cname=="trace" then
 			      local ok, tr = en:trace(str, input_text)
-			      print(trace.tostring(tr))
+			      -- TODO: check 'ok'?
+			      print(tr)
 			   end
 			   print_match(m, left, (cname=="trace"))
 			end -- did exp compile
