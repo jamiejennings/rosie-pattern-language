@@ -322,55 +322,77 @@ local function atmost(e, a, input, start, expected, nextpos)
    return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
 end
 
-local function cs_simple(e, a, input, start, expected, nextpos, complement)
+local function cs_explanation(a, input, start, m, complement)
+   return (" " .. ast.tostring(a) ..
+	   " Looking at input pos " .. tostring(start) .. ": " ..
+           input:sub(start) .. " And match is: " .. tostring(m) .. 
+           " And complement is: " .. tostring(complement))
+end
+
+local function cs_simple(e, a, input, start, expected, nextpos)	    -- !!!
+   local complement = a.complement
    local simple = a.pat
    assert(pattern.is(simple))
    local wrapped_peg = common.match_node_wrap(simple.peg, "*")
    local m, nextstart = rmatch(wrapped_peg, input, start)
-   if (m and (not complement)) or ((not m) and complement) then
-      assert(expected, "simple character set match differs from expected")
-      if m then
-	 assert(nextstart==nextpos, "simple character set nextpos differs from expected")
+   if expected ~= nil then
+      if (m and (not complement)) or ((not m) and complement) then
+	 assert(expected, "simple character set match differs from expected: " ..
+		cs_explanation(a, input, start, m, complement))
+	 if m then
+	    assert(nextstart==nextpos, "simple character set nextpos differs from expected")
+	 end
+      else
+	 assert(not expected, "simple character set non-match differs from expected: " ..
+		cs_explanation(a, input, start, m, complement))
       end
-   else
-      assert(not expected, "simple character set non-match differs from expected")
-   end
-   return {match=expected, nextpos=nextpos, ast=a, input=input, start=start}
+   end -- if there is an expectation that we can check against
+   return {match=m, nextpos=nextstart, ast=a, input=input, start=start}
 end
 
 local function cs_exp(e, a, input, start, expected, nextpos)
    if ast.simple_charset_p(a) then
-      return cs_simple(e, a, input, start, expected, nextpos, false)
+      return cs_simple(e, a, input, start, expected, nextpos)
    elseif ast.cs_exp.is(a.cexp) then
-      local result = cs_exp(e, a.exp, input, nextstart)
-      if (result.match and (not a.complement)) or ((not result.match) and a.complement) then
-	 assert(expected, "cs_exp match differs from expected")
-	 if result.match then
-	    assert(nextstart==nextpos, "cs_exp nextpos differs from expected")
+      local result = cs_exp(e, a.exp, input, start, nil, nil)
+      if expected ~= nil then
+	 if (result.match and (not a.complement)) or ((not result.match) and a.complement) then
+	    assert(expected, "cs_exp match differs from expected")
+	    if result.match then
+	       assert(result.nextpos==nextpos, "cs_exp nextpos differs from expected")
+	    end
+	 else
+	    assert(not expected, "cs_exp non-match differs from expected")
 	 end
-      else
-	 assert(not expected, "cs_exp non-match differs from expected")
-      end
-      return {match=expected, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
+      end -- if there is an expectation that we can check against
+      return {match=result.match, nextpos=result.nextpos, ast=a, subs={result}, input=input, start=start}
    elseif ast.cs_union.is(a.cexp) then
       -- This is identical to 'choice' except for a.cexps, cs_exp, and the assert messages.
       -- Should re-factor, unless there's a reason to treat union/choice differently?
       local matches = {}
       for _, exp in ipairs(a.cexp.cexps) do
-	 local result = cs_exp(e, exp, input, start)
+	 local result = cs_exp(e, exp, input, start, nil, nil)
 	 table.insert(matches, result)
 	 if result.match then break; end
       end -- for
       local last = matches[#matches]
-      if (last.match and (not a.complement)) or ((not last.match) and a.complement) then
-	 assert(expected, "cs_union match differs from expected")
-	 if last.match then
-	    assert(last.nextpos==nextpos, "cs_union nextpos differs from expected")
+      if expected ~= nil then
+	 if (last.match and (not a.complement)) or ((not last.match) and a.complement) then
+	    assert(expected, "cs_union match differs from expected")
+	    if last.match then
+	       assert(last.nextpos==nextpos,
+		      "cs_union nextpos differs from expected:" ..
+			 " incoming nextpos: " .. tostring(nextpos) ..
+		         ", computed nextpos: " .. tostring(last.nextpos) .. "\n" ..
+		         cs_explanation(a, input, start, last, a.complement))
+	    end
+	 else
+	    assert(not expected,
+		   "cs_union non-match differs from expected:" ..
+		      cs_explanation(a, input, start, last, a.complement))
 	 end
-      else
-	 assert(not expected, "cs_union non-match differs from expected")
-      end
-      return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
+      end -- if there is an expectation that we can check against
+      return {match=last.match, nextpos=last.nextpos, ast=a, subs=matches, input=input, start=start}
    elseif ast.cs_intersection.is(a.cexp) then
       throw("character set intersection is not implemented", a)
    elseif ast.cs_difference.is(a.cexp) then
@@ -419,7 +441,7 @@ function expression(e, a, input, start)
    elseif ast.cs_exp.is(a) then
       return cs_exp(e, a, input, start, m, nextpos)
    elseif ast.simple_charset_p(a) then
-      return cs_simple(e, a, input, start, m, nextpos, false)
+      return cs_simple(e, a, input, start, m, nextpos)
    elseif ast.sequence.is(a) then
       return sequence(e, a, input, start, m, nextpos)
    elseif ast.choice.is(a) then
