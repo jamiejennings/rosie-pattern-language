@@ -78,6 +78,7 @@ local function one_node_tostrings(t, is_last_node)
    table.insert(lines,
 		tab(is_last_node) .. "Looking at: " .. left_delim .. t.input:sub(t.start) ..
 	        right_delim .. " (input pos = " .. tostring(t.start) .. ")")
+
    if t.match then
       table.insert(lines, tab(is_last_node) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
    elseif t.match == false then
@@ -141,16 +142,26 @@ function trace.tostring(t)
    return table.concat(lines, "\n")
 end
       
--- Return the trace leaf that has the larger value of nextpos, i.e. the leaf that consumed more of
+-- Return the trace leaf that has the larger value of !@# FIXME:nextpos, i.e. the leaf that consumed more of
 -- the input string.  
-local function better_of(leaf1, leaf2)
-   assert((not leaf2) or leaf2.nextpos)
-   if (leaf1 and
-       leaf1.nextpos and
-       ((not leaf2) or (leaf1.nextpos > leaf2.nextpos))) then
-      return leaf1
+local function better_of(new_leaf, current_max)
+   assert((not current_max) or current_max.nextpos)
+   if (new_leaf and new_leaf.nextpos) then
+--      print("*** new_leaf has nextpos=" .. tostring(new_leaf.nextpos))
+      if (not current_max) then
+--	 print("*** current_max is nil")
+	 return new_leaf
+      elseif (new_leaf.nextpos > current_max.nextpos) then
+--	 print("*** current_max is shorter")
+	 return new_leaf
+      end
    end
-   return leaf2
+   if current_max then
+--      print("*** returning current_max, with nextpos=" .. tostring(current_max.nextpos))
+   else
+--      print("*** returning current_max, which is nil")
+   end
+   return current_max
 end
 
 -- When a match fails, all of the leaves in the trace tree will indicate a match failure.  We
@@ -158,17 +169,24 @@ end
 -- the input, but we can guess.  A reasonable guess is the path from the root to the leaf that
 -- consumed the most input characters.  In the case of a tie, we will choose the path we encounter
 -- first. 
-local function max_input_path(t, max_node)
+local function max_leaf(t, max_node)
+--   print("*** entering max_leaf(" .. ast.tostring(t.ast) .. ", " ..
+--      (max_node and ast.tostring(max_node.ast) or "NIL"))
    if t.subs then
+--      print("t has subs: " .. #t.subs)
       for _, sub in ipairs(t.subs) do
-	 local local_max = max_input_path(sub)
+	 local local_max = max_leaf(sub)
+--	 print("***** max_leaf(" .. ast.tostring(sub.ast) .. ") is " ..
+--	    (local_max and ast.tostring(local_max.ast) or "NIL"))
+
 	 max_node = better_of(local_max, max_node)
 	 sub.parent = t				    -- establish a path going UP the tree
       end
+      assert(max_node)
       return max_node
    else
-      -- no subs, so t is a leaf node
-      return better_of(t, max_node) 
+--      print("t is a leaf: "); for k,v in pairs(t) do print(k,v); end; print()
+      return better_of(t, max_node)
    end
 end
 
@@ -185,13 +203,13 @@ local function trim_matches(path)
 end
 
 function trace.max_path(t)
-   local leaf = max_input_path(t)
+   local leaf = max_leaf(t)
    local path = list.new(leaf)
    while leaf.parent do
       path = list.cons(leaf.parent, path)
       leaf = leaf.parent
    end
-   return trim_matches(path)
+   return path --trim_matches(path)
 end
 
 function trace.path_tostring(p)
@@ -329,7 +347,7 @@ local function cs_explanation(a, input, start, m, complement)
            " And complement is: " .. tostring(complement))
 end
 
-local function cs_simple(e, a, input, start, expected, nextpos)	    -- !!!
+local function cs_simple(e, a, input, start, expected, nextpos)
    local complement = a.complement
    local simple = a.pat
    assert(pattern.is(simple))
@@ -347,14 +365,14 @@ local function cs_simple(e, a, input, start, expected, nextpos)	    -- !!!
 		cs_explanation(a, input, start, m, complement))
       end
    end -- if there is an expectation that we can check against
-   return {match=m, nextpos=nextstart, ast=a, input=input, start=start}
+   return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
 end
 
 local function cs_exp(e, a, input, start, expected, nextpos)
    if ast.simple_charset_p(a) then
       return cs_simple(e, a, input, start, expected, nextpos)
    elseif ast.cs_exp.is(a.cexp) then
-      local result = cs_exp(e, a.exp, input, start, nil, nil)
+      local result = cs_exp(e, a.exp, input, start, nil, nextpos)
       if expected ~= nil then
 	 if (result.match and (not a.complement)) or ((not result.match) and a.complement) then
 	    assert(expected, "cs_exp match differs from expected")
@@ -365,13 +383,13 @@ local function cs_exp(e, a, input, start, expected, nextpos)
 	    assert(not expected, "cs_exp non-match differs from expected")
 	 end
       end -- if there is an expectation that we can check against
-      return {match=result.match, nextpos=result.nextpos, ast=a, subs={result}, input=input, start=start}
+      return {match=result.match, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
    elseif ast.cs_union.is(a.cexp) then
       -- This is identical to 'choice' except for a.cexps, cs_exp, and the assert messages.
       -- Should re-factor, unless there's a reason to treat union/choice differently?
       local matches = {}
       for _, exp in ipairs(a.cexp.cexps) do
-	 local result = cs_exp(e, exp, input, start, nil, nil)
+	 local result = cs_exp(e, exp, input, start, nil, nextpos)
 	 table.insert(matches, result)
 	 if result.match then break; end
       end -- for
@@ -392,7 +410,7 @@ local function cs_exp(e, a, input, start, expected, nextpos)
 		      cs_explanation(a, input, start, last, a.complement))
 	 end
       end -- if there is an expectation that we can check against
-      return {match=last.match, nextpos=last.nextpos, ast=a, subs=matches, input=input, start=start}
+      return {match=last.match, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
    elseif ast.cs_intersection.is(a.cexp) then
       throw("character set intersection is not implemented", a)
    elseif ast.cs_difference.is(a.cexp) then
@@ -436,7 +454,8 @@ function expression(e, a, input, start)
       print("start is: " .. tostring(start) .. " and input is: |" ..  input .. "|")
       error("rmatch failed: " .. m)
    end
-   if not m then m = false; end
+   assert(type(m)=="table" or type(m)=="userdata" or m==false)
+   assert(type(nextpos)=="number")
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
    elseif ast.cs_exp.is(a) then

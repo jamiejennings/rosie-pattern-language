@@ -451,8 +451,12 @@ function process_input_file.match(e, expression, infilename, outfilename, errfil
    return engine_process_file(e, expression, operation.match, infilename, outfilename, errfilename, wholefileflag)
 end
 
-function process_input_file.trace(e, expression, infilename, outfilename, errfilename, wholefileflag)
-   return engine_process_file(e, expression, operation.trace, infilename, outfilename, errfilename, wholefileflag)
+function process_input_file.trace(e, expression, infilename, outfilename, errfilename, wholefileflag, trace_style)
+   local op = operation[trace_style]
+   if not op then
+      engine_error(e, "invalid trace style: " .. tostring(trace_style))
+   end
+   return engine_process_file(e, expression, op, infilename, outfilename, errfilename, wholefileflag)
 end
 
 ---------------------------------------------------------------------------------------------------

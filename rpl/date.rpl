@@ -105,11 +105,13 @@ eur = { day "." month "." year }
 --test eur accepts “31.12.1991”, “15.4.74”
 --test eur rejects “1.13.1991”, “45.4.74”
 
-us = month_name day ","? year?
--- test us accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
--- test us accepts "Dec 31 2016", "March 3 1999",
--- test us rejects "1 October 1900", "Superbowl 1965", "Apr     48"
+us_long = month_name day ","? year?
+-- test us_long accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
+-- test us_long accepts "Dec 31 2016", "March 3 1999",
+-- test us_long rejects "1 October 1900", "Superbowl 1965", "Apr     48"
 
-any = us / us_dashed / dashed / us_slashed / slashed / eur / unix / alt / rfc3339
+us = us_dashed / us_slashed / us_long
+
+any = us / dashed / slashed / eur / unix / alt / rfc3339
 
 
