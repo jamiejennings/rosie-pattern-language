@@ -130,8 +130,8 @@ http_command = http_command_name (url / rooted_path)
 http_version = {"HTTP" "/" [:digit:]+ "." [:digit:]+}     -- e.g. "HTTP1.1"
 
 ---------------------------------------------------------------------------------------------------
--- net.any will match common network patterns (but not http commands or paths)
+-- net.any will match common network patterns (but not all the patterns defined above!)
 ---------------------------------------------------------------------------------------------------
 
 -- Match an IP, Host, Email, URL
-any = ip / host / email / url
+any = ip / fqdn / email / url
