@@ -199,7 +199,7 @@ function repl.repl(en)
 			else
 			   local m, left = rplx:match(input_text)
 			   if (debug and (not m)) or cname=="trace" then
-			      local ok, tr = en:trace(str, input_text)
+			      local ok, tr = en:trace(str, input_text, 1, "condensed")
 			      -- TODO: check 'ok'?
 			      print(tr)
 			   end
