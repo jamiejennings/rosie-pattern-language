@@ -58,10 +58,10 @@ rfc3339 = { strict_year "-" strict_month "-" strict_day }
 -- test rfc3339 accepts "2017-04-28", "1999-10-31"
 -- test rfc3339 rejects "99-01-01", "2010-15-03", "1999-12-32"
 
--- RFC2822 + alternatives
+-- RFC2822 and related components
 day_shortname = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
 day_longname = "Monday" / "Tuesday" / "Wednesday" / "Thursday" / "Friday" / "Saturday" / "Sunday"
-day_name = { day_shortname / day_longname }
+day_name = { day_longname / day_shortname }
 month_shortname = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
 month_longname = "January" / "February" / "March" / "April" / "May" / "June" / "July" / "August" / "September" / "October" / "November" / "December"
 month_name = { month_longname / month_shortname }
@@ -78,12 +78,13 @@ year = d{4,4}
 -- test day accepts "09", "1", "01", "22", "30", "31"
 -- test day rejects "", "100", "1111", "32", "0", "50"
 
-unix = day_shortname month_shortname day year?
+-- RFC2822 was obsoleted by RFC5322, but many documents still cite RFC2822 as the specification for
+-- timestamps written in the "Internet Message Format".
 
-alt = ( day_name "," )? day month_name year
--- test alt accepts "Fri, 28 Apr 2017", "Fri, 31 Dec 1999", "31 Dec 2001"
--- test alt rejects "Dec 31 2001", "Monday, May 22, 2017"
--- test alt rejects "Fri 28, Apr 2010", "Tue, Feb 31st 2001", 
+rfc2822 = ( day_name "," )? day month_name year
+-- test rfc2822 accepts "Fri, 28 Apr 2017", "Fri, 31 Dec 1999", "31 Dec 2001"
+-- test rfc2822 rejects "Dec 31 2001", "Monday, May 22, 2017"
+-- test rfc2822 rejects "Fri 28, Apr 2010", "Tue, Feb 31st 2001", 
 
 dashed = { year "-" month "-" day }
 -- test dashed accepts "2017-04-28", "1999-10-31"
@@ -105,13 +106,18 @@ eur = { day "." month "." year }
 --test eur accepts “31.12.1991”, “15.4.74”
 --test eur rejects “1.13.1991”, “45.4.74”
 
-us_long = month_name day ","? year?
+us_long = (day_name ","?)? month_name day ","? year?
 -- test us_long accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
 -- test us_long accepts "Dec 31 2016", "March 3 1999",
 -- test us_long rejects "1 October 1900", "Superbowl 1965", "Apr     48"
 
+-- The unix 'date' command produces dates in this format by default (in English), which is also
+-- matched by the us_long pattern:
+--     day_shortname month_shortname day year?
+-- test us_long accepts "Sat Aug 12"
+
 us = us_dashed / us_slashed / us_long
 
-any = us / dashed / slashed / eur / unix / alt / rfc3339
+any = us / eur / dashed / slashed / rfc2822 / rfc3339
 
 
