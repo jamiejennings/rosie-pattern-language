@@ -325,23 +325,23 @@ check_match('{a / b} c', " bc", false)
 ----------------------------------------------------------------------------------------
 heading("Look-ahead")
 ----------------------------------------------------------------------------------------
-check_match('@a', "x", false)
-check_match('@a', "a", true, 1, "")
-check_match('@a', "ayz", true, 3, "")		    -- ???
-check_match('@{a}', "ayz", true, 3, "")
-check_match('@(a)', "ayz", true, 3, "")		    -- ???
-check_match('(@a)', "ayz", true, 3, "")
-check_match('(@{a})', "ayz", true, 3, "")
-check_match('(@(a))', "ayz", true, 3, "")
+check_match('>a', "x", false)
+check_match('>a', "a", true, 1, "")
+check_match('>a', "ayz", true, 3, "")		    -- ???
+check_match('>{a}', "ayz", true, 3, "")
+check_match('>(a)', "ayz", true, 3, "")		    -- ???
+check_match('(>a)', "ayz", true, 3, "")
+check_match('(>{a})', "ayz", true, 3, "")
+check_match('(>(a))', "ayz", true, 3, "")
 
-check_match('@a', "xyz", false)
-check_match('(@a)', "xyz", false, 4, "")
-check_match('{@a}', "axyz", true, 4, "")
-check_match('{@a}', "xyz", false, 4, "")
-check_match('@(a)', "axyz", true, 4, "")	    -- ???
-check_match('(@(a))', "axyz", true, 4, "")	    -- ???
-check_match('@{a ~}', "a.xyz", true, 5, "")
-check_match('(@(a ~))', "a.xyz", true, 5, "")	    -- ???
+check_match('>a', "xyz", false)
+check_match('(>a)', "xyz", false, 4, "")
+check_match('{>a}', "axyz", true, 4, "")
+check_match('{>a}', "xyz", false, 4, "")
+check_match('>(a)', "axyz", true, 4, "")	    -- ???
+check_match('(>(a))', "axyz", true, 4, "")	    -- ???
+check_match('>{a ~}', "a.xyz", true, 5, "")
+check_match('(>(a ~))', "a.xyz", true, 5, "")	    -- ???
 
 ----------------------------------------------------------------------------------------
 heading("Negative look-ahead")
@@ -640,7 +640,7 @@ check_match('a*', '', true)
 check_match('a*', 'a', true)
 check_match('a*', 'aaaaaa', true)
 check_match('a*', 'aaaaaa ', true, 1)
-check_match('{a*}', 'aaaaaa ', true, 1)		    -- !@# let's not capture the trailing boundary
+check_match('{a*}', 'aaaaaa ', true, 1)		    -- let's not capture the trailing boundary
 check_match('a*', 'x', true, 1, '')
 check_match('{a}*', '', true)
 check_match('{a}*', 'a', true)
@@ -1190,7 +1190,7 @@ subheading("Character ranges")
 test_charsets("[[a-z]]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[a-z]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[[a-a]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
-test_charsets("[[b-a]]", {}, {"a", "b", "c", "y", "z", " ", "X", "0", "!"}) -- !@# could war
+test_charsets("[[b-a]]", {}, {"a", "b", "c", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[$-&]]", {"$", "%", "&"}, {"^", "-", "z", " ", "X", "0", "!"})
 test_charsets("[[--.]]", {"-", "."}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\[-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})
@@ -1691,7 +1691,7 @@ check_choice3("{ a / {b} }")
 function check_choice4(exp)
    check_match(exp, "ax", false)
    check_match(exp, "bca", true, 2)
-   check_match(exp, "a bc", true, 2, "a ")	    -- !@# trailing space?
+   check_match(exp, "a bc", true, 2, "a ")	    -- trailing space?
    check_match(exp, "", false)
    check_match(exp, "c", false)
 end

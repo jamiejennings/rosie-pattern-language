@@ -100,7 +100,7 @@ alias close =         [[)]]
 alias closeraw =      [[}]]
 
 negation = [[!]]
-lookat = [[@]]
+lookat = [[>]]
 alias predicate_symbol = negation / lookat
 	    
 grammar

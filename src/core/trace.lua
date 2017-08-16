@@ -422,7 +422,7 @@ end
       
 local function predicate(e, a, input, start, expected, nextpos)
    local result = expression(e, a.exp, input, start)
-   if (result.match and (a.type=="@")) or ((not result.match) and (a.type=="!")) then
+   if (result.match and (a.type==">")) or ((not result.match) and (a.type=="!")) then
       assert(expected, "predicate match differs from expected")
       -- Cannot compare nextpos to result.nextpos, because 'a.exp' is NOT a predicate (so it
       -- advances nextpos) whereas 'a' IS a predicate (which does not advance nextpos).

@@ -76,7 +76,7 @@ local repetition = token("repetition",
 ----------------------------------------------------------------------------------------
 
 local negation = token("negation", P"!")
-local lookat = token("lookat", P"@")
+local lookat = token("lookat", P">")
 local predicate_symbol = negation + lookat
 
 local quantifier = (star + question + plus + repetition)

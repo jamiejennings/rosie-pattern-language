@@ -176,7 +176,7 @@ end
 
 local function predicate(a, env, messages)
    local peg = expression(a.exp, env, messages).peg
-   if a.type=="@" then
+   if a.type==">" then
       peg = #peg
    elseif a.type=="!" then
       peg = (- peg)

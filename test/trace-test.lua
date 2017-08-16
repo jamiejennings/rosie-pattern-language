@@ -245,14 +245,14 @@ check_structure(lasttrace.subs[1], '{a b}', {true, 'a', 'b'})
 ----------------------------------------------------------------------------------------
 heading("Eval look-ahead")
 ----------------------------------------------------------------------------------------
-check_trace('a @b', "a b", true, 3)
-check_structure('{a ~ @b}', {true, 'a', '~', '@b'})
+check_trace('a >b', "a b", true, 3)
+check_structure('{a ~ >b}', {true, 'a', '~', '>b'})
 
-check_trace('{a @b}', "ab", true, 2)
-check_structure('{a @b}', {true, 'a', '@b'})
+check_trace('{a >b}', "ab", true, 2)
+check_structure('{a >b}', {true, 'a', '>b'})
 
-check_trace('{a @b}', "a", false, 1)
-check_structure('{a @b}', {true, 'a', '@b', false})
+check_trace('{a >b}', "a", false, 1)
+check_structure('{a >b}', {true, 'a', '>b', false})
 
 ----------------------------------------------------------------------------------------
 heading("Eval negative look-ahead")
