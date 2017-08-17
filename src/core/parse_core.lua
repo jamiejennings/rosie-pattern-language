@@ -76,8 +76,8 @@ local repetition = token("repetition",
 ----------------------------------------------------------------------------------------
 
 local negation = token("negation", P"!")
-local lookat = token("lookat", P">")
-local predicate_symbol = negation + lookat
+local lookahead = token("lookahead", P">")
+local predicate_symbol = negation + lookahead
 
 local quantifier = (star + question + plus + repetition)
 
@@ -174,7 +174,7 @@ function parse.syntax_error_check(ast)
 		      sequence=check_two_branches;
 		      predicate=check_two_branches;
 		      negation=none_found;
-		      lookat=none_found;
+		      lookahead=none_found;
 		      named_charset=none_found;
 		      charset_exp=check_all_branches;
 		      charset_exp=check_one_branch;	    -- USED ONLY IN CORE

@@ -100,8 +100,9 @@ alias close =         [[)]]
 alias closeraw =      [[}]]
 
 negation = [[!]]
-lookat = [[>]]
-alias predicate_symbol = negation / lookat
+lookahead = [[>]]
+lookbehind = [[<]]
+alias predicate_symbol = negation / lookahead / lookbehind
 	    
 grammar
    alias exp = {ignore { syntax_error /

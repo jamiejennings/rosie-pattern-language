@@ -68,7 +68,7 @@ local function internal_macro_find(capture_flag, ...)
    local sref = exp.sourceref
    assert(sref)
    local any_char = ast.ref.new{localname=".", sourceref=sref}
-   local not_exp = ast.predicate.new{type="!", exp=exp, sourceref=sref}
+   local not_exp = ast.predicate.new{type="negation", exp=exp, sourceref=sref}
    local search_exp =
       ast.repetition.new{min=0,
 			 exp=ast.raw.new{exp=ast.sequence.new{exps={not_exp, any_char},

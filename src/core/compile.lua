@@ -176,9 +176,12 @@ end
 
 local function predicate(a, env, messages)
    local peg = expression(a.exp, env, messages).peg
-   if a.type==">" then
+   if a.type=="lookahead" then
       peg = #peg
-   elseif a.type=="!" then
+   elseif a.type=="lookbehind" then
+      -- TODO: pcall and make printable the various errors that can occur
+      peg = lpeg.B(peg)
+   elseif a.type=="negation" then
       peg = (- peg)
    else
       throw("invalid predicate type: " .. tostring(a.type), a)

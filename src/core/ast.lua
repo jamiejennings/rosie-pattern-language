@@ -422,7 +422,7 @@ function convert_exp(pt, sref)
 			 exp = convert_exp(pt.subs[2], sref),
 		         sourceref=sref}
    elseif pt.type=="predicate" then
-      return ast.predicate.new{type = pt.subs[1].data,
+      return ast.predicate.new{type = pt.subs[1].type,
 			       exp = convert_exp(pt.subs[2], sref),
 			       sourceref=sref}
    elseif pt.type=="cooked" then
@@ -582,7 +582,7 @@ function convert_core_exp(pt, sref)
    if pt.type=="capture" then
       return ast.cap.new{name = pt.subs[1].data, exp = convert1(pt.subs[2]), sourceref=sref}
    elseif pt.type=="predicate" then
-      return ast.predicate.new{type = pt.subs[1].data, exp = convert1(pt.subs[2]), sourceref=sref}
+      return ast.predicate.new{type = pt.subs[1].type, exp = convert1(pt.subs[2]), sourceref=sref}
    elseif pt.type=="cooked" then
       return ast.cooked.new{exp = convert1(pt.subs[1]), sourceref=sref}
    elseif pt.type=="raw" then
@@ -729,6 +729,11 @@ end
 -- Reconstruct valid RPL from an ast
 ---------------------------------------------------------------------------------------------------
 
+local predicate_name_table =
+   { ["lookahead"] = ">",
+     ["lookbehind"] = "<",
+     ["negation"] = "!" }
+
 function ast.tostring(a, already_grouped)
    if ast.block.is(a) then
       return ( (a.pdecl and (ast.tostring(a.pdecl) .. "\n") or "") ..
@@ -762,7 +767,8 @@ function ast.tostring(a, already_grouped)
       assert(#choices > 0, "empty choice ast?")
       return pre .. table.concat(choices, " / ") .. post
    elseif ast.predicate.is(a) then
-      return a.type .. ast.tostring(a.exp)
+      local symbol = predicate_name_table[a.type] or "UNKNOWN PREDICATE "
+      return symbol .. ast.tostring(a.exp)
    elseif ast.repetition.is(a) then		    -- Before syntax expansion,
       local postfix				    -- this ast can be seen.
       if (not a.max) then

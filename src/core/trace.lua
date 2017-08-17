@@ -142,24 +142,16 @@ function trace.tostring(t)
    return table.concat(lines, "\n")
 end
       
--- Return the trace leaf that has the larger value of !@# FIXME:nextpos, i.e. the leaf that consumed more of
--- the input string.  
+-- Return the trace leaf that has the larger value of nextpos, i.e. the leaf that consumed more of
+-- the input string.
 local function better_of(new_leaf, current_max)
    assert((not current_max) or current_max.nextpos)
    if (new_leaf and new_leaf.nextpos) then
---      print("*** new_leaf has nextpos=" .. tostring(new_leaf.nextpos))
       if (not current_max) then
---	 print("*** current_max is nil")
 	 return new_leaf
       elseif (new_leaf.nextpos > current_max.nextpos) then
---	 print("*** current_max is shorter")
 	 return new_leaf
       end
-   end
-   if current_max then
---      print("*** returning current_max, with nextpos=" .. tostring(current_max.nextpos))
-   else
---      print("*** returning current_max, which is nil")
    end
    return current_max
 end
@@ -170,22 +162,15 @@ end
 -- consumed the most input characters.  In the case of a tie, we will choose the path we encounter
 -- first. 
 local function max_leaf(t, max_node)
---   print("*** entering max_leaf(" .. ast.tostring(t.ast) .. ", " ..
---      (max_node and ast.tostring(max_node.ast) or "NIL"))
    if t.subs then
---      print("t has subs: " .. #t.subs)
       for _, sub in ipairs(t.subs) do
 	 local local_max = max_leaf(sub)
---	 print("***** max_leaf(" .. ast.tostring(sub.ast) .. ") is " ..
---	    (local_max and ast.tostring(local_max.ast) or "NIL"))
-
 	 max_node = better_of(local_max, max_node)
 	 sub.parent = t				    -- establish a path going UP the tree
       end
       assert(max_node)
       return max_node
    else
---      print("t is a leaf: "); for k,v in pairs(t) do print(k,v); end; print()
       return better_of(t, max_node)
    end
 end
@@ -422,7 +407,7 @@ end
       
 local function predicate(e, a, input, start, expected, nextpos)
    local result = expression(e, a.exp, input, start)
-   if (result.match and (a.type==">")) or ((not result.match) and (a.type=="!")) then
+   if (result.match and (a.type=="lookahead")) or ((not result.match) and (a.type=="negation")) then
       assert(expected, "predicate match differs from expected")
       -- Cannot compare nextpos to result.nextpos, because 'a.exp' is NOT a predicate (so it
       -- advances nextpos) whereas 'a' IS a predicate (which does not advance nextpos).
