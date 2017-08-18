@@ -179,8 +179,16 @@ local function predicate(a, env, messages)
    if a.type=="lookahead" then
       peg = #peg
    elseif a.type=="lookbehind" then
-      -- TODO: pcall and make printable the various errors that can occur
-      peg = lpeg.B(peg)
+      local ok
+      ok, peg = pcall(lpeg.B, peg)
+      if not ok then
+	 assert(type(peg)=="string")
+	 if peg:find("fixed length") then
+	    throw("lookbehind pattern does not have fixed length: " .. ast.tostring(a.exp), a)
+	 else
+	    error("Internal error: " .. peg)
+	 end
+      end
    elseif a.type=="negation" then
       peg = (- peg)
    else
