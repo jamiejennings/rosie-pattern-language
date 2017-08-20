@@ -162,7 +162,7 @@ function common.escape_string(s, unescape_table)
 	 result = result .. '\\' .. escaped_char
 	 i = i + 1
       elseif (s:sub(i,i) < ' ') or (s:sub(i,i) > '~') then
-	 result = result .. '\\u{' .. string.format('%04x', s:byte(i,i)) .. '}'
+	 result = result .. '\\u' .. string.format('%04x', s:byte(i,i))
 	 i = i + 1
       else
 	 result = result .. s:sub(i,i)
