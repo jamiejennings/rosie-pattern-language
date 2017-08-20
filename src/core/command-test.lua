@@ -45,7 +45,13 @@ function p.setup(en)
 	 testKeyword = "accepts" / "rejects"
 	 test_line = "-- test" identifier (testKeyword / includesClause) quoted_string (ws? "," ws? quoted_string)*
    ]==]
-   en:load("import rosie/rpl_1_1 as .")
+   local ok, errs = en:import("rosie/rpl_1_1", ".")
+   if not ok then
+      for _,v in ipairs(errs) do
+	 print(violation.tostring(v))
+      end
+      error("Internal error!  (See above.)")
+   end
    en:load(test_patterns)
 end   
 
