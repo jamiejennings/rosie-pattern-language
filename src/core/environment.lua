@@ -159,11 +159,13 @@ end
 -- Boundary for tokenization... this is going to be customizable, but hard-coded for now
 ----------------------------------------------------------------------------------------
 
-local boundary = locale.space^1 + #locale.punct
-              + (lpeg.B(locale.punct) * #(-locale.punct))
-	      + (lpeg.B(locale.space) * #(-locale.space))
-	      + lpeg.P(-1)
-	      + (- lpeg.B(1))
+local boundary = ( locale.space^1
+		   --+ lpeg.S(" \t")^1 + #lpeg.S("\n")
+		   + #locale.punct
+		   + (lpeg.B(locale.punct) * #(-locale.punct))
+		   + (lpeg.B(locale.space) * #(-locale.space))
+		   + lpeg.P(-1)
+		   + (- lpeg.B(1)) )
 
 environment.boundary = boundary
 local utf8_char_peg = common.utf8_char_peg
