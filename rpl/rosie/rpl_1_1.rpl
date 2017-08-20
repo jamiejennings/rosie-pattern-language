@@ -26,19 +26,19 @@
 
 package rpl_1_1
 
-alias newline = [[\n]]
+alias ws = [[ \t]]+
+newline = "\n"
+comment = { "--" {!newline .}* {newline / $} }
+alias atmos = { ws? (comment / newline) }* ws?		    -- "atmosphere"
 
-alias comment = { "--" {!newline .}* {newline / $} }
-alias ignore = { { [[:space:]] / comment }* }
-
-alias id_char = { [[:alnum:]] / [[_]] }
+alias id_char = [[:alnum:]] / [[_]]
 alias id = { [[:alpha:]] id_char* }
 
 alias id_symbol = [[.$~]]
 
 -- It is important that an error consume at least one character here.
 -- As a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
-rest_of_line = { {!newline .}+ ignore }
+rest_of_line = { {!"\n" .}+ "\n" / $}
 syntax_error = rest_of_line
 
 localname = {id_symbol !id} / {id !id_symbol}
@@ -74,8 +74,8 @@ alias simple_charset = { "[" { ":" named_charset ":]" } /
 		    }
 grammar
    charset_exp = compound_charset / simple_charset
-   compound_charset = { "[" complement? combination ignore "]" }
-   alias combination = { ignore charset_exp { ignore op ignore charset_exp }* }
+   compound_charset = { "[" complement? combination atmos "]" }
+   alias combination = { atmos charset_exp { atmos op atmos charset_exp }* }
    op = intersection / difference / union
    union = ""
    intersection = "&&"
@@ -84,13 +84,13 @@ end
 
 low =  [[0-9]]*				    -- an int or nothing
 high = [[0-9]]* 
-repetition = { "{" ignore low ignore {"," ignore high ignore}? "}" }
+repetition = { "{" atmos low atmos {"," atmos high atmos}? "}" }
 	          
-int = ignore [[0-9]]+
+int = atmos [[0-9]]+
 
 alias quantifier = star / question / plus / repetition
 
-assignment_prefix = identifier ignore "="
+assignment_prefix = identifier atmos "="
 stmnt_prefix = {keyword / assignment_prefix}
 
 alias slash =         [[/]]
@@ -105,20 +105,20 @@ lookbehind = [[<]]
 alias predicate_symbol = negation / lookahead / lookbehind
 	    
 grammar
-   alias exp = {ignore { syntax_error /
+   alias exp = {atmos { syntax_error /
 	                 choice /
 	                 sequence /
 	                 quantified_exp / 
 	                 plain_exp} }
    syntax_error = { stmnt_prefix rest_of_line }
-   application = { identifier ":" } ignore (arg / arglist / rawarglist )
-   arglist = { ignore open int_or_exp { ignore "," int_or_exp }* close }
-   rawarglist = { ignore openraw int_or_exp { ignore "," int_or_exp }* closeraw }
+   application = { identifier ":" } atmos (arg / arglist / rawarglist )
+   arglist = { atmos open int_or_exp { atmos "," int_or_exp }* close }
+   rawarglist = { atmos openraw int_or_exp { atmos "," int_or_exp }* closeraw }
    arg = quantified_exp / plain_exp / int
-   alias int_or_exp = ignore int / exp
-   choice = { {quantified_exp / plain_exp} ignore slash exp }
-   sequence = { {quantified_exp / plain_exp} {ignore !stmnt_prefix exp}+ }
-   alias plain_exp = { ignore 
+   alias int_or_exp = atmos int / exp
+   choice = { {quantified_exp / plain_exp} atmos slash exp }
+   sequence = { {quantified_exp / plain_exp} {atmos !stmnt_prefix exp}+ }
+   alias plain_exp = { atmos 
 		        {application /
 		         identifier /
 		         quoted_string /
@@ -127,55 +127,56 @@ grammar
 		         charset_exp /
 		         predicate /
 		         hash_exp} }
-   quantified_exp = { plain_exp ignore quantifier }
-   cooked = { open exp ignore close }
-   raw = { openraw exp ignore closeraw }
-   predicate = { predicate_symbol ignore {quantified_exp / plain_exp} }
+   quantified_exp = { plain_exp atmos quantifier }
+   cooked = { open exp atmos close }
+   raw = { openraw exp atmos closeraw }
+   predicate = { predicate_symbol atmos {quantified_exp / plain_exp} }
 end
 
 grammar
    alias stmnt = local_ / exported
    alias exported = alias_ / grammar_ / assignment_
-   local_ = "local" ignore alias_ / grammar_ / assignment_ 
-   alias_ = "alias" ignore identifier ignore "=" exp 
-   grammar_ = "grammar" { ignore { alias_ / assignment_ } }+ ignore end_token
-   assignment_ = identifier ignore "=" exp 
+   local_ = "local" atmos alias_ / grammar_ / assignment_ 
+   alias_ = "alias" atmos identifier atmos "=" exp 
+   grammar_ = "grammar" { atmos { alias_ / assignment_ } }+ atmos end_token
+   assignment_ = identifier atmos "=" exp 
 end
-
-importpath = quoted_string		  -- double quoted, interpreted, pattern name is "literal"
-             / { id {"/" id}* }		  -- quotes not needed when each path segment is an id
 
 major = [[0-9]]{1,2}
 minor = major
-version_spec = { major "." minor ignore }
+version_spec = { major "." minor atmos }
+
+importpath = quoted_string /		  -- double quoted, interpreted, pattern name is "literal"
+             { id {"/" id}* }		  -- quotes not needed when each path segment is an id
 dot = "."
-import_spec = ignore importpath ("as" (packagename / dot))?
+import_spec = atmos importpath ("as" (packagename / dot))?
 
 ----------------------------------------------------------------------------------------
 -- Top level patterns
 ----------------------------------------------------------------------------------------
 
-language_decl = ignore {"rpl" [[:space:]]} version_spec [[;]]?
-package_decl = ignore {"package" [[:space:]]} packagename [[;]]?
-import_decl = ignore {"import" [[:space:]]} import_spec ("," ignore import_spec)* [[;]]?
+language_decl = { "rpl" ws version_spec {ws? ";"}? }
+package_decl = { "package" ws packagename {ws? ";"}? }
+import_decl = { "import" import_spec } ("," atmos import_spec)* ws? ";"?
 
-rpl_statements = (ignore [[;]] / package_decl / import_decl / stmnt / syntax_error)* ignore $
-rpl_expression = {exp ignore} / syntax_error
+rpl_statements = (atmos ";" / package_decl / import_decl / stmnt / syntax_error)* atmos $
+rpl_expression = {exp atmos} / syntax_error
 
-preparse = language_decl
+preparse = atmos language_decl
 
 -- RPL module structure:
--- rpl_module = language_decl? package_decl import_decl* statement* ignore
+-- rpl_module = language_decl? package_decl import_decl* statement* atmos
 
 ---------------------------------------------------------------------------------------------------
 -- Tests
 ---------------------------------------------------------------------------------------------------
 
--- test language_decl rejects "rpl", "rpl ", "rpl a", "rpl 1.a", "rpl 1.", "rpl 1.123", "rpl 1.\n1"
--- test language_decl accepts "rpl 0.0", "  rpl 1.0\n", "rpl 52.99", "rpl 99.99", "rpl 1.1 -- Comment\n"
+-- test preparse rejects "rpl", "rpl ", "rpl a", "rpl 1.a", "rpl 1.", "rpl 1.123", "rpl 1.\n1"
+-- test preparse accepts "rpl 0.0", "  rpl 1.0\n", "rpl 52.99", "rpl 99.99", "rpl 1.1 -- Comment\n"
 
 -- test package_decl accepts "package foo", "package fooBar", "package f_oo"
 -- test package_decl rejects "package", "package _foo", "package 6foo", "package .foo", "package foo.bar"
+-- test package_decl rejects "package \n foo"
 
 -- test import_decl rejects "import"
 
@@ -188,19 +189,20 @@ preparse = language_decl
 -- test import_decl accepts "import \"foo/bar\" as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
 
 -- importpath can be PLAIN SYMBOL, uninterpreted:
+--    (But a path must be relative, and a symbol starts with [:alpha:])
 -- test import_decl rejects "import foo,"
 -- test import_decl rejects "import foo["
 -- test import_decl accepts "import foo/bar/baz"
--- test import_decl accepts "import foo/bar", /usr/lo-cal/b_az, \"/usr/bin/time\""
+-- test import_decl accepts "import foo/bar", usr/lo-cal/b_az, \"/usr/bin/time\""
 -- test import_decl accepts "import foo/bar as foo"
--- test import_decl accepts "import foo/bar as foo, \"/usr/local/baz\", /usr/bin/time"
--- test import_decl accepts "import -f_o-o as foo, /usr/local/baz as ., /usr/bin/time"
--- test import_decl accepts "import -f_o-o/bar as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
+-- test import_decl accepts "import foo/bar as foo, \"/usr/local/baz\", bin/time"
+-- test import_decl accepts "import f_o_o as foo, local/baz as ., bin/time"
+-- test import_decl accepts "import f_o_o/bar as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
 
 -- test rpl_expression accepts "foo_1:x", "pkg.f:x", "f:\"hello\"", "f:!x", "f:x+", "f:(x y z)", "f:{x y z}"
 -- test rpl_expression accepts "f:(x, y)", "foo:{a, b}"
--- test rpl_expression accepts "f:(a, 55)", "foo.bar:(1, 2, 3, a b c, d / e, {f}*)"
--- test rpl_expression rejects "f:", "pkg.f:", "f:{a / b, 3}+"
+-- test rpl_expression accepts "f:(a, 55)", "foo.bar:(1, 2, 3, a b c, d / e, {f}*)", "f:{a / b, 3}+"
+-- test rpl_expression rejects "f:", "pkg.f:"
 -- test rpl_expression includes arglist "f:(x, y)", "f:(3)"
 -- test rpl_expression excludes arglist "f:(x y)"
 -- test rpl_expression includes arg "f:(x)", f:(x y)", "f:x", "f:5", "f:{x y}", "f:{x}",

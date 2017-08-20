@@ -43,7 +43,7 @@ function p.setup(en)
 	 includesKeyword = ("includes" / "excludes")
 	 includesClause = includesKeyword identifier
 	 testKeyword = "accepts" / "rejects"
-	 test_line = "-- test" identifier (testKeyword / includesClause) quoted_string (ignore "," ignore quoted_string)*
+	 test_line = "-- test" identifier (testKeyword / includesClause) quoted_string (ws? "," ws? quoted_string)*
    ]==]
    en:load("import rosie/rpl_1_1 as .")
    en:load(test_patterns)

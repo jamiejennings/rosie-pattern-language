@@ -35,11 +35,16 @@ local function preparse(rplx_preparse, input)
       assert(false, "preparse called with neither string nor ast as input: " .. tostring(input))
    end
    if language_decl then
+      assert(language_decl.subs)
+      local subs = filter(common.not_atmosphere, language_decl.subs)
       if parse_core.syntax_error_check(language_decl) then
 	 return false, "Syntax error in language version declaration: " .. language_decl.data
       else
-	 major = tonumber(language_decl.subs[1].subs[1].data) -- major
-	 minor = tonumber(language_decl.subs[1].subs[2].data) -- minor
+	 local subs = filter(common.not_atmosphere, subs[1].subs)
+	 assert(subs and subs[1] and subs[1].type=="version_spec")
+	 subs = filter(common.not_atmosphere, subs[1].subs)
+	 major = tonumber(subs[1].data) -- major
+	 minor = tonumber(subs[2].data) -- minor
 	 return major, minor, #input-leftover+1
       end
    else
@@ -131,6 +136,7 @@ function p2.make_parse_expression(rplx_expression)
 		    "Error: source argument is not a string: "..tostring(src) ..
 		    "\n" .. debug.traceback())
 	     local pt, leftover = rplx_expression:match(src)
+	     assert(pt)
 	     local syntax_errors = find_syntax_errors(pt, src)
 	     return pt, syntax_errors, leftover
 	  end -- parse_expression
