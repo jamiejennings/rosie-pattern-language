@@ -13,6 +13,7 @@
 -- addition.  The syntax has not been chosen, but it may be an optional part of the 'rpl'
 -- declaration, e.g. 'rpl 1.1 noprelude' or 'rpl noprelude'.
 
-import rosie/builtin/symbols as .
 import rosie/builtin/macros as .
 import rosie/builtin/functions as .
+import rosie/symbols as .
+
