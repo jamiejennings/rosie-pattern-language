@@ -564,16 +564,6 @@ function c2.compile_block(a, pkgenv, request, messages)
 	 pat.alias = b.is_alias
 	 if b.is_local then pat.exported = false; end
 	 common.note("Binding value to " .. ref.localname)
-
-	 -- TEMPORARY:
-	 if request then
-	    common.note("request.prefix=", request.prefix)
-	    common.note("request.packagename=", request.packagename)
-	    common.note("request.importpath=", request.importpath)
-	    common.note("request.filename=", request.filename)
---	    common.note("request.parent=", tostring(request.parent))
-	 end
-
 	 bind(pkgenv, ref.localname, pat)
       else
 	 return false

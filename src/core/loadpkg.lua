@@ -303,13 +303,6 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
       							      e=decl.sourceref.e,
       							      origin=source_record.origin,
        				     			      parent=source_record}}
-      -- local sref = common.source.new{text=decl.sourceref.text,
-      -- 				     s=decl.sourceref.s,
-      -- 				     e=decl.sourceref.e,
-      -- 				     origin=common.loadrequest.new{importpath=decl.importpath,
-      -- 								   prefix=decl.prefix,
-      -- 								   filename=source_record.origin.filename},
-      -- 				     parent=source_record}
       local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, messages)
       if not ok then
 	 common.note("FAILED to import from path " .. tostring(decl.importpath))
