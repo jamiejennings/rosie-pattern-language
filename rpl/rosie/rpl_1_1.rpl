@@ -159,7 +159,7 @@ language_decl = { "rpl" ws version_spec {ws? ";"}? }
 package_decl = { "package" ws packagename {ws? ";"}? }
 import_decl = { "import" import_spec } ("," atmos import_spec)* ws? ";"?
 
-rpl_statements = (atmos ";" / package_decl / import_decl / stmnt / syntax_error)* atmos $
+rpl_statements = { {atmos ";" / package_decl / import_decl / stmnt / syntax_error}* atmos $}
 rpl_expression = {exp atmos} / syntax_error
 
 preparse = atmos language_decl
