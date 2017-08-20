@@ -127,19 +127,19 @@ grammar
 		         charset_exp /
 		         predicate /
 		         hash_exp} }
-   quantified_exp = { plain_exp atmos quantifier }
+   quantified_exp = { plain_exp ws? quantifier }
    cooked = { open exp atmos close }
    raw = { openraw exp atmos closeraw }
-   predicate = { predicate_symbol atmos {quantified_exp / plain_exp} }
+   predicate = { predicate_symbol ws? {quantified_exp / plain_exp} }
 end
 
 grammar
    alias stmnt = local_ / exported
    alias exported = alias_ / grammar_ / assignment_
    local_ = "local" atmos alias_ / grammar_ / assignment_ 
-   alias_ = "alias" atmos identifier atmos "=" exp 
+   alias_ = "alias" atmos identifier ws? "=" exp 
    grammar_ = "grammar" { atmos { alias_ / assignment_ } }+ atmos end_token
-   assignment_ = identifier atmos "=" exp 
+   assignment_ = identifier ws? "=" exp 
 end
 
 major = [[0-9]]{1,2}
