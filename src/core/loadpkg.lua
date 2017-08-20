@@ -256,7 +256,6 @@ local function import_one(compiler, pkgtable, searchpath, source_record, message
    if not src then return false; end 		    -- message already in 'messages'
    common.note("load: loading ", origin.importpath, " from ", fullpath)
    local sref = common.source.new{text=src,
---				  s=1,
 				  origin=common.loadrequest.new{importpath=origin.importpath,
 								prefix=origin.prefix,
 								packagename=pkgname,
@@ -277,7 +276,7 @@ function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, en
    local source_record = common.source.new{origin=origin}
    local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, source_record, messages)
    if not ok then return false; end 		    -- message already in 'messages'
-   create_package_bindings(pkgname, pkgenv, env)
+   create_package_bindings(origin.prefix or pkgname, pkgenv, env)
    return true
 end
 
