@@ -256,7 +256,6 @@ local function import_one(compiler, pkgtable, searchpath, source_record, message
    if not src then return false; end 		    -- message already in 'messages'
    common.note("load: loading ", origin.importpath, " from ", fullpath)
    local sref = common.source.new{text=src,
---				  s=1,
 				  origin=common.loadrequest.new{importpath=origin.importpath,
 								prefix=origin.prefix,
 								packagename=pkgname,
@@ -277,7 +276,7 @@ function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, en
    local source_record = common.source.new{origin=origin}
    local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, source_record, messages)
    if not ok then return false; end 		    -- message already in 'messages'
-   create_package_bindings(pkgname, pkgenv, env)
+   create_package_bindings(origin.prefix or pkgname, pkgenv, env)
    return true
 end
 
@@ -304,13 +303,6 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
       							      e=decl.sourceref.e,
       							      origin=source_record.origin,
        				     			      parent=source_record}}
-      -- local sref = common.source.new{text=decl.sourceref.text,
-      -- 				     s=decl.sourceref.s,
-      -- 				     e=decl.sourceref.e,
-      -- 				     origin=common.loadrequest.new{importpath=decl.importpath,
-      -- 								   prefix=decl.prefix,
-      -- 								   filename=source_record.origin.filename},
-      -- 				     parent=source_record}
       local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, messages)
       if not ok then
 	 common.note("FAILED to import from path " .. tostring(decl.importpath))

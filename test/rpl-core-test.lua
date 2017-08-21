@@ -35,7 +35,7 @@ global_rplx = false;
 function set_expression(exp)
    global_rplx, msg = e:compile(exp)
    if not global_rplx then
-      print("This exp failed to compile: " .. tostring(exp))
+      print("\nThis exp failed to compile: " .. tostring(exp))
       table.print(msg)
       error("compile failed in rpl-core-test")
    end

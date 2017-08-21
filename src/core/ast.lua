@@ -1,6 +1,6 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- ast.lua    ast crud for Rosie Pattern Language
+-- ast.lua    ast for Rosie Pattern Language
 --
 -- © Copyright IBM Corporation 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -9,7 +9,9 @@
 local recordtype = require "recordtype"
 local NIL = recordtype.NIL
 local list = require "list"
-local map = list.map; apply = list.apply; append = list.append; foreach = list.foreach
+local map = list.map; apply = list.apply; append = list.append; foreach = list.foreach; filter = list.filter
+
+not_atmosphere = common.not_atmosphere
 
 local ast = {}
 
@@ -259,7 +261,7 @@ local convert_char_exp;
 local function infix_to_prefix(exps, sref)
    -- exps := exp (op exp)*
    assert(sref)
-   local rest = list.from(exps)
+   local rest = filter(not_atmosphere, exps)
    local first = rest[1]
    local op = rest[2]
    if not op then return convert_char_exp(first, sref); end
@@ -414,33 +416,37 @@ end
 
 function convert_exp(pt, sref)
    local sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
+   local subs = pt.subs and filter(not_atmosphere, pt.subs)
    local function convert1(pt)
       return convert_exp(pt, sref)
    end
    if pt.type=="capture" then
-      return ast.cap.new{name = pt.subs[1].data,
-			 exp = convert_exp(pt.subs[2], sref),
+      return ast.cap.new{name = subs[1].data,
+			 exp = convert_exp(subs[2], sref),
 		         sourceref=sref}
    elseif pt.type=="predicate" then
-      return ast.predicate.new{type = pt.subs[1].type,
-			       exp = convert_exp(pt.subs[2], sref),
+      return ast.predicate.new{type = subs[1].type,
+			       exp = convert_exp(subs[2], sref),
 			       sourceref=sref}
    elseif pt.type=="cooked" then
-      return ast.cooked.new{exp = convert_exp(pt.subs[1], sref),
+      return ast.cooked.new{exp = convert_exp(subs[1], sref),
 			    sourceref=sref}
    elseif pt.type=="raw" then
-      return ast.raw.new{exp = convert_exp(pt.subs[1], sref), 
+      return ast.raw.new{exp = convert_exp(subs[1], sref), 
 		      sourceref=sref}
    elseif pt.type=="choice" then
-      return ast.choice.new{exps = map(convert1, flatten(pt, "choice")), sourceref=sref}
+      return ast.choice.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "choice"))),
+			    sourceref=sref}
    elseif pt.type=="sequence" then
-      return ast.sequence.new{exps = map(convert1, flatten(pt, "sequence")), sourceref=sref}
+      return ast.sequence.new{exps = map(convert1,
+					 filter(not_atmosphere, flatten(pt, "sequence"))),
+			      sourceref=sref}
    elseif pt.type=="identifier" then
       return convert_identifier(pt, sref)
    elseif pt.type=="literal" then
       return ast.literal.new{value = pt.data, sourceref=sref}
    elseif pt.type=="hash_exp" then
-      local val_ast = assert(pt.subs and pt.subs[1])
+      local val_ast = assert(subs and subs[1])
       if val_ast.type=="tag" then
 	 return ast.hashtag.new{value = val_ast.data, sourceref=sref}
       elseif val_ast.type=="literal" then
@@ -453,9 +459,9 @@ function convert_exp(pt, sref)
    elseif pt.type=="quantified_exp" then
       return convert_quantified_exp(pt, convert_exp, sref)
    elseif pt.type=="application" then
-      local id = pt.subs[1]
+      local id = subs[1]
       assert(id.type=="identifier")
-      local arglist = pt.subs[2]
+      local arglist = subs[2]
       local operands = map(convert1, arglist.subs)
       if (arglist.type=="arglist") then
 	 operands = map(ast.ambient_cook_exp, operands)
@@ -500,16 +506,17 @@ end
 
 local function convert_stmt(pt, sref)
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
+   local subs = pt.subs and filter(not_atmosphere, pt.subs)
    if pt.type=="assignment_" then
-      assert(pt.subs and pt.subs[1] and pt.subs[2])
-      return ast.binding.new{ref = convert_exp(pt.subs[1], sref),
-			  exp = convert_exp(pt.subs[2], sref),
+      assert(subs and subs[1] and subs[2])
+      return ast.binding.new{ref = convert_exp(subs[1], sref),
+			  exp = convert_exp(subs[2], sref),
 			  is_alias = false,
 			  is_local = false,
 		          sourceref = sref}
    elseif pt.type=="alias_" then
-      return ast.binding.new{ref = convert_exp(pt.subs[1], sref),
-			  exp = convert_exp(pt.subs[2], sref),
+      return ast.binding.new{ref = convert_exp(subs[1], sref),
+			  exp = convert_exp(subs[2], sref),
 			  is_alias = true,
 			  is_local = false,
 		          sourceref = sref}
@@ -517,7 +524,7 @@ local function convert_stmt(pt, sref)
       local rules = map(function(sub)
 			   return convert_stmt(sub, sref)
 			end,
-			pt.subs)
+			subs)
       assert(rules and rules[1])
       local aliasflag = rules[1].is_alias
       local boundref = rules[1].ref
@@ -527,12 +534,12 @@ local function convert_stmt(pt, sref)
 			     is_alias = aliasflag,
 			     is_local = false}
    elseif pt.type=="local_" then
-      local b = convert_stmt(pt.subs[1], sref)
+      local b = convert_stmt(subs[1], sref)
       b.is_local = true
       return b
    elseif pt.type=="package_decl" then
-      assert(pt.subs and pt.subs[1])
-      local pname = pt.subs[1].data
+      assert(subs and subs[1])
+      local pname = subs[1].data
       return ast.pdecl.new{name=pname, sourceref=sref}
    elseif pt.type=="import_decl" then
       local deps = expand_import_decl(pt)
@@ -554,14 +561,15 @@ local function convert(pt, source_record)
    local origin = source_record.origin
    assert(type(source)=="string")
    assert(origin==nil or common.loadrequest.is(origin))
+   local subs = pt.subs and filter(not_atmosphere, pt.subs)
    if pt.type=="rpl_expression" then
-      assert(pt.subs and pt.subs[1] and (not pt.subs[2]))
-      return convert_exp(pt.subs[1], source_record)
+      assert(subs and subs[1] and (not subs[2]))
+      return convert_exp(subs[1], source_record)
    elseif pt.type=="rpl_statements" or pt.type=="rpl_core" then
       return ast.block.new{stmts = map(function(sub)
 					  return convert_stmt(sub, source_record)
 				       end,
-				       pt.subs or {}),
+				       subs or {}),
 			   sourceref = source_record}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
@@ -616,35 +624,36 @@ end
 
 local function convert_core_stmt(pt, sref)
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
+   local subs = pt.subs
    if pt.type=="assignment_" then
-      assert(pt.subs and pt.subs[1] and pt.subs[2])
-      return ast.binding.new{ref = convert_core_exp(pt.subs[1], sref),
-			  exp = convert_core_exp(pt.subs[2], sref),
-			  is_alias = false,
-			  is_local = false,
-		          sourceref=sref}
+      assert(subs and subs[1] and subs[2])
+      return ast.binding.new{ref = convert_core_exp(subs[1], sref),
+			     exp = convert_core_exp(subs[2], sref),
+			     is_alias = false,
+			     is_local = false,
+			     sourceref=sref}
    elseif pt.type=="alias_" then
-      return ast.binding.new{ref = convert_core_exp(pt.subs[1], sref),
-			  exp = convert_core_exp(pt.subs[2], sref),
-			  is_alias = true,
-			  is_local = false,
-			  sourceref=sref}
+      return ast.binding.new{ref = convert_core_exp(subs[1], sref),
+			     exp = convert_core_exp(subs[2], sref),
+			     is_alias = true,
+			     is_local = false,
+			     sourceref=sref}
    elseif pt.type=="grammar_" then
       local rules = map(function(sub)
 			   return convert_core_stmt(sub, sref)
 			end,
-			pt.subs)
+			subs)
       assert(rules and rules[1])
       local aliasflag = rules[1].is_alias
       local boundref = rules[1].ref
       local gexp = ast.grammar.new{rules = rules,
 				   sourceref=sref}
       return ast.binding.new{ref = boundref,
-			  exp = gexp,
-			  is_alias = aliasflag,
-			  is_local = false}
+			     exp = gexp,
+			     is_alias = aliasflag,
+			     is_local = false}
    elseif pt.type=="local_" then
-      local b = convert_core_stmt(pt.subs[1], sref)
+      local b = convert_core_stmt(subs[1], sref)
       b.is_local = true
       return b
    elseif pt.type=="fake_package" then

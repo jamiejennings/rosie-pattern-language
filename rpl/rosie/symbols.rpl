@@ -1,0 +1,32 @@
+-- -*- Mode: rpl; -*-                                                                               
+--
+-- symbols.rpl
+--
+-- © Copyright IBM Corporation 2017.
+-- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+-- AUTHOR: Jamie A. Jennings
+
+package symbols
+
+-- TODO: Add documentation
+
+--import rosie/builtin/ascii as encoding
+import rosie/builtin/utf8 as encoding
+
+~ = encoding.token_boundary
+. = encoding.char_includes
+$ = encoding.end_of_input
+
+-- Put this in include_newline.rpl:
+~ = encoding.token_boundary_including_newline
+. = encoding.char_including_newline
+$ = encoding.end_of_input
+
+-- Want to allow these 4 combinations:
+--
+--            . and ~ matches newline:
+-- encoding:  YES  NO 
+-- ---------  --- ---
+--  ASCII      1   2
+--  UTF-8      3   4
+

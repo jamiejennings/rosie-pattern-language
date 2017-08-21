@@ -125,6 +125,9 @@ common.escape_substitutions =			    -- characters that change when escaped are:
      ["'"] = "'";				    -- single quote
   }
 
+common.unescape_substitutions = {}
+for k,v in pairs(common.escape_substitutions) do common.unescape_substitutions[v]=k; end
+
 function common.unescape_string(s, escape_table)
    -- the only escape character is \
    -- a literal backslash is obtained using \\
@@ -149,8 +152,24 @@ function common.unescape_string(s, escape_table)
    return result
 end	    
 
-function common.escape_string(s)
-   return (string.format("%q", s)):sub(2,-2)
+function common.escape_string(s, unescape_table)
+   unescape_table = unescape_table or common.unescape_substitutions
+   local result = ""
+   local i = 1
+   while (i <= #s) do
+      local escaped_char = unescape_table[s:sub(i,i)]
+      if escaped_char then
+	 result = result .. '\\' .. escaped_char
+	 i = i + 1
+      elseif (s:sub(i,i) < ' ') or (s:sub(i,i) > '~') then
+	 result = result .. '\\u' .. string.format('%04x', s:byte(i,i))
+	 i = i + 1
+      else
+	 result = result .. s:sub(i,i)
+	 i = i + 1
+      end
+   end -- for each character in s
+   return result
 end
 
 -- dequote removes double quotes surrounding an interpolated string, and un-interpolates the
@@ -419,5 +438,12 @@ common.boundary_identifier = "~"
 common.any_char_identifier = "."
 common.end_of_input_identifier = "$"
 common.halt_pattern_identifier = "halt"
+
+-- This function is connected to the definition in rpl_1_1 of the tokens that constitute
+-- "atmosphere", which is ambient blank lines and comments that should be ignored when creating an
+-- ast. 
+function common.not_atmosphere(sub)
+   return (sub.type ~= "comment") and (sub.type ~= "newline")
+end
 
 return common
