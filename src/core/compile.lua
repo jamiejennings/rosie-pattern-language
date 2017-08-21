@@ -129,7 +129,7 @@ c2.expand_expression = expand.expression
 
 local expression;
 
-local function literal(a, env, messages)
+local function literal(a, env, prefix, messages)
    local str, offense = common.unescape_string(a.value)
    if not str then
       throw("invalid escape sequence in literal: \\" .. offense, a)
@@ -138,7 +138,7 @@ local function literal(a, env, messages)
    return a.pat
 end
 
-local function rpl_string(a, env, messages)
+local function rpl_string(a, env, prefix, messages)
    local str, offense = common.unescape_string(a.value)
    if not str then
       throw("invalid escape sequence in string: \\" .. offense, a)
@@ -147,35 +147,35 @@ local function rpl_string(a, env, messages)
    return a.pat
 end
 
-local function hashtag(a, env, messages)
+local function hashtag(a, env, prefix, messages)
    local str = a.value
    assert(type(str)=="string")
    a.pat = taggedvalue.new{type="hashtag"; value=str; ast=a}
    return a.pat
 end
 
-local function sequence(a, env, messages)
+local function sequence(a, env, prefix, messages)
    assert(#a.exps > 0, "empty sequence?")
-   local peg = expression(a.exps[1], env, messages).peg
+   local peg = expression(a.exps[1], env, prefix, messages).peg
    for i = 2, #a.exps do
-      peg = peg * expression(a.exps[i], env, messages).peg
+      peg = peg * expression(a.exps[i], env, prefix, messages).peg
    end
    a.pat = pattern.new{name="sequence", peg=peg, ast=a}
    return a.pat
 end
 
-local function choice(a, env, messages)
+local function choice(a, env, prefix, messages)
    assert(#a.exps > 0, "empty choice?")
-   local peg = expression(a.exps[1], env, messages).peg
+   local peg = expression(a.exps[1], env, prefix, messages).peg
    for i = 2, #a.exps do
-      peg = peg + expression(a.exps[i], env, messages).peg
+      peg = peg + expression(a.exps[i], env, prefix, messages).peg
    end
    a.pat = pattern.new{name="choice", peg=peg, ast=a}
    return a.pat
 end
 
-local function predicate(a, env, messages)
-   local peg = expression(a.exp, env, messages).peg
+local function predicate(a, env, prefix, messages)
+   local peg = expression(a.exp, env, prefix, messages).peg
    if a.type=="lookahead" then
       peg = #peg
    elseif a.type=="lookbehind" then
@@ -207,7 +207,7 @@ end
 -- a reference to the identifier "."
 
 
-local function cs_named(a, env, messages)
+local function cs_named(a, env, prefix, messages)
    local peg = locale[a.name]
    if not peg then
       throw("unknown named charset: " .. a.name, a)
@@ -217,7 +217,7 @@ local function cs_named(a, env, messages)
 end
 
 -- TODO: This impl works only for single byte chars!
-local function cs_range(a, env, messages)
+local function cs_range(a, env, prefix, messages)
    local c1, offense1 = common.unescape_charlist(a.first)
    local c2, offense2 = common.unescape_charlist(a.last)
    if (not c1) or (not c2) then
@@ -232,7 +232,7 @@ end
 
 -- FUTURE optimization: All the single-byte chars can be put into one call to lpeg.S().
 -- FUTURE optimization: The multi-byte chars can be organized by common prefix. 
-function cs_list(a, env, messages)
+function cs_list(a, env, prefix, messages)
    assert(#a.chars > 0, "empty character set list?")
    local alternatives
    for i, c in ipairs(a.chars) do
@@ -251,22 +251,22 @@ end
 
 local cexp;
 
-function cs_exp(a, env, messages)
+function cs_exp(a, env, prefix, messages)
    if ast.cs_exp.is(a.cexp) then
       if not a.complement then
 	 -- outer cs_exp does not affect semantics, so drop it
-	 return cs_exp(a.cexp)
+	 return cs_exp(a.cexp, env, prefix, messages)
       else
 	 -- either: inner cs_exp does not affect semantics, so drop it,
 	 -- or: complement of a complement cancels out.
 	 local new = ast.cs_exp{complement=(not a.cexp.complement), cexp=a.cexp.cexp, s=a.s, e=e.s}
-	 return cs_exp(new, env, messages)
+	 return cs_exp(new, env, prefix, messages)
       end
    elseif ast.cs_union.is(a.cexp) then
       assert(#a.cexp.cexps > 0, "empty character set union?")
-      local alternatives = expression(a.cexp.cexps[1]).peg
+      local alternatives = expression(a.cexp.cexps[1], env, prefix, messages).peg
       for i = 2, #a.cexp.cexps do
-	 alternatives = alternatives + expression(a.cexp.cexps[i]).peg
+	 alternatives = alternatives + expression(a.cexp.cexps[i], env, prefix, messages).peg
       end
       a.pat = pattern.new{name="cs_exp",
 			 peg=((a.complement and (1-alternatives)) or alternatives),
@@ -277,7 +277,7 @@ function cs_exp(a, env, messages)
    elseif ast.cs_difference.is(a.cexp) then
       throw("character set difference is not implemented", a)
    elseif ast.simple_charset_p(a.cexp) then
-      local p = expression(a.cexp, env, messages)
+      local p = expression(a.cexp, env, prefix, messages)
       a.pat = pattern.new{name="cs_exp", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
       return a.pat
    else
@@ -330,7 +330,7 @@ end
 
 -- TODO: test a grammar with two rules by the same name; who signals the error, lpeg or ???
 
-local function grammar(a, env, messages)
+local function grammar(a, env, prefix, messages)
    local gtable = environment.extend(env)
    local labels = {}
    assert(a.rules and a.rules[1])
@@ -342,7 +342,7 @@ local function grammar(a, env, messages)
       assert(not rule.ref.packagename)
       assert(type(rule.ref.localname)=="string")
       local id = rule.ref.localname
-      labels[id] = (id == grammar_id) and id or common.compose_id({grammar_id, id})
+      labels[id] = (id == grammar_id) and id or common.compose_id{prefix, grammar_id, id}
       bind(gtable, id, pattern.new{name=id, peg=V(id), alias=rule.is_alias})
       common.note("grammar: binding " .. id)
    end
@@ -353,7 +353,7 @@ local function grammar(a, env, messages)
       local id = rule.ref.localname
       if not start then start=id; end		    -- first rule is start rule
       common.note("grammar: compiling " .. tostring(rule.exp))
-      pats[id] = expression(rule.exp, gtable, messages)
+      pats[id] = expression(rule.exp, gtable, prefix, messages)
       if (not rule.is_alias) then wrap_pattern(pats[id], labels[id]); end
    end -- for
    -- Third pass: create the table that will create the LPEG grammar 
@@ -392,8 +392,8 @@ local function matches_empty(peg)
    return (not ok) and msg:find("loop body may accept empty string")
 end
 
-local function rep(a, env, messages)
-   local epat = expression(a.exp, env, messages)
+local function rep(a, env, prefix, messages)
+   local epat = expression(a.exp, env, prefix, messages)
    local epeg = epat.peg
    if matches_empty(epeg) then
       throw("pattern being repeated can match the empty string", a)
@@ -409,7 +409,7 @@ local function rep(a, env, messages)
    return a.pat
 end
 
-local function ref(a, env, messages)
+local function ref(a, env, prefix, messages)
    local pat = lookup(env, a.localname, a.packagename)
    local name = common.compose_id{a.packagename, a.localname}
    if (not pat) then throw("unbound identifier: " .. name, a); end
@@ -446,7 +446,7 @@ end
 --     accept some argument types and reject others --- at compile time!
 --   * 
 
-local function application(a, env, messages)
+local function application(a, env, prefix, messages)
    local ref = a.ref
    local fn_ast = lookup(env, ref.localname, ref.packagename)
    local name = common.compose_id{ref.packagename, ref.localname}
@@ -459,7 +459,7 @@ local function application(a, env, messages)
    end
    common.note("applying built-in function '" .. name .. "'")
    local operands = list.map(function(exp)
-				return expression(exp, env, messages)
+				return expression(exp, env, prefix, messages)
 			     end,
 			     a.arglist)
    local ok, peg, uncap = pcall(fn_ast.primop, table.unpack(operands))
@@ -488,17 +488,17 @@ local dispatch = { [ast.string] = rpl_string,
 		}
 
 -- the forward reference declares 'expression' to be local
-function expression(a, env, messages)
+function expression(a, env, prefix, messages)
    local compile = dispatch[parent(a)]
    if (not compile) then
       throw("invalid expression: " .. tostring(a), a)
    end
-   a.pat = compile(a, env, messages)
+   a.pat = compile(a, env, prefix, messages)
    return a.pat
 end
 
-local function compile_expression(exp, env, messages)
-   local ok, value, err = apply_catch(expression, exp, env, messages)
+local function compile_expression(exp, env, prefix, messages)
+   local ok, value, err = apply_catch(expression, exp, env, prefix, messages)
    if not ok then
       local full_message =
 	 "error in compile_expression:" ..
@@ -520,7 +520,7 @@ end
 -- expression is a reference to an alias, or if the expression is not a reference at all, then the
 -- match output will have the name "*" (meaning "anonymous") at the top level.
 function c2.compile_expression(a, env, messages)
-   local pat = compile_expression(a, env, messages)
+   local pat = compile_expression(a, env, nil, messages)
    if not pat then return false; end		    -- error will be in messages
    if pat and (not pattern.is(pat)) then
       local msg =
@@ -555,14 +555,12 @@ function c2.compile_block(a, pkgenv, request, messages)
    assert(environment.is(pkgenv))
    assert(request==nil or common.loadrequest.is(request))
    assert(type(messages)=="table")
-
    local prefix
    if request and request.importpath and (request.prefix~=".") then
       assert(request.packagename==nil or type(request.packagename)=="string")
       assert(request.prefix==nil or type(request.prefix=="string"))
       prefix = request.prefix or request.packagename
    end
-   
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    -- TODO: Ensure each lhs appears only once in a.stmts.
    for _, b in ipairs(a.stmts) do
@@ -582,7 +580,7 @@ function c2.compile_block(a, pkgenv, request, messages)
    --       entire pass through a.stmts fails to change any binding.
    for _, b in ipairs(a.stmts) do
       local ref, exp = b.ref, b.exp
-      local pat = compile_expression(exp, pkgenv, messages)
+      local pat = compile_expression(exp, pkgenv, prefix, messages)
       if pat then 
 	 -- TODO: need a proper error message
 	 if type(pat)~="table" then

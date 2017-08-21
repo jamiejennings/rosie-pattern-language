@@ -30,8 +30,8 @@ ast.binding = recordtype.new("binding",
 			   pat = NIL;
 			   sourceref = NIL;})
 
--- A grammar is an expression in the ast, despite the fact that in the concrete grammar for rpl
--- 1.1, the keyword 'grammar' introduces a binding of a name to a 'grammar expression'.
+-- An rpl grammar is an *expression* in the ast, despite the fact that the rpl 1.1 syntax allows
+-- only grammar statements. 
 ast.grammar = recordtype.new("grammar",
 			     {rules = {};
 			      pat = NIL;
@@ -693,8 +693,8 @@ ast.from_core_parse_tree = convert_core
 ---------------------------------------------------------------------------------------------------
 
 function ast.dependencies_of(a)
-   -- Until we have new use cases, this only works on non-grammar expressions.  And it only works
-   -- on pre-expansion ASTs, i.e. those produced by the compiler's parse_expression function.
+   -- Until we have new use cases, this only works on pre-expansion ASTs, i.e. those produced by
+   -- the compiler's parse_expression function. 
    if ast.block.is(a) then
       return apply(append, map(ast.dependencies_of, a.stmts))
    elseif ast.grammar.is(a) then

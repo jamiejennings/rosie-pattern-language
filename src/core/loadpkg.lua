@@ -250,7 +250,6 @@ local function import_one(compiler, pkgtable, searchpath, source_record, message
    end
    common.note("load: looking for ", origin.importpath)
    -- FUTURE: Next, look for a compiled version of the file to load
-   -- ...
    -- Finally, look for a source file to compile and load
    local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, messages)
    if not src then return false; end 		    -- message already in 'messages'
