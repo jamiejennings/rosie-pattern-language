@@ -446,4 +446,10 @@ function common.not_atmosphere(sub)
    return (sub.type ~= "comment") and (sub.type ~= "newline")
 end
 
+function common.type_is_syntax_error(t)
+   local names = util.split(t, ".")
+   assert(type(names)=="table")
+   return (names[#names]=="syntax_error")
+end
+
 return common

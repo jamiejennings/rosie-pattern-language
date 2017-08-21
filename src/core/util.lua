@@ -339,6 +339,27 @@ function util.trim(str)
    return str:match("%s*(.-)%s*$")
 end
 
+function util.split(str, separator)
+   assert( (type(separator)=="string") and (#separator > 0) )
+   local i
+   local start = 1
+   local results = {}
+   while true do 
+      i = str:find(separator, start, true)
+      if not i then
+	 results[#results+1] = str:sub(start)
+	 break;
+      else
+	 results[#results+1] = str:sub(start, i-1)
+	 start = i + #separator
+      end
+   end
+   return results
+end
+		
+-- FUTURE: Rewrite split_path to use util.split so that the separator can be any string.
+-- Currently, if separator contains a Lua pattern special character (like "."), then split_path
+-- will fail.
 function util.split_path(path, separator)
    -- separator is typically common.dirsep
    if #separator~=1 then

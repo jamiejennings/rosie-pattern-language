@@ -91,7 +91,7 @@ local function collect_syntax_error_nodes(pt, syntax_errors)
    -- Find all the syntax error nodes in the parse tree, and make a list of their parents.  The
    -- root is handled by the caller.
    for _,a in ipairs(pt.subs or {}) do
-      if a.type=="syntax_error" then
+      if common.type_is_syntax_error(a.type) then
 	 table.insert(syntax_errors, pt)
       else
 	 collect_syntax_error_nodes(a, syntax_errors)
@@ -101,7 +101,7 @@ local function collect_syntax_error_nodes(pt, syntax_errors)
 end
 
 local function find_syntax_errors(pt, source)
-   if pt.type=="syntax_error" then
+   if common.type_is_syntax_error(pt.type) then
       return {pt}
    else
       return collect_syntax_error_nodes(pt, {})

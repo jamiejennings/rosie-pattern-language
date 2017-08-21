@@ -56,12 +56,12 @@ local function make_parser_from(parse_something, expected_pt_node)
 		-- OR, go directly to using the 'trace' capability for this, since that's the
 		-- future solution anyway.
 		for _, err in ipairs(syntax_errors) do
-		   if err.type=="syntax_error" then
+		   if common.type_is_syntax_error(err.type) then
 		      -- In this case, the pt root is the syntax error.
 		      assert(false, "** TODO: DECIDE WHAT TO DO IN THIS CASE **")
 		   else
 		      for _, sub in ipairs(err.subs or {}) do
-			 if sub.type=="syntax_error" then
+			 if common.type_is_syntax_error(sub.type) then
 			    local origin = origin and common.loadrequest.new{filename=origin.filename}
 			    local sref = common.source.new{text=pt.data,
 							   s=sub.s,
@@ -203,7 +203,8 @@ local function predicate(a, env, messages)
 end
 
 
--- TODO: Change each "1" below to lookup(env, ".")
+-- TODO: Make the cs_* UTF-8 AND ASCII compatible.  Essentially, change each "1" below to
+-- lookup(env, ".").
 
 
 local function cs_named(a, env, messages)
@@ -327,14 +328,21 @@ end
 -- and 'A.s.d' if c and d were rules in s.  Note that the captures labeled 'A.s.c' and 'A.s.d' can
 -- appear only as sub-matches inside 'A.s'.
 
+-- TODO: test a grammar with two rules by the same name; who signals the error, lpeg or ???
+
 local function grammar(a, env, messages)
    local gtable = environment.extend(env)
-   -- First pass: collect rule names as V() refs into a new env
+   local labels = {}
+   assert(a.rules and a.rules[1])
+   local grammar_id = a.rules[1].ref.localname
+   -- First pass: collect rule names as V() refs into a new env, and create a capture label for
+   -- each one
    for _, rule in ipairs(a.rules) do
       assert(ast.binding.is(rule))
       assert(not rule.ref.packagename)
       assert(type(rule.ref.localname)=="string")
       local id = rule.ref.localname
+      labels[id] = (id == grammar_id) and id or (grammar_id .. "." .. id)
       bind(gtable, id, pattern.new{name=id, peg=V(id), alias=rule.is_alias})
       common.note("grammar: binding " .. id)
    end
@@ -346,7 +354,7 @@ local function grammar(a, env, messages)
       if not start then start=id; end		    -- first rule is start rule
       common.note("grammar: compiling " .. tostring(rule.exp))
       pats[id] = expression(rule.exp, gtable, messages)
-      if (not rule.is_alias) then wrap_pattern(pats[id], id); end
+      if (not rule.is_alias) then wrap_pattern(pats[id], labels[id]); end
    end -- for
    -- Third pass: create the table that will create the LPEG grammar 
    local t = {}

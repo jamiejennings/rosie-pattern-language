@@ -268,15 +268,15 @@ local function infix_to_prefix(exps, sref)
    local optype = op.subs[1].type
    assert(optype)
    rest = list.cdr(list.cdr(rest))
-   if optype=="intersection" then
+   if optype=="charset_exp.intersection" then
       return ast.cs_intersection.new{cexps = {convert_char_exp(first, sref),
 					      infix_to_prefix(rest, sref)},
 				     sourceref=sref}
-   elseif optype=="difference" then
+   elseif optype=="charset_exp.difference" then
       return ast.cs_difference.new{first = convert_char_exp(first, sref),
 				   second = infix_to_prefix(rest, sref),
 				   sourceref=sref}
-   elseif optype=="union" then
+   elseif optype=="charset_exp.union" then
       return ast.cs_union.new{cexps = {convert_char_exp(first, sref), 
 				       infix_to_prefix(rest, sref)}, 
 			      sourceref=sref}
@@ -328,7 +328,7 @@ function convert_char_exp(pt, sref)
 			      last = exps[2].data,
 			      complement = compflag,
 			      sourceref=sref}
-   elseif pt.type=="compound_charset" then
+   elseif pt.type=="charset_exp.compound_charset" then
       assert(exps[1])
       local prefix_cexp
       if not exps[2] then
@@ -424,22 +424,22 @@ function convert_exp(pt, sref)
       return ast.cap.new{name = subs[1].data,
 			 exp = convert_exp(subs[2], sref),
 		         sourceref=sref}
-   elseif pt.type=="predicate" then
+   elseif pt.type=="exp.predicate" then
       return ast.predicate.new{type = subs[1].type,
 			       exp = convert_exp(subs[2], sref),
 			       sourceref=sref}
-   elseif pt.type=="cooked" then
+   elseif pt.type=="exp.cooked" then
       return ast.cooked.new{exp = convert_exp(subs[1], sref),
 			    sourceref=sref}
-   elseif pt.type=="raw" then
+   elseif pt.type=="exp.raw" then
       return ast.raw.new{exp = convert_exp(subs[1], sref), 
 		      sourceref=sref}
-   elseif pt.type=="choice" then
-      return ast.choice.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "choice"))),
+   elseif pt.type=="exp.choice" then
+      return ast.choice.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "exp.choice"))),
 			    sourceref=sref}
-   elseif pt.type=="sequence" then
+   elseif pt.type=="exp.sequence" then
       return ast.sequence.new{exps = map(convert1,
-					 filter(not_atmosphere, flatten(pt, "sequence"))),
+					 filter(not_atmosphere, flatten(pt, "exp.sequence"))),
 			      sourceref=sref}
    elseif pt.type=="identifier" then
       return convert_identifier(pt, sref)
@@ -456,19 +456,19 @@ function convert_exp(pt, sref)
       end
    elseif pt.type=="charset_exp" then
       return convert_char_exp(pt, sref)
-   elseif pt.type=="quantified_exp" then
+   elseif pt.type=="exp.quantified_exp" then
       return convert_quantified_exp(pt, convert_exp, sref)
-   elseif pt.type=="application" then
+   elseif pt.type=="exp.application" then
       local id = subs[1]
       assert(id.type=="identifier")
       local arglist = subs[2]
       local operands = map(convert1, arglist.subs)
-      if (arglist.type=="arglist") then
+      if (arglist.type=="exp.arglist") then
 	 operands = map(ast.ambient_cook_exp, operands)
-      elseif (arglist.type=="rawarglist") then
+      elseif (arglist.type=="exp.rawarglist") then
 	 operands = map(ast.ambient_raw_exp, operands)
       else
-	 assert(arglist.type=="arg")
+	 assert(arglist.type=="exp.arg")
 	 assert(#arglist.subs==1)
       end
       return ast.application.new{ref=convert_identifier(id, sref),
@@ -507,20 +507,20 @@ end
 local function convert_stmt(pt, sref)
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local subs = pt.subs and filter(not_atmosphere, pt.subs)
-   if pt.type=="assignment_" then
+   if pt.type=="stmnt.assignment_" then
       assert(subs and subs[1] and subs[2])
       return ast.binding.new{ref = convert_exp(subs[1], sref),
 			  exp = convert_exp(subs[2], sref),
 			  is_alias = false,
 			  is_local = false,
 		          sourceref = sref}
-   elseif pt.type=="alias_" then
+   elseif pt.type=="stmnt.alias_" then
       return ast.binding.new{ref = convert_exp(subs[1], sref),
 			  exp = convert_exp(subs[2], sref),
 			  is_alias = true,
 			  is_local = false,
 		          sourceref = sref}
-   elseif pt.type=="grammar_" then
+   elseif pt.type=="stmnt.grammar_" then
       local rules = map(function(sub)
 			   return convert_stmt(sub, sref)
 			end,
@@ -533,7 +533,7 @@ local function convert_stmt(pt, sref)
 			     exp = gexp,
 			     is_alias = aliasflag,
 			     is_local = false}
-   elseif pt.type=="local_" then
+   elseif pt.type=="stmnt.local_" then
       local b = convert_stmt(subs[1], sref)
       b.is_local = true
       return b

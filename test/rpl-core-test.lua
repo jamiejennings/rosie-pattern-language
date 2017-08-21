@@ -1290,8 +1290,10 @@ function collect_names(ast)
 end
 ids = collect_names(match)
 check(list.member('g1', ids))
-check(list.member('B', ids))
-check(not list.member('A', ids))			    -- an alias
+check(list.member('g1.B', ids))			    -- name qualified by grammar id
+check(not list.member('B', ids))		    -- unqualified name not present 
+check(not list.member('g1.A', ids))		    -- an alias
+check(not list.member('A', ids))		    -- ensuring this unqualified name not present
 
 check_match('g1 [[:digit:]]', "ab 4", true)
 check_match('{g1 [[:digit:]]}', "ab 4", true)	    -- because g1 is defined to end on a boundary

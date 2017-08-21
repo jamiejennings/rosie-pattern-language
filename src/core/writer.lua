@@ -428,7 +428,7 @@ function write_exp(exp)
 	   exp.type=="cooked_quantified_exp" or
 	   exp.type=="raw_quantified_exp") then
       return write_quantified_exp(exp)
-   elseif exp.type=="syntax_error" then
+   elseif common.type_is_syntax_error(exp.type) then
       return "(syntax_error " .. exp.text .. tostring(exp.pos) .. ")"
    else
       error("Writer: unknown expression type: " .. exp.type)
