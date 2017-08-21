@@ -185,6 +185,10 @@ local function predicate(a, env, messages)
 	 assert(type(peg)=="string")
 	 if peg:find("fixed length") then
 	    throw("lookbehind pattern does not have fixed length: " .. ast.tostring(a.exp), a)
+	 elseif peg:find("too long") then
+	    throw("lookbehind pattern too long: " .. ast.tostring(a.exp), a)
+	 elseif peg:find("captures") then
+	    throw("lookbehind pattern has captures: " .. ast.tostring(a.exp), a)
 	 else
 	    error("Internal error: " .. peg)
 	 end
