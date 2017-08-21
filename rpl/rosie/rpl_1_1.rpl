@@ -42,7 +42,7 @@ rest_of_line = { {!"\n" .}+ "\n" / $}
 syntax_error = rest_of_line
 
 localname = {id_symbol !id} / {id !id_symbol}
-packagename = id --/ syntax_error
+packagename = id
 identifier = { {packagename [[.]]}? localname }
 
 alias dquote = [[\"]]

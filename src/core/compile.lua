@@ -281,7 +281,6 @@ function cs_exp(a, env, messages)
 end
 
 local function wrap_pattern(pat, name)
---   assert(name:sub(1,1)~=".")
    if pat.uncap then
       -- If pat.uncap exists, then pat.peg is already wrapped in a capture.  In order to wrap pat
       -- with a capture called 'name', we start with pat.uncap.  Here's a case where this happens:
