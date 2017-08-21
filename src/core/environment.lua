@@ -31,25 +31,6 @@ local builtins = require "builtins"
 -- Items for the initial environment
 ---------------------------------------------------------------------------------------------------
 
--- local function macro_keep_to(...)
---    -- return {{! <exp>} .}* <exp> when given <exp> as an arg
---    local args = {...}
---    if #args~=1 then error("function takes one argument, " .. tostring(#args) .. " given"); end
---    local exp = args[1]
---    assert(exp.sourceref)
---    local any_char = ast.ref.new{localname=".", sourceref=exp.sourceref}
---    local not_exp = ast.predicate.new{type="!", exp=exp, sourceref=exp.sourceref}
---    local advance =
---       ast.repetition.new{min=0,
--- 			 exp=ast.raw.new{exp=ast.sequence.new{exps={not_exp, any_char},
--- 							   sourceref=exp.sourceref},
--- 				         sourceref=exp.sourceref},
--- 		         sourceref=exp.sourceref}
---    local wrapper = ast.cooked.is(exp) and ast.cooked or ast.raw
---    return wrapper.new{exp=ast.sequence.new{exps={advance, exp}, sourceref=exp.sourceref},
--- 		      sourceref=exp.sourceref}
--- end
-
 local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 				 sourceref=
 				    common.source.new{s=1, e=1,

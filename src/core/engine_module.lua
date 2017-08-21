@@ -147,14 +147,14 @@ end
 
 local function import(e, packagename, as_name)
    local messages = {}
-   local ok = loadpkg.import(e.compiler,
+   local ok, pkgname = loadpkg.import(e.compiler,
 			     e.pkgtable,
 			     e.searchpath,
 			     packagename,	    -- requested importpath
 			     as_name,		    -- requested prefix
 			     e.env,
 			     messages)
-   return ok, messages
+   return ok, pkgname, messages
 end
 
 local function get_file_contents(e, filename, nosearch)
@@ -167,14 +167,14 @@ local function get_file_contents(e, filename, nosearch)
 end
 
 -- FUTURE: re-work the return values?
-local function loadfile(e, filename, nosearch)
+local function loadfile(e, filename)
    if type(filename)~="string" then
       e.engine_error(e, "file name argument not a string: " .. tostring(filename))
    end
-   local actual_path, source, errmsg = get_file_contents(e, filename, nosearch)
+   local actual_path, source, errmsg = get_file_contents(e, filename, true)
    if not source then return false, nil, {errmsg}, actual_path; end
-   local origin = common.loadrequest.new{filename=actual_path}
-   local ok, pkgname, messages = really_load(e, source, origin)
+   -- local origin = common.loadrequest.new{filename=actual_path}
+   local ok, pkgname, messages = load(e, source, actual_path) --really_load(e, source, origin)
    return ok, pkgname, messages, actual_path
 end
 

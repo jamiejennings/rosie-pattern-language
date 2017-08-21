@@ -41,13 +41,18 @@ check(p.type=="pattern")
 p = e:lookup("mod1.A")
 check(not p)					    -- A is a local grammar
 
-ok, m, left, t0, t1, msgs = e:match("mod1.S", "ababab")
+ok, m, left, t0, t1, msgs = e:match("mod1.S", "baab")
 check(ok)
 check(m)
 check(left==0)
 check(type(t0)=="number")
 check(type(t1)=="number")
 check(not msgs)
+check(m.type=="mod1.S")
+check(m.subs and m.subs[1] and m.subs[1].type=="mod1.S.A")
+check(m.subs[1].subs and m.subs[1].subs[1] and m.subs[1].subs[1].type=="mod1.S")
+check(m.subs[1].subs[1].subs and m.subs[1].subs[1].subs[1] and m.subs[1].subs[1].subs[1].type=="mod1.B")
+print("***"); table.print(m)
 
 -- compile error below, so instead of leftover chars, there is a table of messages
 ok, m, left, t0, t1, msgs = e:match("mod1.foooooooo", "ababab")

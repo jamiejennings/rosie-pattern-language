@@ -92,7 +92,10 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     assert(type(pt)=="table")
 
 	     if expected_pt_node then
-		assert(pt.type==expected_pt_node, util.table_to_pretty_string(pt, false))
+		assert(pt.type==expected_pt_node,
+		       string.format("pt.type is %s but expected %q",
+				     tostring(pt.type), tostring(expected_pt_node)))
+		--util.table_to_pretty_string(pt, false)
 	     end
 	     if leftover~=0 then
 		local msg = "extraneous input: " .. src:sub(#src-leftover+1)
@@ -286,13 +289,14 @@ function cs_exp(a, env, prefix, messages)
 end
 
 local function wrap_pattern(pat, name)
+   assert(type(name)=="string")
    if pat.uncap then
       -- If pat.uncap exists, then pat.peg is already wrapped in a capture.  In order to wrap pat
       -- with a capture called 'name', we start with pat.uncap.  Here's a case where this happens:
       -- We must have an assignment like 'p1 = p2' where p2 is not an alias.  RPL semantics are
       -- that p1 must capture the same as p2, but the output should be labeled p1.
       pat.peg = common.match_node_wrap(pat.uncap, name)
-   else
+   else      
       -- If there is no pat.uncap, then pat.peg is NOT wrapped in a capture, so we can simply wrap
       -- it with a capture called 'name'.
       pat.uncap = pat.peg
@@ -311,7 +315,9 @@ local function throw_grammar_error(a, message)
    throw("peg compilation error: " .. message, a)
 end
 
--- PROPOSAL: 
+---------------------------------------------------------------------------------------------------
+-- This is why the 'prefix' value is passed around during compilation:
+---------------------------------------------------------------------------------------------------
 -- A grammar introduces a new scope: the assignments made inside a grammar are not visible outside
 -- the grammar.  We name the scope using the name of the grammar as a prefix.  And since there can
 -- be captures named by any (non-alias) rule name, we must add the import prefix as well, in order
@@ -335,10 +341,11 @@ local function grammar(a, env, prefix, messages)
    local labels = {}
    assert(a.rules and a.rules[1])
    local grammar_id = a.rules[1].ref.localname
-   -- First pass: collect rule names as V() refs into a new env, and create a capture label for
-   -- each one
+   -- First pass: Collect rule names as V() refs into a new env, and create a capture label for
+   -- each one.  Also do some error checking.
    for _, rule in ipairs(a.rules) do
       assert(ast.binding.is(rule))
+      assert(not rule.is_local)
       assert(not rule.ref.packagename)
       assert(type(rule.ref.localname)=="string")
       local id = rule.ref.localname
@@ -360,25 +367,31 @@ local function grammar(a, env, prefix, messages)
    local t = {}
    for id, pat in pairs(pats) do t[id] = pat.peg; end
    t[1] = start					    -- first rule is start rule
-   local uncap_peg
+   local final_peg, final_uncap_peg
+   local aliasflag = lookup(gtable, t[1]).alias
    local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
-   common.note("grammar: lpeg.P() produced " .. tostring(success) .. ", " .. tostring(peg_or_msg))
    if success then
-      local aliasflag = lookup(gtable, t[1]).alias
-      if not aliasflag then
-	 assert(pats[start].uncap)
-	 t[start] = pats[start].uncap
-	 success, uncap_peg = pcall(P, t)
-      end
+      final_peg = peg_or_msg
+      -- if not aliasflag then
+      -- 	 assert(pats[start].uncap)
+      -- 	 local uncapped_t = {}
+      -- 	 for id, pat in pairs(pats) do uncapped_t[id] = pat.peg; end
+      -- 	 uncapped_t[start] = pats[start].uncap
+      -- 	 uncapped_t[1] = start
+      -- 	 success, peg_or_msg = pcall(P, uncapped_t)
+      -- 	 if success then
+      -- 	    final_uncap_peg = peg_or_msg
+      -- 	 end
+      -- end
    end
+--   if not aliasflag then assert(final_uncap_peg); end
    if (not success) then
-      assert(type(peg_or_msg)=="string",
-	  "Internal error (compiler) while reporting an error in a grammar")
+      assert(type(peg_or_msg)=="string")
       throw_grammar_error(a, peg_or_msg)
    end
    a.pat = pattern.new{name="grammar",
-		      peg=peg_or_msg,
-		      uncap=(aliasflag and nil) or uncap_peg,
+		      peg=final_peg,
+		      uncap="grammar", --final_uncap_peg,
 		      ast=a,
 		      alias=aliasflag}
    return a.pat
@@ -487,7 +500,7 @@ local dispatch = { [ast.string] = rpl_string,
 		   [ast.application] = application,
 		}
 
--- the forward reference declares 'expression' to be local
+-- The forward reference for 'expression' declares it to be local
 function expression(a, env, prefix, messages)
    local compile = dispatch[parent(a)]
    if (not compile) then
@@ -500,9 +513,7 @@ end
 local function compile_expression(exp, env, prefix, messages)
    local ok, value, err = apply_catch(expression, exp, env, prefix, messages)
    if not ok then
-      local full_message =
-	 "error in compile_expression:" ..
-	 tostring(value) .. "\n"
+      local full_message = "error in compile_expression:" .. tostring(value) .. "\n"
       for _,v in ipairs(messages) do
 	 full_message = full_message .. tostring(v) .. "\n"
       end
@@ -586,7 +597,8 @@ function c2.compile_block(a, pkgenv, request, messages)
 	 if type(pat)~="table" then
 	    io.stderr:write("    BUT DID NOT GET A PATTERN: ", tostring(pat), "\n")
 	 end
-	 if (not b.is_alias) then
+	 -- -- Sigh.  Grammars are already wrapped.  This is ugly.
+	 if (not b.is_alias) and (not ast.grammar.is(exp)) then
 	    local fullname = common.compose_id{prefix, ref.localname}
 	    wrap_pattern(pat, fullname);
 	 end
@@ -594,6 +606,7 @@ function c2.compile_block(a, pkgenv, request, messages)
 	 if b.is_local then pat.exported = false; end
 	 common.note("Binding value to " .. ref.localname)
 	 bind(pkgenv, ref.localname, pat)
+--	 bind(pkgenv, common.compose_id{prefix, ref.localname}, pat)
       else
 	 return false
       end

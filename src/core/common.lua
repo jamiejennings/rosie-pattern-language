@@ -37,36 +37,36 @@ end
 -- Path handling
 ----------------------------------------------------------------------------------------
 
--- parse_path returns a table of the directories in path, which is a colon separated list
--- on all platforms except windows, where it is a semi-colon separated list
-function common.parse_path(path)
-   assert(common.pathsep)
-   assert(type(path)=="string")
-   local dirs = {}
-   for dir in path:gmatch("([^" .. common.pathsep .. "]+)") do
-      table.insert(dirs, dir)
-   end
-   return dirs
+-- parse_pathlist returns a table of the paths in pathlist, which is a colon separated list on
+-- all platforms except windows, where it is a semi-colon separated list
+function common.parse_pathlist(pathlist)
+   assert(common.pathsep and (type(common.pathsep)=="string"))
+   assert(type(pathlist)=="string")
+   return util.split(pathlist, common.pathsep)
 end
 
--- path assembles a path from its components
+-- path assembles a path from its component directory names
 function common.path(...)
    return table.concat({...}, common.dirsep)
 end
 
 function common.get_file(filepath, searchpath, extension)
    extension = extension or ".rpl"
-   local dirs = common.parse_path(searchpath)
+   local dirs = common.parse_pathlist(searchpath)
+   if #dirs==0 then return nil, nil, "Error: search path is empty"; end
+   local errs = {}
    for _, dir in ipairs(dirs) do
       local fullpath = dir .. common.dirsep .. filepath .. extension
       local contents, msg = util.readfile(fullpath)
       if contents then
-	 return fullpath, contents
+	 return fullpath, contents, nil
+      elseif contents==nil then
+	 return fullpath, nil, "file not readable"
       else
-	 return fullpath, nil, msg
+	 table.insert(errs, msg)
       end
    end
-   return nil, nil, "file not found on search path"
+   return nil, nil, table.concat(errs, "\n")
 end
 
 
@@ -300,7 +300,11 @@ end
 
 assert(lpeg.rcap, "lpeg.rcap not defined: wrong version of lpeg???")
 assert(lpeg.rconstcap, "lpeg.rconstcap not defined: wrong version of lpeg???")
-common.match_node_wrap = lpeg.rcap
+function common.match_node_wrap(peg, label)
+   assert(lpeg.type(peg)=="pattern")
+   assert(type(label)=="string")
+   return lpeg.rcap(peg, label)
+end
 
 local function insert_input_text(m, input)
    local name, s, data, subs, e = common.decode_match(m)

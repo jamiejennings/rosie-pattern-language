@@ -399,7 +399,8 @@ function util.readfile(fullpath)
    local data = f:read("a")
    f:close()
    if (not data) then
-      return false, string.format('Error: cannot read file %s', tostring(fullpath))
+      -- Return nil to distinguish read error from file not found
+      return nil, string.format('Error: cannot read file %s', tostring(fullpath))
    end
    return data
 end
