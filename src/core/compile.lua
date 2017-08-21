@@ -306,6 +306,23 @@ local function throw_grammar_error(a, message)
    throw("peg compilation error: " .. message, a)
 end
 
+-- PROPOSAL: 
+-- A grammar introduces a new scope: the assignments made inside a grammar are not visible outside
+-- the grammar.  We name the scope using the name of the grammar as a prefix.  And since there can
+-- be captures named by any (non-alias) rule name, we must add the import prefix as well, in order
+-- to be consistent.
+--
+-- I.e. a capture from package A (imported as A), grammar s, and rule c would be labeled 'A.s.c'.
+-- This extra prefix layer is present only in the match output.  Much like '*' as a capture name,
+-- it is not possible to refer to 'A.s.c' in RPL.  Currently, with the legacy lpeg code, it is not
+-- possible to jump into the middle of a grammar -- a grammar has a unique start rule.
+--
+-- In RPL 1.1., the name of the start rule is used as the name of the grammar.  If the start rule
+-- is named 's', it would be odd for its captures to be labeled 's.s' when they could be called
+-- just 's'.  E.g. after importing package A (as A), we might see captures labeled 'A.s', 'A.s.c',
+-- and 'A.s.d' if c and d were rules in s.  Note that the captures labeled 'A.s.c' and 'A.s.d' can
+-- appear only as sub-matches inside 'A.s'.
+
 local function grammar(a, env, messages)
    local gtable = environment.extend(env)
    -- First pass: collect rule names as V() refs into a new env
