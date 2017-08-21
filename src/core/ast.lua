@@ -764,7 +764,7 @@ function ast.tostring(a, already_grouped)
 	       "\nend\n" )
    elseif ast.ref.is(a) then
       local lname = (a.localname ~= "*" and a.localname) or "<anonymous>"
-      return ( (a.packagename and (a.packagename ~= ".") and (a.packagename .. ".") or "") .. lname )
+      return common.compose_id{a.packagename, lname}
    elseif ast.sequence.is(a) then
       local pre = already_grouped and "" or "{"
       local post = already_grouped and "" or "}"

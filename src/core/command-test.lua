@@ -98,14 +98,14 @@ function p.run(rosie, en, args, filename)
       write_error("ERROR: test expression did not compile: ", tostring(exp))
    end
    local function test_accepts_exp(exp, q)
-      if pkgname then exp = pkgname .. "." .. exp; end
+      if pkgname then exp = common.compose_id({pkgname, exp}); end
       local ok, res, pos = test_engine:match(exp, q)
       if (not ok) then write_compilation_error(exp); end
       if (not ok) or (not res) or (pos ~= 0) then return false end
       return true
    end
    local function test_rejects_exp(exp, q)
-      if pkgname then exp = pkgname .. "." .. exp; end
+      if pkgname then exp = common.compose_id({pkgname, exp}); end
       local ok, res, pos = test_engine:match(exp, q)
       if (not ok) then write_compilation_error(exp); end
       if (not ok) or (res and (pos == 0)) then return false end
@@ -128,7 +128,7 @@ function p.run(rosie, en, args, filename)
          end
          return found
       end
-      if pkgname then exp = pkgname .. "." .. exp; end
+      if pkgname then exp = common.compose_id({pkgname, exp}); end
       local ok, res, leftover = test_engine:match(exp, q)
       if (not ok) then write_compilation_error(exp); end
       -- check for match error, which prevents testing containment

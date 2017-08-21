@@ -213,11 +213,11 @@ local function find_module_source(compiler, pkgtable, searchpath, source_record,
    return false
 end
 
-local function create_package_bindings(localname, pkgenv, target_env)
-   assert(type(localname)=="string")
+local function create_package_bindings(prefix, pkgenv, target_env)
+   assert(type(prefix)=="string")
    assert(environment.is(pkgenv))
    assert(environment.is(target_env))
-   if localname=="." then
+   if prefix=="." then
       -- import all exported bindings into the target environment
       for name, obj in pkgenv:bindings() do
 	 assert(type(obj)=="table", name .. " bound to " .. tostring(obj))
@@ -231,12 +231,12 @@ local function create_package_bindings(localname, pkgenv, target_env)
 	 end
       end -- for each binding in the package
    else
-      -- import the entire package under the desired localname
-      if lookup(target_env, localname) then
-	 common.note("load: rebinding ", localname)
+      -- import the entire package under the desired prefix
+      if lookup(target_env, prefix) then
+	 common.note("load: rebinding ", prefix)
       end
-      bind(target_env, localname, pkgenv)
-      common.note("load: binding package prefix " .. localname)
+      bind(target_env, prefix, pkgenv)
+      common.note("load: binding package prefix " .. prefix)
    end
 end
 
@@ -313,9 +313,9 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
    -- to make the exported bindings accessible.
    for _, decl in ipairs(idecls) do
       local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath, decl.prefix)
-      local localname = decl.prefix or pkgname
-      assert(type(localname)=="string")
-      create_package_bindings(localname, pkgenv, target_env)
+      local prefix = decl.prefix or pkgname
+      assert(type(prefix)=="string")
+      create_package_bindings(prefix, pkgenv, target_env)
    end
    return true
 end

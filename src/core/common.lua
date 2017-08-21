@@ -16,7 +16,8 @@ local table = import "table"
 
 local common = {}				    -- interface
 
-function common.split_identifier(name)
+-- Return the first component of a dotted identifier (typically an rpl package id), and the rest. 
+function common.split_id(name)
    local pkgname, localname
    local start, finish = name:find(".", 1, true)
    if start then
@@ -24,6 +25,12 @@ function common.split_identifier(name)
    else
       return nil, name
    end
+end
+
+-- If first component (the package id) is nil or ".", then do not include it.
+function common.compose_id(names)
+   return table.concat(names, ".",
+		       ((names[1] == nil) or (names[1] == ".")) and 2 or 1)
 end
 
 ----------------------------------------------------------------------------------------

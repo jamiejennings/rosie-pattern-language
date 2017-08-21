@@ -204,7 +204,7 @@ end
 
 
 -- TODO: Make the cs_* UTF-8 AND ASCII compatible.  Essentially, change each "1" below to
--- lookup(env, ".").
+-- a reference to the identifier "."
 
 
 local function cs_named(a, env, messages)
@@ -342,7 +342,7 @@ local function grammar(a, env, messages)
       assert(not rule.ref.packagename)
       assert(type(rule.ref.localname)=="string")
       local id = rule.ref.localname
-      labels[id] = (id == grammar_id) and id or (grammar_id .. "." .. id)
+      labels[id] = (id == grammar_id) and id or common.compose_id({grammar_id, id})
       bind(gtable, id, pattern.new{name=id, peg=V(id), alias=rule.is_alias})
       common.note("grammar: binding " .. id)
    end
@@ -411,7 +411,7 @@ end
 
 local function ref(a, env, messages)
    local pat = lookup(env, a.localname, a.packagename)
-   local name = (a.packagename and (a.packagename~=".") and (a.packagename .. ".") or "") .. a.localname
+   local name = common.compose_id{a.packagename, a.localname}
    if (not pat) then throw("unbound identifier: " .. name, a); end
    if not(pattern.is(pat)) then
       throw("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
@@ -422,7 +422,7 @@ local function ref(a, env, messages)
       -- rewrap using the fully qualified name, because the code we are now compiling uses the
       -- fully qualified name to refer to this value.
       assert(pat.uncap)
-      a.pat.peg = common.match_node_wrap(pat.uncap, name) --a.packagename .. "." .. a.localname)
+      a.pat.peg = common.match_node_wrap(pat.uncap, name)
    end
    return a.pat
 end
@@ -449,7 +449,7 @@ end
 local function application(a, env, messages)
    local ref = a.ref
    local fn_ast = lookup(env, ref.localname, ref.packagename)
-   local name = (ref.packagename and (ref.packagename~=".") and (ref.packagename .. ".") or "") .. ref.localname
+   local name = common.compose_id{ref.packagename, ref.localname}
    if (not ref) then throw("unbound identifier: " .. name, ref); end
    if not pfunction.is(fn_ast) then
       throw("type mismatch: expected a function, but '" .. name .. "' is bound to " .. tostring(fn_ast), a)
@@ -555,6 +555,14 @@ function c2.compile_block(a, pkgenv, request, messages)
    assert(environment.is(pkgenv))
    assert(request==nil or common.loadrequest.is(request))
    assert(type(messages)=="table")
+
+   local prefix
+   if request and request.importpath and (request.prefix~=".") then
+      assert(request.packagename==nil or type(request.packagename)=="string")
+      assert(request.prefix==nil or type(request.prefix=="string"))
+      prefix = request.prefix or request.packagename
+   end
+   
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    -- TODO: Ensure each lhs appears only once in a.stmts.
    for _, b in ipairs(a.stmts) do
@@ -581,12 +589,7 @@ function c2.compile_block(a, pkgenv, request, messages)
 	    io.stderr:write("    BUT DID NOT GET A PATTERN: ", tostring(pat), "\n")
 	 end
 	 if (not b.is_alias) then
-	    local fullname = ref.localname
-	    if request and request.importpath and (request.prefix~=".") then
-	       assert(request.packagename==nil or type(request.packagename)=="string")
-	       assert(request.prefix==nil or type(request.prefix=="string"))
-	       fullname = (request.prefix or request.packagename) .. "." .. fullname
-	    end
+	    local fullname = common.compose_id{prefix, ref.localname}
 	    wrap_pattern(pat, fullname);
 	 end
 	 pat.alias = b.is_alias
