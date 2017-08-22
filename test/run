@@ -1,0 +1,12 @@
+#!/bin/bash
+this=`basename $0`
+file=$1
+if [ "$file" = "" ]; then
+   echo "Usage: ${this} <path_to_rosie_test_file>"
+   exit -1
+elif [ ! -f $file ]; then
+    echo "Test file does not exist: $file"
+   exit -1
+fi
+echo "Launching test file $file ... "
+lua -e "ROSIE_HOME=\"`pwd`\"; rosie=require'rosie'; rosie.import'termcolor'" $file
