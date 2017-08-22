@@ -349,7 +349,7 @@ local function grammar(a, env, prefix, messages)
       assert(not rule.ref.packagename)
       assert(type(rule.ref.localname)=="string")
       local id = rule.ref.localname
-      labels[id] = (id == grammar_id) and id or common.compose_id{prefix, grammar_id, id}
+      labels[id] = (id == grammar_id) and common.compose_id{prefix, id} or common.compose_id{prefix, grammar_id, id}
       bind(gtable, id, pattern.new{name=id, peg=V(id), alias=rule.is_alias})
       common.note("grammar: binding " .. id)
    end
@@ -391,7 +391,7 @@ local function grammar(a, env, prefix, messages)
    end
    a.pat = pattern.new{name="grammar",
 		      peg=final_peg,
-		      uncap="grammar", --final_uncap_peg,
+		      uncap=nil, --"grammar", --final_uncap_peg,
 		      ast=a,
 		      alias=aliasflag}
    return a.pat
@@ -430,13 +430,14 @@ local function ref(a, env, prefix, messages)
       throw("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
    end
    a.pat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, uncap=pat.uncap}
-   if a.packagename and (not pat.alias) then
+--   if a.packagename and (not pat.alias) then
+      -- THIS IS NO LONGER TRUE:
       -- Here, pat was wrapped with only a local name when its module was compiled.  We need to
       -- rewrap using the fully qualified name, because the code we are now compiling uses the
       -- fully qualified name to refer to this value.
-      assert(pat.uncap)
-      a.pat.peg = common.match_node_wrap(pat.uncap, name)
-   end
+--      assert(pat.uncap)
+--      a.pat.peg = common.match_node_wrap(pat.uncap, name)
+--   end
    return a.pat
 end
 

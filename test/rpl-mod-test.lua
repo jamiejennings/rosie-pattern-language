@@ -51,8 +51,7 @@ check(not msgs)
 check(m.type=="mod1.S")
 check(m.subs and m.subs[1] and m.subs[1].type=="mod1.S.A")
 check(m.subs[1].subs and m.subs[1].subs[1] and m.subs[1].subs[1].type=="mod1.S")
-check(m.subs[1].subs[1].subs and m.subs[1].subs[1].subs[1] and m.subs[1].subs[1].subs[1].type=="mod1.B")
-print("***"); table.print(m)
+check(m.subs[1].subs[1].subs and m.subs[1].subs[1].subs[1] and m.subs[1].subs[1].subs[1].type=="mod1.S.B")
 
 -- compile error below, so instead of leftover chars, there is a table of messages
 ok, m, left, t0, t1, msgs = e:match("mod1.foooooooo", "ababab")
