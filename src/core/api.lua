@@ -235,7 +235,13 @@ end
 api.match = api_wrap(match, "string", "int")	    -- string depends on encoder function
 
 local function match_file(infilename, outfilename, errfilename, wholefileflag)
-   if (wholefileflag and type(json.decode(wholefileflag))~="boolean") then
+   if wholefileflag then
+      assert(type(wholefileflag)=="string")
+      wholefileflag = json.decode(wholefileflag)
+   else
+      wholefileflag = false
+   end
+   if type(wholefileflag) ~= "boolean" then
       arg_error("whole file flag not a boolean: " .. json.decode(wholefileflag))
    end
    local i,o,e = lapi.match_file((default_engine), infilename, outfilename, errfilename, wholefileflag)
