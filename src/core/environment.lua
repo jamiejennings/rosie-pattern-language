@@ -77,7 +77,7 @@ local function internal_macro_find(capture_flag, ...)
    end
    local trailing_boundary = ast.cooked.is(exp) and boundary_ref or nil
    local start_rule =
-      ast.binding.new{ref=ast.ref.new{localname="<find>", sourceref=sref},
+      ast.binding.new{ref=ast.ref.new{localname="find", sourceref=sref},
 		      exp=ast.raw.new{exp=ast.sequence.new{exps={search_ref, capture_ref, trailing_boundary}, 
 							   sourceref=sref},
 				      sourceref=sref},
@@ -85,7 +85,12 @@ local function internal_macro_find(capture_flag, ...)
 		      sourceref=sref}
    -- By putting capture_rule last, it will be omitted if nil
    local rules = {start_rule, search_rule, capture_rule}
-   return ast.grammar.new{rules=rules, sourceref=sref}
+   -- Wrapping result in a sequence because currently (commit ed9524) grammars are not being
+   -- labeled in the way that other constructs are.  This is due to the fact that grammars are
+   -- wrapped, i.e. labeled, during the grammar EXPRESSION compilation, whereas every other
+   -- binding is wrapped in the compile_block that calls compile_expression.
+   -- FUTURE: Change this (above).
+   return ast.sequence.new{exps={ast.grammar.new{rules=rules, sourceref=sref}}, sourceref=sref}
 end
 
 local function macro_find(...)
