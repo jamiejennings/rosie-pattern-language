@@ -1266,7 +1266,6 @@ ok, msg = pcall(e.load, e, g1_defn)
 check(ok)
 check_match('g1', "", true)
 check_match('g1', "ab", true)
-check_match('g1', "baab", true)
 check_match('g1', "abb", false)
 check_match('g1', "a", true, 1)
 check_match('g1', "a#", true, 2)
@@ -1274,6 +1273,21 @@ check_match('g1', "a#", true, 2)
 check_match('g1 $', "x", false)
 check_match('g1 $', "a", false)
 check_match('g1 $', "aabb", true)
+
+m, leftover = check_match('g1', "baab", true)
+check(m)
+check(leftover==0)
+check(m.type=="g1")
+m = m.subs[1]
+check(m.type=="g1.S")
+m = m.subs[1]
+check(m.type=="g1.S")
+m = m.subs[1]
+check(m.type=="g1.B")
+m = m.subs[1]
+check(m.type=="g1.S")
+check(not m.subs)
+
 
 set_expression('g1')
 ok, match, leftover = e:match('g1', "baab!")
@@ -1841,7 +1855,9 @@ check_idem_etc_raw('{(c){2,4}}', "cc", false)
 check_idem_etc_raw('{(c){2,4}}', "c c", true)
 check_idem_etc_raw('{(c){2,4}}', "c c c c c c", true, 4)
 
-subheading("Hash tags and string literals")
+---------------------------------------------------------------------------------------------------
+heading("Hash tags and string literals")
+---------------------------------------------------------------------------------------------------
 
 r, err = e:compile("#x")
 check(not r)					    -- not a pattern
@@ -1912,10 +1928,81 @@ check(not r)					    -- too many args
 check(violation.tostring(err[1]):find("3 given"))
 r, err = e:compile('message:()')
 check(not r)					    -- too few args
-print(violation.tostring(err[1]):find("extraneous input"))
+check(violation.tostring(err[1]):find("extraneous input"))
 r, err = e:compile('message:(message)')
 check(not r)					    -- wrong arg type (pfunction, not pattern)
 
+---------------------------------------------------------------------------------------------------
+heading("Lookarounds")
+---------------------------------------------------------------------------------------------------
+
+function check_look(invert, extra_prefix)
+
+   local not_fn = function(x) return not x end
+   local identity = function(x) return x end
+   local pre = (extra_prefix or "")
+   local switch = invert and not_fn or identity
+
+   check_match(pre..'>"x"', 'x', switch(true), 1)
+   check_match(pre..'>"x"', 'xyz', switch(true), 3)
+   check_match(pre..'>"x"', '', switch(false), 0)
+   check_match(pre..'>"x"', 'y', switch(false), 1)
+
+   check_match('{"w"'..pre..'>"x"}', 'wx', switch(true), 1)
+   check_match('{"w"'..pre..'>"x"}', 'wxyz', switch(true), 3)
+   check_match('{"w"'..pre..'>"x"}', 'w', switch(false), 0)
+   check_match('{"w"'..pre..'>"x"}', 'wy', switch(false), 1)
+
+   check_match('"w"'..pre..'>"x"', 'w x', switch(true), 1)
+   check_match('"w"'..pre..'>"x"', 'w xyz', switch(true), 3)
+   check_match('"w"'..pre..'>"x"', 'w', switch(false), 0)
+   check_match('"w"'..pre..'>"x"', 'w \t\t', switch(false), 0)
+   check_match('"w"'..pre..'>"x"', 'w y', switch(false), 1)
+
+end
+
+check_look(false)
+check_look(true, "!")
+check_look(false, "!!")				    -- two wrongs make a right :)
+
+check_look(false, ">")
+check_look(false, ">>")
+check_look(false, ">!>!")
+check_look(false, "!!>!>!")
+
+check_look(true, "!>")
+check_look(true, "!>")
+check_look(true, "!!>!")
+check_look(true, "!!>>!")
+check_look(true, "!!>!>!!")
+
+function check_lookbehind(invert, extra_prefix)
+
+   local not_fn = function(x) return not x end
+   local identity = function(x) return x end
+   local pre = (extra_prefix or "")
+   local switch = invert and not_fn or identity
+
+   check_match(pre..'{.<"x"}', 'x', switch(true), 0)
+   check_match(pre..'{.<"x"}', 'xyz', switch(true), 2)
+   check_match(pre..'{<"x"}', '', switch(false), 0)
+   check_match(pre..'{.<"x"}', 'y', switch(false), 1)
+
+   check_match('{"w".'..pre..'<"x"}', 'wx', switch(true), 0)
+   check_match('{"w".'..pre..'<"x"}', 'wxyz', switch(true), 2)
+   check_match('{"w".'..pre..'<"x"}', 'w/', switch(false), 0)
+   check_match('{"w".'..pre..'<"x"}', 'wyz', switch(false), 1)
+
+   check_match('"w".'..pre..'<"x"', 'w x', switch(true), 0)
+   check_match('"w"{.'..pre..'<"x"}', 'w xyz', switch(true), 2)
+   check_match('"w"{.'..pre..'<"x"}', 'w 3333', switch(false), 3)
+   check_match('"w"'..pre..'<"x"', 'w \t\t', switch(false), 0)
+   check_match('"w".'..pre..'<"x"', 'w y', switch(false), 0)
+
+end
+
+check_lookbehind(false)
+check_lookbehind(true, "!")
 
 
 -- return the test results in case this file is being called by another one which is collecting

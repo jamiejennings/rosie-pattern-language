@@ -95,10 +95,7 @@ function remove_cooked_exp(ex)
       assert(#exps > 0, "received an empty sequence")
       local new = list.new(exps[1])
       for i = 2, #exps do
-	 if not ast.predicate.is(exps[i-1]) then
-	    -- boundary references inserted after any exp EXCEPT a predicate
-	    table.insert(new, boundary_ref)
-	 end
+	 table.insert(new, boundary_ref)
 	 table.insert(new, exps[i])
       end -- for
       return ast.sequence.new{exps=new, sourceref=ex.sourceref}
