@@ -174,5 +174,20 @@ class engine ():
             print "Garbage collecting engine", self.id
             self.rosie.rosie.rosieL_finalize(self.engine)
 
+    def match_file(self, input, output, error, wholefileflag):
+        return self._match_file(input, output, error, wholefileflag, self.rosie.rosie.rosieL_match_file)
 
-    
+    def eval_file(self, input, output, error, wholefileflag):
+        return self._match_file(input, output, error, wholefileflag, self.rosie.rosie.rosieL_eval_file)
+
+    def _match_file(self, input, output, error, wholefileflag, operation):
+        if ( (wholefileflag != True) and (wholefileflag != False) ):
+            raise ValueError("The wholefileflag must be a python boolean, i.e. True or False")
+        input_file_string = to_cstr_ptr(self.rosie.rosie, input)
+        output_file_string = to_cstr_ptr(self.rosie.rosie, output)
+        error_file_string = to_cstr_ptr(self.rosie.rosie, error)
+        flag_string = to_cstr_ptr(self.rosie.rosie, wholefileflag and "true" or "false")
+        r = operation(self.engine, input_file_string, output_file_string, error_file_string, flag_string);
+        retvals = self.rosie.get_retvals(r)
+        return retvals
+

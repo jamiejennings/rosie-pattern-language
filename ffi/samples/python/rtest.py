@@ -90,3 +90,13 @@ engine = None
 engine = Rosie.engine()
 print "Obtained a rosie matching engine:", engine, "with id", engine.id
 
+r = engine.load_manifest("$sys/MANIFEST")
+config = json.dumps( {'expression': 'common.word',
+                      'encode': 'json'} )
+r = engine.configure(config)
+
+print "The next call is to match_file, which will print 3 small JSON structures to stdout."
+r = engine.match_file("testfile", "", "", False)
+
+print
+print "A message should print below, as the program exits, indicating that engine", engine.id, "is being collected"
