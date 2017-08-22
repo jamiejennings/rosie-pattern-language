@@ -31,7 +31,15 @@ ast.binding = recordtype.new("binding",
 			   sourceref = NIL;})
 
 -- An rpl grammar is an *expression* in the ast, despite the fact that the rpl 1.1 syntax allows
--- only grammar statements. 
+-- only grammar statements.  This unusual situation is due to the fact that we *want* grammars to
+-- be expressions so that:
+-- (1) they can be bound to identifiers different from the name of the start rule
+-- (2) they can be embedded (as literal expressions) in other expressions without first having to
+--     be bound to an identifier
+-- (3) and that includes being embedded into other grammars
+-- BUT, because the need for (2) and (3) are not obvious, we don't want to design their solutions
+-- or implement them now (in RPL 1.1).  We note that (2) will need a good concrete syntax, and (3)
+-- may require some lpeg gymnastics.  Clearly, more investigation is needed.
 ast.grammar = recordtype.new("grammar",
 			     {rules = {};
 			      pat = NIL;
