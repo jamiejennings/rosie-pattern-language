@@ -190,6 +190,10 @@ function common.dequote(str)
    return str
 end
 
+function common.requote(str)
+   return '"' .. common.unescape_string(str) .. '"'
+end
+
 local additional_escape_substitutions = 
    { ['['] = '[';				    -- open bracket
      [']'] = ']';				    -- close bracket

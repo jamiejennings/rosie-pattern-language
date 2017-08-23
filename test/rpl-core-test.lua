@@ -91,22 +91,14 @@ check(match.type=="a", "the match of an identifier is named for the identifier")
    set_expression('(a)')
    ok, match, leftover = e:match('(a)', "a")
    check(ok)
-   check(match.type=="a", "the match of an expression is usually anonymous, but cooking an identifier is redundant")
-   subs = match.subs
-   check(not subs)
+   check(match.type=="*", "the match of an expression is anonymous")
+   check(match.subs and match.subs[1] and match.subs[1].type=="a")
 
-if false then
-   -- This works differently now, with c2.  Because '{a}' expands to merely a reference to 'a', it
-   -- is a references, not a more complex expressions.
    set_expression('{a}')
    ok, match, leftover = e:match('{a}', "a")
    check(ok)
    check(match.type=="*", "the match of an expression is anonymous")
-   subs = match.subs
-   check(subs)
-   submatchname = subs[1].type
-   check(submatchname=="a", "the only sub of this expression is the identifier in the raw group")
-end
+   check(match.subs and match.subs[1] and match.subs[1].type=="a")
 
 ok, pkgname, msg = e.load(e, 'alias plain_old_alias = "p"')
 check(ok)
@@ -1418,15 +1410,21 @@ check((e:load("import num   word=[:alpha:]+")))
 m = check_match("num.int", "42", true)
 check(m.type=="num.int" and (not m.subs))
 m = check_match("{num.int}", "42", true)
-check(not m.subs)
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="num.int")
 m = check_match("(num.int)", "42", true)
-check(m.type=="num.int" and (not m.subs))
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="num.int")
+--check(m.type=="num.int" and (not m.subs))
 
 m = check_match("num.int", "42x", true, 1, "42")
 check(m.type=="num.int" and (not m.subs))
 m = check_match("{num.int}", "42x", true, 1, "42")
-check(not m.subs) --(m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="num.int")
 m = check_match("(num.int)", "42x", true, 1)
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="num.int")
 m = check_match("(num.int ~)", "42x", false)
 
 m = check_match("num.int word", "42x", false)
@@ -1444,21 +1442,20 @@ m = check_match("(num.int word)", "42 x", true)
 check((e:load("int = num.int"))) -- word = word")))
        
 m = check_match("int", "42", true)
---check((not m["*"]) and m["int"] and (#m["int"].subs==1))
 check(m.type=="int" and (not m.subs))
 m = check_match("{int}", "42", true)
---check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (#m["*"].subs[1]["int"].subs==1))
-check(not m.subs) --(m.subs[1]) and m.subs[1].type=="int" and (not m.subs[1].subs))
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="int")
 m = check_match("(int)", "42", true)
---check((not m["*"]) and m["int"] and (#m["int"].subs==1))
-check(m.type=="int" and (not m.subs))
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="int")
 
 m = check_match("int", "42x", true, 1, "42")
---check((not m["*"]) and m["int"] and (#m["int"].subs==1))
 check(m.type=="int" and (not m.subs))
 m = check_match("{int}", "42x", true, 1, "42")
---check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (#m["*"].subs[1]["int"].subs==1))
-check(not m.subs) --(m.subs[1]) and m.subs[1].type=="int" and (not m.subs[1].subs))
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="int")
+
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 
@@ -1481,6 +1478,11 @@ check((e:load("alias int = num.int alias aword = word")))
 m = check_match("int", "42", true)
 check(m.type=="*" and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("{int}", "42", true)
+
+
+m = check_match("{num.int}", "42", true)
+print("***"); table.print(m)
+
 check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("(int)", "42", true)
 check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))

@@ -161,11 +161,36 @@ local function hashtag(a, env, prefix, messages)
    return a.pat
 end
 
+local function check_pattern(pat, a)
+   assert(a, "missing ast parameter?")
+   if not pattern.is(pat) then
+      local msg = "type error: expected a pattern, received " .. tostring(pat)
+      return violation.throw(violation.compile.new{who='expression compiler',
+						   message=msg,
+						   ast=a})
+   end
+end
+
 local function sequence(a, env, prefix, messages)
    assert(#a.exps > 0, "empty sequence?")
-   local peg = expression(a.exps[1], env, prefix, messages).peg
+   local e = expression(a.exps[1], env, prefix, messages)
+   -- The meaning of a sequence of 2 or more items is defined only when all the elements are
+   -- patterns. 
+   if #a.exps == 1 then
+      if pattern.is(e) then
+	 a.pat = pattern.new{name="sequence", peg=e.peg, ast=a}
+	 return a.pat
+      else
+	 return e				    -- a taggedvalue
+      end
+   end
+   assert(#a.exps > 1)
+   check_pattern(e, a.exps[1])
+   local peg = e.peg
    for i = 2, #a.exps do
-      peg = peg * expression(a.exps[i], env, prefix, messages).peg
+      e = expression(a.exps[i], env, prefix, messages)
+      check_pattern(e, a.exps[i])
+      peg = peg * e.peg
    end
    a.pat = pattern.new{name="sequence", peg=peg, ast=a}
    return a.pat

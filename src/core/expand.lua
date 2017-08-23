@@ -42,14 +42,28 @@ local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 -- Transform AST to remove cooked and raw nodes
 ---------------------------------------------------------------------------------------------------
 
+local function sequence_wrap(exp)
+   return ast.sequence.new{exps = {exp}, sourceref = exp.sourceref}
+end
+
 local remove_cooked_exp;
 local remove_cooked_raw_from_stmts;
 
 local function remove_raw_exp(ex)
    assert(ex)
    assert(ex.sourceref)
-   if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
-   elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
+   if ast.cooked.is(ex) then
+      if ast.sequence.is(ex.exp) then
+	 return remove_cooked_exp(ex.exp)
+      else
+	 return sequence_wrap(remove_cooked_exp(ex.exp))
+      end
+   elseif ast.raw.is(ex) then
+      if ast.sequence.is(ex.exp) then
+	 return remove_raw_exp(ex.exp)
+      else
+	 return sequence_wrap(remove_raw_exp(ex.exp))
+      end
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
@@ -84,8 +98,18 @@ end
 -- "cooked".
 function remove_cooked_exp(ex)
    assert(ex.sourceref)
-   if ast.cooked.is(ex) then return remove_cooked_exp(ex.exp)
-   elseif ast.raw.is(ex) then return remove_raw_exp(ex.exp)
+   if ast.cooked.is(ex) then
+      if ast.sequence.is(ex.exp) then
+	 return remove_cooked_exp(ex.exp)
+      else
+	 return sequence_wrap(remove_cooked_exp(ex.exp))
+      end
+   elseif ast.raw.is(ex) then
+      if ast.sequence.is(ex.exp) then
+	 return remove_raw_exp(ex.exp)
+      else
+	 return sequence_wrap(remove_raw_exp(ex.exp))
+      end
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=remove_cooked_exp(ex.exp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then

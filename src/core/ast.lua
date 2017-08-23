@@ -416,10 +416,11 @@ end
 function ast.ambient_raw_exp(ex)
    assert(ex.sourceref)
    if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
-      return ast.raw.new{exp=ex, sourceref=ex.sourceref}
-   else
-      return ex
+      if ast.sequence.is(ex) then
+	 return ast.raw.new{exp=ex, sourceref=ex.sourceref}
+      end
    end
+   return ex
 end
 
 function convert_exp(pt, sref)
@@ -482,6 +483,14 @@ function convert_exp(pt, sref)
       return ast.application.new{ref=convert_identifier(id, sref),
 			         arglist=operands,
 			         sourceref=sref}
+   elseif pt.type=="int" then
+      local i = tonumber(pt.data)
+      if not i then
+	 -- FUTURE: tonumber() will return incorrect values when the argument cannot be contained
+	 -- in a Lua integer.  We should trap this situation and throw an error.
+	 assert(false, "parser allowed invalid integer: " .. tostring(pt.data))
+      end
+      return ast.int.new{value=i, sourceref=sref}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
@@ -729,6 +738,9 @@ function ast.dependencies_of(a)
 	   ast.raw.is(a)) then
       return ast.dependencies_of(a.exp)
    elseif (ast.literal.is(a) or
+	   ast.hashtag.is(a) or
+	   ast.string.is(a) or
+	   ast.int.is(a) or
 	   ast.cs_exp.is(a) or 
 	   ast.cs_named.is(a) or
 	   ast.cs_list.is(a) or
@@ -840,13 +852,20 @@ function ast.tostring(a, already_grouped)
       local argstring
       if ( #a.arglist==1 and
 	   (ast.ref.is(a.arglist[1]) or
+	    ast.sequence.is(a.arglist[1]) or
 	    ast.cooked.is(a.arglist[1]) or
 	    ast.raw.is(a.arglist[1])) )	then
 	 argstring = ast.tostring(a.arglist[1])
       else
-	 argstring = "(" .. table.concat(map(ast.tostring, a.arglist), ", ") .. ")"
+	 argstring = "{" .. table.concat(map(ast.tostring, a.arglist), ", ") .. "}"
       end
       return ast.tostring(a.ref) .. ":" .. argstring
+   elseif ast.hashtag.is(a) then
+      return '#' .. a.value
+   elseif ast.string.is(a) then
+      return common.requote(a.value)
+   elseif ast.int.is(a) then
+      return tostring(a.value)
    elseif list.is(a) then
       return tostring(map(ast.tostring, a))
    else
