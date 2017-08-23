@@ -6,21 +6,26 @@ package u
 -- No, everyone is used to ^ for complement, and we want to escape as few things as possible in char
 -- lists and ranges.
 
+-- Instead of [{propname}] we will use [:propname:] so that the posix names simply become
+-- (ascii-only, locale-specific) property names.
+
 -- Note these "rules":
 -- + Certain characters are always escaped in character expressions, regardless of position, and
---   they are the delimeters [ ] { } and the complement mark ^
+--   they are the delimeters [ ] and the complement mark ^
 -- + Escape is always backslash in all RPL expressions, and backslash is always \\
 -- + Character expressions, like strings, are interpolated for \a, \b, \f, \n, \r, \t, \uXXXX, \UXXXXXXXX
 -- + Double quote marks must be escaped in string literals because double quote is the delimeter
 -- + FUTURE: In single quoted strings, the only escapes are \' and \\.
 
 
-alias esc =    [[\\]]
-complement = "^"
-character = { {!esc !"[" !"{" !"^" !"]" !"}" .} / {esc .} }
+-- THIS IS NOT NEEDED ANYMORE since the named_charset will serve also as the property charset.
+-- 
+-- alias esc =    [[\\]]
+-- complement = "^"
+-- character = { {!esc !"[" !"{" !"^" !"]" !"}" .} / {esc .} }
 
--- property_name is a unicode category, script, property, or block name
-property_name = {!"}" .}+
-property_charset = { complement? property_name } 
-pcs = { "[" { "{" property_charset "}]" } }
+-- -- property_name is a unicode category, script, property, or block name
+-- property_name = {!"}" .}+
+-- property_charset = { complement? property_name } 
+-- pcs = { "[" { "{" property_charset "}]" } }
 
