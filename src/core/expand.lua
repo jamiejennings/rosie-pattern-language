@@ -42,28 +42,24 @@ local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 -- Transform AST to remove cooked and raw nodes
 ---------------------------------------------------------------------------------------------------
 
+-- Return a one-element sequence containing exp, if needed.
 local function sequence_wrap(exp)
-   return ast.sequence.new{exps = {exp}, sourceref = exp.sourceref}
+   if ast.sequence.is(exp) or ast.choice.is(exp) then
+      return exp
+   else
+      return ast.sequence.new{exps = {exp}, sourceref = exp.sourceref}
+   end
 end
 
 local remove_cooked_exp;
 local remove_cooked_raw_from_stmts;
 
 local function remove_raw_exp(ex)
-   assert(ex)
    assert(ex.sourceref)
    if ast.cooked.is(ex) then
-      if ast.sequence.is(ex.exp) then
-	 return remove_cooked_exp(ex.exp)
-      else
-	 return sequence_wrap(remove_cooked_exp(ex.exp))
-      end
+      return sequence_wrap(remove_cooked_exp(ex.exp))
    elseif ast.raw.is(ex) then
-      if ast.sequence.is(ex.exp) then
-	 return remove_raw_exp(ex.exp)
-      else
-	 return sequence_wrap(remove_raw_exp(ex.exp))
-      end
+      return sequence_wrap(remove_raw_exp(ex.exp))
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
@@ -99,17 +95,9 @@ end
 function remove_cooked_exp(ex)
    assert(ex.sourceref)
    if ast.cooked.is(ex) then
-      if ast.sequence.is(ex.exp) then
-	 return remove_cooked_exp(ex.exp)
-      else
-	 return sequence_wrap(remove_cooked_exp(ex.exp))
-      end
+      return sequence_wrap(remove_cooked_exp(ex.exp))
    elseif ast.raw.is(ex) then
-      if ast.sequence.is(ex.exp) then
-	 return remove_raw_exp(ex.exp)
-      else
-	 return sequence_wrap(remove_raw_exp(ex.exp))
-      end
+      return sequence_wrap(remove_raw_exp(ex.exp))
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=remove_cooked_exp(ex.exp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
@@ -179,7 +167,7 @@ local function xrepetition(a, env, messages)
 						    ast.atleast.new{min=0,
 								    exp=boundary_exp,
 								    sourceref=a.sourceref}}},
-			   sourceref=a.sourceref}
+			      sourceref=a.sourceref}
 	 else
 	    final = ast.atleast.new{min=0, exp=exp, sourceref=a.sourceref}
 	 end
@@ -189,7 +177,7 @@ local function xrepetition(a, env, messages)
 					   ast.atleast.new{min=0,
 							   exp=boundary_exp,
 							   sourceref=a.sourceref}},
-				  sourceref=a.sourceref}
+				     sourceref=a.sourceref}
 	 else
 	    final = ast.atleast.new{min=1, exp=exp, sourceref=a.sourceref}
 	 end
@@ -200,7 +188,7 @@ local function xrepetition(a, env, messages)
 					   ast.atleast.new{min=(min-1),
 							exp=boundary_exp,
 							sourceref=a.sourceref}},
-				  sourceref=a.sourceref}
+				     sourceref=a.sourceref}
 	 else
 	    final = ast.atleast.new{min=min, exp=exp, sourceref=a.sourceref}
 	 end
@@ -245,13 +233,12 @@ local function xrepetition(a, env, messages)
 	 final = ast.sequence.new{exps=exps, sourceref=a.sourceref}
       end -- switch on min
    end -- switch on max
-   assert(final)
-   assert(final.sourceref)
+   assert(final and final.sourceref)
    return final
 end
 
 function remove_repetition(ex)
-   assert(ex.sourceref)
+   assert(ex and ex.sourceref)
    if ast.predicate.is(ex) then
       ex.exp = remove_repetition(ex.exp)
       return ex
@@ -270,7 +257,6 @@ function remove_repetition(ex)
       ex.arglist = map(remove_repetition, ex.arglist)
       return ex
    else
-      assert(ex.sourceref)
       return ex
    end
 end
@@ -336,7 +322,7 @@ local function apply_macro(ex, env, messages)
 end
    
 function apply_macros(ex, env, messages)
-   assert(ex.sourceref)
+   assert(ex and ex.sourceref)
    local map_apply_macros = function(exp)
 			       return apply_macros(exp, env, messages)
 			    end
@@ -379,7 +365,6 @@ function apply_macros(ex, env, messages)
       return ast.grammar.new{rules=newrules, sourceref=ex.sourceref}
    else
       -- finally, return expressions that do not have sub-expressions to process
-      assert(ex.sourceref)
       return ex
    end
 end
@@ -390,8 +375,8 @@ end
 -- namespace for macros, functions, and other values, and (3) macro expansion requires a syntactic
 -- environment in which (at least) references to macros can be resolved.
 local function expression(ex, env, messages)
-   assert(ex.sourceref)
-   local ex = ast.ambient_cook_exp(ex)
+   assert(ex and ex.sourceref)
+   ex = ast.ambient_cook_exp(ex)
 
    -- Now we have an ast that a user should recognize as a parsing of their rpl source code, with
    -- the minor addition of a 'cooked' wrapper which makes the ambient/default mode of 'cooked'
@@ -408,14 +393,14 @@ local function expression(ex, env, messages)
    -- - Maybe produce all the sourcerefs programmatically for the produced AST?
    assert(ex.sourceref)
 
-
    -- The final steps in processing the ast are purely syntactic.  Here, we simplify the ast to
    -- transform some constructs, like raw/cooked, which are unknown to the compiler.  Such
    -- constructs are, of course, transformed into lower-level operations that the compiler does
    -- know about.
    ex = remove_cooked_raw_from_exp(ex)
    ex = remove_repetition(ex)
-   assert(ex.sourceref)
+
+   assert(ex and ex.sourceref)
    return ex
 end
 
@@ -441,13 +426,6 @@ function e2.expression(ex, env, messages)
    if not result then table.insert(messages, err); end
    return result				    -- if false, errors in messages tables
 end
-
--- function e2.stmts(stmts, env, messages)
---    local ok, result, err = violation.catch(statements, stmts, env, messages)
---    if not ok then error("Internal error in e2: " .. tostring(result)); end
---    if not result then table.insert(messages, err); end
---    return result				    -- if false, errors in messages tables
--- end   
 
 function e2.block(a, env, messages)
    assert(ast.block.is(a))

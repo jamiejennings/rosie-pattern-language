@@ -311,31 +311,32 @@ check_trace('{a/b}{3,5}', "ba", false, 1)
 check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', false})
 
 check_trace('(a*)', "", true, 1)
-check_structure('{a}*', {false, 'a'})
+check_structure('{{a}*}', {true, '{a}*'})
 
 check_trace('(a*)', "aaaa", true, 5)
-check_structure('{a}*', {true, 'a', 'a', 'a', 'a', 'a', false})
+check_structure('{{a}*}', {true, '{a}*'})
 
 check_trace('(a+)', "", false, 1)
-check_structure('{a}+', {false, 'a'})
+check_structure('{{a}+}', {false, '{a}+'})
 
 check_trace('(a+)', "a", true, 2)
-check_structure('{a}+', {true, 'a', 'a', false})
+check_structure('{{a}+}', {true, '{a}+'})
 
 check_trace('({a/b}+)', "baaa", true, 5)
-check_structure('{a / b}+', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}', '{a / b}', false})
+--check_structure('{a / b}+', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}', '{a / b}', false})
+check_structure('{{a / b}+}', {true, '{a / b}+'})
 
 check_trace('({a/b}{3,5})', "baaa", true, 5)
-check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}{,2}'})
+check_structure('{{{a / b} {a / b} {a / b} {a / b}{,2}}}', {true, '{{a / b} {a / b} {a / b} {a / b}{,2}}'})
 
 check_trace('({a/b}{3,5})', "baaabXYZ", true, 6)
-check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}{,2}'})
+check_structure('{{{a / b} {a / b} {a / b} {a / b}{,2}}}', {true, '{{a / b} {a / b} {a / b} {a / b}{,2}}'})
 
 check_trace('({a/b}{3,5})', "baaabaYZ", true, 6)
-check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', '{a / b}{,2}'})
+check_structure('{{{a / b} {a / b} {a / b} {a / b}{,2}}}', {true, '{{a / b} {a / b} {a / b} {a / b}{,2}}'})
 
 check_trace('({a/b}{3,5})', "ba", false, 1)
-check_structure('{{a / b} {a / b} {a / b} {a / b}{,2}}', {true, '{a / b}', '{a / b}', '{a / b}', false})
+check_structure('{{{a / b} {a / b} {a / b} {a / b}{,2}}}', {false, '{{a / b} {a / b} {a / b} {a / b}{,2}}'})
 
 ----------------------------------------------------------------------------------------
 heading("Eval grammar")
