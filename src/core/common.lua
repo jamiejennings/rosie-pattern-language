@@ -126,10 +126,10 @@ common.escape_substitutions =			    -- characters that change when escaped are:
      n = "\n";					    -- newline
      r = "\r";					    -- return
      t = "\t";					    -- tab
-     v = "\v"; 					    -- vertical tab
+--     v = "\v"; 					    -- vertical tab
      ['\\'] = '\\';				    -- backslash
      ['"'] = '"';				    -- double quote
-     ["'"] = "'";				    -- single quote
+--     ["'"] = "'";				    -- single quote
   }
 
 common.unescape_substitutions = {}
