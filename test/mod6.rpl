@@ -1,0 +1,10 @@
+package mod6
+package mod6  -- this should not be here!
+
+local x = "hello"
+y = "world"
+
+
+
+
+

@@ -15,6 +15,9 @@ if not test then
    test = import("test")
 end
 
+list = import "list"
+map = assert(list.map)
+
 check = test.check
 heading = test.heading
 subheading = test.subheading
@@ -150,6 +153,22 @@ ok, pkgname, msgs = e:load("import mod4")
 check(not ok)
 check(not pkgname)
 check(type(msgs)=="table")
+
+ok, pkgname, msgs = e:load("import mod5")
+check(not ok)
+check(not pkgname)
+check(type(msgs)=="table")
+msg = table.concat(map(violation.tostring, msgs), "\n")
+check(msg:find("unbound identifier"))
+check(msg:find("package mod5"))
+
+ok, pkgname, msgs = e:load("import mod6")
+check(not ok)
+check(not pkgname)
+check(type(msgs)=="table")
+msg = table.concat(map(violation.tostring, msgs), "\n")
+check(msg:find("unexpected declaration"))
+check(msg:find("package mod6"))
 
 ok, pkgname, msgs = e:load("package foo")
 check(ok)

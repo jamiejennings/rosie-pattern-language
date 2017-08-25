@@ -406,7 +406,12 @@ end
 
 local function statements(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
-      assert(ast.binding.is(stmt))
+      if not ast.binding.is(stmt) then
+	 local msg = "unexpected declaration (duplicate or not positioned before rpl statements)"
+	 violation.throw(violation.compile.new{who='statement compiler',
+					       message=msg,
+					       ast=stmt})
+      end
       local ref = stmt.ref
       common.note("expanding " ..
 		  common.compose_id{ref.packagename, ref.localname} ..
