@@ -143,6 +143,11 @@ ast.int = recordtype.new("int",
 			  pat = NIL;
 			  sourceref = NIL;})
 
+ast.ldecl = recordtype.new("ldecl",		    -- language_decl
+			   {version_spec = NIL;
+			    pat = NIL;
+			    sourceref = NIL;})
+
 ast.pdecl = recordtype.new("pdecl",
 			   {name = NIL;
 			    pat = NIL;
@@ -566,6 +571,11 @@ local function convert_stmt(pt, sref)
 			      sourceref = sref}
       end
       return ast.ideclist.new{idecls = map(to_idecl, deps), sourceref=sref}
+   elseif pt.type=="language_decl" then
+      assert(subs and subs[1])
+      assert(subs[1].type=="version_spec")
+      local version_spec = subs[1].data
+      return ast.ldecl.new{version_spec=version_spec, sourceref=sref}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
