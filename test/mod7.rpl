@@ -1,0 +1,12 @@
+package mod7 
+rpl    1.3 -- this must be first, when present at all
+
+local alias x = "hello"
+y = ci9:"world"
+
+
+
+
+
+
+
