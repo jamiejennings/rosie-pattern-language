@@ -29,6 +29,8 @@
 (setq rpl-some-space "[ \t]+")
 (setq rpl-any-space "[ \t]*")
 
+(setq rpl-optional-comment "\\s *\\(--.*\\)?$")
+
 (setq rpl-font-lock-keywords-basic
   (list
    `(,rpl-binding-keywords (1 font-lock-keyword-face))
@@ -45,13 +47,12 @@
 
 (setq rpl-font-lock-keywords-declarations
       (list
-       `(,(concat "^" rpl-any-space     ; fresh line, any amount of whitespace
+      `(,(concat "^" rpl-any-space     ; fresh line, any amount of whitespace
 		  "\\(\\<package\\>\\|\\<rpl\\>\\)"
 		  rpl-some-space
 		  "\\(\\S-+\\)"		; package name or rpl version spec
-                  rpl-any-space "$"	; stop at EOL
 		  )
-	 (1 font-lock-preprocessor-face)) ;(2 font-lock-constant-face))
+	(1 font-lock-preprocessor-face)) ; (2 font-lock-negation-char-face))
        ;; below is an "anchored match": (anchor-pat (item-pat pre-form post-form face-spec))
        `(,(concat "^" rpl-any-space
 		  "\\(\\<import\\>\\)"
@@ -61,14 +62,21 @@
 	 ("\\<as\\>\\|\\<import\\>" (beginning-of-line) nil (0 font-lock-preprocessor-face)))
        ))
 
+(setq rpl-function-regexp "\\b\\([[:alpha:]][[:alnum:]]*\\):\\S ")
+
+(setq rpl-font-lock-functions
+      (list
+       (list rpl-function-regexp `(1 font-lock-function-name-face))))
+
 (setq rpl-font-lock-keywords-ALL
       (append rpl-font-lock-keywords-basic
 	      rpl-font-lock-keywords-bindings
-              rpl-font-lock-keywords-declarations))
+              rpl-font-lock-keywords-declarations
+	      rpl-font-lock-functions))
 ;      "Syntax highlighting for rpl mode")
 
-(defvar rpl-font-lock-keywords rpl-font-lock-keywords-ALL
-  "Default highlighting expressions for rpl mode")
+(setq rpl-font-lock-keywords rpl-font-lock-keywords-ALL)
+;  "Default highlighting expressions for rpl mode")
 
 ;; ----------------------------------------------------------------------------------------
 
@@ -82,7 +90,7 @@ Returns the point, or nil if it reached the beginning of the buffer"
       (if (bobp) (throw 'found nil))
       (forward-char -1)
       (beginning-of-line)
-      (if (not (looking-at "\\s *\\(--.*\\)?$")) (throw 'found (point))))))
+      (if (not (looking-at rpl-optional-comment)) (throw 'found (point))))))
 
 (defun rpl-goto-next-nonblank-line ()
   "Puts the point at the first next line that is not blank.
@@ -93,7 +101,7 @@ Returns the point, or nil if it reached the end of the buffer"
       (forward-line)
       (if (eobp) (throw 'found nil))
       (beginning-of-line)
-      (if (not (looking-at "\\s *\\(--.*\\)?$")) (throw 'found (point))))))
+      (if (not (looking-at rpl-optional-comment)) (throw 'found (point))))))
 
 (setq rpl-binding-regexp
       (concat rpl-any-space
@@ -114,7 +122,8 @@ Returns the point, or nil if it reached the end of the buffer"
 
 (setq rpl-declaration-regexp
       (concat rpl-any-space
-	      rpl-declaration-keywords))
+	      rpl-declaration-keywords
+	      rpl-some-space))
 
 (defun rpl-find-previous-binding ()
   "Returns a buffer position on the line containing the previous binding, and
