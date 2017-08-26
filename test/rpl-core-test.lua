@@ -1372,6 +1372,20 @@ check(not ok)
 check(type(msg)=="table" and msg[1])
 check(violation.compile.is(msg[1])) --.message:find("can match the empty string"))
 
+g_dup_rules = [[grammar
+  S = { {"a" B} / {"b" A} / "" }
+  A = { {"a" S} / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
+  A = "this won't work"
+end]]
+
+ok, pkgname, errs = e:load(g_dup_rules)
+check(not ok)
+check(type(errs)=="table" and errs[1])
+check(violation.compile.is(errs[1])) --.message:find("can match the empty string"))
+msg = table.concat(map(violation.tostring, errs), "\n")
+check(msg:find("more than one rule named 'A'"))
+
 
 heading("Invariants")
 
@@ -1482,7 +1496,6 @@ m = check_match("{int}", "42", true)
 
 
 m = check_match("{num.int}", "42", true)
-print("***"); table.print(m)
 
 check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("(int)", "42", true)
@@ -2028,14 +2041,14 @@ check_match("a b a", "a a a", true, 0)
 s = 'b = a; a = "a"'
 ok, _, errs = e:load(s)
 check(ok)
-print("***", table.concat(map(violation.tostring, errs), "\n"))
+check(#errs==0)
 check_match("a b a", "a a a", true, 0)
 
 s = 'a = b; b = a'
 ok, _, errs = e:load(s)
 check(not ok)
-m = table.concat(map(violation.tostring, errs), "\n")
-check(m:find("mutual recursion"))
+msg = table.concat(map(violation.tostring, errs), "\n")
+check(msg:find("mutual recursion"))
 
 
 -- return the test results in case this file is being called by another one which is collecting

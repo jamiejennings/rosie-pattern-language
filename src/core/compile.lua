@@ -367,13 +367,22 @@ end
 -- and 'A.s.d' if c and d were rules in s.  Note that the captures labeled 'A.s.c' and 'A.s.d' can
 -- appear only as sub-matches inside 'A.s'.
 
--- TODO: test a grammar with two rules by the same name; who signals the error, lpeg or ???
-
 local function grammar(a, env, prefix, messages)
    local gtable = environment.extend(env)
-   local labels = {}
-   assert(a.rules and a.rules[1])
+   do
+      assert(a.rules and a.rules[1])
+      local names = {}
+      for _, rule in pairs(a.rules) do
+	 local id = rule.ref.localname
+	 if names[id] then
+	    raise_error("grammar has more than one rule named '" .. id .. "'", a)
+	 else
+	    names[id] = true
+	 end
+      end
+   end
    local grammar_id = a.rules[1].ref.localname
+   local labels = {}
    -- First pass: Collect rule names as V() refs into a new env, and create a capture label for
    -- each one.  Also do some error checking.
    for _, rule in ipairs(a.rules) do
