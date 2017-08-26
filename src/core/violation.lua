@@ -10,6 +10,7 @@ local violation = {}
 
 local recordtype = require "recordtype"
 local NIL = recordtype.NIL
+local thread = require "thread"
 
 ----------------------------------------------------------------------------------------
 -- Error type
@@ -124,18 +125,10 @@ end
 
 -- 'catch' applies f to args until it returns or yields.
 -- Like pcall, return a success code in front of return values, and when that code is false, there
--- was a lua error.
-function violation.catch(f, ...)
-   local t = coroutine.create(f)
-   return coroutine.resume(t, ...)
-end
-
-function violation.throw(violation_object)
-   if coroutine.isyieldable() then
-      coroutine.yield(false, violation_object)
-   else
-      error("Uncaught violation:\n", violation.tostring(violation_object), 2)
-   end
-end
+-- was a lua error.  First return value should be checked with thread.exception.is().
+violation.catch = thread.pcall
+violation.raise = thread.raise
+violation.is_exception = thread.exception.is
+violation.throw_value = thread.throw
 
 return violation

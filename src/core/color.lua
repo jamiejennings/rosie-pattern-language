@@ -83,8 +83,9 @@ local co = {}
 
 local list = require "list"
 local violation = require "violation"
-local throw = violation.throw
+local throw = violation.raise
 local catch = violation.catch
+local is_exception = violation.is_exception
 
 local map = list.map; apply = list.apply; append = list.append;
 
@@ -193,9 +194,12 @@ end
 
 function co.color_string(color_spec, str)
    local specs = split_color_spec(color_spec)
-   local ok, numbers, bad_spec_msg = catch(map, to_ansi_code, specs)
+   local ok, numbers = catch(map, to_ansi_code, specs)
    if not ok then error(numbers); end
-   if not numbers then return false, bad_spec_msg; end
+   if is_exception(numbers) then
+      local bad_spec_msg = numbers[1]
+      return false, bad_spec_msg
+   end
    return "\027[" .. table.concat(numbers, ";") .. "m" .. str .. "\027[0m"
 end
 

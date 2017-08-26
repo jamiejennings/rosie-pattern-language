@@ -2035,8 +2035,7 @@ s = 'a = b; b = a'
 ok, _, errs = e:load(s)
 check(not ok)
 m = table.concat(map(violation.tostring, errs), "\n")
-print("***", table.concat(map(violation.tostring, errs), "\n"))
-check(m:find(" asldkaldkaslkdas"))
+check(m:find("mutual recursion"))
 
 
 -- return the test results in case this file is being called by another one which is collecting

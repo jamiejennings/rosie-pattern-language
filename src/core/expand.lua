@@ -26,6 +26,10 @@ local list = require "list"
 local environment = require "environment"
 local lookup = environment.lookup
 local bind = environment.bind
+local violation = require "violation"
+local catch = violation.catch
+local raise = violation.raise
+local is_exception = violation.is_exception
 local common = require "common"
 local pfunction = common.pfunction
 local macro = common.macro
@@ -280,9 +284,9 @@ local function apply_macro(ex, env, messages)
    local m = environment.lookup(env, ex.ref.localname, ex.ref.packagename)
    local refname = common.compose_id{ex.ref.packagename, ex.ref.localname}
    if not m then
-      violation.throw(violation.compile.new{who='macro expander',
-					    message='undefined operator: ' .. refname,
-					    ast=ex})
+      raise(violation.compile.new{who='macro expander',
+				  message='undefined operator: ' .. refname,
+				  ast=ex})
    elseif pfunction.is(m) then
       common.note("expanding args of call to built-in function '" .. refname .. "'")
       local expanded_args = map(function(arg)
@@ -295,9 +299,9 @@ local function apply_macro(ex, env, messages)
       return new				    -- pfunctions are processed during compilation
    elseif not macro.is(m) then
       local msg = 'type mismatch: ' .. refname .. " is not a macro or function"
-      violation.throw(violation.compile.new{who='macro expander',
-					    message=msg,
-					    ast=ex})
+      raise(violation.compile.new{who='macro expander',
+				  message=msg,
+				  ast=ex})
    end
    -- We have a macro to expand!
    if not m.primop then
@@ -313,9 +317,9 @@ local function apply_macro(ex, env, messages)
    if not ok then
       local msg = "error while expanding macro '" .. refname .. "': "
       msg = msg .. tostring(new)		    -- 'new' is the lua error
-      violation.throw(violation.compile.new{who='macro expander',
-					    message=msg,
-					    ast=ex})
+      raise(violation.compile.new{who='macro expander',
+				  message=msg,
+				  ast=ex})
    end
    assert(new and new.sourceref)
    return new
@@ -408,9 +412,9 @@ local function statements(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
       if not ast.binding.is(stmt) then
 	 local msg = "unexpected declaration (duplicate or not positioned before rpl statements)"
-	 violation.throw(violation.compile.new{who='statement compiler',
-					       message=msg,
-					       ast=stmt})
+	 raise(violation.compile.new{who='statement compiler',
+				     message=msg,
+				     ast=stmt})
       end
       local ref = stmt.ref
       common.note("expanding " ..
@@ -426,9 +430,12 @@ function e2.expression(ex, env, messages)
    assert(recordtype.parent(ex) and ex.sourceref)
    assert(environment.is(env))
    assert(type(messages)=="table")
-   local ok, result, err = violation.catch(expression, ex, env, messages)
+   local ok, result = catch(expression, ex, env, messages)
    if not ok then error("Internal error in e2: " .. tostring(result)); end
-   if not result then table.insert(messages, err); end
+   if is_exception(result) then
+      table.insert(messages, result[1])
+      return false
+   end
    return result				    -- if false, errors in messages tables
 end
 
@@ -436,9 +443,12 @@ function e2.block(a, env, messages)
    assert(ast.block.is(a))
    assert(environment.is(env))
    assert(type(messages)=="table")
-   local ok, result, err = violation.catch(statements, a.stmts, env, messages)
+   local ok, result = catch(statements, a.stmts, env, messages)
    if not ok then error("Internal error in e2: " .. tostring(result)); end
-   if not result then table.insert(messages, err); end
+   if is_exception(result) then
+      table.insert(messages, result[1])
+      return false
+   end
    return result				    -- if false, errors in messages tables
 end
 

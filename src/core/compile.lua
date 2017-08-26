@@ -6,13 +6,8 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
--- FUTURE:
---   - Upon error in expression, throw out to compile_block, where the identifier (lhs of
---     binding) can be bound to the error.  Then we go on to try to compile other statements.
--- 
-
 -- NOTE: The 'prefix' value is passed to all the compilation functions because it is needed when
--- labeling captures inside a grammar.
+-- labeling captures inside a grammar.  Yes, this is ugly, and yes, it will be fixed. (FUTURE)
 
 
 local c2 = {}
@@ -28,7 +23,9 @@ local taggedvalue = common.taggedvalue
 local pattern = common.pattern
 local pfunction = common.pfunction
 local violation = require "violation"
-local apply_catch = violation.catch
+local catch = violation.catch
+local throw = violation.throw_value
+local is_exception = violation.is_exception
 local recordtype = require "recordtype"
 parent = recordtype.parent
 local environment = require "environment"
@@ -36,11 +33,12 @@ lookup = environment.lookup
 bind = environment.bind
 local expand = require "expand"
 
-local function throw(msg, a)
-   return violation.throw(violation.compile.new{who='compiler',
+local function raise_error(msg, a)
+   return violation.raise(violation.compile.new{who='compiler',
 						message=msg,
 						ast=a})
 end
+
 						
 ---------------------------------------------------------------------------------------------------
 -- Create parser
@@ -139,7 +137,7 @@ local expression;
 local function literal(a, env, prefix, messages)
    local str, offense = common.unescape_string(a.value)
    if not str then
-      throw("invalid escape sequence in literal: \\" .. offense, a)
+      raise_error("invalid escape sequence in literal: \\" .. offense, a)
    end
    a.pat = pattern.new{name="literal"; peg=P(str); ast=a}
    return a.pat
@@ -148,7 +146,7 @@ end
 local function rpl_string(a, env, prefix, messages)
    local str, offense = common.unescape_string(a.value)
    if not str then
-      throw("invalid escape sequence in string: \\" .. offense, a)
+      raise_error("invalid escape sequence in string: \\" .. offense, a)
    end
    a.pat = taggedvalue.new{type="string"; value=str; ast=a}
    return a.pat
@@ -161,11 +159,12 @@ local function hashtag(a, env, prefix, messages)
    return a.pat
 end
 
-local function check_pattern(pat, a)
+local function check_pattern(thing, a)
    assert(a, "missing ast parameter?")
-   if not pattern.is(pat) then
-      local msg = "type error: expected a pattern, received " .. tostring(pat)
-      return violation.throw(violation.compile.new{who='expression compiler',
+   if not pattern.is(thing) then
+      if novalue.is(thing) then throw(thing); end
+      local msg = "type error: expected a pattern, received " .. tostring(thing)
+      return violation.raise(violation.compile.new{who='expression compiler',
 						   message=msg,
 						   ast=a})
    end
@@ -216,11 +215,11 @@ local function predicate(a, env, prefix, messages)
       if not ok then
 	 assert(type(peg)=="string")
 	 if peg:find("fixed length") then
-	    throw("lookbehind pattern does not have fixed length: " .. ast.tostring(a.exp), a)
+	    raise_error("lookbehind pattern does not have fixed length: " .. ast.tostring(a.exp), a)
 	 elseif peg:find("too long") then
-	    throw("lookbehind pattern too long: " .. ast.tostring(a.exp), a)
+	    raise_error("lookbehind pattern too long: " .. ast.tostring(a.exp), a)
 	 elseif peg:find("captures") then
-	    throw("lookbehind pattern has captures: " .. ast.tostring(a.exp), a)
+	    raise_error("lookbehind pattern has captures: " .. ast.tostring(a.exp), a)
 	 else
 	    error("Internal error: " .. peg)
 	 end
@@ -228,7 +227,7 @@ local function predicate(a, env, prefix, messages)
    elseif a.type=="negation" then
       peg = (- peg)
    else
-      throw("invalid predicate type: " .. tostring(a.type), a)
+      raise_error("invalid predicate type: " .. tostring(a.type), a)
    end
    a.pat = pattern.new{name="predicate", peg=peg, ast=a}
    return a.pat
@@ -242,7 +241,7 @@ end
 local function cs_named(a, env, prefix, messages)
    local peg = locale[a.name]
    if not peg then
-      throw("unknown named charset: " .. a.name, a)
+      raise_error("unknown named charset: " .. a.name, a)
    end
    a.pat = pattern.new{name="cs_named", peg=((a.complement and 1-peg) or peg), ast=a}
    return a.pat
@@ -253,7 +252,7 @@ local function cs_range(a, env, prefix, messages)
    local c1, offense1 = common.unescape_charlist(a.first)
    local c2, offense2 = common.unescape_charlist(a.last)
    if (not c1) or (not c2) then
-      throw("invalid escape sequence in character set: \\" ..
+      raise_error("invalid escape sequence in character set: \\" ..
 	    (c1 and offense2) or offense1,
 	 a)
    end
@@ -270,7 +269,7 @@ function cs_list(a, env, prefix, messages)
    for i, c in ipairs(a.chars) do
       local char, offense = common.unescape_charlist(c)
       if not char then
-	 throw("invalid escape sequence in character set: \\" .. offense, a)
+	 raise_error("invalid escape sequence in character set: \\" .. offense, a)
       end
       if not alternatives then alternatives = P(char)
       else alternatives = alternatives + P(char); end
@@ -305,9 +304,9 @@ function cs_exp(a, env, prefix, messages)
 			 ast=a}
       return a.pat
    elseif ast.cs_intersection.is(a.cexp) then
-      throw("character set intersection is not implemented", a)
+      raise_error("character set intersection is not implemented", a)
    elseif ast.cs_difference.is(a.cexp) then
-      throw("character set difference is not implemented", a)
+      raise_error("character set difference is not implemented", a)
    elseif ast.simple_charset_p(a.cexp) then
       local p = expression(a.cexp, env, prefix, messages)
       a.pat = pattern.new{name="cs_exp", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
@@ -344,9 +343,9 @@ local function throw_grammar_error(a, message)
    local fmt = "%s"
    common.note("grammar: entering throw_grammar_error: " .. message)
    if message:find("may be left recursive") then
-      throw(string.format(fmt, message), a)
+      raise_error(string.format(fmt, message), a)
    end
-   throw("peg compilation error: " .. message, a)
+   raise_error("peg compilation error: " .. message, a)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -402,7 +401,7 @@ local function grammar(a, env, prefix, messages)
    for id, pat in pairs(pats) do t[id] = pat.peg; end
    t[1] = start					    -- first rule is start rule
    local aliasflag = lookup(gtable, t[1]).alias
-   local success, peg_or_msg = pcall(P, t)	    -- P(t) while catching errors
+   local success, peg_or_msg = pcall(P, t)	    -- P(t)
    if (not success) then
       assert(type(peg_or_msg)=="string")
       throw_grammar_error(a, peg_or_msg)
@@ -427,7 +426,7 @@ local function rep(a, env, prefix, messages)
    local epat = expression(a.exp, env, prefix, messages)
    local epeg = epat.peg
    if matches_empty(epeg) then
-      throw("pattern being repeated can match the empty string", a)
+      raise_error("pattern being repeated can match the empty string", a)
    end
    a.exp.pat = epat
    if ast.atleast.is(a) then
@@ -443,10 +442,11 @@ end
 local function ref(a, env, prefix, messages)
    local pat = lookup(env, a.localname, a.packagename)
    local name = common.compose_id{a.packagename, a.localname}
-   if (not pat) then throw("unbound identifier: " .. name, a); end
-   if not(pattern.is(pat)) then
-      throw("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
-   end
+   if (not pat) then raise_error("unbound identifier: " .. name, a); end
+   check_pattern(pat, a)
+   -- if not(pattern.is(pat)) then
+   --    raise_error("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
+   -- end
    a.pat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, uncap=pat.uncap}
    return a.pat
 end
@@ -474,9 +474,9 @@ local function application(a, env, prefix, messages)
    local ref = a.ref
    local fn_ast = lookup(env, ref.localname, ref.packagename)
    local name = common.compose_id{ref.packagename, ref.localname}
-   if (not ref) then throw("unbound identifier: " .. name, ref); end
+   if (not ref) then raise_error("unbound identifier: " .. name, ref); end
    if not pfunction.is(fn_ast) then
-      throw("type mismatch: expected a function, but '" .. name .. "' is bound to " .. tostring(fn_ast), a)
+      raise_error("type mismatch: expected a function, but '" .. name .. "' is bound to " .. tostring(fn_ast), a)
    end
    if not fn_ast.primop then
       assert(false, "user-defined functions are currently not supported")
@@ -488,7 +488,7 @@ local function application(a, env, prefix, messages)
 			     a.arglist)
    local ok, peg, uncap = pcall(fn_ast.primop, table.unpack(operands))
    if not ok then
-      throw("error in function: '" .. tostring(peg), a)
+      raise_error("error in function: '" .. tostring(peg), a)
    end
    a.pat = pattern.new{name=name, peg=peg, ast=a, uncap=uncap}
    return a.pat
@@ -515,22 +515,23 @@ local dispatch = { [ast.string] = rpl_string,
 function expression(a, env, prefix, messages)
    local compile = dispatch[parent(a)]
    if (not compile) then
-      throw("invalid expression: " .. tostring(a), a)
+      raise_error("invalid expression: " .. tostring(a), a)
    end
    a.pat = compile(a, env, prefix, messages)
    return a.pat
 end
 
 local function compile_expression(exp, env, prefix, messages)
-   local ok, value, err = apply_catch(expression, exp, env, prefix, messages)
+   local ok, value = catch(expression, exp, env, prefix, messages)
    if not ok then
-      local full_message = "error in compile_expression:" .. tostring(value) .. "\n"
-      for _,v in ipairs(messages) do
-	 full_message = full_message .. tostring(v) .. "\n"
-      end
+      local full_message = "Internal error in compile_expression:" .. tostring(value) .. "\n"
+      -- for _,v in ipairs(messages) do
+      -- 	 full_message = full_message .. tostring(v) .. "\n"
+      -- end
       assert(false, full_message)
-   elseif not value then
-      assert(parent(err))
+   elseif is_exception(value) then
+      local err = value[1]
+      assert(parent(err))			    -- is a record of some kind
       table.insert(messages, err)		    -- enqueue violation object
       return false
    end
@@ -569,7 +570,7 @@ end
 
 function initialize_bindings(stmts, pkgenv, prefix, messages)
    for _, b in ipairs(stmts) do
-      assert(ast.binding.is(b))
+      assert(ast.binding.is(b))			    -- ensured by expand.block()
       local ref = b.ref
       assert(not ref.packagename)
       local val = lookup(pkgenv, ref.localname)
@@ -597,7 +598,6 @@ function compile_statements(stmts, pkgenv, prefix, messages)
       local pat = compile_expression(exp, pkgenv, prefix, messages)
       if not pat then return false; end 	    -- error is in messages
       if novalue.is(pat) then
-	 print("*** Will come back to " .. ref.localname)
 	 table.insert(uncompiled, b)
       elseif pattern.is(pat) then
 	 -- Sigh.  Grammars are already wrapped.  This is ugly.
@@ -646,17 +646,14 @@ function c2.compile_block(a, pkgenv, request, messages)
       uncompiled = compile_statements(uncompiled, pkgenv, prefix, messages)
       if not uncompiled then return false; end
       if #uncompiled >= count then
-	 print("***");
-	 for _,s in ipairs(uncompiled) do
-	    print(ast.tostring(s))
-	 end
-	 error("mutual recursion detected!!")
+	 local msg = "mutual recursion detected in these statements:\n"
+	 msg = msg .. table.concat(map(ast.tostring, uncompiled), "\n")
+	 table.insert(messages,
+		      violation.compile.new{who='compiler', message=msg, ast=a})
+	 return false
       end
       count = #uncompiled
    end
-
-   -- Step 3: 
-
    return true
 end
 
