@@ -641,7 +641,7 @@ function convert_core_exp(pt, sref)
       if text:sub(1,1)=="^" then
 	 error("Internal error: rpl core does not support complemented named character sets")
       end
-      return ast.cs_named.new{name = text, complement = compflag, sourceref=sref}      
+      return ast.cs_named.new{name = text, complement = false, sourceref=sref}      
    elseif pt.type=="quantified_exp" then
       return convert_quantified_exp(pt, convert_core_exp, sref)
    else

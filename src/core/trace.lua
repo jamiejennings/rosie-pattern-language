@@ -477,7 +477,7 @@ function trace.internal(r, input, start)
    assert((pcall(rawget, r.pattern, "ast")))	    -- quack: "is ast a valid key in r.pattern?"
    local a = r.pattern.ast
    assert(a, "no ast stored for pattern")
-   return expression(en, a, input, start)
+   return expression(r.engine, a, input, start)
 end
 
 function trace.expression(r, input, start, style)

@@ -46,6 +46,8 @@
 --           the script passes ROSIE_HOME to cli.lua, which has called this file (init).
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
 
+import('strict')(_G)
+
 local io = require "io"
 local os = require "os"
 
@@ -68,7 +70,6 @@ local function read_version_or_die(home)
    init_error("Error while initializing: "..tostring(home)
 	   .."/VERSION does not exist or is not readable\n")
 end
-
 
 if not ROSIE_HOME then error("Error while initializing: internal variable ROSIE_HOME not set"); end
 -- When init is loaded from run-rosie, ROSIE_DEV will be a boolean (as set by cli.lua)
@@ -258,7 +259,7 @@ function create_encoder_table()
       byte = 0,
       color = function(m) return color.match(m, color.colormap); end,
 
-   -- FIXME: the nocolor option does output codes for the default color.  fix this! 
+   -- TODO: the nocolor option does output codes for the default color.  fix this! 
       nocolor = function(m) return color.match(m, {["*"]="default"}); end,
       text = function(m) return m.data end,	    -- "only match text"
       subs = function(m)
@@ -303,8 +304,8 @@ rosie_package.encoders = create_encoder_table()
 rosie_package.info = function(...) return ROSIE_INFO; end
 rosie_package.import = import
 
-rosie_package.setmode = setmode
-rosie_package.mode = mode
+-- rosie_package.setmode = setmode
+-- rosie_package.mode = mode
 
 collectgarbage("setpause", 194)
 

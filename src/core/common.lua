@@ -313,7 +313,7 @@ end
 local function insert_input_text(m, input)
    local name, s, data, subs, e = common.decode_match(m)
    if data then return m; end			    -- const capture will have data already
-   assert(type(e)=="number", "expected an end position, got: " .. tostring(text))
+   assert(type(e)=="number", "expected an end position, got: " .. tostring(data))
    m.data = input:sub(s, e-1)
    if subs then
       for i = 1, #subs do insert_input_text(subs[i], input); end
