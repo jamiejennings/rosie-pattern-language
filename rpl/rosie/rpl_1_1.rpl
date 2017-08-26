@@ -28,7 +28,7 @@ package rpl_1_1
 
 alias ws = [[ \t]]+
 newline = "\n"
-comment = { "--" {!newline .}* {newline / $} }
+comment = { "--" {!newline .}* newline / $ }
 alias atmos = { ws? (comment / newline) }* ws?		    -- "atmosphere"
 
 alias id_char = [[:alnum:]] / [[_]]
@@ -144,7 +144,7 @@ end
 
 major = [[0-9]]{1,2}
 minor = major
-version_spec = { major "." minor atmos }
+version_spec = { major "." minor }
 
 importpath = quoted_string /		  -- double quoted, interpreted, pattern name is "literal"
              { id {"/" id}* }		  -- quotes not needed when each path segment is an id
