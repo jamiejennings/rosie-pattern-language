@@ -1378,13 +1378,23 @@ g_dup_rules = [[grammar
   B = { {"b" S} / {"a" B B} }
   A = "this won't work"
 end]]
-
 ok, pkgname, errs = e:load(g_dup_rules)
 check(not ok)
 check(type(errs)=="table" and errs[1])
 check(violation.compile.is(errs[1])) --.message:find("can match the empty string"))
 msg = table.concat(map(violation.tostring, errs), "\n")
 check(msg:find("more than one rule named 'A'"))
+
+g_missing_rule = [[grammar
+  S = { {"a" B} / {"b" A} / "" }
+  A = { {"a" S} / {"b" A A} }
+end]]
+ok, pkgname, errs = e:load(g_missing_rule)
+check(not ok)
+check(type(errs)=="table" and errs[1])
+check(violation.compile.is(errs[1]))
+msg = table.concat(map(violation.tostring, errs), "\n")
+check(msg:find("unbound identifier: B"))
 
 
 heading("Invariants")
