@@ -645,17 +645,16 @@ function c2.compile_block(a, pkgenv, request, messages)
    if not initialize_bindings(a.stmts, pkgenv, prefix, messages) then
       return false
    end
-   -- Step 2: Compile the rhs (expression) for each binding.  
-   -- TODO: If an exp depends on a 'novalue', return 'novalue'.
-   -- TODO: Repeat step 2 until either every lhs is bound to an actual value (or error), or an
-   --       entire pass through a.stmts fails to change any binding.
+   -- Step 2: Compile the rhs (expression) for each binding, repeating until either all statements
+   -- have compiled, or there's a compilation error, or we cannot make progress because there are
+   -- mutual dependencies (mutual recursion).
    local uncompiled = a.stmts
    local count = #a.stmts
    while count > 0 do
       uncompiled = compile_statements(uncompiled, pkgenv, prefix, messages)
       if not uncompiled then return false; end
       if #uncompiled >= count then
-	 local msg = "mutual recursion detected in these statements:\n"
+	 local msg = "mutual dependencies detected among these statements:\n"
 	 msg = msg .. table.concat(map(ast.tostring, uncompiled), "\n")
 	 table.insert(messages,
 		      violation.compile.new{who='compiler', message=msg, ast=a})

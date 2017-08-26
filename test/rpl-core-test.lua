@@ -2058,7 +2058,7 @@ s = 'a = b; b = a'
 ok, _, errs = e:load(s)
 check(not ok)
 msg = table.concat(map(violation.tostring, errs), "\n")
-check(msg:find("mutual recursion"))
+check(msg:find("mutual dependencies"))
 
 
 -- return the test results in case this file is being called by another one which is collecting
