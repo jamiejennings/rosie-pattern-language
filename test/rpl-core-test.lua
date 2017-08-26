@@ -21,6 +21,7 @@ if not test then
 end
 
 list = import "list"
+cons, map, flatten, member = list.cons, list.map, list.flatten, list.member
 common = import "common"
 violation = import "violation"
 
@@ -1150,8 +1151,8 @@ check(violation.compile.is(msg[1])) -- .message:find("named charset not defined"
 subheading("Named character sets")
 
 function test_charsets(exp, true_inputs, false_inputs)
-   list.map(function(input) return check_match(exp, input, true, nil, nil, 2); end, true_inputs)
-   list.map(function(input) return check_match(exp, input, false, nil, nil, 2); end, false_inputs)
+   map(function(input) return check_match(exp, input, true, nil, nil, 2); end, true_inputs)
+   map(function(input) return check_match(exp, input, false, nil, nil, 2); end, false_inputs)
 end
 
 
@@ -1289,17 +1290,17 @@ check(leftover==1, "one char left over for this match")
 function collect_names(ast)
    local name = ast.type
    if ast.subs then
-      return list.cons(name, list.flatten(list.map(collect_names, ast.subs)))
+      return cons(name, flatten(map(collect_names, ast.subs)))
    else
       return list.new(name)
    end
 end
 ids = collect_names(match)
-check(list.member('g1', ids))
-check(list.member('g1.B', ids))			    -- name qualified by grammar id
-check(not list.member('B', ids))		    -- unqualified name not present 
-check(not list.member('g1.A', ids))		    -- an alias
-check(not list.member('A', ids))		    -- ensuring this unqualified name not present
+check(member('g1', ids))
+check(member('g1.B', ids))			    -- name qualified by grammar id
+check(not member('B', ids))		    -- unqualified name not present 
+check(not member('g1.A', ids))		    -- an alias
+check(not member('A', ids))		    -- ensuring this unqualified name not present
 
 check_match('g1 [[:digit:]]', "ab 4", true)
 check_match('{g1 [[:digit:]]}', "ab 4", true)	    -- because g1 is defined to end on a boundary
@@ -2005,6 +2006,37 @@ end
 
 check_lookbehind(false)
 check_lookbehind(true, "!")
+
+heading("Allowing bindings in any order in a block")
+
+s = 'a = "a"; a = "b"'
+ok, _, errs = e:load(s)
+check(not ok)
+m = table.concat(map(violation.tostring, errs), "\n")
+check(m:find("already bound"))
+
+s = 'b = "b"; a = "a"'
+ok, _, errs = e:load(s)
+check(ok)
+check_match("a b a", "a b a", true, 0)
+
+s = 'a = "a"; b = a'
+ok, _, errs = e:load(s)
+check(ok)
+check_match("a b a", "a a a", true, 0)
+
+s = 'b = a; a = "a"'
+ok, _, errs = e:load(s)
+check(ok)
+print("***", table.concat(map(violation.tostring, errs), "\n"))
+check_match("a b a", "a a a", true, 0)
+
+s = 'a = b; b = a'
+ok, _, errs = e:load(s)
+check(not ok)
+m = table.concat(map(violation.tostring, errs), "\n")
+print("***", table.concat(map(violation.tostring, errs), "\n"))
+check(m:find(" asldkaldkaslkdas"))
 
 
 -- return the test results in case this file is being called by another one which is collecting

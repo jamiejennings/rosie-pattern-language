@@ -567,6 +567,58 @@ end
 -- Compile block
 ---------------------------------------------------------------------------------------------------
 
+function initialize_bindings(stmts, pkgenv, prefix, messages)
+   for _, b in ipairs(stmts) do
+      assert(ast.binding.is(b))
+      local ref = b.ref
+      assert(not ref.packagename)
+      local val = lookup(pkgenv, ref.localname)
+      if val then
+	 if novalue.is(val) then
+	    local msg = "identifier already bound: " .. ref.localname
+	    table.insert(messages,
+			 violation.compile.new{who='compiler', message=msg, ast=b})
+	    return false
+	 else
+	    common.note("Rebinding " .. ref.localname)
+	 end
+      else
+	 common.note("Creating initial binding for " .. ref.localname)
+      end
+      bind(pkgenv, ref.localname, novalue.new{exported=true, ast=b})
+   end -- for
+   return true
+end
+
+function compile_statements(stmts, pkgenv, prefix, messages)
+   local uncompiled = {}
+   for _, b in ipairs(stmts) do
+      local ref, exp = b.ref, b.exp
+      local pat = compile_expression(exp, pkgenv, prefix, messages)
+      if not pat then return false; end 	    -- error is in messages
+      if novalue.is(pat) then
+	 print("*** Will come back to " .. ref.localname)
+	 table.insert(uncompiled, b)
+      elseif pattern.is(pat) then
+	 -- Sigh.  Grammars are already wrapped.  This is ugly.
+	 if (not b.is_alias) and (not ast.grammar.is(exp)) then
+	    local fullname = common.compose_id{prefix, ref.localname}
+	    wrap_pattern(pat, fullname);
+	 end
+	 pat.alias = b.is_alias
+	 if b.is_local then pat.exported = false; end
+	 common.note("Binding value to " .. ref.localname)
+	 bind(pkgenv, ref.localname, pat)
+      else
+	 assert(false,
+		"Internal error: unexpected return value from expression compiler: " ..
+		   tostring(pat))
+      end -- switch on pat
+   end -- for
+   return uncompiled
+end
+
+
 -- Compile all the statements in the block.  Any imports were loaded during the syntax expansion
 -- phase, in order to access macro definitions.
 function c2.compile_block(a, pkgenv, request, messages)
@@ -581,43 +633,27 @@ function c2.compile_block(a, pkgenv, request, messages)
       prefix = request.prefix or request.packagename
    end
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
-   -- TODO: Ensure each lhs appears only once in a.stmts.
-   for _, b in ipairs(a.stmts) do
-      assert(ast.binding.is(b))
-      local ref = b.ref
-      assert(not ref.packagename)
-      if environment.lookup(pkgenv, ref.localname) then
-	 common.note("Rebinding " .. ref.localname)
-      else
-	 common.note("Creating initial binding for " .. ref.localname)
-      end
-      bind(pkgenv, ref.localname, novalue.new{exported=true, ast=b})
-   end -- for
+   if not initialize_bindings(a.stmts, pkgenv, prefix, messages) then
+      return false
+   end
    -- Step 2: Compile the rhs (expression) for each binding.  
    -- TODO: If an exp depends on a 'novalue', return 'novalue'.
    -- TODO: Repeat step 2 until either every lhs is bound to an actual value (or error), or an
    --       entire pass through a.stmts fails to change any binding.
-   for _, b in ipairs(a.stmts) do
-      local ref, exp = b.ref, b.exp
-      local pat = compile_expression(exp, pkgenv, prefix, messages)
-      if pat then 
-	 -- TODO: need a proper error message
-	 if type(pat)~="table" then
-	    io.stderr:write("    BUT DID NOT GET A PATTERN: ", tostring(pat), "\n")
+   local uncompiled = a.stmts
+   local count = #a.stmts
+   while count > 0 do
+      uncompiled = compile_statements(uncompiled, pkgenv, prefix, messages)
+      if not uncompiled then return false; end
+      if #uncompiled >= count then
+	 print("***");
+	 for _,s in ipairs(uncompiled) do
+	    print(ast.tostring(s))
 	 end
-	 -- Sigh.  Grammars are already wrapped.  This is ugly.
-	 if (not b.is_alias) and (not ast.grammar.is(exp)) then
-	    local fullname = common.compose_id{prefix, ref.localname}
-	    wrap_pattern(pat, fullname);
-	 end
-	 pat.alias = b.is_alias
-	 if b.is_local then pat.exported = false; end
-	 common.note("Binding value to " .. ref.localname)
-	 bind(pkgenv, ref.localname, pat)
-      else
-	 return false
+	 error("mutual recursion detected!!")
       end
-   end -- for
+      count = #uncompiled
+   end
 
    -- Step 3: 
 
