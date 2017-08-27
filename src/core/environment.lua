@@ -39,15 +39,23 @@ local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 
 local function internal_macro_find(capture_flag, ...)
     -- grammar
-    --    alias find = {search <exp>}  OR  {search <exp> ~}
+    --    alias find = {search <exp>}  OR  {search { ~ <exp> ~}}
     --    alias search = {!<exp> .}*
     -- end
    assert(type(capture_flag)=="boolean")
    local args = {...}
    if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
-   local exp = args[1]
-   local sref = exp.sourceref
+   local original_exp = args[1]
+   local sref = original_exp.sourceref
    assert(sref)
+   local exp
+   if ast.cooked.is(original_exp) then
+      exp = ast.raw.new{exp = ast.sequence.new{exps={boundary_ref, original_exp.exp, boundary_ref},
+					       sourceref=sref},
+			sourceref=sref}
+   else
+      exp = original_exp
+   end
    local any_char = ast.ref.new{localname=".", sourceref=sref}
    local not_exp = ast.predicate.new{type="negation", exp=exp, sourceref=sref}
    local search_exp =
@@ -75,10 +83,9 @@ local function internal_macro_find(capture_flag, ...)
 				     exp=ast.sequence.new{exps={exp}, sourceref=sref},
 				     sourceref=sref}
    end
-   local trailing_boundary = ast.cooked.is(exp) and boundary_ref or nil
    local start_rule =
       ast.binding.new{ref=ast.ref.new{localname="find", sourceref=sref},
-		      exp=ast.raw.new{exp=ast.sequence.new{exps={search_ref, capture_ref, trailing_boundary}, 
+		      exp=ast.raw.new{exp=ast.sequence.new{exps={search_ref, capture_ref}, 
 							   sourceref=sref},
 				      sourceref=sref},
 		      is_alias=true,
