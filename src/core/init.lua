@@ -78,6 +78,7 @@ if not ROSIE_HOME then error("Error while initializing: internal variable ROSIE_
 ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
 ROSIE_VERBOSE = false
 ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
+ROSIE_COMMAND = ""				    -- will be set by cli, if cli is invoked
 
 ---------------------------------------------------------------------------------------------------
 -- Make some standard libraries available, and do some essential checks to make sure we can run
