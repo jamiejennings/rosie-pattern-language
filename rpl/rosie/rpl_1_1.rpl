@@ -127,7 +127,7 @@ grammar
 		         charset_exp /
 		         predicate /
 		         hash_exp} }
-   quantified_exp = { plain_exp ws? quantifier }
+   quantified_exp = { plain_exp quantifier }
    cooked = { open exp atmos close }
    raw = { openraw exp atmos closeraw }
    predicate = { predicate_symbol ws? {quantified_exp / plain_exp} }

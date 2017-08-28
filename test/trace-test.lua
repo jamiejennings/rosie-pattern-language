@@ -33,7 +33,7 @@ lasttrace = "no trace set"
 function check_trace(exp, input, expectation, expected_nextpos, expected_contents_list)
    local rplx, errs = e:compile(exp)
    if not rplx then
-      error("this expression failed to compile: " .. exp)
+      error("this expression failed to compile: " .. exp, 2)
    end
    local t = trace.internal(rplx, input)
    lasttrace = t				    -- GLOBAL
@@ -275,10 +275,10 @@ check_trace('a b / c', 'a c', true, 4)
 check_structure('{a ~ {b / c}}', {true, 'a', '~', '{b / c}'})
 check_structure(lasttrace.subs[3], '{b / c}', {false, 'b', 'c', true})
 
-check_trace('a b / c {3,3}', 'a ccc', true, 6)
+check_trace('a b / c{3,3}', 'a ccc', true, 6)
 check_structure('{a ~ {b / {c c c}}}', {true, 'a', '~', '{b / {c c c}}'})
 
-check_trace('a b / c {3,3}', 'a cc', false, 1)
+check_trace('a b / c{3,3}', 'a cc', false, 1)
 check_structure('{a ~ {b / {c c c}}}', {true, 'a', '~', '{b / {c c c}}', false})
 check_structure(lasttrace.subs[3], '{b / {c c c}}', {false, 'b', '{c c c}'})
 check_structure(lasttrace.subs[3].subs[2], '{c c c}', {true, 'c', 'c', 'c', false})
