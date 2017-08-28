@@ -152,13 +152,29 @@ end
 -- Boundary for tokenization... this is going to be customizable, but hard-coded for now
 ----------------------------------------------------------------------------------------
 
-local boundary = ( locale.space^1
-		   --+ lpeg.S(" \t")^1 + #lpeg.S("\n")
-		   + #locale.punct
-		   + (lpeg.B(locale.punct) * #(-locale.punct))
-		   + (lpeg.B(locale.space) * #(-locale.space))
-		   + lpeg.P(-1)
-		   + (- lpeg.B(1)) )
+  -- - Define ~ as: s+ / b / pb / sb / $ / ^
+  --   where
+  --     ^ is lpeg.B(-1) -- at start of input
+  --     $ is lpeg.P(-1) -- at end of input
+  --     b is start/end of word as above
+  --     pb is "punctuation boundary" {>[:punct:] / <[:punct:]}
+  --     sb is "space boundary" {!<s >s} / {<s !>s}
+
+local sol_peg = - lpeg.B(1)
+local eol_peg = lpeg.P(-1)
+-- ASCII only definitions:
+local s_peg = locale.space
+local w_peg = lpeg.R"AZ" + lpeg.R"az" + lpeg.R"09"
+local b_peg = #w_peg - lpeg.B(w_peg)
+local pb_peg = #locale.punct + lpeg.B(locale.punct)
+local sb_peg = (lpeg.B(s_peg) - #s_peg) + (#s_peg - lpeg.B(s_peg))
+
+local boundary = ( s_peg^1
+		   + b_peg
+		   + pb_peg
+		   + sb_peg
+		   + eol_peg
+		   + sol_peg )
 
 environment.boundary = boundary
 local utf8_char_peg = common.utf8_char_peg
@@ -170,11 +186,13 @@ local utf8_char_peg = common.utf8_char_peg
 local b_id = common.boundary_identifier
 local dot_id = common.any_char_identifier
 local eol_id = common.end_of_input_identifier
+local sol_id = common.start_of_input_identifier
 local halt_id = common.halt_pattern_identifier
 
 local ENV =
     {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true};  -- any single character
      [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true};	  -- end of input
+     [sol_id] = pattern.new{name=sol_id; peg=-lpeg.B(1); alias=true};	  -- start of input
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true};		  -- token boundary
      [halt_id] = pattern.new{name=halt_id; peg=lpeg.Halt()};
      ["message"] = pfunction.new{primop=builtins.message};

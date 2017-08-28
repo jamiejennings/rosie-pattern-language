@@ -453,6 +453,7 @@ common.pattern =
 common.boundary_identifier = "~"
 common.any_char_identifier = "."
 common.end_of_input_identifier = "$"
+common.start_of_input_identifier = "^"
 common.halt_pattern_identifier = "halt"
 
 -- This function is connected to the definition in rpl_1_1 of the tokens that constitute
