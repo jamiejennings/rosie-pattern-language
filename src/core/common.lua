@@ -197,6 +197,7 @@ end
 local additional_escape_substitutions = 
    { ['['] = '[';				    -- open bracket
      [']'] = ']';				    -- close bracket
+     ['-'] = '-';				    -- hyphen / dash
      ['^'] = '^';				    -- caret (signifies complement)
   }
    

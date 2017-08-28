@@ -62,7 +62,7 @@ alias keyword_list = "local" / "alias" / "grammar" / "end"
 keyword = { keyword_list !id_char }
 
 complement = "^"
-character = { {!esc !"[" !"^" !"]" .} / {esc .} }
+character = { {!esc !"[" !"]" .} / {esc .} }
 range = { complement? character [[-]] !"]" character } 
 charlist = { complement? {!"]" character}+ }		    -- cannot be empty
 name = {!":" .}+

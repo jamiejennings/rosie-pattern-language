@@ -253,7 +253,7 @@ local function cs_range(a, env, prefix, messages)
    local c2, offense2 = common.unescape_charlist(a.last)
    if (not c1) or (not c2) then
       raise_error("invalid escape sequence in character set: \\" ..
-	    (c1 and offense2) or offense1,
+		  ((c1 and offense2) or offense1),
 	 a)
    end
    local peg = R(c1..c2)
