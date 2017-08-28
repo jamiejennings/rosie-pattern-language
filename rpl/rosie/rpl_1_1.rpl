@@ -78,7 +78,7 @@ grammar
    alias combination = { atmos charset_exp { atmos op atmos charset_exp }* }
    op = intersection / difference / union
    union = ""
-   intersection = "&&"
+   intersection = "&"
    difference = "-"
 end
 
