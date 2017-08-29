@@ -173,8 +173,7 @@ local function loadfile(e, filename)
    end
    local actual_path, source, errmsg = get_file_contents(e, filename, true)
    if not source then return false, nil, {errmsg}, actual_path; end
-   -- local origin = common.loadrequest.new{filename=actual_path}
-   local ok, pkgname, messages = load(e, source, actual_path) --really_load(e, source, origin)
+   local ok, pkgname, messages = load(e, source, actual_path)
    return ok, pkgname, messages, actual_path
 end
 

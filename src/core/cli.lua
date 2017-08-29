@@ -90,7 +90,7 @@ local function run(args)
    if args.verbose then ROSIE_VERBOSE = true; end
 
    ok, msg = pcall(create_cl_engine, args)
-   if not ok then print("Error in cli when creating cli engine: " .. msg); end
+   if not ok then print("Error when creating cli engine: " .. msg); os.exit(-1); end
 
    local en = CL_ENGINE
    
@@ -190,6 +190,7 @@ local function run(args)
       repl_mod.repl(en)
       os.exit()
    else
+      -- match, trace, grep
       for _,fn in ipairs(args.filename) do
 	 cli_match.process_pattern_against_file(rosie, en, args, compiled_pattern, fn)
       end

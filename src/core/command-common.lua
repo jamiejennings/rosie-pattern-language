@@ -66,8 +66,7 @@ function p.setup_engine(en, args)
 	 if args.verbose then
 	    io.stdout:write("Compiling additional file ", filename, "\n")
 	 end
-	 -- nosearch is true so that files given on command line are not searched for
-	 local success, pkgname, errs, actual_path = en.loadfile(en, filename, true)
+	 local success, pkgname, errs, actual_path = en.loadfile(en, filename)
 	 if not success then
 	    io.stdout:write(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	    os.exit(-4)
