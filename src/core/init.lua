@@ -46,17 +46,12 @@
 --           the script passes ROSIE_HOME to cli.lua, which has called this file (init).
 -- Or (2) The code in rosie.lua, which was also created by the Rosie installation.
 
-import('strict')(_G)
-
 local io = require "io"
 local os = require "os"
 
 local function init_error(msg)
-   if ROSIE_DEV then
-      error(msg, 3)
-   else
-      io.stderr:write(msg); os.exit(-3)
-   end
+   if ROSIE_DEV then error(msg, 3)
+   else io.stderr:write(msg); os.exit(-3); end
 end
    
 local function read_version_or_die(home)
@@ -79,6 +74,8 @@ ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
 ROSIE_VERBOSE = false
 ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
 ROSIE_COMMAND = ""				    -- will be set by cli, if cli is invoked
+
+import('strict')(_G)				    -- do this AFTER checking the ROSIE_* globals
 
 ---------------------------------------------------------------------------------------------------
 -- Make some standard libraries available, and do some essential checks to make sure we can run
