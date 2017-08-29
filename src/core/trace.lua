@@ -74,13 +74,26 @@ end
 -- boolean value.
 
 local function one_node_tostrings(t, is_last_node)
-   local lines = { node_marker(is_last_node) .. "Expression: " .. ast.tostring(t.ast) }
+   local t_ast_lines = util.split(ast.tostring(t.ast), '\n')
+   assert(t_ast_lines[1])
+   local lines = { node_marker(is_last_node) .. "Expression: " .. t_ast_lines[1] }
+   for i = 2, #t_ast_lines do
+      table.insert(lines, tab(is_last_node) .. t_ast_lines[i])
+   end
    table.insert(lines,
 		tab(is_last_node) .. "Looking at: " .. left_delim .. t.input:sub(t.start) ..
 	        right_delim .. " (input pos = " .. tostring(t.start) .. ")")
 
    if t.match then
-      table.insert(lines, tab(is_last_node) .. "Matched " .. tostring(t.nextpos - t.start) .. " chars")
+      local match = lpeg.decode(t.match)
+      local extra = ""
+      if ast.grammar.is(t.ast) then
+	 assert(match.subs and match.subs[1])
+       	 extra = " (" .. match.subs[1].type .. ")"
+      end
+      table.insert(lines, tab(is_last_node) .. "Matched " ..
+		   tostring(t.nextpos - t.start) .. " chars" ..
+		   extra)
    elseif t.match == false then
       table.insert(lines, tab(is_last_node) .. "No match")
    else
@@ -431,7 +444,7 @@ function expression(e, a, input, start)
    assert(pattern.is(pat),
 	  "no pattern stored in ast node " .. tostring(a) .. " (found " .. tostring(pat) .. ")")
    local peg = common.match_node_wrap(pat.peg, "*")
-   local ok, m, nextpos = pcall(rmatch, peg, input, start, 1)
+   local ok, m, nextpos = pcall(rmatch, peg, input, start, 0) -- 0 = byte encoded
    if not ok then
       print("\n\n\nTrace failed while working on: ", a)
       if a.exps then print("a.exps: " .. tostring(list.from(a.exps))); end
@@ -439,7 +452,7 @@ function expression(e, a, input, start)
       print("start is: " .. tostring(start) .. " and input is: |" ..  input .. "|")
       error("rmatch failed: " .. m)
    end
-   assert(type(m)=="table" or type(m)=="userdata" or m==false)
+   assert(type(m)=="userdata" or m==false)
    assert(type(nextpos)=="number")
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
