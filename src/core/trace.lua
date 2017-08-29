@@ -462,10 +462,14 @@ function expression(e, a, input, start)
    elseif ast.grammar.is(a) then
       return grammar(e, a, input, start, m, nextpos)
    else
-      -- TODO: Change this to throw a proper error
-      print("\nError:")
-      print("Arguments to trace:", ast.tostring(a), a, start, m, nextpos)
-      error("Internal error: invalid ast type in trace.expression: " .. tostring(a))
+      return table.concat({"Internal error: invalid ast type in trace.expression:" .. tostring(a),
+			   "Arguments to trace:",
+			   ast.tostring(a),
+			   tostring(a),
+			   tostring(start),
+			   tostring(m),
+			   tostring(nextpos)},
+			  '\n')
    end
 end
 

@@ -112,8 +112,6 @@ function violation.tostring(err)
 	 sref = a
       else
 	 sref = assert(a.sourceref, tostring(a) .. " does not have a sourceref!")
-	 -- TODO: use something better than the default tostring for ast objects?
-	 --	 str = str .. " " .. ast.tostring(a)
       end
       return str .. violation.sourceref_tostring(sref)
    end -- if syntax error or other kind
