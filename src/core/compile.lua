@@ -44,6 +44,29 @@ end
 -- Create parser
 ---------------------------------------------------------------------------------------------------
 
+local name = {rpl_statements = "statement",
+	      rpl_expression = "expression"}
+
+local function enqueue_syntax_error(pt, err, source_record, messages)
+   local origin = source_record.origin and
+      common.loadrequest.new{filename=source_record.origin.filename}
+   local msg = "syntax error while reading " .. (name[pt.type] or "???")
+   if err.subs and err.subs[1] then
+      if err.subs[1].type=="stmnt_prefix" then
+	 msg = "expected expression but found statement: " .. err.data
+      end
+   end
+   local sref = common.source.new{text=pt.data,
+				  s=err.s,
+				  e=err.e,
+				  origin=origin,
+				  parent=source_record}
+   local v = violation.syntax.new{who='parser',
+				  message=msg,
+				  sourceref=sref}
+   table.insert(messages, v)
+end
+
 local function make_parser_from(parse_something, expected_pt_node)
    return function(source_record, messages)
 	     assert(common.source.is(source_record))
@@ -53,51 +76,22 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     assert(type(src)=="string", "src is " .. tostring(src))
 	     assert(origin==nil or common.loadrequest.is(origin), "origin is: " .. tostring(origin))
 	     local pt, syntax_errors, leftover = parse_something(src)
+	     assert(type(pt)=="table", "Internal error: parser failed on this input")
 	     if #syntax_errors > 0 then
-		-- TODO: Use the parse tree, pt, to help pinpoint the error
-		-- OR, go directly to using the 'trace' capability for this, since that's the
-		-- future solution anyway.
+		-- TODO: Use the parse tree, pt, to help pinpoint the error (or use 'trace')
 		for _, err in ipairs(syntax_errors) do
-		   if common.type_is_syntax_error(err.type) then
-		      -- In this case, the pt root is the syntax error.
-		      assert(false, "** TODO: DECIDE WHAT TO DO IN THIS CASE **")
-		   else
-		      for _, sub in ipairs(err.subs or {}) do
-			 if common.type_is_syntax_error(sub.type) then
-			    local origin = origin and common.loadrequest.new{filename=origin.filename}
-			    local sref = common.source.new{text=pt.data,
-							   s=sub.s,
-							   e=sub.e,
-							   origin=origin,
-							   parent=source_record}
-			    local message = "syntax error"
-			    if sub.subs and sub.subs[1] then
-			       if sub.subs[1].type=="stmnt_prefix" then
-				  message = "Expected expression but found assignment"
-				  -- ... to identifier sub.subs[1].subs[1]--> localname/packagename
-			       end
-			    end
-			    local v = violation.syntax.new{who='parser',
-							   message=message,
-							   sourceref=sref}
-			    table.insert(messages, v)
-			 end
-		      end -- for each sub
-		   end -- for either the root or one of its subs are syntax errors
+		   for _, sub in ipairs(err.subs or {}) do
+		      if common.type_is_syntax_error(sub.type) then
+			 enqueue_syntax_error(pt, sub, source_record, messages)
+		      end
+		   end -- for each sub
 		end -- for each syntax error node found 
 		return false
 	     end -- if syntax errors were returned
-
-	     -- TODO: convert each "warning" here into a violation.warning
-	     -- table.move(syntax_errors, 1, #syntax_errors, #messages+1, messages)
-
-	     assert(type(pt)=="table")
-
 	     if expected_pt_node then
 		assert(pt.type==expected_pt_node,
 		       string.format("pt.type is %s but expected %q",
 				     tostring(pt.type), tostring(expected_pt_node)))
-		--util.table_to_pretty_string(pt, false)
 	     end
 	     if leftover~=0 then
 		local msg = "extraneous input: " .. src:sub(#src-leftover+1)
