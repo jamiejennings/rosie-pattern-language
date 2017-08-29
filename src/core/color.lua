@@ -193,6 +193,7 @@ local function split_color_spec(color_spec)
 end
 
 function co.color_string(color_spec, str)
+   if not color_spec then return str; end	    -- in case default is nil/false
    local specs = split_color_spec(color_spec)
    local ok, numbers = catch(map, to_ansi_code, specs)
    if not ok then error(numbers); end
@@ -257,26 +258,12 @@ end
 function co.match(match, db)
    if not db then db = co.colormap; end
    local global_default = query(db, nil, "global_default")
-   assert(global_default, "no global default color value?")
+   if not global_default then
+      common.note("no global default color value in color db")
+   end
    return table.concat(map_apply(co.color_string,
 				 color(match, db, nil, nil, global_default)),
 		       " ")
 end
-
--- Rewrite notes
---
--- (1) Write node_to_color_text
---
--- To convert a node to text using a colormap, do this:
---   If the colormap is empty:
---     Return the text field of the node
---   ElseIf the node name has a color entry in the colormap:
---     Return the color encoding string .. text field of the node .. color reset string
---   Else, return concatenation of the node-to-text of each child of node (breadth first)
---
--- (2) Change the color encoding to use the rgb approach instead (TEST it first!)
---
--- (3) Move the color encoding functions to a common place, like utils
-
 
 return co
