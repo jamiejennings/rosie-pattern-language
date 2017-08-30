@@ -2034,6 +2034,7 @@ end
 check_lookbehind(false)
 check_lookbehind(true, "!")
 
+---------------------------------------------------------------------------------------------------
 heading("Allowing bindings in any order in a block")
 
 s = 'a = "a"; a = "b"'
@@ -2064,6 +2065,98 @@ check(not ok)
 msg = table.concat(map(violation.tostring, errs), "\n")
 check(msg:find("mutual dependencies"))
 
+
+---------------------------------------------------------------------------------------------------
+heading("Ok to use 'alias' and 'local' as identifiers")
+	
+check((e:load('alias = "foo"')))
+ok, m = e:match('alias', "foo")
+check(ok)
+check(m and m.type=="alias" and m.s==1 and m.e==4 and m.data=='foo')
+check((e:load('local alias = "bar"')))
+ok, m = e:match('alias', "foo")
+check(ok)
+check(not m)
+ok, m = e:match('alias', "bar")
+check(ok)
+check(m and m.type=="alias" and m.s==1 and m.e==4 and m.data=='bar')
+
+check((e:load('local alias alias = "bar"')))
+ok, m = e:match('alias', "bar")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==4 and m.data=='bar')
+
+check((e:load('local = "oklocal"')))
+ok, m = e:match('local', "oklocal")
+check(ok)
+check(m and m.type=="local" and m.s==1 and m.e==8 and m.data=='oklocal')
+
+check((e:load('local local = "oklocallocal"')))
+ok, m = e:match('local', "oklocal")
+check(ok)
+check(not m)
+
+ok, m = e:match('local', "oklocallocal")
+check(m and m.type=="local" and m.s==1 and m.e==13 and m.data=='oklocallocal')
+
+check((e:load('local alias local = "oklocalaliaslocal"')))
+ok, m = e:match('local', "oklocallocal")
+check(ok)
+check(not m)
+
+ok, m = e:match('local', "oklocalaliaslocal")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==18 and m.data=='oklocalaliaslocal')
+
+check((e:load('grammar = "okgrammar"')))
+ok, m = e:match('grammar', "okgrammar")
+check(ok)
+check(m and m.type=="grammar" and m.s==1 and m.e==10 and m.data=='okgrammar')
+
+check((e:load('alias grammar = "okaliasgrammar"')))
+ok, m = e:match('grammar', "okgrammar")
+check(ok)
+check(not m)
+
+ok, m = e:match('grammar', "okaliasgrammar")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==15 and m.data=='okaliasgrammar')
+
+check(not ((e:load('alias local grammar = "wrong order of declaration keywords"'))))
+
+check((e:load('local alias grammar = "oklocalaliasgrammar"')))
+ok, m = e:match('grammar', "okaliasgrammar")
+check(ok)
+check(not m)
+
+ok, m = e:match('grammar', "oklocalaliasgrammar")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==20 and m.data=='oklocalaliasgrammar')
+
+check((e:load('end = "okend"')))
+ok, m = e:match('end', "okend")
+check(ok)
+check(m and m.type=="end" and m.s==1 and m.e==6 and m.data=='okend')
+
+check((e:load('alias end = "okaliasend"')))
+ok, m = e:match('end', "okend")
+check(ok)
+check(not m)
+
+ok, m = e:match('end', "okaliasend")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==11 and m.data=='okaliasend')
+
+check(not ((e:load('alias local end = "wrong order of declaration keywords"'))))
+
+check((e:load('local alias end = "oklocalaliasend"')))
+ok, m = e:match('end', "okaliasend")
+check(ok)
+check(not m)
+
+ok, m = e:match('end', "oklocalaliasend")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==16 and m.data=='oklocalaliasend')
 
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
