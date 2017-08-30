@@ -161,7 +161,7 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    else
       env = environment.extend(top_level_env)
    end
-   if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, messages) then
+   if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, {}, messages) then
       return false
    end
    if not compile(compiler, a, env, source_record, messages) then
@@ -182,7 +182,7 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    end
 end
 
-local function import_from_source(compiler, pkgtable, searchpath, source_record, messages)
+local function import_from_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    local src = source_record.text
    local origin = source_record.origin
    local a = parse_block(compiler, source_record, messages)
@@ -194,7 +194,7 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
    end
    origin.packagename = a.pdecl.name
    local env = environment.new()
-   if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, messages) then
+   if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, loadinglist, messages) then
       return false
    end
    if not compile(compiler, a, env, source_record, messages) then
@@ -204,10 +204,18 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
    return true, a.pdecl.name, env
 end
 
-local function find_module_source(compiler, pkgtable, searchpath, source_record, messages)
+local function find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    local fullpath, src, msg = common.get_file(source_record.origin.importpath, searchpath)
    if src then
-      return src, fullpath
+      -- Check to see if fullpath is in the list of "things that are being loaded now",
+      -- and if so, signal an error that there are circular dependencies
+      if not loadinglist[fullpath] then
+	 loadinglist[fullpath] = true
+	 return src, fullpath
+      else
+	 msg = "Detected circular list of module dependencies"
+	 --for k,_ in pairs(loadinglist) do msg = msg .. "\n" .. k; end
+      end
    end
    table.insert(messages, violation.compile.new{who='loader', message=msg, ast=source_record})
    return false
@@ -240,7 +248,7 @@ local function create_package_bindings(prefix, pkgenv, target_env)
    end
 end
 
-local function import_one(compiler, pkgtable, searchpath, source_record, messages)
+local function import_one(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    local origin = assert(source_record.origin)
    -- First, look in the pkgtable to see if this pkg has been loaded already
    local pkgname, pkgenv = common.pkgtableref(pkgtable, origin.importpath, origin.prefix)
@@ -251,7 +259,7 @@ local function import_one(compiler, pkgtable, searchpath, source_record, message
    common.note("load: looking for ", origin.importpath)
    -- FUTURE: Next, look for a compiled version of the file to load
    -- Finally, look for a source file to compile and load
-   local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, messages)
+   local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    if not src then return false; end 		    -- message already in 'messages'
    common.note("load: loading ", origin.importpath, " from ", fullpath)
    local sref = common.source.new{text=src,
@@ -260,7 +268,7 @@ local function import_one(compiler, pkgtable, searchpath, source_record, message
 								packagename=pkgname,
 								filename=fullpath},
 			          parent=source_record}
-   return import_from_source(compiler, pkgtable, searchpath, sref, messages)
+   return import_from_source(compiler, pkgtable, searchpath, sref, loadinglist, messages)
 end
 
 function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, env, messages)
@@ -273,15 +281,15 @@ function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, en
    assert(type(messages)=="table")
    local origin = common.loadrequest.new{importpath=packagename, prefix=as_name}
    local source_record = common.source.new{origin=origin}
-   local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, source_record, messages)
+   local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, source_record, {}, messages)
    if not ok then return false; end 		    -- message already in 'messages'
    create_package_bindings(origin.prefix or pkgname, pkgenv, env)
    return true
 end
 
--- 'load_dependencies' recursively loads each import in ideclist.
+-- load_dependencies recursively loads each import in ideclist.
 -- Returns success; side-effects the messages argument.
-function load_dependencies(compiler, pkgtable, searchpath, source_record, a, target_env, messages)
+function load_dependencies(compiler, pkgtable, searchpath, source_record, a, target_env, loadinglist, messages)
    assert(type(compiler)=="table")
    assert(type(pkgtable)=="table")
    assert(type(searchpath)=="string")
@@ -302,7 +310,7 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
       							      e=decl.sourceref.e,
       							      origin=source_record.origin,
        				     			      parent=source_record}}
-      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, messages)
+      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, loadinglist, messages)
       if not ok then
 	 common.note("FAILED to import from path " .. tostring(decl.importpath))
 	 return false

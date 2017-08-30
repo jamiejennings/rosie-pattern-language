@@ -183,7 +183,22 @@ check(ok)
 check(pkgname=="foo")
 
 
-print("\nTODO: add tests for other kinds of failures\n")
+subheading("Circular dependencies")
+
+ok, pkgname, msgs = e:import("mod_circular")
+check(not ok)
+check(not pkgname)
+msg = table.concat(map(violation.tostring, msgs), "\n")
+check(msg:find("circular"))
+check(msg:find("mod_circular"))
+
+ok, pkgname, msgs = e:import("mod_circular_1")
+check(not ok)
+check(not pkgname)
+msg = table.concat(map(violation.tostring, msgs), "\n")
+check(msg:find("circular"))
+check(msg:find("mod_circular_1"))
+check(msg:find("mod_circular_2"))
 
 
 
