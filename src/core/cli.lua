@@ -47,10 +47,10 @@ common = assert(rosie.import("common"), "failed to open common package")
 lpeg = assert(rosie.import("lpeg"), "failed to open lpeg package")
 
 ui = assert(rosie.import("ui"), "failed to open ui package")
-argparser = assert(rosie.import("command-parser"), "failed to load command-parser package")
-cli_match = assert(rosie.import("command-match"), "failed to open command-match package")
-cli_test = assert(rosie.import("command-test"), "failed to open command-test package")
-cli_common = assert(rosie.import("command-common"), "failed to open command-common package")
+argparser = assert(rosie.import("cli-parser"), "failed to load command-parser package")
+cli_match = assert(rosie.import("cli-match"), "failed to open command-match package")
+cli_test = assert(rosie.import("cli-test-command"), "failed to open command-test package")
+cli_common = assert(rosie.import("cli-common"), "failed to open command-common package")
 
 parser = argparser.create(rosie)
 

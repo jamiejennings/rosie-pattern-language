@@ -1,13 +1,13 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- command-match.lua         Implements the cli commands 'match' and 'grep'
+-- cli-match.lua         Implements the cli commands 'match' and 'grep'
 --
 -- © Copyright IBM Corporation 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
 local match = {}
-local cli_common = import("command-common")
+local cli_common = import("cli-common")
 
 -- FUTURE: use lua_filesystem equivalent instead of this:
 local function readable_file(fn)

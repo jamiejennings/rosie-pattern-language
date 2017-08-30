@@ -1,13 +1,13 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- command-test.lua    Implements the 'test' command of the cli
+-- cli-test-command.lua    Implements the 'test' command of the cli
 --
 -- © Copyright IBM Corporation 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHORS: Jamie A. Jennings, Kevin Zander
 
 local p = {}
-local cli_common = import("command-common")
+local cli_common = import("cli-common")
 local io = import("io")
 local common = import("common")
 local violation = import("violation")

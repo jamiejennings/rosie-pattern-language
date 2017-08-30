@@ -1,6 +1,6 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- command-parser.lua
+-- cli-parser.lua
 --
 -- © Copyright IBM Corporation 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
