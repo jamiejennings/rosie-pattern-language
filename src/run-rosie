@@ -2,6 +2,8 @@
 # 
 # Run the Rosie CLI
 
+ROSIE_COMMAND=$1
+shift
 ROSIE_HOME=$1
 
 if [[ -z ROSIE_HOME ]]; then
@@ -49,6 +51,6 @@ if [[ ! -r $CLI ]]; then
     >&2 echo "Loading rosie from source"
 fi
 
-${executable} $i "$CLI" "$ROSIE_HOME" "$dev" "$@"
+${executable} $i "$CLI" "$ROSIE_COMMAND" "$ROSIE_HOME" "$dev" "$@"
 
 

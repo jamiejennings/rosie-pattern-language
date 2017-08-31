@@ -210,7 +210,9 @@ compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so
 $(ROSIEBIN): compile
 	@/usr/bin/env echo "Creating $(ROSIEBIN)"
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(ROSIEBIN)"
-	@/usr/bin/env echo -n "exec $(BUILD_ROOT)/lib/run-rosie $(BUILD_ROOT)" >> "$(ROSIEBIN)"
+	@/usr/bin/env echo -n "exec $(BUILD_ROOT)/lib/run-rosie " >> "$(ROSIEBIN)"
+	@/usr/bin/env echo -n ' "$$0"' >> "$(ROSIEBIN)"
+	@/usr/bin/env echo -n " $(BUILD_ROOT)" >> "$(ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(ROSIEBIN)"
 	@chmod 755 "$(ROSIEBIN)"
 	@/usr/bin/env echo "Creating $(BUILD_LUA_PACKAGE)"
@@ -219,13 +221,10 @@ $(ROSIEBIN): compile
 
 # See comment above re: ROSIEBIN
 .PHONY: $(INSTALL_ROSIEBIN)
-$(INSTALL_ROSIEBIN):
+$(INSTALL_ROSIEBIN): $(ROSIEBIN)
 	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
 	mkdir -p `dirname "$(INSTALL_ROSIEBIN)"` "$(ROSIED)"/bin
-	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo -n "exec $(ROSIED)/lib/run-rosie $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo ' "$$@"' >> "$(INSTALL_ROSIEBIN)"
-	cp "$(BUILD_ROOT)"/src/run-rosie "$(ROSIED)"/src
+	cp "$(BUILD_ROOT)"/bin/rosie "$(INSTALL_ROSIEBIN)"
 	@chmod 755 "$(INSTALL_ROSIEBIN)"
 
 # Install the lua interpreter
@@ -249,15 +248,15 @@ install_metadata:
 # Install the real run script, and the rosie.lua file
 .PHONY: install_run_script
 install_run_script:
-	mkdir -p "$(ROSIED)"/lib
-	@cp src/run-rosie "$(ROSIED)"/lib
+	mkdir -p "$(INSTALL_LIB_DIR)"
+	@cp src/run-rosie "$(INSTALL_LIB_DIR)"
 	@cp rosie.lua "$(ROSIED)"/
 
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
 install_luac_bin:
-	mkdir -p "$(ROSIED)"/lib
-	cp lib/*.luac "$(ROSIED)"/lib
+	mkdir -p "$(INSTALL_LIB_DIR)"/lib
+	cp lib/*.luac "$(INSTALL_LIB_DIR)"/lib
 
 # Install the provided RPL patterns
 .PHONY: install_rpl

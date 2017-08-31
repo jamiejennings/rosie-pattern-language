@@ -230,12 +230,12 @@ check(lines[3]:find("2 tests failed out of"))
 check(lines[4]=="")
 
 ---------------------------------------------------------------------------------------------------
-test.heading("Info command")
+test.heading("Config command")
 
-cmd = rosie_cmd .. " info"
+cmd = rosie_cmd .. " config"
 print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
-check(#results>0, "info command succeeded")
+check(#results>0, "config command failed")
 check(code==0, "Return code is zero")
 -- check for a few of the items displayed by the info command
 check(results[1]:find("ROSIE_HOME"))      

@@ -14,8 +14,9 @@
 --     line argument to the Rosie run script, will launch Rosie in development mode.  The code
 --     below does not need to process that switch.
 
-ROSIE_HOME = arg[1]
-ROSIE_DEV = (arg[2]=="true")
+ROSIE_COMMAND = arg[1]
+ROSIE_HOME = arg[2]
+ROSIE_DEV = (arg[3]=="true")
 
 if not ROSIE_HOME then
 	io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
@@ -24,17 +25,18 @@ end
 
 -- Reconstruct the command line using all the arg information available.  For readability, we
 -- replace instances of ROSIE_HOME with the string "ROSIE_HOME" at the start of each arg.
-local s=0; while arg[s] do s=s-1; end; s=s+1	                     -- Find first arg
-local function munge_arg(a)                                          -- Replace
-   local s, e = a:find(ROSIE_HOME, 1, true)
-   if s then return "ROSIE_HOME" .. a:sub(e+1); else return a; end
-end
-local str=""; for i=s,#arg do str=str..munge_arg(arg[i]).." "; end   -- Assemble string
+-- local s=0; while arg[s] do s=s-1; end; s=s+1	                     -- Find first arg
+-- local function munge_arg(a)                                          -- Replace
+--    local s, e = a:find(ROSIE_HOME, 1, true)
+--    if s then return "ROSIE_HOME" .. a:sub(e+1); else return a; end
+-- end
+-- local str=""; for i=s,#arg do str=str..munge_arg(arg[i]).." "; end   -- Assemble string
 
-ROSIE_COMMAND = str:sub(1,-1)                                        -- Remove trailing space
+-- ROSIE_COMMAND = str:sub(1,-1)                                        -- Remove trailing space
 
--- Shift args by 2, to remove ROSIE_HOME and ROSIE_DEV
-table.move(arg, 3, #arg, 1); arg[#arg-1]=nil; arg[#arg]=nil;
+-- Shift args, to remove n args: ROSIE_COMMAND, ROSIE_HOME and ROSIE_DEV
+local n = 3
+table.move(arg, n+1, #arg, 1); for i=#arg-n+1, #arg do arg[i]=nil; end
 
 -- Load rosie
 rosie = dofile(ROSIE_HOME .. "/rosie.lua", "t")
@@ -47,10 +49,10 @@ common = assert(rosie.import("common"), "failed to open common package")
 lpeg = assert(rosie.import("lpeg"), "failed to open lpeg package")
 
 ui = assert(rosie.import("ui"), "failed to open ui package")
-argparser = assert(rosie.import("cli-parser"), "failed to load command-parser package")
-cli_match = assert(rosie.import("cli-match"), "failed to open command-match package")
-cli_test = assert(rosie.import("cli-test-command"), "failed to open command-test package")
-cli_common = assert(rosie.import("cli-common"), "failed to open command-common package")
+argparser = assert(rosie.import("cli-parser"), "failed to load cli parser package")
+cli_match = assert(rosie.import("cli-match"), "failed to open cli match package")
+cli_test = assert(rosie.import("cli-test-command"), "failed to open cli test package")
+cli_common = assert(rosie.import("cli-common"), "failed to open cli common package")
 environment = assert(rosie.import("environment"), "failed to open environment package")
 
 parser = argparser.create(rosie)
@@ -102,12 +104,11 @@ local function run(args)
 	 os.exit(-1)
       end
    end
-   if (args.command=="info") or (args.command=="help") then
-      if args.command=="info" then
-	 print_rosie_info()
-      else
-	 print(parser:get_help())
-      end
+   if (args.command=="config") then
+      print_rosie_info()
+      os.exit()
+   elseif (args.command=="help") then
+      print(parser:get_help())
       os.exit()
    end
    
@@ -173,7 +174,11 @@ local function run(args)
 	    io.stdout:write("all " .. tostring(total_tests) .. " tests passed\n")
 	 end
       end
-      os.exit((total_failures==0) and 0 or -1)
+      if ((total_files-total_compiled) > 0) or (total_failures > 0) then
+	 os.exit(-1)
+      else
+	 os.exit(0)
+      end
    end
    
    local compiled_pattern = cli_common.setup_engine(en, args);

@@ -68,14 +68,14 @@ function p.create(rosie)
    
    -- target variable for commands
    parser:command_target("command")
-   local cmd_info = parser:command("help")
+   local cmd_help = parser:command("help")
    :description("Print this help message")
    -- grep command
    local cmd_grep = parser:command("grep")
    :description("In the style of Unix grep, match the pattern anywhere in each input line")
    -- info command
-   local cmd_info = parser:command("info")
-   :description("Print rosie installation information")
+   local cmd_info = parser:command("config")
+   :description("Print rosie configuration information")
    -- patterns command
    local cmd_patterns = parser:command("list")
    :description("List patterns, packages, and macros")

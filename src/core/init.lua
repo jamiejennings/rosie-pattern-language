@@ -73,7 +73,6 @@ if not ROSIE_HOME then error("Error while initializing: internal variable ROSIE_
 ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
 ROSIE_VERBOSE = false
 ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
-ROSIE_COMMAND = ""				    -- will be set by cli, if cli is invoked
 
 import('strict')(_G)				    -- do this AFTER checking the ROSIE_* globals
 
