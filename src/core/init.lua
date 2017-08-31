@@ -98,9 +98,13 @@ end
 local function setup_paths()
    ROSIE_LIB = common.path(ROSIE_HOME, "rpl")
    ROSIE_PATH = ROSIE_LIB
+   ROSIE_PATH_SOURCE = "lib"
    local ok, value = pcall(os.getenv, "ROSIE_PATH")
    if (not ok) then init_error('Internal error: call to os.getenv(ROSIE_PATH)" failed'); end
-   if value then ROSIE_PATH = value; end
+   if value then
+      ROSIE_PATH = value;
+      ROSIE_PATH_SOURCE = "env";
+   end
    assert(type(ROSIE_PATH)=="string")
 end
 
@@ -233,6 +237,7 @@ function populate_info()
       {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),                 desc="true if rosie was started in development mode"},
       {name="ROSIE_LIB",     value=tostring(ROSIE_LIB),                 desc="location of the standard rpl library"},
       {name="ROSIE_PATH",    value=tostring(ROSIE_PATH),                desc="directories to search for modules"},
+      {name="ROSIE_PATH_SOURCE", value=tostring(ROSIE_PATH_SOURCE),     desc="env if ROSIE_PATH set by environment"},
       {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
       {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "",         desc="host on which rosie is running"},
       {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},

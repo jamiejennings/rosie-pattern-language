@@ -44,14 +44,14 @@ BUILD_ROOT = $(shell pwd)
 #
 # Rosie executable is created by 'make install': $(DESTDIR)/bin/rosie
 #
-# Links into $(ROSIED)
+# FUTURE: Links into $(ROSIED)
 #   $(ROSIE_ROOT)/rpl  --> $(ROSIED)/rpl
 #   $(ROSIE_ROOT)/pkg  --> $(ROSIED)/pkg
 #   $(ROSIE_DOC)/rosie --> $(ROSIED)/doc
 
 ROSIED = $(DESTDIR)/lib/rosie
-ROSIE_DOC = $(DESTDIR)/share/doc
-ROSIE_ROOT = $(DESTDIR)/share/rosie
+#ROSIE_DOC = $(DESTDIR)/share/doc
+#ROSIE_ROOT = $(DESTDIR)/share/rosie
 
 .PHONY: default
 default: $(PLATFORM) save_build_info
@@ -255,8 +255,8 @@ install_run_script:
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
 install_luac_bin:
-	mkdir -p "$(INSTALL_LIB_DIR)"/lib
-	cp lib/*.luac "$(INSTALL_LIB_DIR)"/lib
+	mkdir -p "$(INSTALL_LIB_DIR)"
+	cp lib/*.luac "$(INSTALL_LIB_DIR)"
 
 # Install the provided RPL patterns
 .PHONY: install_rpl
@@ -268,12 +268,19 @@ install_rpl:
 .PHONY: install
 install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
 	install_run_script install_luac_bin install_rpl
-	@echo 
-	@echo TO TEST THE INSTALLATION: make installtest
-	@echo TO UNINSTALL: remove one directory and several files/links, e.g.
-	@echo     rm -rf $(ROSIED)
-	@echo     rm $(INSTALL_ROSIEBIN) $(ROSIE_ROOT)/rpl $(ROSIE_ROOT)/pkg $(ROSIE_DOC)/rosie
-	@echo 
+#	@echo 
+#	@echo TO TEST THE INSTALLATION: make installtest
+#	@echo TO UNINSTALL: remove one directory and several files/links, e.g.
+#	@echo     rm -rf $(ROSIED)
+#	@echo     rm $(INSTALL_ROSIEBIN) $(ROSIE_ROOT)/rpl $(ROSIE_ROOT)/pkg $(ROSIE_DOC)/rosie
+#	@echo 
+
+.PHONY: uninstall
+uninstall:
+	@echo "Removing $(INSTALL_ROSIEBIN)"
+	@-rm -vf $(INSTALL_ROSIEBIN)
+	@echo "Removing $(ROSIED)"
+	@-rm -Rvf $(ROSIED)/
 
 .PHONY: save_build_info
 save_build_info: $(ROSIEBIN)

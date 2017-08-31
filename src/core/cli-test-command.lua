@@ -55,14 +55,21 @@ function p.setup(en)
    en:load(test_patterns)
 end   
 
+local function shorten(str, len)
+   if #str > len then
+      return "..." .. str:sub(#str-len+4)
+   end
+   return str
+end
 
 function p.run(rosie, en, args, filename)
-   local right_column = 24
+   local right_column = 28
    -- fresh engine for testing this file
    local test_engine = rosie.engine.new()
    -- set it up using whatever rpl strings or files were given on the command line
    cli_common.setup_engine(test_engine, args)
-   io.stdout:write(filename, string.rep(".", right_column-#filename))
+   local shortfilename = shorten(filename, right_column-3)
+   io.stdout:write(shortfilename, string.rep(".", right_column-#shortfilename))
    -- load the rpl code we are going to test (second arg true means "do not search")
    local ok, pkgname, msgs, actual_path = test_engine:loadfile(filename, true)
    if not ok then
@@ -91,7 +98,7 @@ function p.run(rosie, en, args, filename)
    local num_patterns, test_lines = find_test_lines(f:read('*a'))
    f:close()
    if num_patterns == 0 then
-      print("no tests found")
+      write_error("no tests found")
       return true, 0, 0
    end
    local function write_compilation_error(exp)

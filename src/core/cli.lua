@@ -71,11 +71,30 @@ local function print_rosie_info()
    local function printf(fmt, ...)
       print(string.format(fmt, ...))
    end
-   local fmt = "%20s = %s"
-   for _,info in ipairs(rosie.info()) do printf(fmt, info.name, info.value); end
+   local fmt1 = "%20s"
+   local fmt = fmt1 .. " = %s"
+   local config = rosie.info()
+   print("Configuration from the environment:")
+   local multi_sourced = {ROSIE_PATH = "ROSIE_PATH_SOURCE"}
+   local any = false
+   for name, sourceinfo in pairs(multi_sourced) do
+      if config[sourceinfo]=="env" then
+	 print(fmt, name, config[name])
+	 any = true
+      end
+   end
+   if not any then printf(fmt1, "None"); end
+   print()
+   
+   print("Internal configuration:")
+   for _,info in ipairs(config) do printf(fmt, info.name, info.value); end
+
+   print()
+   print("Build log:")
    local log = io.open(ROSIE_HOME .. "/build.log", "r")
-   if log then
-      print()
+   if not log then
+      printf(fmt1, "Not found")
+   else
       local line = log:read("l")
       while line do
 	 local name, val = line:match('([^ ]+) (.*)')
