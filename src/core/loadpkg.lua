@@ -148,7 +148,6 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    if origin then assert(origin.importpath==nil); assert(origin.filename); end
    local source_record = common.source.new{text=source,
 					   origin=origin,
-					   --parent=common.source.new{}
 					   }
    local a = parse_block(compiler, source_record, messages)
    if not a then return false; end		    -- errors will be in messages table
@@ -156,6 +155,7 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    if a.pdecl then
       assert(a.pdecl.name)
       env = environment.new()
+      env.origin = origin
    else
       env = environment.extend(top_level_env)
    end
@@ -192,6 +192,7 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
    end
    origin.packagename = a.pdecl.name
    local env = environment.new()
+   env.origin = origin
    if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, loadinglist, messages) then
       return false
    end

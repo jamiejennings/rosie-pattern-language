@@ -189,12 +189,15 @@ local eol_id = common.end_of_input_identifier
 local sol_id = common.start_of_input_identifier
 local halt_id = common.halt_pattern_identifier
 
+-- TODO: Decide whether to keep 'halt' in the env as a pattern, or expose it only as a macro that
+-- expands to the halt pattern.  (Or a pfunction that...)
+
 local ENV =
     {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true};  -- any single character
      [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true};	  -- end of input
      [sol_id] = pattern.new{name=sol_id; peg=-lpeg.B(1); alias=true};	  -- start of input
      [b_id] = pattern.new{name=b_id; peg=boundary; alias=true};		  -- token boundary
-     [halt_id] = pattern.new{name=halt_id; peg=lpeg.Halt()};
+     [halt_id] = pattern.new{name=halt_id; peg=lpeg.Halt(); alias=true};
      ["message"] = pfunction.new{primop=builtins.message};
      ["error"] = pfunction.new{primop=builtins.error};
      ["keepto"] = macro.new{primop=macro_keepto};
@@ -256,6 +259,7 @@ end
 env = recordtype.new("environment",
 		     {store = recordtype.NIL,
 		      parent = recordtype.NIL,
+		      origin = recordtype.NIL,
 		      exported = false,		    -- prevents export of modules
 		      lookup = lookup,
 		      bind = bind,
@@ -294,7 +298,13 @@ environment.extend = function (parent)
 			      .. tostring(parent))
 			end
 
-
+function environment.exported_bindings(env)
+   local tbl = {}
+   for k,v in env:bindings() do
+      if v.exported then tbl[k]=v; end
+   end
+   return tbl
+end
 
 -- -- return a flat representation of env (recall that environments are nested)
 -- function environment.flatten(env, output_table)

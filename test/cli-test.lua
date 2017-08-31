@@ -194,7 +194,9 @@ print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "Expression on command line can contain [[.,.]]") -- command succeeded
 check(code==0, "Return code is zero")
-check(results[#results]:find("names\n"))
+results_txt = table.concat(results, '\n')
+check(results_txt:find("lua_ident"))
+check(results_txt:find("names"))
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Test command")

@@ -413,7 +413,7 @@ end
 
 common.novalue =
    recordtype.new("novalue",
-		  {exported=false;
+		  {exported=true;
 		   ast=NIL;
 		})
 
@@ -421,20 +421,20 @@ common.taggedvalue =
    recordtype.new("taggedvalue",		    -- tagged values that are not patterns
 		  { type=NIL;
 		    value=NIL;
-		    exported=false;
+		    exported=true;
 		    ast=NIL;
 		 })
 
 common.pfunction =
    recordtype.new("pfunction",
 		  { primop=NIL;	    -- if primitive, holds a lua function
-		    exported=false;
+		    exported=true;
 		  })
 
 common.macro =
    recordtype.new("macro",
 		  { primop=NIL;	    -- if primitive, holds a lua function
-		    exported=false;
+		    exported=true;
 		  })
 
 common.pattern = 

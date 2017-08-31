@@ -183,20 +183,25 @@ local function run(args)
       assert(args.filter)			    -- default is "*"
       local pkgname, localname = common.split_id(args.filter)
       if not pkgname then
-	 local filter = (args.filter~="*" and args.filter) or nil
-	 local env = {}
-	 for k,v in en.env:bindings() do env[k]=ui.properties(k,v); end -- flat list of visible bindings
-	 ui.print_env(env, filter)
+	 local tbl = environment.exported_bindings(en.env)
+	 for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v); end
+	 ui.print_env(tbl, localname)
 	 os.exit()
       else
-	 print("*** package name given: ", pkgname)
-	 local item = en:lookup(pkgname)
-	 if item and item.type=="package" then
-	    print("Found environment", item.name)
-	 elseif item then
-	    print("???"); for k,v in pairs(item) do print(k,v) end
+	 local pkgenv = en.env:lookup(pkgname)
+	 if pkgenv then
+	    local props = ui.properties(pkgname, pkgenv)
+	    if props.type=="package" then
+	       print("Package " .. pkgname)
+	       local tbl = environment.exported_bindings(pkgenv)
+	       for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v); end
+	       ui.print_env(tbl, localname)
+	       os.exit()
+	    else
+	       print("Not an environment: "); for k,v in pairs(props) do print(k,v) end
+	    end
 	 else
-	    print("not found")
+	    print("Package '" .. pkgname .. "' not found")
 	 end
 	 os.exit()
       end
