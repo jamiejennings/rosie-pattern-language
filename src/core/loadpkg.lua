@@ -47,8 +47,6 @@
 
 local ast = require "ast"
 local environment = require "environment"
-local lookup = environment.lookup
-local bind = environment.bind
 local common = require "common"
 local violation = require "violation"
 
@@ -230,20 +228,20 @@ local function create_package_bindings(prefix, pkgenv, target_env)
       for name, obj in pkgenv:bindings() do
 	 assert(type(obj)=="table", name .. " bound to " .. tostring(obj))
 	 if obj.exported then			    -- quack
-	    if lookup(target_env, name) then
+	    if target_env:lookup(name) then
 	       common.note("load: rebinding ", name)
 	    else
 	       common.note("load: binding ", name)
 	    end
-	    bind(target_env, name, obj)
+	    target_env:bind(name, obj)
 	 end
       end -- for each binding in the package
    else
       -- import the entire package under the desired prefix
-      if lookup(target_env, prefix) then
+      if target_env:lookup(prefix) then
 	 common.note("load: rebinding ", prefix)
       end
-      bind(target_env, prefix, pkgenv)
+      target_env:bind(prefix, pkgenv)
       common.note("load: binding package prefix " .. prefix)
    end
 end

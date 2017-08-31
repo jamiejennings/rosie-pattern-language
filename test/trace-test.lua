@@ -140,7 +140,7 @@ check(ok)
 subheading("Setting up assignments")
 ok = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
 check(ok)
-t = e:lookup("a")
+t = e.env:lookup("a")
 check(type(t)=="table")
 
 ok = e:load('alias plain_old_alias = "p"')

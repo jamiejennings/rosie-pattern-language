@@ -51,6 +51,7 @@ argparser = assert(rosie.import("cli-parser"), "failed to load command-parser pa
 cli_match = assert(rosie.import("cli-match"), "failed to open command-match package")
 cli_test = assert(rosie.import("cli-test-command"), "failed to open command-test package")
 cli_common = assert(rosie.import("cli-common"), "failed to open command-common package")
+environment = assert(rosie.import("environment"), "failed to open environment package")
 
 parser = argparser.create(rosie)
 
@@ -179,11 +180,26 @@ local function run(args)
 
    if args.command == "list" then
       if not args.verbose then greeting(); end
-      -- local name, properties = en:lookup(args.filter)
-      -- if properties.type=="package" then ...
-      local env = en:lookup()
-      ui.print_env(env, args.filter)
-      os.exit()
+      assert(args.filter)			    -- default is "*"
+      local pkgname, localname = common.split_id(args.filter)
+      if not pkgname then
+	 local filter = (args.filter~="*" and args.filter) or nil
+	 local env = {}
+	 for k,v in en.env:bindings() do env[k]=ui.properties(k,v); end -- flat list of visible bindings
+	 ui.print_env(env, filter)
+	 os.exit()
+      else
+	 print("*** package name given: ", pkgname)
+	 local item = en:lookup(pkgname)
+	 if item and item.type=="package" then
+	    print("Found environment", item.name)
+	 elseif item then
+	    print("???"); for k,v in pairs(item) do print(k,v) end
+	 else
+	    print("not found")
+	 end
+	 os.exit()
+      end
    elseif args.command == "repl" then
       local repl_mod = mod.import("repl", rosie_mod)
       if not args.verbose then greeting(); end

@@ -223,19 +223,56 @@ function environment.make_module_table()
    return setmetatable({}, {__tostring = function(env) return "<module_table>"; end;})
 end
 
-local env					    -- forward ref for env.factory
+---------------------------------------------------------------------------------------------------
+
+local env
+
+local function lookup(env, id, prefix)
+   assert(environment.is(env))
+   if prefix then
+      local mod = lookup(env, prefix)
+      if environment.is(mod) then
+	 local val = lookup(mod, id)
+	 if val and val.exported then		    -- we are duck typing here
+	    return val
+	 else
+	    return nil
+	 end
+      else
+	 return nil, prefix .. " is not a valid package reference"
+      end
+   else
+      return env.store[id] or (env.parent and lookup(env.parent, id))
+   end
+end
+
+-- N.B. value can be nil (this is how bindings are removed)
+local function bind(env, id, value)
+   assert(environment.is(env))
+   assert(type(id)=="string")
+   env.store[id] = value
+end
+
 env = recordtype.new("environment",
 		     {store = recordtype.NIL,
 		      parent = recordtype.NIL,
-		      exported = false,
-		      next = function(self, key)
-				return next(self.store, key)
-			     end,
+		      exported = false,		    -- prevents export of modules
+		      lookup = lookup,
+		      bind = bind,
 		      bindings = function(self)
-				    return function(store, key)
-					      return next(store, key)
+				    local current_env = self
+				    return function(_, key)
+					      local k, v = next(current_env.store, key)
+					      if k then return k, v
+					      else
+						 while (not k) and (current_env.parent) do
+						    current_env = current_env.parent
+						    k, v = next(current_env.store)
+						 end
+						 if k then return k, v; end
+					      end
 					   end,
-				    self.store,
+				    self,
 				    nil
 				 end,
 		   },
@@ -243,6 +280,8 @@ env = recordtype.new("environment",
 			return env.factory{store={}, parent=parent}; end)
 
 local base_environment = env.new(); base_environment.store = ENV
+
+environment.is = env.is
 
 environment.new = function (...)
 		     if #{...}==0 then return env.new(base_environment); end
@@ -255,50 +294,23 @@ environment.extend = function (parent)
 			      .. tostring(parent))
 			end
 
-environment.is = env.is
 
-function environment.lookup(env, id, prefix)
-   assert(environment.is(env))
-   if prefix then
-      local mod = environment.lookup(env, prefix)
-      if environment.is(mod) then
-	 local val = environment.lookup(mod, id)
-	 if val and val.exported then		    -- hmmm, we are duck typing here
-	    return val
-	 else
-	    return nil
-	 end
-      else -- found prefix but it is not a module
-	 return nil, prefix .. " is not a valid module reference"
-      end
-   else
-      -- no prefix
-      return env.store[id] or (env.parent and environment.lookup(env.parent, id))
-   end
-end
 
--- N.B. value can be nil (this is how bindings are removed)
-function environment.bind(env, id, value)
-   assert(environment.is(env))
-   assert(type(id)=="string")
-   env.store[id] = value
-end
-
--- return a flat representation of env (recall that environments are nested)
-function environment.flatten(env, output_table)
-   output_table = output_table or {}
-   for item, value in pairs(env.store) do
-      -- access only string keys.  numeric keys are for other things.
-      if type(item)=="string" then
-	 -- if already seen, do not overwrite with value from parent env
-	 if not output_table[item] then output_table[item] = value; end
-      end
-   end
-   if env.parent then
-      return environment.flatten(env.parent, output_table)
-   else
-      return output_table
-   end
-end
+-- -- return a flat representation of env (recall that environments are nested)
+-- function environment.flatten(env, output_table)
+--    output_table = output_table or {}
+--    for item, value in pairs(env.store) do
+--       -- access only string keys.  numeric keys are for other things.
+--       if type(item)=="string" then
+-- 	 -- if already seen, do not overwrite with value from parent env
+-- 	 if not output_table[item] then output_table[item] = value; end
+--       end
+--    end
+--    if env.parent then
+--       return environment.flatten(env.parent, output_table)
+--    else
+--       return output_table
+--    end
+-- end
 
 return environment

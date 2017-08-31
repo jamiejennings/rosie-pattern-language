@@ -78,7 +78,7 @@ success, pkgname, msg = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
 check(type(success)=="boolean")
 check(not pkgname)
 check(type(msg)=="table")
-t = e:lookup("a")
+t = e.env:lookup("a")
 check(type(t)=="table")
 
 set_expression('a')

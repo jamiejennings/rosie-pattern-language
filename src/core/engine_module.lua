@@ -86,8 +86,6 @@ local rmatch = common.rmatch
 local pfunction = common.pfunction
 local macro = common.macro
 local environment = require "environment"
-local lookup = environment.lookup
-local bind = environment.bind
 local violation = require "violation"
 local writer = require "writer"
 local loadpkg = require "loadpkg"
@@ -131,7 +129,7 @@ local function really_load(e, source, origin)
       assert(environment.is(env))
       if pkgname then
 	 -- We compiled a module, reified it as the package in 'env'
-	 bind(e.env, pkgname, env)
+	 e.env:bind(pkgname, env)
       else
 	 -- Did not load a module, so the env we passed in was extended with new bindings 
 	 e.env = env
@@ -236,88 +234,6 @@ local function engine_trace(e, expression, input, start, style)
 end
 
 ----------------------------------------------------------------------------------------
-
-local function reconstitute_pattern_definition(id, p)
-   if p then
-      if recordtype.parent(p.ast) then
-	 -- We have an ast, not a parse tree
-	 return ast.tostring(p.ast) or "built-in RPL pattern"
-      end
-      return (p.ast and writer.reveal_ast(p.ast)) or "// built-in RPL pattern //" 
-   end
-   engine_error(e, "undefined identifier: " .. id)
-end
-
--- FUTURE: Update this to make a use general pretty printer for the contents of the environment.
-local function properties(name, obj)
-   if common.pattern.is(obj) then
-      local kind = "pattern"
-      local capture = (not obj.alias)
-      local color, reason = co.query(name)
-      local binding = reconstitute_pattern_definition(name, obj)
-      local color_explanation = color
-      if reason=="default" then color_explanation = color_explanation .. " (default)"; end
-      return {type=kind, capture=capture, color=color_explanation, binding=binding}
-   elseif environment.is(obj) then
-      return {type="package", color="", binding="<not printable>"}
-   elseif pfunction.is(obj) then
-      return {type="function", color="", binding="<not printable>"}
-   elseif macro.is(obj) then
-      return {type="macro", color="", binding="<not printable>"}
-   else
-      error("Internal error: unknown kind of object in environment, stored at " ..
-	    tostring(name) .. ": " .. tostring(obj))
-   end
-end
-
-local function parse_identifier(en, str)
-   local msgs = {}
-   local m = en.compiler.parse_expression(common.source.new{text=str}, msgs)
-   if ast.ref.is(m) then
-      return m.localname, m.packagename
-   end
-   if m and m.subs and m.subs[1] then
-      assert(m.type=="rpl_expression")
-      m = m.subs[1]
-      if m.type=="ref" then
-	 return m.data, nil
-      elseif m.type=="extref" then
-	 assert(m.subs and m.subs[1] and m.subs[2])
-	 assert(m.subs[1].type=="packagename")
-	 assert(m.subs[2].type=="localname")
-	 return m.subs[2].data, m.subs[1].data
-      end -- is there a packagename in the identifier?
-   end -- did we get an identifier?
-end
-	    
--- Lookup an identifier in the engine's environment, and get a human-readable definition of it
--- (reconstituted from its ast).  If identifier is null, return the entire environment.
-local function get_environment(en, identifier)
-   local env = en.env
-   if identifier then
-      local localname, prefix = parse_identifier(en, identifier)
-      local val = lookup(en.env, localname, prefix)
---      if not environment.is(val) then
-	 return val and properties(identifier, val)
---      else
---	 env = val
---      end
-   end
-   local flat_env = environment.flatten(env)
-   -- Rewrite the flat_env table, replacing the pattern with a table of properties
-   for id, pat in pairs(flat_env) do flat_env[id] = properties(id, pat); end
-   return flat_env
-end
-
-local function clear_environment(en, identifier)
-   if identifier then
-      if lookup(en.env, identifier) then bind(en.env, identifier, nil); return true
-      else return false; end
-   else -- no identifier arg supplied, so wipe the entire env
-      en.env = environment.new()
-      return true
-   end
-end
 
 -- Built-in encoder options:
 -- false = return lua table as usual
@@ -490,8 +406,8 @@ engine =
 		     encode_function=false,	      -- false or nil ==> use default encoder
 		     output=get_set_encoder_function,
 
-		     lookup=get_environment,
-		     clear=clear_environment,
+--		     lookup=environment_lookup,
+--		     clear=environment_clear,
 
 		     load=load,
 		     loadfile=loadfile,

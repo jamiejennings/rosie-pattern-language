@@ -24,8 +24,6 @@ local e2 = {}
 local ast = require "ast"
 local list = require "list"
 local environment = require "environment"
-local lookup = environment.lookup
-local bind = environment.bind
 local violation = require "violation"
 local catch = violation.catch
 local raise = violation.raise
@@ -281,7 +279,7 @@ local function apply_macro(ex, env, messages)
    assert(ast.application.is(ex))
    assert(ast.ref.is(ex.ref))
    assert(ex.sourceref)
-   local m = environment.lookup(env, ex.ref.localname, ex.ref.packagename)
+   local m = env:lookup(ex.ref.localname, ex.ref.packagename)
    local refname = common.compose_id{ex.ref.packagename, ex.ref.localname}
    if not m then
       raise(violation.compile.new{who='macro expander',

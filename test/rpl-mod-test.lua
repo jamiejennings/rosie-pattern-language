@@ -17,6 +17,8 @@ end
 
 list = import "list"
 map = assert(list.map)
+environment = import "environment"
+common = import "common"
 
 check = test.check
 heading = test.heading
@@ -33,15 +35,15 @@ e.searchpath = ROSIE_HOME .. "/test"
 
 ok, _, msgs = e:load("import mod1")
 check(ok)
-m = e:lookup("mod1")
+m = e.env:lookup("mod1")
 check(m)
-check(m and m.type=="package")
+check(m and environment.is(m))
 
-p = e:lookup("mod1.S")
+p = e.env:lookup("S", "mod1")
 check(p)
-check(p.type=="pattern")
+check(common.pattern.is(p))
 
-p = e:lookup("mod1.A")
+p = e.env:lookup("A", "mod1")
 check(not p)					    -- A is a local grammar
 
 ok, m, left, t0, t1, msgs = e:match("mod1.S", "baab")
@@ -68,37 +70,37 @@ check(type(msgs)=="table")
 
 ok, _, msgs = e:load("import mod2")
 check(ok)
-p = e:lookup("mod2.x")
+p = e.env:lookup("x", "mod2")
 check(not p)					    -- x is declared local
-p = e:lookup("mod2.y")
+p = e.env:lookup("y", "mod2")
 check(p)
 
 ok, _, msgs = e:load("import mod2 as foobar")
 check(ok)
-p = e:lookup("foobar.x")
+p = e.env:lookup("x", "foobar")
 check(not p)
-p = e:lookup("foobar.y")
+p = e.env:lookup("y", "foobar")
 check(p)
 
-p = e:lookup("x")
+p = e.env:lookup("x")
 check(not p)
-p = e:lookup("y")
+p = e.env:lookup("y")
 check(not p)
 
 ok, pkgname, msgs = e:load("import mod2 as .")
 check(ok)
 check(not pkgname)
-p = e:lookup("x")
+p = e.env:lookup("x")
 check(not p)
-p = e:lookup("y")
+p = e.env:lookup("y")
 check(p)
 
 ok, pkgname, msgs = e:load("import mod3")
 check(ok)
 check(not pkgname)
-p = e:lookup("mod3")
+p = e.env:lookup("mod3")
 check(not p)
-p = e:lookup("name_is_unexpectedly_different_from_file_name.y")
+p = e.env:lookup("y", "name_is_unexpectedly_different_from_file_name")
 check(p)
 
 ok, m, left, t0 = e:match("name_is_unexpectedly_different_from_file_name.y", "hello world")
@@ -114,7 +116,7 @@ check(m.subs, "missing submatch for x")
 check(m.subs and m.subs[1].type=="name_is_unexpectedly_different_from_file_name.x")
 
 -- x is local to mod3.  make sure we cannot see it.
-p = e:lookup("name_is_unexpectedly_different_from_file_name.x")
+p = e.env:lookup("name_is_unexpectedly_different_from_file_name.x")
 check(not p)
 
 -- check that "import as..." works
@@ -132,13 +134,13 @@ check(m.subs and m.subs[1].type=="foo.x")
 
 
 -- check the same for grammars
-p = e:lookup("name_is_unexpectedly_different_from_file_name.gx") -- local
+p = e.env:lookup("name_is_unexpectedly_different_from_file_name.gx") -- local
 check(not p)
-p = e:lookup("foo.gx")				    -- local
+p = e.env:lookup("foo.gx")				    -- local
 check(not p)
-p = e:lookup("gy")				    -- not imported at top level
+p = e.env:lookup("gy")				    -- not imported at top level
 check(not p)
-p = e:lookup("foo.gy")
+p = e.env:lookup("gy", "foo")
 check(p)
 ok, m, left, t0 = e:match("foo.gy", "hello world")
 check(ok)

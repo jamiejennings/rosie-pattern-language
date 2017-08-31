@@ -61,7 +61,7 @@ success, pkg, msg = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
 check(type(success)=="boolean")
 check(pkg==nil)
 check(type(msg)=="table")
-t = e:lookup("a")
+t = e.env:lookup("a")
 check(type(t)=="table")
 
 ----------------------------------------------------------------------------------------

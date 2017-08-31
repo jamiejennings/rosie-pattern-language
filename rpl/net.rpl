@@ -100,8 +100,8 @@ fqdn = { subdomain {"." subdomain}+ "."? port? }
 -- involved than this simple pattern, which can accept some invalid addresses and may reject some
 -- valid ones.
 
-alias name_char = { [:alnum:] / [!#$%\^&*()_-+=|\\'`~?/{}{}:;] }
-alias name = { name_char {name_char / "."}* }
+local alias name_char = { [:alnum:] / [!#$%\^&*()_-+=|\\'`~?/{}{}:;] }
+local alias name = { name_char {name_char / "."}* }
 email = { name "@" host }
 -- test email accepts "me@here.com", "you+filter@somewhere.org"
 -- TODO: add rejecting email strings
@@ -109,12 +109,15 @@ email = { name "@" host }
 ---------------------------------------------------------------------------------------------------
 -- URI
 ---------------------------------------------------------------------------------------------------
+-- TODO: Revise per RFCxxxx
+-- TODO: url requires host/ipv4 but should not; if missing, will it require rooted_path?
 
 -- URI syntax highly simplified here (e.g. no query parms)
 protocol = {{[:alpha:]+} "://"}
 local alias path_char = [:alpha:] / [:digit:] / [-._~!$&'()*+,;=:@] / { "%" [:xdigit:] [:xdigit:] }
-rooted_path = { "/" path_char+ }+ / "/"
-url = {protocol {host / ipv4}? rooted_path?}
+path = { "/"? path_char+ {"/" path_char+}* "/"? } / "/"
+rooted_path = {>"/" path}
+url = {protocol {host / ipv4} rooted_path?}
 -- test url accepts "http://www.google.com", "http://google.com/"
 -- test url accepts "https://www.github.com/jamiejennings/rosie-pattern-language"
 -- test url accepts "ftp://some.ftp.net/path/to/file.zip"

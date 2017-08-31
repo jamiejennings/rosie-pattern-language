@@ -29,8 +29,6 @@ local is_exception = violation.is_exception
 local recordtype = require "recordtype"
 parent = recordtype.parent
 local environment = require "environment"
-lookup = environment.lookup
-bind = environment.bind
 local expand = require "expand"
 
 local function raise_error(msg, a)
@@ -386,7 +384,7 @@ local function grammar(a, env, prefix, messages)
       assert(type(rule.ref.localname)=="string")
       local id = rule.ref.localname
       labels[id] = (id == grammar_id) and common.compose_id{prefix, id} or common.compose_id{prefix, grammar_id, id}
-      bind(gtable, id, pattern.new{name=id, peg=V(id), alias=rule.is_alias})
+      gtable:bind(id, pattern.new{name=id, peg=V(id), alias=rule.is_alias})
       common.note("grammar: binding " .. id)
    end
    -- Second pass: compile right hand sides in gtable environment
@@ -403,7 +401,7 @@ local function grammar(a, env, prefix, messages)
    local t = {}
    for id, pat in pairs(pats) do t[id] = pat.peg; end
    t[1] = start					    -- first rule is start rule
-   local aliasflag = lookup(gtable, t[1]).alias
+   local aliasflag = gtable:lookup(t[1]).alias
    local success, peg_or_msg = pcall(P, t)	    -- P(t)
    if (not success) then
       assert(type(peg_or_msg)=="string")
@@ -443,7 +441,7 @@ local function rep(a, env, prefix, messages)
 end
 
 local function ref(a, env, prefix, messages)
-   local pat = lookup(env, a.localname, a.packagename)
+   local pat = env:lookup(a.localname, a.packagename)
    local name = common.compose_id{a.packagename, a.localname}
    if (not pat) then raise_error("unbound identifier: " .. name, a); end
    check_pattern(pat, a)
@@ -475,7 +473,7 @@ end
 
 local function application(a, env, prefix, messages)
    local ref = a.ref
-   local fn_ast = lookup(env, ref.localname, ref.packagename)
+   local fn_ast = env:lookup(ref.localname, ref.packagename)
    local name = common.compose_id{ref.packagename, ref.localname}
    if (not ref) then raise_error("unbound identifier: " .. name, ref); end
    if not pfunction.is(fn_ast) then
@@ -576,7 +574,7 @@ function initialize_bindings(stmts, pkgenv, prefix, messages)
       assert(ast.binding.is(b))			    -- ensured by expand.block()
       local ref = b.ref
       assert(not ref.packagename)
-      local val = lookup(pkgenv, ref.localname)
+      local val = pkgenv:lookup(ref.localname)
       if val then
 	 if novalue.is(val) then
 	    local msg = "identifier already bound: " .. ref.localname
@@ -589,7 +587,7 @@ function initialize_bindings(stmts, pkgenv, prefix, messages)
       else
 	 common.note("Creating initial binding for " .. ref.localname)
       end
-      bind(pkgenv, ref.localname, novalue.new{exported=true, ast=b})
+      pkgenv:bind(ref.localname, novalue.new{exported=true, ast=b})
    end -- for
    return true
 end
@@ -611,7 +609,7 @@ function compile_statements(stmts, pkgenv, prefix, messages)
 	 pat.alias = b.is_alias
 	 if b.is_local then pat.exported = false; end
 	 common.note("Binding value to " .. ref.localname)
-	 bind(pkgenv, ref.localname, pat)
+	 pkgenv:bind(ref.localname, pat)
       else
 	 assert(false,
 		"Internal error: unexpected return value from expression compiler: " ..
