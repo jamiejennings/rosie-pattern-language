@@ -50,7 +50,7 @@ local repl_patterns = [==[
       package = rpl.packagename
       list = ".list" arg?
       star = "*"
-      clear = ".clear" (rpl.identifier / star)?
+      clear = ".clear" rpl.identifier? --(rpl.identifier / star)?
       help = ".help"
       badcommand = {"." .+}
       command = load / match / trace / debug / list / clear / help / badcommand
@@ -152,21 +152,18 @@ function repl.repl(en)
 	       if csubs and csubs[1] then
 	          filter = csubs[1].data
 	       end
-	       local tbl = ui.to_property_table(en.env, filter)
-	       ui.print_props(tbl)
+	       local tbl, msg = ui.to_property_table(en.env, filter)
+	       if tbl then ui.print_props(tbl)
+	       else io.write(msg, "\n")
+	       end
 	    elseif cname=="clear" then
 	       if csubs and csubs[1] then
 		  local name, pos, id, subs = common.decode_match(csubs[1])
-		  if (name=="identifier") then
-		     if not en:clear(id) then io.write("Repl: undefined identifier: ", id, "\n"); end
-		  elseif (name=="star") then
-		     en:clear()
-		     io.write("Pattern environment cleared\n")
-		  else
-		     io.write("Repl: internal error while processing clear command\n")
+		  if not en.env:lookup(id) then io.write("Repl: undefined identifier: ", id, "\n")
+		  else en.env:bind(id, nil)
 		  end
 	       else -- missing argument
-		  io.write("Error: supply the identifier to clear, or * for all\n")
+		  io.write("Error: missing the identifier to clear\n")
 	       end
 	    elseif cname=="match" or cname =="trace" then
 	       if (not csubs) or (not csubs[1]) then
