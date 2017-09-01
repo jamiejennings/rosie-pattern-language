@@ -95,12 +95,17 @@ function ui.to_property_table(env, filter)
       local props = ui.properties(pkgname, pkgenv)
       if props.type=="package" then
 	 local tbl = environment.exported_bindings(pkgenv)
-	 for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v); end
+	 for k,v in pairs(tbl) do
+	    tbl[k] = ui.properties(k, v)
+	 end
 	 return apply_filter(tbl, localname)
       else
 	 return nil, "Type error: expected a package, found a " .. props.type
       end
    else
+      if pkgname=="*" then
+	 return nil, "Wildcard for package name not supported"
+      end
       return nil, "Package '" .. pkgname .. "' not found"
    end
 end

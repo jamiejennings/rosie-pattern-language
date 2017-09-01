@@ -12,9 +12,9 @@
 --     then later, 'foo = foo'
 --   - Be able to enter a grammar interactively
 --   - Support .import and .load commands, where .import does a re-loading?
---   - Change the .list command to do what the CLI now does
---   - MAYBE Be able to change the search path
---   - Make sure that 'clear' works
+--   + Change the .list command to do what the CLI now does
+--   X MAYBE Be able to change the search path
+--   + Rename 'clear' to 'undefine' and make sure that 'undefine' works
 
 
 local repl = {}
@@ -50,10 +50,10 @@ local repl_patterns = [==[
       package = rpl.packagename
       list = ".list" arg?
       star = "*"
-      clear = ".clear" rpl.identifier? --(rpl.identifier / star)?
+      undefine = ".undefine" rpl.identifier? --(rpl.identifier / star)?
       help = ".help"
       badcommand = {"." .+}
-      command = load / match / trace / debug / list / clear / help / badcommand
+      command = load / match / trace / debug / list / undefine / help / badcommand
       statements = rpl.rpl_statements
       identifier = ~ rpl.identifier ~ $
       input = command / identifier / statements
@@ -156,14 +156,18 @@ function repl.repl(en)
 	       if tbl then ui.print_props(tbl)
 	       else io.write(msg, "\n")
 	       end
-	    elseif cname=="clear" then
+	    elseif cname=="undefine" then
 	       if csubs and csubs[1] then
 		  local name, pos, id, subs = common.decode_match(csubs[1])
-		  if not en.env:lookup(id) then io.write("Repl: undefined identifier: ", id, "\n")
-		  else en.env:bind(id, nil)
+		  local situation = en.env:unbind(id)
+		  if situation then
+		     io.write("Repl: removed binding, revealing inherited binding: ",
+			      tostring(situation), '\n')
+		  elseif situation==nil then
+		     io.write("Repl: undefined identifier: ", id, "\n")
 		  end
 	       else -- missing argument
-		  io.write("Error: missing the identifier to clear\n")
+		  io.write("Error: missing the identifier to undefine\n")
 	       end
 	    elseif cname=="match" or cname =="trace" then
 	       if (not csubs) or (not csubs[1]) then
@@ -253,8 +257,8 @@ local help_text = [[
    .match exp quoted_string   match RPL exp against (quoted) input data
    .trace exp quoted_string   show full trace output of the matching process
    .debug {on|off}            show debug state; with an argument, set it
-   .list [package] [filter]   list patterns in package (if given) that match filter (if given)
-   .clear <id>                clear the pattern definition of <id>, * for all
+   .list [filter]             list patterns that match filter string (* for all)
+   .undefine <id>             remove the binding to <id>
    .help                      print this message
 
    EOF (^D) will exit the read/eval/print loop.

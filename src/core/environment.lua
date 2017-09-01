@@ -232,6 +232,8 @@ local env
 
 local function lookup(env, id, prefix)
    assert(environment.is(env))
+   assert(type(id)=="string")
+   assert( (prefix==nil) or ((type(prefix)=="string") and (#prefix > 0)) )
    if prefix then
       local mod = lookup(env, prefix)
       if environment.is(mod) then
@@ -249,11 +251,30 @@ local function lookup(env, id, prefix)
    end
 end
 
--- N.B. value can be nil (this is how bindings are removed)
 local function bind(env, id, value)
    assert(environment.is(env))
    assert(type(id)=="string")
    env.store[id] = value
+end
+
+-- Use env:bind(id, nil) to remove a shallow binding, possibly exposing another binding for the
+-- same identifier from an outer environment.
+-- Use env:unbind(id) in an interactive setting to remove a binding no matter where it came from.
+-- This may also expose a deeper binding for the same identifier, which can be removed with
+-- another call to unbind().
+-- Return values:
+--    nil if id not found;
+--    false if found (and unbound);
+--    true if unbound but the unbinding exposed another binding for the same identifier
+local function unbind(env, id)
+   assert(environment.is(env))
+   assert(type(id)=="string")
+   while (not env.store[id]) and env.parent do
+      env = env.parent
+   end
+   if not env.store[id] then return nil; end
+   env.store[id] = nil
+   return lookup(env, id) or false
 end
 
 env = recordtype.new("environment",
@@ -263,6 +284,7 @@ env = recordtype.new("environment",
 		      exported = false,		    -- prevents export of modules
 		      lookup = lookup,
 		      bind = bind,
+		      unbind = unbind,
 		      bindings = function(self)
 				    local current_env = self
 				    return function(_, key)
