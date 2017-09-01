@@ -168,10 +168,10 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    if a.pdecl then
       -- The code we compiled defined a module, which we have instantiated as a package (in env).
       -- But there is no importpath, so we cannot create an entry in the package table.
-      local fullpath = origin and origin.filename
-      local msg = "package " .. tostring(a.pdecl.name) .. 
-                  " loaded directly from " .. ((fullpath and tostring(fullpath)) or "top level")
-      table.insert(messages, violation.warning.new{who='loader', message=msg, ast=a})
+   --    local fullpath = origin and origin.filename
+--       local msg = "package " .. tostring(a.pdecl.name) .. 
+--                   " loaded directly from " .. ((fullpath and tostring(fullpath)) or "top level")
+--       table.insert(messages, violation.warning.new{who='loader', message=msg, ast=a})
       return true, a.pdecl.name, env
    else
       -- The caller must replace their top_level_env with the returned env in order to see the new

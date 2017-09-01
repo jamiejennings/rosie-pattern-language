@@ -84,13 +84,17 @@ function violation.sourceref_tostring(sref)
    return str or ""
 end
 
+local function indent(str)
+   return str:gsub('\n', '\n\t')
+end
+
 function violation.tostring(err)
    local kind = recordtype.typename(err)
    if not kind then
       return "Unexpected error type: " .. tostring(err)
    end
    local str = kind .. "\n"
-   str = str .. "\t[" .. err.who .. "]: " .. err.message .. "\n\t"
+   str = str .. "\t[" .. err.who .. "]: " .. indent(err.message) .. "\n\t"
    if violation.syntax.is(err) then
       local sref = assert(err.sourceref)
       return str .. violation.sourceref_tostring(sref)

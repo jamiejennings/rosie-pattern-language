@@ -7,11 +7,10 @@
 ---- AUTHOR: Jamie A. Jennings
 
 -- TODO:
---   - Add trace back in
---   - Fix the infinite loop triggered in the repl when someone does 'foo = "x"' and
+--   + Fix the infinite loop triggered in the repl when someone does 'foo = "x"' and
 --     then later, 'foo = foo'
 --   - Be able to enter a grammar interactively
---   - Support .import and .load commands, where .import does a re-loading?
+--   - Support .import which does a re-loading?  Or .unload to remove a package?
 --   + Change the .list command to do what the CLI now does
 --   X MAYBE Be able to change the search path
 --   + Rename 'clear' to 'undefine' and make sure that 'undefine' works
@@ -44,6 +43,7 @@ local repl_patterns = [==[
       args = .*
       match = ".match" args 
       trace = ".trace" args
+      fulltrace = ".fulltrace" args
       on_off = "on" / "off"
       debug = ".debug" on_off?
       alnum = { [[:alpha:]] / [[:digit:]] }
@@ -53,7 +53,7 @@ local repl_patterns = [==[
       undefine = ".undefine" rpl.identifier? --(rpl.identifier / star)?
       help = ".help"
       badcommand = {"." .+}
-      command = load / match / trace / debug / list / undefine / help / badcommand
+      command = load / match / trace / fulltrace / debug / list / undefine / help / badcommand
       statements = rpl.rpl_statements
       identifier = ~ rpl.identifier ~ $
       input = command / identifier / statements
@@ -70,7 +70,7 @@ assert(pargs_rplx, "internal error: pargs_rplx failed to compile")
 
 local repl_prompt = "Rosie> "
 
-local function print_match(m, left, eval_p)
+local function print_match(m, left, trace_command)
    if type(m)=="userdata" then m = lpeg.getdata(m); end
    if m then 
       io.write(util.prettify_json(m, true), "\n")
@@ -78,12 +78,13 @@ local function print_match(m, left, eval_p)
 	 print(string.format("Warning: %d unmatched characters at end of input", left))
       end
    else
-      local msg = "Repl: No match"
-      if not eval_p then
-	 msg = msg .. ((debug and "  (turn debug off to hide the trace output)")
-		    or "  (turn debug on to show the trace output)")
+      if not trace_command then
+	 if not debug then
+	    print("No match  [Turn debug on to show the trace output]")
+	 else
+	    print("No match  [Turn debug off to hide the trace output]")
+	 end
       end
-      print(msg)
    end
 end
 
@@ -132,14 +133,18 @@ function repl.repl(en)
 		  end
 		  local ok, messages, full_path
 		  ok, pkgname, messages, full_path = en:loadfile(path, true)
-		  if ok then
-		     if messages then
-			for _,msg in ipairs(messages) do print(msg); end
+		  if messages then
+		     for _,msg in ipairs(messages) do
+			print(violation.tostring(msg))
 		     end
-		     io.write("Loaded ", full_path, "\n")
-		  else
-		     io.write(messages, "\n")
 		  end
+		  if ok then
+		     if pkgname then
+			io.write("Loaded package ", pkgname, " from ", full_path, "\n")
+		     else
+			io.write("Loaded ", full_path, "\n")
+		     end
+		  end -- if ok
 	       end -- if csubs[1]
 	    elseif cname=="debug" then
 	       if csubs then
@@ -169,7 +174,8 @@ function repl.repl(en)
 	       else -- missing argument
 		  io.write("Error: missing the identifier to undefine\n")
 	       end
-	    elseif cname=="match" or cname =="trace" then
+	    elseif cname=="match" or cname=="trace" or cname=="fulltrace" then
+	       local trace_command = (cname ~= "match")
 	       if (not csubs) or (not csubs[1]) then
 		  io.write("Missing expression and input arguments\n")
 	       else
@@ -212,12 +218,19 @@ function repl.repl(en)
 			   io.write(err_string, "\n")
 			else
 			   local m, left = rplx:match(input_text)
-			   if (debug and (not m)) or cname=="trace" then
-			      local ok, tr = en:trace(str, input_text, 1, "condensed")
-			      -- TODO: check 'ok'?
-			      print(tr)
+			   if (debug and (not m)) or trace_command then
+			      local tracetype = (cname=="trace") and "condensed" or "full"
+			      local ok, tr = en:trace(str, input_text, 1, tracetype)
+			      if not ok then
+				 io.write("Internal error: expression did not compile\n")
+			      else
+				 if (not trace_command) and tr:sub(-9)=="\nNo match" then
+				    tr = tr:sub(1,-10)
+				 end
+				 print(tr)
+			      end
 			   end
-			   print_match(m, left, (cname=="trace"))
+			   print_match(m, left, trace_command)
 			end -- did exp compile
 		     end -- could not parse out the expression and input string from the repl input
 		  end -- if unable to parse argtext into: stuff "," quoted_string
