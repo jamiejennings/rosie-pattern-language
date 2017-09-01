@@ -306,6 +306,12 @@ function environment.exported_bindings(env)
    return tbl
 end
 
+function environment.all_bindings(env)
+   local tbl = {}
+   for k,v in env:bindings() do tbl[k]=v; end
+   return tbl
+end
+
 -- -- return a flat representation of env (recall that environments are nested)
 -- function environment.flatten(env, output_table)
 --    output_table = output_table or {}

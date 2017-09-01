@@ -6,6 +6,17 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+-- TODO:
+--   - Add trace back in
+--   - Fix the infinite loop triggered in the repl when someone does 'foo = "x"' and
+--     then later, 'foo = foo'
+--   - Be able to enter a grammar interactively
+--   - Support .import and .load commands, where .import does a re-loading?
+--   - Change the .list command to do what the CLI now does
+--   - MAYBE Be able to change the search path
+--   - Make sure that 'clear' works
+
+
 local repl = {}
 
 -- N.B. 'rosie' is a global defined by init and loaded by cli.lua, which calls the repl
@@ -18,8 +29,8 @@ local readline = require "readline"
 local lpeg = require "lpeg"
 local os = require "os"
 
--- For basic ~ expansion when the user enters a file name.  (Only ~/... is supported, not the
--- ~otheruser/... syntax.)
+-- We support a basic form of tilde expansion when the user enters a file name.  (Only ~/... is
+-- supported, not the ~user/... syntax.)
 local ok, HOMEDIR = pcall(os.getenv, "HOME")
 if (not ok) or (type(HOMEDIR)~="string") then HOMEDIR = ""; end
 
@@ -29,6 +40,7 @@ local repl_patterns = [==[
       parsed_args = rpl_exp_placeholder? ","? word.dq?
       path = {![[:space:]] {"\\ " / .}}+		    -- escaped spaces allowed
       load = ".load" path?
+      arg = [:^space:]+
       args = .*
       match = ".match" args 
       trace = ".trace" args
@@ -36,7 +48,7 @@ local repl_patterns = [==[
       debug = ".debug" on_off?
       alnum = { [[:alpha:]] / [[:digit:]] }
       package = rpl.packagename
-      list = ".list" package? {alnum+}?
+      list = ".list" arg?
       star = "*"
       clear = ".clear" (rpl.identifier / star)?
       help = ".help"
@@ -96,8 +108,10 @@ function repl.repl(en)
 	 local _, _, _, subs = common.decode_match(m)
 	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
-	    local def = en:lookup(text)
-	    if def then io.write(def.binding, "\n")
+	    local def = en.env:lookup(text)
+	    if def then
+	       local props = ui.properties(text, def)
+	       io.write(props.binding, "\n")
 	    else
 	       io.write(string.format("Repl: undefined identifier %s\n", text))
 	       if text=="help" then
@@ -134,13 +148,12 @@ function repl.repl(en)
 	       end -- if csubs
 	       io.write("Debug is ", (debug and "on") or "off", "\n")
 	    elseif cname=="list" then
-	       print("\n*** TODO: decide on a syntax for listing the patterns from an imported module ***")
-	       local filter = nil
+	       local filter = "*"
 	       if csubs and csubs[1] then
-	          _,_,filter,_ = common.decode_match(csubs[1])
+	          filter = csubs[1].data
 	       end
-	       local env = en:lookup()
-	       ui.print_env(env, filter)
+	       local tbl = ui.to_property_table(en.env, filter)
+	       ui.print_props(tbl)
 	    elseif cname=="clear" then
 	       if csubs and csubs[1] then
 		  local name, pos, id, subs = common.decode_match(csubs[1])
@@ -215,8 +228,14 @@ function repl.repl(en)
 	    end -- switch on command
 	 elseif name=="statements" then
 	    local ok, pkg, messages = en:load(text);
-	    local err_string = table.concat(map(violation.tostring, messages), "\n")
-	    io.write(err_string, "\n")
+	    if (not ok) and (#messages == 0) then
+	       io.write("Repl: invalid rpl statement.  Further detail is unavailable.\n")
+	       io.write("Please consider reporting this as a bug.\n")
+	    end
+	    if #messages > 0 then
+	       local err_string = table.concat(map(violation.tostring, messages), "\n")
+	       io.write(err_string, "\n")
+	    end
 	 else
 	    io.write("Repl: internal error (name was '" .. tostring(name) .. "')\n")
 	 end -- switch on type of input received

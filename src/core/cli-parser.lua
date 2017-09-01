@@ -70,10 +70,7 @@ function p.create(rosie)
    parser:command_target("command")
    local cmd_help = parser:command("help")
    :description("Print this help message")
-   -- grep command
-   local cmd_grep = parser:command("grep")
-   :description("In the style of Unix grep, match the pattern anywhere in each input line")
-   -- info command
+   -- config command
    local cmd_info = parser:command("config")
    :description("Print rosie configuration information")
    -- patterns command
@@ -83,6 +80,9 @@ function p.create(rosie)
    :description("List all names that have substring 'filter'")
    :default("*")
    :args(1)
+   -- grep command
+   local cmd_grep = parser:command("grep")
+   :description("In the style of Unix grep, match the pattern anywhere in each input line")
    -- match command
    local cmd_match = parser:command("match")
    :description("Match the given RPL pattern against the input")

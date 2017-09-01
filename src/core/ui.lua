@@ -17,7 +17,7 @@ function ui.properties(name, obj)
    if common.pattern.is(obj) then
       local kind = "pattern"
       local capture = (not obj.alias)
-      local binding = obj.ast and ast.tostring(obj.ast) or "built-in"
+      local binding = obj.ast and ast.tostring(obj.ast) or tostring(obj)
       local color, reason = co.query(name)
       local color_explanation = color
       if reason=="default" then color_explanation = color_explanation .. " (default)"; end
@@ -69,7 +69,9 @@ local function apply_filter(tbl, name_filter)
 	 out[k] = v;
       end
    end
-   return out, count, total
+   out[1] = count				    -- ugh.
+   out[2] = total
+   return out
 end   
 
 local function shorten(str, len)
@@ -79,8 +81,32 @@ local function shorten(str, len)
    return str
 end
    
-function ui.print_env(tbl, filter, skip_header)
-   local tbl, count, total = apply_filter(tbl, filter)
+function ui.to_property_table(env, filter)
+   assert(environment.is(env))
+   assert(type(filter)=="string")
+   local pkgname, localname = common.split_id(filter)
+   if not pkgname then
+      local tbl = environment.all_bindings(env)
+      for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v); end
+      return apply_filter(tbl, localname)
+   end
+   local pkgenv = env:lookup(pkgname)
+   if pkgenv then
+      local props = ui.properties(pkgname, pkgenv)
+      if props.type=="package" then
+	 local tbl = environment.exported_bindings(pkgenv)
+	 for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v); end
+	 return apply_filter(tbl, localname)
+      else
+	 return nil, "Type error: expected a package, found a " .. props.type
+      end
+   else
+      return nil, "Package '" .. pkgname .. "' not found"
+   end
+end
+
+function ui.print_props(tbl, skip_header)
+   local count, total = tbl[1], tbl[2]		    -- ugh.
    local fmt = "%-30s %-4s %-10s %-15s %s"
    if not skip_header then
       print();
@@ -91,7 +117,7 @@ function ui.print_env(tbl, filter, skip_header)
    local s, e
 
    local names = {}
-   for k,v in pairs(tbl) do table.insert(names, k); end
+   for k,v in pairs(tbl) do if type(k)=="string" then table.insert(names, k); end; end
    table.sort(names)
 
    for _,v in ipairs(names) do
@@ -102,8 +128,7 @@ function ui.print_env(tbl, filter, skip_header)
    end
    if not skip_header then
       print()
-      if filter then print(count .. "/" .. total .. " names shown")
-      else print(total .. " names"); end
+      print(count .. "/" .. total .. " names shown")
    end
 end
 

@@ -204,30 +204,13 @@ local function run(args)
 
    if args.command == "list" then
       if not args.verbose then greeting(); end
-      assert(args.filter)			    -- default is "*"
-      local pkgname, localname = common.split_id(args.filter)
-      if not pkgname then
-	 local tbl = environment.exported_bindings(en.env)
-	 for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v); end
-	 ui.print_env(tbl, localname)
-	 os.exit()
+      local props_table, msg = ui.to_property_table(en.env, args.filter)
+      if props_table then
+	 ui.print_props(props_table)
+	 os.exit(0)
       else
-	 local pkgenv = en.env:lookup(pkgname)
-	 if pkgenv then
-	    local props = ui.properties(pkgname, pkgenv)
-	    if props.type=="package" then
-	       print("Package " .. pkgname)
-	       local tbl = environment.exported_bindings(pkgenv)
-	       for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v); end
-	       ui.print_env(tbl, localname)
-	       os.exit()
-	    else
-	       print("Not an environment: "); for k,v in pairs(props) do print(k,v) end
-	    end
-	 else
-	    print("Package '" .. pkgname .. "' not found")
-	 end
-	 os.exit()
+	 print(msg)
+	 os.exit(-1)
       end
    elseif args.command == "repl" then
       local repl_mod = mod.import("repl", rosie_mod)
