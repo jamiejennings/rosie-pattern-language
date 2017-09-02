@@ -1,6 +1,7 @@
 -- There should be one line above which is inserted by the makefile during installation.  It
 -- should look like this:
 -- local ROSIE_HOME = "/Users/jjennings/rosie-pattern-language"
+ROSIE_COMMAND = ""
 loader, msg = loadfile(ROSIE_HOME .. "/lib/submodule.luac", "b")
 if not loader then
    loader, msg = loadfile(ROSIE_HOME .. "/submodules/lua-modules/submodule.lua", "t")
