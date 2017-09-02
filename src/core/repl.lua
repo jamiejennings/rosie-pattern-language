@@ -6,14 +6,8 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- TODO:
---   + Fix the infinite loop triggered in the repl when someone does 'foo = "x"' and
---     then later, 'foo = foo'
---   - Be able to enter a grammar interactively
---   - Support .import which does a re-loading?  Or .unload to remove a package?
---   + Change the .list command to do what the CLI now does
---   X MAYBE Be able to change the search path
---   + Rename 'clear' to 'undefine' and make sure that 'undefine' works
+-- FUTURE:
+--   - Create a .import command which does a re-loading?  Or .unload to remove a package?
 
 
 local repl = {}
