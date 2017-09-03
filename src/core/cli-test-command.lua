@@ -47,7 +47,7 @@ function p.setup(en)
    ]==]
    local ok, errs = en:import("rosie/rpl_1_1", ".")
    if not ok then
-      for _,v in ipairs(errs) do
+      for _,v in ipairs(errs or {}) do
 	 print(violation.tostring(v))
       end
       error("Internal error!  (See above.)")
@@ -91,7 +91,6 @@ function p.run(rosie, en, args, filename)
    if args.verbose then
       write_error("File compiled successfully")
    end
-   cli_common.set_encoder(rosie, test_engine, false)
    -- read the tests out of the file and run each one
    local f, msg = io.open(filename, 'r')
    if not f then error(msg); end

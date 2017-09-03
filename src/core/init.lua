@@ -249,31 +249,6 @@ function populate_info()
 end
 
 ----------------------------------------------------------------------------------------
--- Output encoding functions
-----------------------------------------------------------------------------------------
-
--- Map encoder names to the internal value needed to use them
-
-function create_encoder_table()
-   return {
-      line = 2,
-      json = 1,
-      byte = 0,
-      color = function(m) return color.match(m, color.colormap); end,
-
-      nocolor = function(m) return color.match(m, {}); end,
-      text = function(m) return m.data end,	    -- only the matching text
-      subs = function(m)			    -- each submatch on its own line
-		return table.concat(list.map(function(sub) return sub.data end,
-					     m.subs),
-				    "\n")
-	     end,
-      none = false,
-      [false] = false,
-   }
-end
-
-----------------------------------------------------------------------------------------
 -- Provide an API for setting/checking modes
 ----------------------------------------------------------------------------------------
 
@@ -300,8 +275,32 @@ ROSIE_ENGINE = create_rpl_1_1_engine(CORE_ENGINE)
 assert(ROSIE_ENGINE)
 populate_info()
 
+common.add_encoder("color", 0,
+		   function(m, input, start)
+		      return color.match(common.byte_to_lua(m, input), color.colormap)
+		   end)
+common.add_encoder("nocolor", 0,
+		   function(m, input, start)
+		      return color.match(common.byte_to_lua(m, input), {})
+		   end)
+common.add_encoder("text", 0,
+		   function(m, input, start)
+		      m = common.byte_to_lua(m, input)
+		      return m.data
+		   end)
+common.add_encoder("subs", 0,
+		   function(m, input, start)
+		      m = common.byte_to_lua(m, input)
+		      return table.concat(list.map(function(sub)
+						      return sub.data
+						   end,
+						   m.subs),
+					  "\n")
+		   end)
+
+rosie_package.encoders = common.encoder_table
+
 rosie_package.engine = engine
-rosie_package.encoders = create_encoder_table()
 rosie_package.info = function(...) return ROSIE_INFO; end
 rosie_package.import = import
 

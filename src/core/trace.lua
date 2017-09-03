@@ -14,7 +14,7 @@ local rmatch = common.rmatch
 
 local trace = {}
 
-local BYTE_ENCODING = 0
+local BYTE_ENCODING, fn_BYTE_ENCODING = common.lookup_encoder("byte")
 
 ---------------------------------------------------------------------------------------------------
 -- Print a trace
@@ -352,7 +352,7 @@ local function cs_simple(e, a, input, start, expected, nextpos)
    local simple = a.pat
    assert(pattern.is(simple))
    local wrapped_peg = common.match_node_wrap(simple.peg, "*")
-   local m, nextstart = rmatch(wrapped_peg, input, start, BYTE_ENCODING)
+   local m, nextstart = rmatch(wrapped_peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
    if expected ~= nil then
       if (m and (not complement)) or ((not m) and complement) then
 	 assert(expected, "simple character set match differs from expected: " ..
@@ -446,7 +446,7 @@ function expression(e, a, input, start)
    assert(pattern.is(pat),
 	  "no pattern stored in ast node " .. tostring(a) .. " (found " .. tostring(pat) .. ")")
    local peg = common.match_node_wrap(pat.peg, "*")
-   local ok, m, nextpos = pcall(rmatch, peg, input, start, BYTE_ENCODING)
+   local ok, m, nextpos = pcall(rmatch, peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
    if not ok then
       print("\n\n\nTrace failed while working on: ", a)
       if a.exps then print("a.exps: " .. tostring(list.from(a.exps))); end

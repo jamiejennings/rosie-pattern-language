@@ -129,7 +129,10 @@ local any_token = (fake_package + statement + expression + top_level_syntax_erro
 function parse_without_error_check(str, pos, tokens)
    pos = pos or 1
    tokens = tokens or {}
-   local nt, nextpos = rmatch(any_token, str, pos)
+   local rmatch_encoder, fn_encoder = common.lookup_encoder("default")
+   assert(type(rmatch_encoder)=="number")
+   assert(type(fn_encoder)=="function")
+   local nt, nextpos = rmatch(any_token, str, pos, rmatch_encoder, fn_encoder)
    if (not nt) then return tokens, #str-pos+1; end  -- return ASTlist and leftover
    table.insert(tokens, nt)
    return parse_without_error_check(str, nextpos, tokens)

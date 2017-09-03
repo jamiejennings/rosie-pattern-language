@@ -323,14 +323,17 @@ local function insert_input_text(m, input)
    return m
 end
 
-function common.rmatch(peg, input, start, encode, total_time, lpegvm_time)
-   local Cencoder = encode or 0			    -- default is compact byte encoding
-   if encode==-1 then Cencoder = 0; end		    -- -1 ==> no output
-   local m, nextpos, abend, t1, t2 = peg:rmatch(input, start, Cencoder, total_time, lpegvm_time)
+function common.rmatch(peg, input, start, rmatch_encoder, fn_encoder, total_time, lpegvm_time)
+--   local Cencoder = encode or 0			    -- default is compact byte encoding
+--   if encode==-1 then Cencoder = 0; end		    -- -1 ==> no output
+   local m, nextpos, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
+   assert(start, debug.traceback())
    if not m then return false, start, t1, t2; end
-   if not encode then return insert_input_text(lpeg.decode(m), input), nextpos, t1, t2
-   elseif encode==-1 then return nil, nextpos, t1, t2
-   else return m, nextpos, t1, t2; end
+   -- TODO: return abend also
+   return fn_encoder(m, input, start), nextpos, t1, t2
+--   if not encode then return insert_input_text(lpeg.decode(m), input), nextpos, t1, t2
+--   elseif encode==-1 then return nil, nextpos, t1, t2
+--   else return m, nextpos, t1, t2; end
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the
@@ -468,5 +471,43 @@ function common.type_is_syntax_error(t)
    assert(type(names)=="table")
    return (names[#names]=="syntax_error")
 end
+
+----------------------------------------------------------------------------------------
+-- Output encoding functions
+----------------------------------------------------------------------------------------
+
+function common.byte_to_lua(m, input)
+   return insert_input_text(lpeg.decode(m), input)
+end
+
+local identity_fn = function(...) return ... end
+
+common.encoder_table = 
+   setmetatable({ line = {2, identity_fn},
+		  json = {1, function(m, input, start)
+				return lpeg.getdata(m)
+			     end},
+		  byte = {0, identity_fn},
+		  none = {0, function(...)
+				return nil
+			     end},
+		  default = {0, common.byte_to_lua},
+	       },
+		{__index = function(...) return {} end})
+
+function common.encoder_returns_userdata(encoder)
+   return (encoder=="byte") or (encoder=="line")
+end
+
+function common.add_encoder(name, rmatch_arg, fn)
+   common.encoder_table[name] = {rmatch_arg, fn}
+end
+
+function common.lookup_encoder(name)
+   local entry = common.encoder_table[name]
+   return entry[1], entry[2]
+end
+
+
 
 return common

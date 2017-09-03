@@ -12,7 +12,13 @@
 -- part of the external API.
 
 -- 1. new() to get a new engine, which is a necessary call when multiple threads will use rosie.
--- 2. Also: compile, load, match, trace, matchfile, tracefile
+-- 2. Also:
+--      compile()
+--      load()
+--      match()
+--      trace()
+--      matchfile()
+--      tracefile()
 -- 3. Future: dependencies, expand, set/get ROSIE_PATH, lookup, unbind
 -- 4. Future: profiling (maybe an API to get the perf info from the last match?)
 -- 

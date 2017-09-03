@@ -47,7 +47,8 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    
    -- Set up what kind of encoding we want done on the output
    local default_encoder = (args.command=="grep") and "line" or "color"
-   cli_common.set_encoder(rosie, en, args.encoder or default_encoder)
+--   cli_common.set_encoder(rosie, en, args.encoder or default_encoder)
+   local encoder = args.encoder or default_encoder
    
    local ok, msg = readable_file(infilename)
    local printable_infilename = (infilename ~= "") and infilename or "stdin"
@@ -65,7 +66,9 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    local ok, cin, cout, cerr =
       pcall(match_function, en, compiled_pattern,
 	    infilename, outfilename, errfilename,
-	    args.wholefile, (args.verbose and "fulltrace" or "trace"))
+	    encoder,
+	    args.wholefile,
+	    (args.verbose and "fulltrace" or "trace"))
 
    if not ok then io.write(cin, "\n"); return; end	-- cin is error message (a string) in this case
    

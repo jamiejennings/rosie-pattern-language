@@ -65,9 +65,10 @@ assert(pargs_rplx, "internal error: pargs_rplx failed to compile")
 local repl_prompt = "Rosie> "
 
 local function print_match(m, left, trace_command)
-   if type(m)=="userdata" then m = lpeg.getdata(m); end
+--   if type(m)=="userdata" then m = lpeg.getdata(m); end
+   assert(type(m)=="table")
    if m then 
-      io.write(util.prettify_json(m, true), "\n")
+      io.write(util.table_to_pretty_string(m, false, true, true), "\n")
       if (left > 0) then
 	 print(string.format("Warning: %d unmatched characters at end of input", left))
       end
@@ -87,11 +88,10 @@ function repl.repl(en)
    if (not ok) then
       error("Argument to repl is not a live engine: " .. tostring(en))
    end
-   en:output(rosie.encoders.json)
    local s = readline.readline(repl_prompt)
    if s==nil then io.write("\nExiting\n"); return nil; end -- EOF, e.g. ^D at terminal
    if s~="" then					   -- blank line input
-      local m, left = input_rplx:match(s)
+      local m, left = input_rplx:match(s, 1)
       if not m then
 	 io.write("Repl: syntax error.  Enter a statement or a command.  Type .help for help.\n")
       else

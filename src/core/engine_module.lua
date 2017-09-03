@@ -182,35 +182,31 @@ end
 --   Create a closure over the encode function to avoid looking it up in e.
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
-local function _match(rplx_exp, input, start, total_time_accum, lpegvm_time_accum)
-   local result, nextpos
-   local encode = rplx_exp.engine.encode_function
-   result, nextpos, total_time_accum, lpegvm_time_accum =
+local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
+   encoder = encoder or "default"
+   local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
+--   assert(rmatch_encoder, "invalid encoder name: " .. tostring(encoder))
+   local match, nextpos, t0, t1 = 
       rmatch(rplx_exp.pattern.peg,
 	     input,
 	     start,
-	     type(encode)=="number" and encode,
+	     rmatch_encoder,
+	     fn_encoder,
 	     total_time_accum,
 	     lpegvm_time_accum)
-   if result then
-      return (type(encode)=="function") and encode(result) or result,
-             #input - nextpos + 1, 
-             total_time_accum, 
-             lpegvm_time_accum
-   end
-   -- return: no match, leftover chars, t0, t1
-   return false, #input, total_time_accum, lpegvm_time_accum;
+   return match, #input-nextpos+1, t0, t1
 end
 
-local function _trace(r, input, start, style)
+local function _trace(r, input, start, encoder, style)
    return trace.expression(r, input, start, style)
 end
    
 -- FUTURE: Maybe cache expressions?
 -- returns matches, leftover, total match time, total spent in lpeg vm
-local function engine_match_trace(e, match_trace_fn, expression, input, start, total_time_accum, lpegvm_time_accum)
+local function engine_match_trace(e, match_trace_fn, expression, input, start, encoder, total_time_accum, lpegvm_time_accum)
    if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
-   if start and type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
+   start = start or 1
+   if type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
    if type(expression)=="string" then
       -- Expression has not been compiled.
       -- If in future we cache the string expressions, then look up expression in the cache here.
@@ -219,18 +215,18 @@ local function engine_match_trace(e, match_trace_fn, expression, input, start, t
       if not expression then return false, msgs; end
    end
    if rplx.is(expression) then
-      return true, match_trace_fn(expression, input, start, total_time_accum, lpegvm_time_accum)
+      return true, match_trace_fn(expression, input, start, encoder, total_time_accum, lpegvm_time_accum)
    else
       engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
    end
 end
 
-local function engine_match(e, expression, input, start, t0, t1)
-   return engine_match_trace(e, _match, expression, input, start, t0, t1)
+local function engine_match(e, expression, input, start, encoder, t0, t1)
+   return engine_match_trace(e, _match, expression, input, start, encoder, t0, t1)
 end
 
-local function engine_trace(e, expression, input, start, style)
-   return engine_match_trace(e, _trace, expression, input, start, style)
+local function engine_trace(e, expression, input, start, encoder, style)
+   return engine_match_trace(e, _trace, expression, input, start, encoder, style)
 end
 
 ----------------------------------------------------------------------------------------
@@ -240,12 +236,12 @@ end
 -- -1 = no output
 --  0 = compact byte encoding with only start/end indices (no text)
 --  1 = compact json encoding with only start/end indices (no text)
-local function get_set_encoder_function(en, f)
-   if f==nil then return en.encode_function; end
-   if f==false or type(f)=="number" or type(f)=="function" then
-      en.encode_function = f;
-   else engine_error(en, "Invalid output encoder: " .. tostring(f)); end
-end
+-- local function get_set_encoder_function(en, f)
+--    if f==nil then return en.encode_function; end
+--    if f==false or type(f)=="number" or type(f)=="function" then
+--       en.encode_function = f;
+--    else engine_error(en, "Invalid output encoder: " .. tostring(f)); end
+-- end
 
 ---------------------------------------------------------------------------------------------------
 
@@ -291,8 +287,9 @@ end
 
 local operation = {match=1, trace=2, fulltrace=3}
 
-local function engine_process_file(e, expression, op, infilename, outfilename, errfilename, wholefileflag)
+local function engine_process_file(e, expression, op, infilename, outfilename, errfilename, encoder, wholefileflag)
    --
+   -- TODO: Do we still need to compile it first?
    -- Set up pattern to match.  Always compile it first, even if we are going to call tracematch later.
    -- This is so that we report errors uniformly at this point in the process, instead of after
    -- opening the files.
@@ -308,12 +305,12 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
 
    -- This set of simple optimizations almost doubles performance of the loop through the file
    -- (below) in typical cases, e.g. syslog pattern. 
-   local encoder = e.encode_function		    -- optimization
-   local built_in_encoder = type(encoder)=="number" and encoder
-   if built_in_encoder then encoder = false; end
+   local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
+--   local built_in_encoder = type(encoder)=="number" and encoder
+--   if built_in_encoder then encoder = false; end
    local peg = r.pattern.peg			    -- optimization
-   local matcher = function(input, start)
-		      return rmatch(peg, input, start, built_in_encoder)
+   local matcher = function(input)
+		      return rmatch(peg, input, 1, rmatch_encoder, fn_encoder)
 		   end                              -- FUTURE: inline this for performance
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
@@ -329,7 +326,17 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    else
       nextline = infile:lines();
    end
-   local o_write, e_write = outfile.write, errfile.write
+   local o_write_prim, e_write = outfile.write, errfile.write
+   if common.encoder_returns_userdata(encoder) then
+      o_write = function(handle, m)
+		   lpeg.writedata(handle, m)
+		   o_write_prim(handle, '\n')
+		end
+   else
+      o_write = function(handle, m)
+		   o_write_prim(handle, m, '\n')
+		end
+   end
    local ok, l = pcall(nextline);
    if not ok then e:error(l); end
    local _, m, leftover, trace_string
@@ -342,13 +349,7 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
       -- local leftover = (#input - nextpos + 1);
       if trace_string then o_write(outfile, trace_string, "\n"); end
       if m then
-	 if type(m)=="userdata" then
-	    lpeg.writedata(outfile, m)
-	 else
-	    local str = encoder and encoder(m) or m
-	    o_write(outfile, str);
-	 end
-	 o_write(outfile, "\n")
+	 o_write(outfile, m);
 	 outlines = outlines + 1
       else
 	 e_write(errfile, l, "\n")
@@ -362,16 +363,16 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    return inlines, outlines, errlines
 end
 
-function process_input_file.match(e, expression, infilename, outfilename, errfilename, wholefileflag)
-   return engine_process_file(e, expression, operation.match, infilename, outfilename, errfilename, wholefileflag)
+function process_input_file.match(e, expression, infilename, outfilename, errfilename, encoder, wholefileflag)
+   return engine_process_file(e, expression, operation.match, infilename, outfilename, errfilename, encoder, wholefileflag)
 end
 
-function process_input_file.trace(e, expression, infilename, outfilename, errfilename, wholefileflag, trace_style)
+function process_input_file.trace(e, expression, infilename, outfilename, errfilename, encoder, wholefileflag, trace_style)
    local op = operation[trace_style]
    if not op then
       engine_error(e, "invalid trace style: " .. tostring(trace_style))
    end
-   return engine_process_file(e, expression, op, infilename, outfilename, errfilename, wholefileflag)
+   return engine_process_file(e, expression, op, infilename, outfilename, errfilename, encoder, wholefileflag)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -403,8 +404,8 @@ engine =
 
 		     id=recordtype.id,
 
-		     encode_function=false,	      -- false or nil ==> use default encoder
-		     output=get_set_encoder_function,
+--		     encode_function=false,	      -- false or nil ==> use default encoder
+--		     output=get_set_encoder_function,
 
 --		     lookup=environment_lookup,
 --		     clear=environment_clear,
@@ -430,8 +431,9 @@ engine =
 local create_rplx = function(en, pattern)			    
 		       return rplx.factory{ engine=en,
 					    pattern=pattern,
-					    match=function(...)
-						     local ok, m, left, t0, t1 = en:match(...)
+					    match=function(self, input, start, encoder, t0, t1)
+						     local ok, m, left, t0, t1 =
+							engine_match(en, self, input, start, encoder, t0, t1)
 						     assert(ok, "precompiled pattern failed to compile?")
 						     return m, left, t0, t1
 						  end,
