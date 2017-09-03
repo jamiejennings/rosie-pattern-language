@@ -14,6 +14,7 @@
    - Check result of each malloc, and error out appropriately
 */
 
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,9 @@
 #include "lualib.h"
 
 #include "librosie.h"
+
+#include <dlfcn.h>
+#include <libgen.h>
 
 int luaopen_lpeg (lua_State *L);
 int luaopen_cjson (lua_State *L);
@@ -117,7 +121,6 @@ static int require_api (lua_State *L) {
  * ----------------------------------------------------------------------------------------
  */
 
-static const char *progname = "librosie";
 
 static void print_error_message (const char *msg) {
      lua_writestringerror("%s: ", progname);
@@ -164,6 +167,21 @@ static void print_stringArray(struct rosieL_stringArray sa, char *caller_name) {
  * Exported functions
  * ----------------------------------------------------------------------------------------
  */
+
+
+static char *libname;
+static char *libdir;
+
+void set_lib_info() {
+     Dl_info dl_info;
+     int ok = dladdr((void *)libdir, &dl_info);
+     if (!ok) {
+       fprintf(stderr, "library loaded from directory: %s\n", );
+     }
+     libname = basename((char *)dl_info.dli_fname);
+     libdir = dirname((char *)dl_info.dli_fname);
+}
+
 
 /* forward ref */
 static struct rosieL_stringArray call_api(lua_State *L, char *api_name, int nargs);
@@ -343,4 +361,4 @@ void rosieL_finalize(void *L) {
      lua_close(L);
 }
 
-#include "librosie_gen.c"
+/* #include "librosie_gen.c" */

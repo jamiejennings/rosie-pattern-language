@@ -11,14 +11,31 @@
 -- debugging.  Only the functions that end up in the api table (returned by this code) will become
 -- part of the external API.
 
+-- 1. new() to get a new engine, which is a necessary call when multiple threads will use rosie.
+-- 2. Also: compile, load, match, trace, matchfile, tracefile
+-- 3. Future: dependencies, expand, set/get ROSIE_PATH, lookup, unbind
+-- 4. Future: profiling (maybe an API to get the perf info from the last match?)
+-- 
+-- No more config() API.  Pass output encoding on each call.
+--
+-- Read the input string directly from the address given via the API.
+-- 
+-- How to configure ROSIE_HOME and ROSIE_PATH?
+--   Options:
+--   (1) When compiling librosie, we can embed a value for ROSIE_HOME.
+--     The librosie.so file can be moved anywhere, but it is tied to that ROSIE_HOME.
+--     To install rosie in a different dir, librosie must be relinked to the new ROSIE_HOME.
+--     For ROSIE_PATH, librosie will look: (1) $ROSIE_PATH, (2) .rosie/path, (3) ROSIE_HOME.
+--   (2) Turns out that librosie can discover its own path (via dladdr).
+--     If it's /usr/local/lib/librosie.so, then we can use /usr/local/lib/rosie as ROSIE_HOME.
+--     And for a "local" installation like /home/jj/rosie/librosie.so, we can use /home/jj/rosie.
+--       Or reorganize things so that both kinds of installation do the same thing?
+
+
 io = require "io"
 debug = require "debug"
-
 rosie = require "rosie"
 
-
-recordtype = require "recordtype"
-lpeg = require "lpeg"
 json = require "cjson"
 
 ROSIE_INFO = rosie.info()

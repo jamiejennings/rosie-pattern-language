@@ -34,6 +34,8 @@ struct rosieL_stringArray {
      struct rosieL_string **ptr;
 };
 
+void libdir();
+
 struct rosieL_string *rosieL_new_string(byte_ptr msg, size_t len);
 struct rosieL_stringArray *rosieL_new_stringArray();
 void rosieL_free_string(struct rosieL_string s);
@@ -94,7 +96,8 @@ class initialize():
         # TODO: Catch an exception here, if ffi cannot open the dynamic library
         self.rosie = ffi.dlopen(librosie_path)
         self.rosie_home = rosie_home
-
+        self.rosie.libdir()
+        
     def engine(self):
         return engine(self)
     

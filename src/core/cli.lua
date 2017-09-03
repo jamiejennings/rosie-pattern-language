@@ -39,8 +39,19 @@ local n = 3
 table.move(arg, n+1, #arg, 1); for i=#arg-n+1, #arg do arg[i]=nil; end
 
 -- Load rosie
-rosie = dofile(ROSIE_HOME .. "/rosie.lua", "t")
-package.loaded.rosie = rosie
+package.path = ROSIE_HOME .. "/?.lua;" .. ROSIE_HOME .. "/lib/?.luac"
+
+local bootfn = loadfile(ROSIE_HOME .. "/lib/boot.luac") or loadfile(ROSIE_HOME .. "/src/core/boot.lua")
+if not bootfn then
+   io.write(stderr, "Failed to find boot code")
+   os.exit(-3)
+else
+   local boot = bootfn()
+   rosie = boot(ROSIE_HOME)
+end
+
+import = rosie.import
+mod = require "submodule"
 
 ROSIE_VERSION = rosie.info().ROSIE_VERSION
 
@@ -213,7 +224,7 @@ local function run(args)
 	 os.exit(-1)
       end
    elseif args.command == "repl" then
-      local repl_mod = mod.import("repl", rosie_mod)
+      local repl_mod = import("repl")
       if not args.verbose then greeting(); end
       repl_mod.repl(en)
       os.exit()
