@@ -15,6 +15,7 @@
 */
 
 
+#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,12 +33,17 @@
 int luaopen_lpeg (lua_State *L);
 int luaopen_cjson (lua_State *L);
 
-#define EXIT_OUT_OF_MEMORY -100
+#define BOOTSCRIPT "/lib/boot.luac"
+
+#define ERR_OUT_OF_MEMORY -2
+#define ERR_SYSCALL_FAILED -3
 
 /* ----------------------------------------------------------------------------------------
  * DEBUG (LOGGING) 
  * ----------------------------------------------------------------------------------------
  */
+
+#define DEBUG 1
 
 #ifdef DEBUG
 #define LOGGING 1
@@ -67,7 +73,6 @@ int luaopen_cjson (lua_State *L);
 	  fflush(NULL);						\
      } while (0)
 
-
 #define new_TRUE_string() (rosieL_new_string((byte_ptr) "true", 4))
 #define new_FALSE_string() (rosieL_new_string((byte_ptr) "false", 5))
 
@@ -84,46 +89,60 @@ int luaopen_cjson (lua_State *L);
  * ----------------------------------------------------------------------------------------
  */
 
-/* TODO: First try to load bin/bootstrap.luac and then fall back to src/core/bootstrap.lua */
-static int bootstrap (lua_State *L, struct rosieL_string *rosie_home) {
-     const char *bootscript = "/src/core/bootstrap.lua";
-     LOG("About to bootstrap\n");
-     char *name = malloc(rosie_home->len + strlen(bootscript) + 1);
-     memcpy(name, rosie_home->ptr, rosie_home->len);
-     memcpy(name+(rosie_home->len), bootscript, strlen(bootscript)+1); /* +1 copies the NULL terminator */
-     int status = luaL_loadfile(L, name);
-     if (status != LUA_OK) return status;
-     status = lua_pcall(L, 0, LUA_MULTRET, 0);
-     return status;
+static char *libname = NULL;
+static char *libdir = NULL;
+static char bootscript[MAX_PATH_LEN];
+
+static void set_lib_info() {
+     Dl_info dl_info;
+     int ok = dladdr((void *)set_lib_info, &dl_info);
+     if (!ok) {
+       fprintf(stderr, "librosie: call to dladdr failed\n");
+       exit(ERR_SYSCALL_FAILED);
+     }
+     /* TODO: malloc & strcpy these (maybe use _r variants? */
+     LOGf("dli_fname is %s\n", dl_info.dli_fname);
+     libname = basename((char *)dl_info.dli_fname);
+     libdir = dirname((char *)dl_info.dli_fname);
+     LOGf("libdir is %s, and libname is %s\n", libdir, libname);
 }
 
-static int require_api (lua_State *L) {  
-     int status;  
-     lua_getglobal(L, "require");  
-     lua_pushstring(L, "api");  
-     status = lua_pcall(L, 1, 1, 0);                   /* call 'require(name)' */  
-     if (status != LUA_OK) {
-	  lua_pop(L, 1);	/* discard error because the details don't matter */
-	  return FALSE;
-     }
-     /* IMPORTANT: leave the api table on the stack!
-      * For each call to the API, we will index into this table to
-      * find the Lua function that implements the API.  An
-      * alternative, which may be slightly faster, is to store each
-      * API function in LUA_REGISTRY, each with its own unique
-      * integer key (see luaL_ref).
-      */
-     return TRUE;
-}  
+static void set_bootscript() {
+  size_t bootscript_len;
+  static char *last;
+  if (!libdir) set_lib_info();
+  bootscript_len = strnlen(BOOTSCRIPT, MAX_PATH_LEN);
+  last = stpncpy(bootscript, libdir, (MAX_PATH_LEN - bootscript_len - 1));
+  last = stpncpy(last, BOOTSCRIPT, bootscript_len);
+  *last = '\0';
+  assert(((unsigned long)(last-bootscript))==(strnlen(libdir, MAX_PATH_LEN)+bootscript_len));
+  assert((last-bootscript) < MAX_PATH_LEN);
+  LOGf("Bootscript filename set to %s\n", bootscript);
+}
+
+static int boot (lua_State *L, struct rosieL_string *rosie_home) {
+  if (!*bootscript) set_bootscript();
+  assert(bootscript);
+  LOGf("Booting rosie from %s\n", bootscript);
+  int status = luaL_loadfile(L, bootscript);
+  if (status != LUA_OK) return status;
+  LOG("Loadfile succeeded\n");
+  status = lua_pcall(L, 0, LUA_MULTRET, 0);
+  if (status != LUA_OK) return status;
+  LOG("Call to loaded thunk succeeded\n");
+  lua_pushlstring(L, rosie_home->ptr, rosie_home->len);
+  status = lua_pcall(L, 1, LUA_MULTRET, 0);
+  LOG("Call to boot function succeeded\n");
+  return status;
+}
 
 /* ----------------------------------------------------------------------------------------
  * Debug functions
  * ----------------------------------------------------------------------------------------
  */
 
-
 static void print_error_message (const char *msg) {
-     lua_writestringerror("%s: ", progname);
+     lua_writestringerror("%s: ", libname);
      lua_writestringerror("%s\n", msg);
 }
 
@@ -168,94 +187,76 @@ static void print_stringArray(struct rosieL_stringArray sa, char *caller_name) {
  * ----------------------------------------------------------------------------------------
  */
 
-
-static char *libname;
-static char *libdir;
-
-void set_lib_info() {
-     Dl_info dl_info;
-     int ok = dladdr((void *)libdir, &dl_info);
-     if (!ok) {
-       fprintf(stderr, "library loaded from directory: %s\n", );
-     }
-     libname = basename((char *)dl_info.dli_fname);
-     libdir = dirname((char *)dl_info.dli_fname);
-}
-
-
 /* forward ref */
 static struct rosieL_stringArray call_api(lua_State *L, char *api_name, int nargs);
      
 void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs) {
-     lua_State *L = luaL_newstate();
-     if (L == NULL) {
-	  print_error_message("error during initialization: not enough memory");
-	  exit(EXIT_OUT_OF_MEMORY);
-     }
-/* 
-   luaL_checkversion checks whether the core running the call, the core that created the Lua state,
-   and the code making the call are all using the same version of Lua. Also checks whether the core
-   running the call and the core that created the Lua state are using the same address space.
-*/   
+  int status;
+  lua_State *L = luaL_newstate();
+  if (L == NULL) {
+    print_error_message("error during initialization: not enough memory");
+    exit(ERR_OUT_OF_MEMORY);
+  }
+  /* 
+     luaL_checkversion checks whether the core running the call, the core that created the Lua state,
+     and the code making the call are all using the same version of Lua. Also checks whether the core
+     running the call and the core that created the Lua state are using the same address space.
+  */   
   luaL_checkversion(L);
   luaL_openlibs(L);
+  status = boot(L, rosie_home);
+  LOGf("Boot completed with status %d\n", status); fflush(NULL);
 
-  /* preload these so they will NOT be dynamically loaded later (in bootstrap) */
-    luaL_requiref(L, "lpeg", luaopen_lpeg, 1);
-    lua_pop(L, 1);  /* luaL_requiref leaves lib on the stack */
-    luaL_requiref(L, "cjson", luaopen_cjson, 1);
-    lua_pop(L, 1);  /* luaL_requiref leaves lib on the stack */
-
-  lua_pushlstring(L, (char *) rosie_home->ptr, rosie_home->len);
-  lua_setglobal(L, "ROSIE_HOME");
-  LOGf("Initializing Rosie, where ROSIE_HOME = %s\n", rosie_home->ptr);
-  int status = bootstrap(L, rosie_home);
-  LOGf("Call to bootstrap() completed: status=%d\n", status); fflush(NULL);
   if (status==LUA_OK) {
-       LOG("Bootstrap succeeded\n"); fflush(NULL);
-       fflush(stderr);
-       if (require_api(L)) { 
-	    lua_getfield(L, -1, "initialize");
-	    struct rosieL_stringArray retvals = call_api(L, "initialize", 0);
-	    msgs->n = retvals.n;
-	    msgs->ptr = retvals.ptr;
-	    return L;
-       }
-       else {
-	    struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
-	    list[0] = new_FALSE_string();
-	    char *str_ptr;
-	    int n = asprintf(&str_ptr, "Internal error: cannot load api (%s)", lua_tostring(L, -1));
-	    if (n < 0) exit(EXIT_OUT_OF_MEMORY);  
-	    list[1] = malloc(sizeof(struct rosieL_string));
-	    list[1]->ptr = (byte_ptr) str_ptr;
-	    list[1]->len = n;
-	    lua_close(L);
-	    msgs->n = 2;
-	    msgs->ptr = list;
-	    return NULL;
-       }
+    char *msg = malloc(6);
+    msg = "12345";
+    LOG("Bootstrap succeeded\n"); fflush(NULL);
+    fflush(stderr);
+    struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
+    list[0] = new_TRUE_string();
+    list[1] = rosieL_new_string(msg, 5);
+    msgs->n = 2;;
+    msgs->ptr = list;
+    return L;
   }
+  else {
+    struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
+    list[0] = new_FALSE_string();
+    char *str_ptr;
+    int n = asprintf(&str_ptr, "Internal error: cannot load api (%s)", lua_tostring(L, -1));
+    if (n < 0) exit(ERR_OUT_OF_MEMORY);  
+    list[1] = malloc(sizeof(struct rosieL_string));
+    list[1]->ptr = (byte_ptr) str_ptr;
+    list[1]->len = n;
+    lua_close(L);
+    msgs->n = 2;
+    msgs->ptr = list;
+    return NULL;
+  }
+
   LOG("Bootstrap failed... building return value array\n");
   struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
   list[0] = new_FALSE_string();
   list[1] = malloc(sizeof(struct rosieL_string));
+
   if (luaL_checkstring(L, -1)) {
-       LOG("There is an error message on the Lua stack\n");
-       byte_ptr str = (byte_ptr) lua_tolstring(L, -1, (size_t *) &(list[1]->len));
-       LOGf("The message has length %d and reads: %s\n", list[1]->len, str);
-       list[1] = rosieL_new_string(str, list[1]->len);
+    LOG("There is an error message on the Lua stack\n");
+    byte_ptr str = (byte_ptr) lua_tolstring(L, -1, (size_t *) &(list[1]->len));
+    LOGf("The message has length %d and reads: %s\n", list[1]->len, str);
+    list[1] = rosieL_new_string(str, list[1]->len);
   }
   else {
-       const char *msg =  "Unknown error encountered while trying to bootstrap";
-       LOGf("%s\n", msg);
-       list[1] = rosieL_new_string((byte_ptr) msg, strlen(msg));
+    const char *msg =  "Unknown error encountered while trying to bootstrap";
+    LOGf("%s\n", msg);
+    list[1] = rosieL_new_string((byte_ptr) msg, strlen(msg));
   }       
+
   LOG("About to close the Lua state... ");
   lua_close(L);
   LOG("Done closing the Lua state.");
   msgs->n = 2;
   msgs->ptr = list;
+
   return NULL;
 }
 

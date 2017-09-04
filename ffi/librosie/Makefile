@@ -12,7 +12,7 @@ HOME = $(shell cd ../..; pwd)
 ROSIE = "$(HOME)/bin/rosie"
 
 ifdef DEBUG
-COPT = "-DDEBUG"
+COPT=-DDEBUG
 endif
 
 REPORTED_PLATFORM=$(shell (uname -o || uname -s) 2> /dev/null)
@@ -34,7 +34,7 @@ else
 CC= gcc
 endif
 
-CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(SYSCFLAGS) $(MYCFLAGS) $(COPT)
+CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
@@ -77,7 +77,7 @@ cjson_objs: $(CJSON_SO)
 
 ALL= librosie.so librosie.a
 
-librosie.o: librosie_gen.c librosie_gen.h librosie.c librosie.h
+librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
 librosie.so: librosie.o lua_objs lpeg_objs cjson_objs
@@ -116,13 +116,13 @@ macosx: CFLAGS += -std=gnu99
 windows:
 	@echo Windows installation not yet supported.
 
-gen_C:
-librosie_gen.c:
-librosie_gen.h:
-	@echo Generating librosie C functions and headers
-	echo 'api = require "api"; api.write_C_FILES();' | $(ROSIE) -D >/dev/null
+# gen_C:
+# librosie_gen.c:
+# librosie_gen.h:
+# 	@echo Generating librosie C functions and headers
+# 	echo 'api = require "api"; api.write_C_FILES();' | $(ROSIE) -D >/dev/null
 
 ## Targets that do not create files
 .PHONY: default o a clean echo none
 
-librosie.o: librosie_gen.c librosie_gen.h librosie.c librosie.h 
+librosie.o: librosie.c librosie.h 

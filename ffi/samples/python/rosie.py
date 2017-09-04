@@ -96,7 +96,6 @@ class initialize():
         # TODO: Catch an exception here, if ffi cannot open the dynamic library
         self.rosie = ffi.dlopen(librosie_path)
         self.rosie_home = rosie_home
-        self.rosie.libdir()
         
     def engine(self):
         return engine(self)
@@ -113,7 +112,7 @@ class initialize():
         free(messages) #self.rosie.rosie.rosieL_free_stringArray(messages)
         code = retvals[0]
         if code != 'true':
-            raise # exception indicating that the call failed
+            raise RuntimeError("get_retvals failed")
         return retvals[1:]
 
 
@@ -134,7 +133,7 @@ class engine ():
         retvals = self.rosie.get_retvals_from_ptr(messages)
         self.id = retvals[0]
         if self.engine == ffi.NULL:
-            raise #"Error initializing librosie.  Exiting..."
+            raise RuntimeError("Error initializing librosie.  Exiting...")
         return
 
     def configure(self, config_string):
@@ -172,7 +171,7 @@ class engine ():
         return retvals
 
     def __del__(self):
-        print "Garbage collecting engine", self.id
+        print "Garbage collecting engine", self
         self.rosie.rosie.rosieL_finalize(self.engine)
 
 
