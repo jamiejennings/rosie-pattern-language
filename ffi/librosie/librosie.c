@@ -37,6 +37,7 @@ int luaopen_cjson (lua_State *L);
 
 #define ERR_OUT_OF_MEMORY -2
 #define ERR_SYSCALL_FAILED -3
+#define ERR_ENGINE_CALL_FAILED -4
 
 /* ----------------------------------------------------------------------------------------
  * DEBUG (LOGGING) 
@@ -84,39 +85,48 @@ int luaopen_cjson (lua_State *L);
 	  else lua_pushnil(L);						\
      } while (0)
 
+
 /* ----------------------------------------------------------------------------------------
  * Utility functions
  * ----------------------------------------------------------------------------------------
  */
 
-static char *libname = NULL;
-static char *libdir = NULL;
-static char bootscript[MAX_PATH_LEN];
+static char libname[MAXPATHLEN];
+static char libdir[MAXPATHLEN];
+static char bootscript[MAXPATHLEN];
 
-static void set_lib_info() {
-     Dl_info dl_info;
-     int ok = dladdr((void *)set_lib_info, &dl_info);
-     if (!ok) {
-       fprintf(stderr, "librosie: call to dladdr failed\n");
-       exit(ERR_SYSCALL_FAILED);
-     }
-     /* TODO: malloc & strcpy these (maybe use _r variants? */
-     LOGf("dli_fname is %s\n", dl_info.dli_fname);
-     libname = basename((char *)dl_info.dli_fname);
-     libdir = dirname((char *)dl_info.dli_fname);
-     LOGf("libdir is %s, and libname is %s\n", libdir, libname);
+static void display (const char *msg) {
+  fprintf(stderr, "%s: ", libname);
+  fprintf(stderr, "%s\n", msg);
+  fflush(NULL);
+}
+
+static void set_libinfo() {
+  Dl_info dl;
+  int ok = dladdr((void *)set_libinfo, &dl);
+  if (!ok) {
+    display("librosie: call to dladdr failed");
+    exit(ERR_SYSCALL_FAILED);
+  }
+  LOGf("dli_fname is %s\n", dl.dli_fname);
+  if (!basename_r((char *)dl.dli_fname, libname) ||
+      !dirname_r((char *)dl.dli_fname, libdir)) {
+    display("librosie: call to basename/dirname failed");
+    exit(ERR_SYSCALL_FAILED);
+  }
+  LOGf("libdir is %s, and libname is %s\n", libdir, libname);
 }
 
 static void set_bootscript() {
   size_t bootscript_len;
   static char *last;
-  if (!libdir) set_lib_info();
-  bootscript_len = strnlen(BOOTSCRIPT, MAX_PATH_LEN);
-  last = stpncpy(bootscript, libdir, (MAX_PATH_LEN - bootscript_len - 1));
+  if (!*libdir) set_libinfo();
+  bootscript_len = strnlen(BOOTSCRIPT, MAXPATHLEN);
+  last = stpncpy(bootscript, libdir, (MAXPATHLEN - bootscript_len - 1));
   last = stpncpy(last, BOOTSCRIPT, bootscript_len);
   *last = '\0';
-  assert(((unsigned long)(last-bootscript))==(strnlen(libdir, MAX_PATH_LEN)+bootscript_len));
-  assert((last-bootscript) < MAX_PATH_LEN);
+  assert(((unsigned long)(last-bootscript))==(strnlen(libdir, MAXPATHLEN)+bootscript_len));
+  assert((last-bootscript) < MAXPATHLEN);
   LOGf("Bootscript filename set to %s\n", bootscript);
 }
 
@@ -133,18 +143,13 @@ static int boot (lua_State *L, struct rosieL_string *rosie_home) {
   lua_pushlstring(L, rosie_home->ptr, rosie_home->len);
   status = lua_pcall(L, 1, LUA_MULTRET, 0);
   LOG("Call to boot function succeeded\n");
-  return status;
+  return (status==LUA_OK);
 }
 
 /* ----------------------------------------------------------------------------------------
  * Debug functions
  * ----------------------------------------------------------------------------------------
  */
-
-static void print_error_message (const char *msg) {
-     lua_writestringerror("%s: ", libname);
-     lua_writestringerror("%s\n", msg);
-}
 
 static void stackDump (lua_State *L) {
       int i;
@@ -190,11 +195,10 @@ static void print_stringArray(struct rosieL_stringArray sa, char *caller_name) {
 /* forward ref */
 static struct rosieL_stringArray call_api(lua_State *L, char *api_name, int nargs);
      
-void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs) {
-  int status;
+void *rosieL_initialize(struct rosieL_string *rosie_home) {
   lua_State *L = luaL_newstate();
   if (L == NULL) {
-    print_error_message("error during initialization: not enough memory");
+    display("Cannot initialize: not enough memory");
     exit(ERR_OUT_OF_MEMORY);
   }
   /* 
@@ -204,60 +208,30 @@ void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringAr
   */   
   luaL_checkversion(L);
   luaL_openlibs(L);
-  status = boot(L, rosie_home);
-  LOGf("Boot completed with status %d\n", status); fflush(NULL);
 
-  if (status==LUA_OK) {
-    char *msg = malloc(6);
-    msg = "12345";
-    LOG("Bootstrap succeeded\n"); fflush(NULL);
-    fflush(stderr);
-    struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
-    list[0] = new_TRUE_string();
-    list[1] = rosieL_new_string(msg, 5);
-    msgs->n = 2;;
-    msgs->ptr = list;
-    return L;
-  }
-  else {
-    struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
-    list[0] = new_FALSE_string();
-    char *str_ptr;
-    int n = asprintf(&str_ptr, "Internal error: cannot load api (%s)", lua_tostring(L, -1));
-    if (n < 0) exit(ERR_OUT_OF_MEMORY);  
-    list[1] = malloc(sizeof(struct rosieL_string));
-    list[1]->ptr = (byte_ptr) str_ptr;
-    list[1]->len = n;
-    lua_close(L);
-    msgs->n = 2;
-    msgs->ptr = list;
+  if (!boot(L, rosie_home)) {
+    LOG("Bootstrap failed\n");
     return NULL;
   }
-
-  LOG("Bootstrap failed... building return value array\n");
-  struct rosieL_string **list = malloc(sizeof(struct rosieL_string *) * 2);
-  list[0] = new_FALSE_string();
-  list[1] = malloc(sizeof(struct rosieL_string));
-
-  if (luaL_checkstring(L, -1)) {
-    LOG("There is an error message on the Lua stack\n");
-    byte_ptr str = (byte_ptr) lua_tolstring(L, -1, (size_t *) &(list[1]->len));
-    LOGf("The message has length %d and reads: %s\n", list[1]->len, str);
-    list[1] = rosieL_new_string(str, list[1]->len);
+  LOG("Bootstrap succeeded\n");
+  if (!lua_checkstack(L, 6)) {
+    display("Cannot initialize: not enough memory for stack expansion");
+    exit(ERR_OUT_OF_MEMORY);
   }
-  else {
-    const char *msg =  "Unknown error encountered while trying to bootstrap";
-    LOGf("%s\n", msg);
-    list[1] = rosieL_new_string((byte_ptr) msg, strlen(msg));
-  }       
+  lua_getglobal(L, "rosie");
+  lua_getfield(L, -1, "engine");
+  lua_getfield(L, -1, "new");
+  lua_call(L, 0, 1);
+  lua_copy(L, -1, 1);
+  lua_pop(L, 3);
 
-  LOG("About to close the Lua state... ");
-  lua_close(L);
-  LOG("Done closing the Lua state.");
-  msgs->n = 2;
-  msgs->ptr = list;
+#if (LOGGING)
+  display(luaL_tolstring(L, -1, NULL)); /* convert copy of engine to a string */
+  lua_pop(L, 1);		/* remove string */
+#endif
 
-  return NULL;
+  LOG("Engine created\n");
+  return L;
 }
 
 struct rosieL_stringArray construct_retvals(lua_State *L) {
@@ -342,7 +316,7 @@ static struct rosieL_stringArray call_api(lua_State *L, char *api_name, int narg
      LOGstack(L);
      
      if (lua_istable(L, -1) != TRUE) {
-	  print_error_message(
+	  display(
 	       lua_pushfstring(L,
 			       "librosie internal error: return value of %s not a table",
 			       api_name));

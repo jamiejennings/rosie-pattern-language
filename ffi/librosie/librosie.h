@@ -9,9 +9,8 @@
 #define TRUE 1
 #define FALSE 0
 
-#define MAX_PATH_LEN 4096
-
 #include <stdint.h>
+#include <sys/param.h>		/* MAXPATHLEN */
 
 typedef uint8_t * byte_ptr;
 
@@ -38,7 +37,7 @@ void rosieL_free_stringArray_ptr(struct rosieL_stringArray *r);
 /* void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs); */
 /* void rosieL_finalize(void *L); */
 
-void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs);
+void *rosieL_initialize(struct rosieL_string *rosie_home);
 
 /* #include "librosie_gen.h" */
 

@@ -43,7 +43,7 @@ void rosieL_free_string_ptr(struct rosieL_string *s);
 void rosieL_free_stringArray(struct rosieL_stringArray r);
 void rosieL_free_stringArray_ptr(struct rosieL_stringArray *r);
 
-void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs);
+void *rosieL_initialize(struct rosieL_string *rosie_home);
 void rosieL_finalize(void *L);
 
 struct rosieL_stringArray rosieL_load_manifest(void *L, struct rosieL_string *manifest_file);
@@ -121,17 +121,8 @@ class engine ():
     'put docstring here'
 
     def __init__(self, rosie_instance):
-        # if not rosie:
-        #     raise #"Exception indicating that rosie was not initialized"
-        # if not rosie_home:
-        #     raise #"Exception indicating that rosie_home is not set"
-        self.name = "anonymous"
         self.rosie = rosie_instance
-        messages = self.rosie.rosie.rosieL_new_stringArray()
-        self.engine = self.rosie.rosie.rosieL_initialize(to_cstr_ptr(self.rosie.rosie, self.rosie.rosie_home), messages)
-        #printArray(messages, "initialize")
-        retvals = self.rosie.get_retvals_from_ptr(messages)
-        self.id = retvals[0]
+        self.engine = self.rosie.rosie.rosieL_initialize(to_cstr_ptr(self.rosie.rosie, self.rosie.rosie_home))
         if self.engine == ffi.NULL:
             raise RuntimeError("Error initializing librosie.  Exiting...")
         return
