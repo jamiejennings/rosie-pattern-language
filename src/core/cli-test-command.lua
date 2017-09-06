@@ -28,7 +28,7 @@ local function find_test_lines(str)
   local num = 0
   local lines = {}
   for _,line in pairs(split(str, "\n")) do
-     if startswith(line,'-- test') then
+     if startswith(line,'-- test') or startswith(line,'--test') then
         table.insert(lines, line)
         num = num + 1
      end
@@ -43,7 +43,7 @@ function p.setup(en)
 	 includesKeyword = ("includes" / "excludes")
 	 includesClause = includesKeyword identifier
 	 testKeyword = "accepts" / "rejects"
-	 test_line = "-- test" identifier (testKeyword / includesClause) quoted_string (ws? "," ws? quoted_string)*
+	 test_line = ("--test"/"-- test") identifier (testKeyword / includesClause) (quoted_string ("," quoted_string)*)?
    ]==]
    local ok, errs = en:import("rosie/rpl_1_1", ".")
    if not ok then
@@ -52,7 +52,8 @@ function p.setup(en)
       end
       error("Internal error!  (See above.)")
    end
-   en:load(test_patterns)
+   local ok = en:load(test_patterns)
+   assert(ok, "Internal error: test_patterns failed to load")
 end   
 
 local function shorten(str, len)
@@ -150,13 +151,16 @@ function p.run(rosie, en, args, filename)
    end
    for _,p in pairs(test_lines) do
       local m, left = test_rplx:match(p)
+      local literals = 3 -- literals will start at subs offset 3
       if not m then
 	 write_error("FAIL: invalid test syntax: ", p)
+	 failures = failures + 1
+      elseif #m.subs < literals then
+	 write_error("FAIL: invalid test syntax (missing quoted input strings): ", p)
 	 failures = failures + 1
       else
 	 local testIdentifier = m.subs[1].data
 	 local testType = m.subs[2].type
-	 local literals = 3 -- literals will start at subs offset 3
 	 if testType == "includesClause" then
 	    -- test includes
 	    local t = m.subs[2]
