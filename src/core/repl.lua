@@ -65,9 +65,8 @@ assert(pargs_rplx, "internal error: pargs_rplx failed to compile")
 local repl_prompt = "Rosie> "
 
 local function print_match(m, left, trace_command)
---   if type(m)=="userdata" then m = lpeg.getdata(m); end
-   assert(type(m)=="table")
    if m then 
+      assert(type(m)=="table")
       io.write(util.table_to_pretty_string(m, false, true, true), "\n")
       if (left > 0) then
 	 print(string.format("Warning: %d unmatched characters at end of input", left))
@@ -214,7 +213,7 @@ function repl.repl(en)
 			   local m, left = rplx:match(input_text)
 			   if (debug and (not m)) or trace_command then
 			      local tracetype = (cname=="trace") and "condensed" or "full"
-			      local ok, tr = en:trace(str, input_text, 1, tracetype)
+			      local ok, tr = en:trace(str, input_text, 1, nil, tracetype)
 			      if not ok then
 				 io.write("Internal error: expression did not compile\n")
 			      else
