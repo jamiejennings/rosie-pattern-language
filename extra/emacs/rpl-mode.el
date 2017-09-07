@@ -6,7 +6,8 @@
 ;; LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ;; AUTHOR: Jamie A. Jennings
 
-(defvar *rpl-mode-verbose* t)
+(defvar *rpl-mode-verbose* nil)
+;; (setq *rpl-mode-verbose* t)
 
 (defun rpl-maybe-message (msg)
   (if *rpl-mode-verbose*
@@ -20,23 +21,20 @@
     map)
   "rpl major mode key map")
 
-(setq rpl-declaration-keywords
-      (regexp-opt '("import" "package" "rpl") 'words))
-
-(setq rpl-binding-keywords
+(defvar rpl-binding-keywords
       (regexp-opt '("local" "alias" "grammar" "end") 'words))
 
-(setq rpl-some-space "[ \t]+")
-(setq rpl-any-space "[ \t]*")
+(defvar rpl-some-space "[ \t]+")
+(defvar rpl-any-space "[ \t]*")
 
-(setq rpl-optional-comment "\\s *\\(--.*\\)?$")
+(defvar rpl-optional-comment "\\s *\\(--.*\\)?$")
 
-(setq rpl-font-lock-keywords-basic
+(defvar rpl-font-lock-keywords-basic
   (list
    `(,rpl-binding-keywords (1 font-lock-keyword-face))
    ))
 
-(setq rpl-font-lock-keywords-bindings
+(defvar rpl-font-lock-keywords-bindings
       (list
        `(,(concat "^" rpl-any-space                          ; fresh line, any amount of whitespace
 		  "\\(?:\\(?:\\sw+\\)" rpl-some-space "\\)*" ; any series of words
@@ -45,12 +43,13 @@
 		  )
 	 (1 font-lock-variable-name-face))))
 
-(setq rpl-font-lock-keywords-declarations
+(defvar rpl-font-lock-keywords-declarations
       (list
       `(,(concat "^" rpl-any-space     ; fresh line, any amount of whitespace
 		  "\\(\\<package\\>\\|\\<rpl\\>\\)"
 		  rpl-some-space
 		  "\\(\\S-+\\)"		; package name or rpl version spec
+		  rpl-optional-comment
 		  )
 	(1 font-lock-preprocessor-face)) ; (2 font-lock-negation-char-face))
        ;; below is an "anchored match": (anchor-pat (item-pat pre-form post-form face-spec))
@@ -62,24 +61,23 @@
 	 ("\\<as\\>\\|\\<import\\>" (beginning-of-line) nil (0 font-lock-preprocessor-face)))
        ))
 
-(setq rpl-function-regexp "\\b\\([[:alpha:]][[:alnum:]]*\\):\\S ")
+(defvar rpl-function-regexp "\\b\\([[:alpha:]][[:alnum:]]*\\):\\S ")
 
-(setq rpl-font-lock-functions
+(defvar rpl-font-lock-functions
       (list
        (list rpl-function-regexp `(1 font-lock-function-name-face))))
 
-(setq rpl-font-lock-keywords-ALL
+(defvar rpl-font-lock-keywords-ALL
       (append rpl-font-lock-keywords-basic
 	      rpl-font-lock-keywords-bindings
               rpl-font-lock-keywords-declarations
-	      rpl-font-lock-functions))
-;      "Syntax highlighting for rpl mode")
+	      rpl-font-lock-functions)
+      "Syntax highlighting for rpl mode")
 
-(setq rpl-font-lock-keywords rpl-font-lock-keywords-ALL)
-;  "Default highlighting expressions for rpl mode")
+(defvar rpl-font-lock-keywords rpl-font-lock-keywords-ALL
+  "Default highlighting expressions for rpl mode")
 
 ;; ----------------------------------------------------------------------------------------
-
 
 (defun rpl-goto-previous-nonblank-line ()
   "Puts the point at the first previous line that is not blank.
@@ -103,7 +101,7 @@ Returns the point, or nil if it reached the end of the buffer"
       (beginning-of-line)
       (if (not (looking-at rpl-optional-comment)) (throw 'found (point))))))
 
-(setq rpl-binding-regexp
+(defvar rpl-binding-regexp
       (concat rpl-any-space
 	      "\\(\\sw+" rpl-some-space "\\)*" ; skip binding modifiers before identifier name
 	      "\\("
@@ -112,18 +110,17 @@ Returns the point, or nil if it reached the end of the buffer"
 	      "\\<grammar\\>"
 	      "\\)"))
 
-(setq rpl-end-regexp
+(defvar rpl-end-regexp
       (concat rpl-any-space "\\<end\\>\\(" rpl-some-space "\\|$\\)"))
 
-(setq rpl-grammar-regexp
+(defvar rpl-grammar-regexp
       (concat rpl-any-space
 	      "\\(\\sw+" rpl-some-space "\\)*" ; skip any binding modifiers before "grammar"
 	      "\\<grammar\\>\\(" rpl-some-space "\\|$\\)"))
 
-(setq rpl-declaration-regexp
+(defvar rpl-declaration-regexp
       (concat rpl-any-space
-	      rpl-declaration-keywords
-	      rpl-some-space))
+	      rpl-declaration-keywords))
 
 (defun rpl-find-previous-binding ()
   "Returns a buffer position on the line containing the previous binding, and
@@ -148,7 +145,6 @@ nil if the previous rpl statement was not a binding"
 ;;     (cond ((looking-at rpl-binding-regexp) nil) ; current line starts new binding
 ;; 	  (t
 ;; 	   (rpl-find-previous-binding)))))
-
 
 ;; (rpl-goto-previous-nonblank-line)
 ;; 	   (let ((has-binding (re-search-forward rpl-binding-regexp (line-end-position) t)))
@@ -238,8 +234,7 @@ nil if the previous rpl statement was not a binding"
     (if (< (current-column) (current-indentation))
 	(forward-whitespace 1))))
 
-;;defvar
-(setq rpl-mode-syntax-table
+(defvar rpl-mode-syntax-table
   (let ((syntax-table (make-syntax-table)))
     (modify-syntax-entry ?_ "w" syntax-table)     ; _ is a word constituent
     (modify-syntax-entry ?. "_" syntax-table)     ; . is a word constituent, e.g. `common.int'
@@ -265,6 +260,6 @@ nil if the previous rpl statement was not a binding"
 (provide 'rpl-mode)
 (rpl-maybe-message "major mode loaded")
 
-(message "Reminder: rpl-mode still needs setq statements replaced by defconst")
+;;(message "Reminder: replace some defvar statements with defconst?")
 
 	       

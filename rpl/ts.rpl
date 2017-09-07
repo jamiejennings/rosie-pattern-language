@@ -10,55 +10,74 @@ package ts
 
 import date, time
 
+-- RFC3339              date-time = full-date [Tt ] full-time
+-- RFC2822 / RFC5322    date-time = [ day-of-week "," ] date FWS time [CFWS]
+
+local alias slashed_date = date.us_slashed / date.slashed
+local alias dashed_date = date.us_dashed / date.dashed
+local alias common_times = time.simple / time.rfc2822_frac / time.rfc3339
+
+rfc3339 = { date.rfc3339 [Tt ] time.rfc3339_strict}
+rfc2822 = { date.rfc2822 time.rfc2822 }
+slashed_colon = { slashed_date ":" time.rfc2822 }
+us_long = date.us_long common_times
+us_short = date.us_short common_times 
+slashed = slashed_date common_times time.rfc2822_zone?
+dashed = dashed_date common_times time.rfc2822_zone?
+spaced = date.spaced common_times time.rfc2822_zone?
+spaced_en = date.spaced_en common_times time.rfc2822_zone?
+
+websphere = slashed_date time.websphere			    -- seen in WebSphere logs
+db2 = { date.rfc3339 "-" time.db2 }			    -- seen in db2 logs
+
+mixed1 = (date.day_name ","?)? date.month_name date.day ","? time.rfc2822_frac time.rfc2822_zone? date.year?
+mixed2 = (date.us_dashed / date.slashed / date.us_slashed / date.slashed)
+	 time.rfc2822_frac
+	 time.rfc2822_zone?
+	 date.year?
+
+any = dashed / slashed /
+      rfc3339 /
+      mixed1 / mixed2 /
+      us_long / us_short /
+      rfc2822 /
+      websphere / db2 /
+      spaced_en / spaced
+
+
 --	  Format                          Example
 --
---	  dd/MMM/yyyy:HH:mm:ss ZZZZ       19/Dec/2010:06:36:15 -0700
---	  dd/MMM/yyyy HH:mm:ss            09/Mar/2004 22:02:40 08691
---	  dd/MMM HH:mm:ss,sss             23/Dec 11:42:35,342
---	  dd/MMM/yyyy:HH:mm:ss            23/Dec/2015:11:42:35
---	  dd/MMM/yyyy HH:mm:ss            23/Dec/2015 11:42:35
---	  dd-MMM-yyyy HH:mm:ss            23-Dec-2015 11:42:35
---	  dd-MMM-yyyy HH:mm:ss.sss        23-Apr-2015 11:42:35.883
---	  dd MMM yyyy HH:mm:ss            23 Apr 2015 11:42:35
---	  dd MMM yyyy HH:mm:ss.sss        23 Apr 2015 11:42:35.883
---	  MMM dd, yyyy hh:mm:ss am/pm     Dec 2, 2010 2:39:58 AM
---	  MMM dd yyyy HH:mm:ss            Jun 09 2011 15:28:14
---	  MMM dd HH:mm:ss yyyy            Apr 20 00:00:35 2010
---	  MMM dd HH:mm:ss ZZZZ yyyy       Feb 07 15:22:31 -0700 2016
---	  MMM dd HH:mm:ss ZZZZ            Sep 28 19:00:00 +0000
---	  MMM dd HH:mm:ss                 Mar 16 08:12:04
---	  yy-MM-dd HH:mm:ss,sss ZZZZ      11-02-11 16:47:35,985 +0000
---	  yy-MM-dd HH:mm:ss,sss           10-06-26 02:31:29,573
---	  yy-MM-dd HH:mm:ss               10-04-19 12:00:17
---	  yy/MM/dd HH:mm:ss               06/01/22 04:09:05
---	  yyyy MMM dd HH:mm:ss.sss zzz    2017 Jun 19 13:16:49.194 EST
---	  yyyy-MM-dd HH:mm:ss,sss ZZZZ    2011-02-11 16:47:35,985 +0000
---	  yyyy-MM-dd'T'HH:mm:ss,sssZZZZ   2015-10-02T23:59:59.573+02:00
---	  yyyy-MM-dd'T'HH:mm:ssZZZZ       2015-10-14T22:11:20+00:00
---	  yyyy-MM-dd'T'HH:mm:ss.sssZ      2014-07-01T14:59:55.711Z
---	  yyyy-MM-dd HH:mm:ss ZZZZ        2011-08-19 12:17:55 -0400
---	  yyyy-MM-dd HH:mm:ssZZZZ         2011-08-19 12:17:55-0400
---	  yyyy-MM-dd HH:mm:ss zzz         2016-09-06 10:51:18 PDT
---	  yyyy-MM-dd HH:mm:ss,sss         2010-06-26 02:31:29,573
---	  yyyy-MM-dd HH:mm:ss             2010-04-19 12:00:17
---	  yyyy-MM-dd HH:mm:ss:sss         2010-04-19 12:00:17:552
---	  yyyy/MM/dd HH:mm:ss             2006/01/22 04:11:05
---	  MMdd_HH:mm:ss                   0423_11:42:35
---	  MMdd_HH:mm:ss.sss               0423_11:42:35.883
---	  MM/dd/yy HH:mm:ss               04/23/15 11:42:35
---	  MM/dd/yyyy HH:mm:ss             04/23/2015 11:42:35
---	  MM/dd/yyyy HH:mm:ss.sss         04/23/2015 11:42:35.883
---	  MM/dd/yyyy hh:mm:ss a:sss       8/5/2009 3:31:18 AM:234
---	  MM/dd/yyyy hh:mm:ss am/pm       9/28/2009 2:23:15 PM
+--	  dd MMM yyyy HH:mm:ss.sss        23 Apr 2015 11:42:35.883        us_short
+--	  MMM dd, yyyy hh:mm:ss am/pm     Dec 2, 2010 2:39:58 AM          us_long
+--	  MMM dd yyyy HH:mm:ss            Jun 09 2011 15:28:14            us_long
+--	  MMM dd HH:mm:ss yyyy            Apr 20 00:00:35 2010            mixed1
+--	  MMM dd HH:mm:ss ZZZZ yyyy       Feb 07 15:22:31 -0700 2016      mixed1
+--	  MMM dd HH:mm:ss ZZZZ            Sep 28 19:00:00 +0000           mixed1
+--	  MMM dd HH:mm:ss                 Mar 16 08:12:04                 mixed1
+--	  yy-MM-dd HH:mm:ss,sss ZZZZ      11-02-11 16:47:35,985 +0000     dashed
+--	  yy-MM-dd HH:mm:ss,sss           10-06-26 02:31:29,573           dashed
+--	  yy-MM-dd HH:mm:ss               10-04-19 12:00:17               dashed
+--	  yy/MM/dd HH:mm:ss               06/01/22 04:09:05               slashed
+--	  yyyy MMM dd HH:mm:ss.sss zzz    2017 Jun 19 13:16:49.194 EST    spaced_en
+--	  yyyy-MM-dd HH:mm:ss,sss ZZZZ    2011-02-11 16:47:35,985 +0000   dashed
+--	  yyyy-MM-dd'T'HH:mm:ss,sssZZZZ   2015-10-02T23:59:59.573+02:00   rfc3339
+--	  yyyy-MM-dd'T'HH:mm:ssZZZZ       2015-10-14T22:11:20+00:00       rfc3339
+--	  yyyy-MM-dd'T'HH:mm:ss.sssZ      2014-07-01T14:59:55.711Z        rfc3339
+--	  yyyy-MM-dd HH:mm:ss ZZZZ        2011-08-19 12:17:55 -0400       dashed
+--	  yyyy-MM-dd HH:mm:ssZZZZ         2011-08-19 12:17:55-0400        dashed 
+--	  yyyy-MM-dd HH:mm:ss zzz         2016-09-06 10:51:18 PDT         dashed
+--	  yyyy-MM-dd HH:mm:ss,sss         2010-06-26 02:31:29,573         dashed
+--	  yyyy-MM-dd HH:mm:ss             2010-04-19 12:00:17             dashed
+--	  yyyy-MM-dd HH:mm:ss:sss         2010-04-19 12:00:17:552         dashed
+--	  yyyy/MM/dd HH:mm:ss             2006/01/22 04:11:05             slashed
+--	  MM/dd/yy HH:mm:ss               04/23/15 11:42:35               slashed
+--	  MM/dd/yyyy HH:mm:ss             04/23/2015 11:42:35             slashed
+--	  MM/dd/yyyy HH:mm:ss.sss         04/23/2015 11:42:35.883         slashed
+--	  MM/dd/yyyy hh:mm:ss a:sss       8/5/2009 3:31:18 AM:234         X
+--	  MM/dd/yyyy hh:mm:ss am/pm       9/28/2009 2:23:15 PM            slashed
 --
+--	  MMdd_HH:mm:ss                   0423_11:42:35                   X
+--	  MMdd_HH:mm:ss.sss               0423_11:42:35.883               X
+--	  yyMMdd HH:mm:ss                 150423 11:42:35                 X
+--	  yyyyMMdd HH:mm:ss.sss           20150423 11:42:35.342           X
 --
---	  HH:mm:ss                        09:42:35
---	  HH:mm:ss.sss                    09:42:35.342
---	  HH:mm:ss,sss                    09:42:35,342
---
---
---	  yyMMdd HH:mm:ss                 150423 11:42:35
---	  yyyyMMdd HH:mm:ss.sss           20150423 11:42:35.342
---
-
-
