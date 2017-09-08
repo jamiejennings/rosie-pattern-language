@@ -197,11 +197,17 @@ local function xrepetition(a, env, messages)
       end -- switch on min where (not max)
    else -- have both min and max values
       if (min > max) then
-	 throw("invalid repetition (min must be greater than max)", a)
+	 raise(violation.compile.new{who="syntax expander",
+				     message="invalid repetition (min must be greater than max)",
+				     ast=a})
       elseif (max < 1) then
-	 throw("invalid repetition (max must be greater than zero)", a)
+	 raise(violation.compile.new{who="syntax expander",
+				     message="invalid repetition (max must be greater than zero)",
+				     ast=a})
       elseif (min < 0) then
-	 throw("invalid repetition (min must be greater than or equal to zero)", a)
+	 raise(violation.compile.new{who="syntax expander",
+				     message="invalid repetition (min must be greater than or equal to zero)",
+				     ast=a})
       end
       -- Here's where things get interesting, because we must match at least min copies of 
       -- exp, and at most max.
