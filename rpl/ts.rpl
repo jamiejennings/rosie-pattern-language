@@ -44,40 +44,33 @@ any = dashed / slashed /
       websphere / db2 /
       spaced_en / spaced
 
-
---	  Format                          Example
 --
---	  dd MMM yyyy HH:mm:ss.sss        23 Apr 2015 11:42:35.883        us_short
---	  MMM dd, yyyy hh:mm:ss am/pm     Dec 2, 2010 2:39:58 AM          us_long
---	  MMM dd yyyy HH:mm:ss            Jun 09 2011 15:28:14            us_long
---	  MMM dd HH:mm:ss yyyy            Apr 20 00:00:35 2010            mixed1
---	  MMM dd HH:mm:ss ZZZZ yyyy       Feb 07 15:22:31 -0700 2016      mixed1
---	  MMM dd HH:mm:ss ZZZZ            Sep 28 19:00:00 +0000           mixed1
---	  MMM dd HH:mm:ss                 Mar 16 08:12:04                 mixed1
---	  yy-MM-dd HH:mm:ss,sss ZZZZ      11-02-11 16:47:35,985 +0000     dashed
---	  yy-MM-dd HH:mm:ss,sss           10-06-26 02:31:29,573           dashed
---	  yy-MM-dd HH:mm:ss               10-04-19 12:00:17               dashed
---	  yy/MM/dd HH:mm:ss               06/01/22 04:09:05               slashed
---	  yyyy MMM dd HH:mm:ss.sss zzz    2017 Jun 19 13:16:49.194 EST    spaced_en
---	  yyyy-MM-dd HH:mm:ss,sss ZZZZ    2011-02-11 16:47:35,985 +0000   dashed
---	  yyyy-MM-dd'T'HH:mm:ss,sssZZZZ   2015-10-02T23:59:59.573+02:00   rfc3339
---	  yyyy-MM-dd'T'HH:mm:ssZZZZ       2015-10-14T22:11:20+00:00       rfc3339
---	  yyyy-MM-dd'T'HH:mm:ss.sssZ      2014-07-01T14:59:55.711Z        rfc3339
---	  yyyy-MM-dd HH:mm:ss ZZZZ        2011-08-19 12:17:55 -0400       dashed
---	  yyyy-MM-dd HH:mm:ssZZZZ         2011-08-19 12:17:55-0400        dashed 
---	  yyyy-MM-dd HH:mm:ss zzz         2016-09-06 10:51:18 PDT         dashed
---	  yyyy-MM-dd HH:mm:ss,sss         2010-06-26 02:31:29,573         dashed
---	  yyyy-MM-dd HH:mm:ss             2010-04-19 12:00:17             dashed
---	  yyyy-MM-dd HH:mm:ss:sss         2010-04-19 12:00:17:552         dashed
---	  yyyy/MM/dd HH:mm:ss             2006/01/22 04:11:05             slashed
---	  MM/dd/yy HH:mm:ss               04/23/15 11:42:35               slashed
---	  MM/dd/yyyy HH:mm:ss             04/23/2015 11:42:35             slashed
---	  MM/dd/yyyy HH:mm:ss.sss         04/23/2015 11:42:35.883         slashed
---	  MM/dd/yyyy hh:mm:ss a:sss       8/5/2009 3:31:18 AM:234         X
---	  MM/dd/yyyy hh:mm:ss am/pm       9/28/2009 2:23:15 PM            slashed
+--      Pattern           Example                         Format
 --
---	  MMdd_HH:mm:ss                   0423_11:42:35                   X
---	  MMdd_HH:mm:ss.sss               0423_11:42:35.883               X
---	  yyMMdd HH:mm:ss                 150423 11:42:35                 X
---	  yyyyMMdd HH:mm:ss.sss           20150423 11:42:35.342           X
---
+-- test us_short accepts  "23 Apr 2015 11:42:35.883"      dd MMM yyyy HH:mm:ss.sss 
+-- test us_long accepts   "Dec 2, 2010 2:39:58 AM"        MMM dd, yyyy hh:mm:ss am/pm 
+-- test us_long accepts   "Jun 09 2011 15:28:14"          MMM dd yyyy HH:mm:ss 
+-- test mixed1 accepts    "Apr 20 00:00:35 2010"          MMM dd HH:mm:ss yyyy 
+-- test mixed1 accepts    "Feb 07 15:22:31 -0700 2016"    MMM dd HH:mm:ss ZZZZ yyyy 
+-- test mixed1 accepts    "Sep 28 19:00:00 +0000"         MMM dd HH:mm:ss ZZZZ 
+-- test mixed1 accepts    "Mar 16 08:12:04"               MMM dd HH:mm:ss 
+-- test dashed accepts    "11-02-11 16:47:35,985 +0000"   yy-MM-dd HH:mm:ss,sss ZZZZ 
+-- test dashed accepts    "10-06-26 02:31:29,573"         yy-MM-dd HH:mm:ss,sss 
+-- test dashed accepts    "10-04-19 12:00:17"             yy-MM-dd HH:mm:ss 
+-- test slashed accepts   "06/01/22 04:09:05"             yy/MM/dd HH:mm:ss 
+-- test spaced_en accepts "2017 Jun 19 13:16:49.194 EST"  yyyy MMM dd HH:mm:ss.sss zzz 
+-- test dashed accepts    "2011-02-11 16:47:35,985 +0000" yyyy-MM-dd HH:mm:ss,sss ZZZZ 
+-- test rfc3339 accepts   "2015-10-02T23:59:59.573+02:00" yyyy-MM-dd'T'HH:mm:ss,sssZZZZ 
+-- test rfc3339 accepts   "2015-10-14T22:11:20+00:00"     yyyy-MM-dd'T'HH:mm:ssZZZZ 
+-- test rfc3339 accepts   "2014-07-01T14:59:55.711Z"      yyyy-MM-dd'T'HH:mm:ss.sssZ 
+-- test dashed accepts    "2011-08-19 12:17:55 -0400"     yyyy-MM-dd HH:mm:ss ZZZZ 
+-- test dashed accepts    "2011-08-19 12:17:55-0400"      yyyy-MM-dd HH:mm:ssZZZZ 
+-- test dashed accepts    "2016-09-06 10:51:18 PDT"       yyyy-MM-dd HH:mm:ss zzz 
+-- test dashed accepts    "2010-06-26 02:31:29,573"       yyyy-MM-dd HH:mm:ss,sss 
+-- test dashed accepts    "2010-04-19 12:00:17"           yyyy-MM-dd HH:mm:ss 
+-- test dashed accepts    "2010-04-19 12:00:17:552"       yyyy-MM-dd HH:mm:ss:sss 
+-- test slashed accepts   "2006/01/22 04:11:05"           yyyy/MM/dd HH:mm:ss 
+-- test slashed accepts   "04/23/15 11:42:35"             MM/dd/yy HH:mm:ss 
+-- test slashed accepts   "04/23/2015 11:42:35"           MM/dd/yyyy HH:mm:ss 
+-- test slashed accepts   "04/23/2015 11:42:35.883"       MM/dd/yyyy HH:mm:ss.sss 
+-- test slashed accepts    "9/28/2009 2:23:15 PM"         MM/dd/yyyy hh:mm:ss am/pm 
