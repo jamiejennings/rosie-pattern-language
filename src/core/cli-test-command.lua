@@ -63,6 +63,10 @@ local function shorten(str, len)
    return str
 end
 
+local function indent(str, col)
+   return str:gsub('\n', '\n' .. string.rep(" ", col))
+end
+
 function p.run(rosie, en, args, filename)
    local right_column = 28
    -- fresh engine for testing this file
@@ -72,11 +76,11 @@ function p.run(rosie, en, args, filename)
    local shortfilename = shorten(filename, right_column-3)
    io.stdout:write(shortfilename, string.rep(".", right_column-#shortfilename))
    -- load the rpl code we are going to test (second arg true means "do not search")
-   local ok, pkgname, msgs, actual_path = test_engine:loadfile(filename, true)
+   local ok, pkgname, errs, actual_path = test_engine:loadfile(filename, true)
    if not ok then
-      io.write("Error: rpl file did not compile\n",
-	       table.concat(list.map(violation.tostring, msgs), "\n"),
-	       "\n")
+      local msgs = list.map(violation.tostring, errs)
+      local msg = table.concat(msgs, "\n")
+      io.write(indent(msg, right_column), "\n")
       return false, 0, 0
    end
    local first_error = true

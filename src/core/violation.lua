@@ -91,7 +91,7 @@ end
 function violation.tostring(err)
    local kind = recordtype.typename(err)
    if not kind then
-      return "Unexpected error type: " .. tostring(err)
+      return "Unspecific error: " .. tostring(err)
    end
    local str = kind .. "\n"
    str = str .. "\t[" .. err.who .. "]: " .. indent(err.message) .. "\n\t"
