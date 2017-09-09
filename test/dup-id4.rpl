@@ -1,0 +1,11 @@
+-- This one is a module, so we can test it with 'import'
+package foo
+local x = "hello"
+x = "world"
+
+
+
+
+
+
+

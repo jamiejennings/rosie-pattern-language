@@ -2158,6 +2158,30 @@ ok, m = e:match('end', "oklocalaliasend")
 check(ok)
 check(m and m.type=="*" and m.s==1 and m.e==16 and m.data=='oklocalaliasend')
 
+heading("Cannot define same id twice in a file")
+
+function check_dup_id(filename)
+   ok, pkgname, errs = e:loadfile(ROSIE_HOME .. "/test/" .. filename)
+   check(not ok)
+   check(not pkgname, "pkgname is: " .. tostring(pkgname))
+   msg = table.concat(map(violation.tostring, errs), "\n")
+   check(msg:find("identifier already bound"), "error was:\n" .. msg)
+end
+
+check_dup_id("dup-id1.rpl")
+check_dup_id("dup-id2.rpl")
+check_dup_id("dup-id3.rpl")
+
+e.searchpath = ROSIE_HOME .. "/test:" .. e.searchpath
+ok, pkgname, errs = e:import("dup-id4")
+check(not ok)
+check(not pkgname, "pkgname is: " .. tostring(pkgname))
+msg = table.concat(map(violation.tostring, errs), "\n")
+check(msg:find("identifier already bound"), "error was:\n" .. msg)
+
+
+
+
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
 return test.finish()
