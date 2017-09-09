@@ -82,10 +82,11 @@ local function one_node_tostrings(t, is_last_node)
    for i = 2, #t_ast_lines do
       table.insert(lines, tab(is_last_node) .. t_ast_lines[i])
    end
-   table.insert(lines,
-		tab(is_last_node) .. "Looking at: " .. left_delim .. t.input:sub(t.start) ..
-	        right_delim .. " (input pos = " .. tostring(t.start) .. ")")
-
+   if t.match ~= nil then
+      table.insert(lines,
+		   tab(is_last_node) .. "Looking at: " .. left_delim .. t.input:sub(t.start) ..
+		   right_delim .. " (input pos = " .. tostring(t.start) .. ")")
+   end
    if t.match then
       local match = lpeg.decode(t.match)
       local extra = ""
