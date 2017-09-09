@@ -1,0 +1,33 @@
+-- -*- Mode: rpl; -*-                                                                               
+--
+-- all.rpl    Collections of things
+--
+-- © Copyright IBM Corporation 2017.
+-- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+-- AUTHOR: Jamie A. Jennings
+
+package all
+import ts, date, time, net, num, id, word
+
+alias all_caps = { [:upper:] ![:lower:] [[:upper:][:digit:][-_$]]* }
+alias any_id_char = [[:alnum:][-_$]]
+alias has_special_chars = { [-_$]+ [:alpha:] any_id_char* } /
+			  { [:alpha:] [:alnum:]* [-_$] any_id_char*}
+identifier = all_caps / has_special_chars / id.dotted / id.guid
+punct = [:punct:]
+unmatched = [:^space:]+
+
+thing = ts.any /					    -- complete timestamps
+	date.any /
+	time.any / 
+	net.any /
+	identifier /
+	num.any /
+	word.any /
+	punct /
+	unmatched
+
+things = findall:thing
+
+
+
