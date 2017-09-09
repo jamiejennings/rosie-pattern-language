@@ -100,14 +100,13 @@ co.colormap = {["*"] = "black";			    -- global default
 	       ["net.ipv6"] = "red;underline";
 
 	       ["num.*"] = "underline";
-
 	       ["word.*"] = "yellow";
-	       ["id.*"] = "cyan";
+	       ["all.identifier"] = "cyan";
+	       ["id.*"] = "bold;cyan";
 	       ["os.path"] = "green";
 	       ["date.*"] = "blue";
 	       ["time.*"] = "4;34";		    -- underline & blue
-
---	       ["ts.*"] = "bold;blue";		    -- bold & blue
+	       ["ts.*"] = "bold;blue";		    -- bold & blue
 	    }
 
 local function query(db, key, query_type)
