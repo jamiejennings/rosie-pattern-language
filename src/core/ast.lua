@@ -723,7 +723,11 @@ function ast.dependencies_of(a)
    -- Until we have new use cases, this only works on pre-expansion ASTs, i.e. those produced by
    -- the compiler's parse_expression function. 
    if ast.block.is(a) then
-      return apply(append, map(ast.dependencies_of, a.stmts))
+      if #a.stmts==0 then			    -- e.g. parsing the empty string as rpl
+	 return {}
+      else
+	 return apply(append, map(ast.dependencies_of, a.stmts))
+      end
    elseif ast.grammar.is(a) then
       return apply(append, map(ast.dependencies_of, a.rules))
    elseif ast.binding.is(a) then
