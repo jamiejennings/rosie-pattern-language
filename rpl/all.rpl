@@ -9,11 +9,13 @@
 package all
 import ts, date, time, net, num, id, word
 
+-- Ways of distinguishing identifiers from ordinary words:
 alias all_caps = { [:upper:] ![:lower:] [[:upper:][:digit:][-_$]]* }
 alias any_id_char = [[:alnum:][-_$]]
 alias has_special_chars = { [-_$]+ [:alpha:] any_id_char* } /
 			  { [:alpha:] [:alnum:]* [-_$] any_id_char*}
 identifier = all_caps / has_special_chars / id.dotted / id.guid
+
 punct = [:punct:]
 unmatched = [:^space:]+
 
