@@ -124,7 +124,7 @@ function repl.repl(en)
 		  if path:sub(1,2)=="~/" then
 		     path = HOMEDIR .. path:sub(2)
 		  end
-		  local ok, messages, full_path
+		  local ok, pkgname, messages, full_path
 		  ok, pkgname, messages, full_path = en:loadfile(path, true)
 		  if messages then
 		     for _,msg in ipairs(messages) do
