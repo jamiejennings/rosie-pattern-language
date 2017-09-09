@@ -204,7 +204,7 @@ local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_
 end
 
 local function _trace(r, input, start, encoder, style)
-   return trace.expression(r, input, start, style)
+   return trace.expression(r, input, start, encoder, style)
 end
    
 -- FUTURE: Maybe cache expressions?
@@ -291,7 +291,7 @@ local function open3(e, infilename, outfilename, errfilename)
    return infile, outfile, errfile
 end
 
-local operation = {match=1, trace=2, fulltrace=3}
+local operation = {match=1, condensed=2, full=3}
 
 local function engine_process_file(e, expression, op, infilename, outfilename, errfilename, encoder, wholefileflag)
    --
@@ -346,11 +346,12 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    local ok, l = pcall(nextline);
    if not ok then e:error(l); end
    local _, m, leftover, trace_string
-   local trace_flag = (op == operation.trace) or (op == operation.fulltrace)
-   local trace_style = (op == operation.fulltrace) and "full" or "condensed"
+   local trace_flag = (op ~= "match")
+   local trace_style = op
+   local m, nextpos
    while l do
       if trace_flag then _, trace_string = e:trace(expression, l, 1, trace_style); end
-      m, nextpos = matcher(l);		    -- this is nextpos, NOT leftover
+      m, nextpos = matcher(l);		    -- This is nextpos, NOT leftover.
       -- What to do with leftover?  User might want to see it.
       -- local leftover = (#input - nextpos + 1);
       if trace_string then o_write(outfile, trace_string, "\n"); end
@@ -370,15 +371,12 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
 end
 
 function process_input_file.match(e, expression, infilename, outfilename, errfilename, encoder, wholefileflag)
-   return engine_process_file(e, expression, operation.match, infilename, outfilename, errfilename, encoder, wholefileflag)
+   return engine_process_file(e, expression, "match", infilename, outfilename, errfilename, encoder, wholefileflag)
 end
 
 function process_input_file.trace(e, expression, infilename, outfilename, errfilename, encoder, wholefileflag, trace_style)
-   local op = operation[trace_style]
-   if not op then
-      engine_error(e, "invalid trace style: " .. tostring(trace_style))
-   end
-   return engine_process_file(e, expression, op, infilename, outfilename, errfilename, encoder, wholefileflag)
+   assert(type(trace_style)=="string")
+   return engine_process_file(e, expression, trace_style, infilename, outfilename, errfilename, encoder, wholefileflag)
 end
 
 ---------------------------------------------------------------------------------------------------

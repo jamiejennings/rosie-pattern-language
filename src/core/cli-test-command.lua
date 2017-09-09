@@ -125,6 +125,7 @@ function p.run(rosie, en, args, filename)
    -- return values: true, false, nil (nil means failure to match)
    local function test_includes_ident(exp, q, id)
       local function searchForID(tbl, id)
+	 if not tbl then return false; end
          -- tbl MUST BE "subs" table from a match
          local found = false
          for i = 1, #tbl do

@@ -68,7 +68,7 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
 	    infilename, outfilename, errfilename,
 	    encoder,
 	    args.wholefile,
-	    (args.verbose and "fulltrace" or "trace"))
+	    (args.verbose and "full" or "condensed"))
 
    if not ok then io.write(cin, "\n"); return; end	-- cin is error message (a string) in this case
    
