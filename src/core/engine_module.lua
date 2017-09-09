@@ -191,7 +191,6 @@ end
 local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
    encoder = encoder or "default"
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
---   assert(rmatch_encoder, "invalid encoder name: " .. tostring(encoder))
    local match, nextpos, t0, t1 = 
       rmatch(rplx_exp.pattern.peg,
 	     input,
@@ -204,7 +203,7 @@ local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_
 end
 
 local function _trace(r, input, start, encoder, style)
-   return trace.expression(r, input, start, encoder, style)
+   return trace.expression(r, input, start, style)
 end
    
 -- FUTURE: Maybe cache expressions?

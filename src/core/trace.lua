@@ -500,7 +500,7 @@ function trace.internal(r, input, start)
 end
 
 function trace.expression(r, input, start, style)
-   assert(type(style)=="string", debug.traceback())
+   assert(type(style)=="string")
    local tr = trace.internal(r, input, start)
    if style == "full" then
       return trace.tostring(tr)
