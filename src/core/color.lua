@@ -102,16 +102,12 @@ co.colormap = {["*"] = "black";			    -- global default
 	       ["num.*"] = "underline";
 
 	       ["word.*"] = "yellow";
-	       ["word.id"] = "cyan";
-	       ["word.id1"] = "cyan";
-	       ["word.id2"] = "cyan";
-	       ["word.id3"] = "cyan";
-	       ["word.dotted_id"] = "cyan";
-
+	       ["id.*"] = "cyan";
 	       ["os.path"] = "green";
+	       ["date.*"] = "blue";
+	       ["time.*"] = "4;34";		    -- underline & blue
 
-	       ["date.any"] = "blue";
-	       ["time.time"] = "4;34";		    -- underline & blue
+--	       ["ts.*"] = "bold;blue";		    -- bold & blue
 	    }
 
 local function query(db, key, query_type)
@@ -213,39 +209,45 @@ local function color(match, db, pkgname, pkgcolor, global_default)
    local c = query(db, mtype, "exact")
    -- Exact match in color database: print in color c
    if c then return list.new{c, match.data}; end
-   -- Else, if match is a leaf, then check for a default color
    local match_pkg, match_name = common.split_id(mtype or "")
-   if not match.subs then
-      if match_pkg then
-	 if not pkgname then
-	    -- We were not given any default package with a default color, so
-	    -- look for one.
-	    pkgcolor = query(db, match_pkg, "default")
-	    if pkgcolor then
-	       return list.new{pkgcolor, match.data}
-	    else
-	       return list.new{global_default, match.data}
-	    end
-	 elseif (match_pkg==pkgname) then
-	    return list.new{pkgcolor, match.data}
-	 end
-      else
-	 -- The match does not have a pkg prefix (only a local name, match_name).  And we know
-	 -- also that there is no assigned color for this exact match type.
+   if not match_pkg then
+      if not match.subs then
 	 return list.new{global_default, match.data}
+      else -- Defer to the subs.
+	 return apply(append,
+		      map(function(sub)
+			     return color(sub, db, pkgname, pkgcolor, global_default)
+			  end,
+			  match.subs))
       end
-   else
-      -- Else, there are sub-matches.  Print each sub-match in its own color.  Start by looking
-      -- for a package default, provided we were not given one already.
-      if (not pkgname) and match_pkg then
+   else -- There is a match_pkg
+      if not pkgname then
 	 pkgcolor = query(db, match_pkg, "default")
 	 if pkgcolor then pkgname = match_pkg; end
       end
-      return apply(append, map(function(sub)
-				  return color(sub, db, pkgname, pkgcolor, global_default)
-			       end,
-			       match.subs))
-   end
+      if match_pkg==pkgname then
+	 return list.new{pkgcolor, match.data}
+      else
+	 -- Either we were not given any default package/color, or we were but it didn't match the 
+	 -- pkg prefix of the current node.
+	 pkgcolor = query(db, match_pkg, "default")
+	 if pkgcolor then
+	    return list.new{pkgcolor, match.data}
+	 else
+	    if match.subs then
+	       -- Defer to the subs. 
+	       return apply(append,
+			    map(function(sub)
+				   return color(sub, db, pkgname, pkgcolor, global_default)
+				end,
+				match.subs))
+	    else
+	       return list.new{global_default, match.data}
+	    end -- if/else match.subs
+	 end -- if/else pkgcolor
+      end -- if/else match_pkg==pkgname
+   end -- if/else not match_pkg
+   assert(false, "could not find color")
 end
 
 local function map_apply(fn, list_of_arglists)
