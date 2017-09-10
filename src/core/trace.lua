@@ -43,19 +43,15 @@ local function tab(is_last_node)
    end
 end
 
--- TODO:
+-- FUTURE:
 -- + Include in the trace ALL the components of a sequence/choice
 -- + Draw the tree using codepoints 2500-257F
 -- - Compress a sequence of simple charset matches to one trace entry
 -- - Print a statement about leftover characters after the tree
--- 
 -- + Show the "best guess" as to what went wrong by focusing on the path in the trace (tree) that
 --   went the furthest in the input.  (This is a heuristic.)
--- 
 -- - Maybe add color to highlight where branches fail?
--- 
 -- - Show sequences different from branching due to choices
--- 
 -- - Make this [below] convention a configuration option with display settings like:
 --   "none" - output the bytes in the input as-is
 --   "hex" - translate each byte into its 2-char hex representation
@@ -75,16 +71,17 @@ end
 -- called, the is_last_node argument should be nil.  Subsequent (recursive) calls will supply a
 -- boolean value.
 
-local function one_node_tostrings(t, is_last_node)
+local function one_node_tostrings(t, is_last_node, in_seq)
    local t_ast_lines = util.split(ast.tostring(t.ast), '\n')
    assert(t_ast_lines[1])
-   local lines = { node_marker(is_last_node) .. "Expression: " .. t_ast_lines[1] }
+   local lines = { node_marker(is_last_node, in_seq) .. "Expression: " .. t_ast_lines[1] }
    for i = 2, #t_ast_lines do
-      table.insert(lines, tab(is_last_node) .. t_ast_lines[i])
+      table.insert(lines, tab(is_last_node, in_seq) .. t_ast_lines[i])
    end
    if t.match ~= nil then
       table.insert(lines,
-		   tab(is_last_node) .. "Looking at: " .. left_delim .. t.input:sub(t.start) ..
+		   tab(is_last_node, in_seq) ..
+		   "Looking at: " .. left_delim .. t.input:sub(t.start) ..
 		   right_delim .. " (input pos = " .. tostring(t.start) .. ")")
    end
    if t.match then
@@ -94,14 +91,13 @@ local function one_node_tostrings(t, is_last_node)
 	 assert(match.subs and match.subs[1])
        	 extra = " (" .. match.subs[1].type .. ")"
       end
-      table.insert(lines, tab(is_last_node) .. "Matched " ..
-		   tostring(t.nextpos - t.start) .. " chars" ..
-		   extra)
+      table.insert(lines, tab(is_last_node, in_seq) ..
+		   "Matched " .. tostring(t.nextpos - t.start) .. " chars" .. extra)
    elseif t.match == false then
-      table.insert(lines, tab(is_last_node) .. "No match")
+      table.insert(lines, tab(is_last_node, in_seq) .. "No match")
    else
       assert(t.match==nil)
-      table.insert(lines, tab(is_last_node) .. "Not attempted")
+      table.insert(lines, tab(is_last_node, in_seq) .. "Not attempted")
    end
    return lines
 end
@@ -112,21 +108,22 @@ local function select_subs_to_show(node, sub_on_path)
       -- If we are not following a path, then we are showing the entire tree
       return node.subs or {}
    end
+   local is_sequence = ast.sequence.is(node.ast)
    local subs = list.new()
    if (not node.subs) or not list.member(sub_on_path, list.from(node.subs)) then
       -- Trace trees are fuller than ASTs, i.e. they have sub-traces where identifiers are
       -- referenced and where quantified expressions are unrolled.  So there are times when we
       -- show a node but not its subs because the path did not include one of the subs.
-      return subs
-   elseif ast.sequence.is(node.ast) or ast.choice.is(node.ast) then
+      return subs, is_sequence
+   elseif is_sequence or ast.choice.is(node.ast) then
       local i = 1
-      while node.subs[i] do --and (node.subs[i].match ~= nil) do
+      while node.subs[i] do
 	 table.insert(subs, node.subs[i])	    -- FUTURE: write list.insert?
 	 i = i+1
       end
-      return subs
+      return subs, is_sequence
    else
-      return list.new(sub_on_path)
+      return list.new(sub_on_path), is_sequence
    end
 end
 
@@ -136,7 +133,7 @@ local function node_tostrings(t, is_last_node, path)
    if path and list.null(path) then
       return lines
    end
-   local subs_to_show = select_subs_to_show(t, path and list.car(path))
+   local subs_to_show, in_sequence = select_subs_to_show(t, path and list.car(path))
    local next_path = path and list.cdr(path)
    local last = #subs_to_show
    for i = 1, last do
@@ -145,7 +142,7 @@ local function node_tostrings(t, is_last_node, path)
    end
    for i = 1, #sublines do
       if is_last_node ~= nil then
-	 sublines[i] = tab(is_last_node) .. sublines[i]
+	 sublines[i] = tab(is_last_node, in_sequence) .. sublines[i]
       end
    end
    table.move(sublines, 1, #sublines, #lines+1, lines)      

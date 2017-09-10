@@ -212,18 +212,18 @@ local function engine_match_trace(e, match_trace_fn, expression, input, start, e
    if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
    start = start or 1
    if type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
+   local compiled_exp, msgs
    if type(expression)=="string" then
       -- Expression has not been compiled.
       -- If in future we cache the string expressions, then look up expression in the cache here.
-      local msgs
-      expression, msgs = e:compile(expression)
-      if not expression then return false, msgs; end
-   end
-   if rplx.is(expression) then
-      return true, match_trace_fn(expression, input, start, encoder, total_time_accum, lpegvm_time_accum)
+      compiled_exp, msgs = e:compile(expression)
+      if not compiled_exp then return false, msgs; end
+   elseif rplx.is(expression) then
+      compiled_exp = expression
    else
       engine_error(e, "Expression not a string or rplx object: " .. tostring(expression));
    end
+   return true, match_trace_fn(compiled_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
 end
 
 local function engine_match(e, expression, input, start, encoder, t0, t1)
@@ -293,26 +293,17 @@ end
 local operation = {match=1, condensed=2, full=3}
 
 local function engine_process_file(e, expression, op, infilename, outfilename, errfilename, encoder, wholefileflag)
-   --
-   -- TODO: Do we still need to compile it first?
-   -- Set up pattern to match.  Always compile it first, even if we are going to call tracematch later.
-   -- This is so that we report errors uniformly at this point in the process, instead of after
-   -- opening the files.
-   --
    local r, msgs
    if engine_module.rplx.is(expression) then
       r = expression
    else
       r, msgs = e:compile(expression)
       if not r then e:error(table.concat(msgs, '\n')); end
+      assert(engine_module.rplx.is(r))
    end
-   assert(engine_module.rplx.is(r))
-
    -- This set of simple optimizations almost doubles performance of the loop through the file
-   -- (below) in typical cases, e.g. syslog pattern. 
+   -- (below) in cases where there are many lines to process.
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
---   local built_in_encoder = type(encoder)=="number" and encoder
---   if built_in_encoder then encoder = false; end
    local peg = r.pattern.peg			    -- optimization
    local matcher = function(input)
 		      return rmatch(peg, input, 1, rmatch_encoder, fn_encoder)
@@ -349,7 +340,7 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    local trace_style = op
    local m, nextpos
    while l do
-      if trace_flag then _, trace_string = e:trace(expression, l, 1, trace_style); end
+      if trace_flag then _, trace_string = e:trace(expression, l, 1, nil, trace_style); end
       m, nextpos = matcher(l);		    -- This is nextpos, NOT leftover.
       -- What to do with leftover?  User might want to see it.
       -- local leftover = (#input - nextpos + 1);
@@ -374,7 +365,6 @@ function process_input_file.match(e, expression, infilename, outfilename, errfil
 end
 
 function process_input_file.trace(e, expression, infilename, outfilename, errfilename, encoder, wholefileflag, trace_style)
-   assert(type(trace_style)=="string")
    return engine_process_file(e, expression, trace_style, infilename, outfilename, errfilename, encoder, wholefileflag)
 end
 

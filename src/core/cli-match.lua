@@ -39,15 +39,12 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    assert(compiled_pattern, "Rosie: missing pattern?")
    assert(engine_module.rplx.is(compiled_pattern), "Rosie: compiled pattern not rplx?")
 
-   -- Set up the input, output and error parameters
    if infilename=="-" then infilename = ""; end	    -- stdin
    outfilename = ""				    -- stdout
    errfilename = "/dev/null"
    if args.all then errfilename = ""; end	            -- stderr
    
-   -- Set up what kind of encoding we want done on the output
    local default_encoder = (args.command=="grep") and "line" or "color"
---   cli_common.set_encoder(rosie, en, args.encoder or default_encoder)
    local encoder = args.encoder or default_encoder
    
    local ok, msg = readable_file(infilename)
@@ -62,13 +59,14 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    
    -- Iterate through the lines in the input file
    local match_function = (args.command=="trace") and en.tracefile or en.matchfile
+   local trace_style = (args.verbose and "full" or "condensed")
 
    local ok, cin, cout, cerr =
       pcall(match_function, en, compiled_pattern,
 	    infilename, outfilename, errfilename,
 	    encoder,
 	    args.wholefile,
-	    (args.verbose and "full" or "condensed"))
+	    trace_style)
 
    if not ok then io.write(cin, "\n"); return; end	-- cin is error message (a string) in this case
    
