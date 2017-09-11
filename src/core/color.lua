@@ -98,6 +98,7 @@ co.colormap = {["*"] = "black";			    -- global default
 	       ["net.host"] = "red";		    -- show host, not its constituent parts
 	       ["net.fqdn"] = "red";		    -- show fqdn, not its constituent parts
 	       ["net.ipv6"] = "red;underline";
+	       ["net.path"] = "green";
 
 	       ["num.*"] = "underline";
 	       ["word.*"] = "yellow";
@@ -225,27 +226,29 @@ local function color(match, db, pkgname, pkgcolor, global_default)
 	 if pkgcolor then pkgname = match_pkg; end
       end
       if match_pkg==pkgname then
-	 return list.new{pkgcolor, match.data}
-      else
-	 -- Either we were not given any default package/color, or we were but it didn't match the 
-	 -- pkg prefix of the current node.
-	 pkgcolor = query(db, match_pkg, "default")
-	 if pkgcolor then
+	 if not match.subs then
 	    return list.new{pkgcolor, match.data}
 	 else
-	    if match.subs then
-	       -- Defer to the subs. 
-	       return apply(append,
-			    map(function(sub)
-				   return color(sub, db, pkgname, pkgcolor, global_default)
-				end,
-				match.subs))
-	    else
-	       return list.new{global_default, match.data}
-	    end -- if/else match.subs
-	 end -- if/else pkgcolor
+	    -- Defer to the subs.
+	    return apply(append,
+			 map(function(sub)
+				return color(sub, db, pkgname, pkgcolor, global_default)
+			     end,
+			     match.subs))
+	 end
+      else 
+	 if not match.subs then
+	    return list.new{global_default, match.data}
+	 else
+	    -- Defer to the subs.
+	    return apply(append,
+			 map(function(sub)
+				return color(sub, db, pkgname, pkgcolor, global_default)
+			     end,
+			     match.subs))
+	 end -- if/else match.subs
       end -- if/else match_pkg==pkgname
-   end -- if/else not match_pkg
+   end -- if/else match_pkg
    assert(false, "could not find color")
 end
 
