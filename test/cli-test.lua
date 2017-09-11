@@ -95,7 +95,7 @@ results_all_things =
    {
 "[30m#[0m",
 "[30m#[0m [33mThis[0m [33mis[0m [33man[0m [33mexample[0m [33mfile[0m [30m,[0m [36mhand-generated[0m [33mfor[0m [33mtesting[0m [33mrosie[0m [30m.[0m",
-"[30m#[0m [33mLast[0m [33mupdate[0m [30m:[0m [30mWed[0m [30mJun[0m [30m28[0m [30m16[0m [30m58[0m [30m22[0m [30mEDT[0m [30m2017[0m",
+"[30m#[0m [33mLast[0m [33mupdate[0m [30m:[0m [34mWed[0m [34mJun[0m [34m28[0m [1;34m16[0m [1;34m58[0m [1;34m22[0m [1;34mEDT[0m [34m2017[0m",
 "[30m#[0m",
 "[33mdomain[0m [31mabc.aus.example.com[0m",
 "[33msearch[0m [31mibm.com[0m [31mmylocaldomain.myisp.net[0m [31mexample.com[0m",

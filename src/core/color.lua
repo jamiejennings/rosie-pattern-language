@@ -106,8 +106,8 @@ co.colormap = {["*"] = "black";			    -- global default
 	       ["id.*"] = "bold;cyan";
 	       ["os.path"] = "green";
 	       ["date.*"] = "blue";
-	       ["time.*"] = "4;34";		    -- underline & blue
-	       ["ts.*"] = "bold;blue";		    -- bold & blue
+	       ["time.*"] = "1;34";		    -- bold and blue
+	       ["ts.*"] = "underline;blue";
 	    }
 
 local function query(db, key, query_type)
@@ -221,7 +221,7 @@ local function color(match, db, pkgname, pkgcolor, global_default)
 			  match.subs))
       end
    else -- There is a match_pkg
-      if not pkgname then
+      if match_pkg ~= pkgname then
 	 pkgcolor = query(db, match_pkg, "default")
 	 if pkgcolor then pkgname = match_pkg; end
       end
