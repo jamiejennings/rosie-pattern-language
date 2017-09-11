@@ -99,7 +99,7 @@ co.colormap = {["*"] = "black";			    -- global default
 	       ["net.fqdn"] = "red";		    -- show fqdn, not its constituent parts
 	       ["net.ipv6"] = "red;underline";
 	       ["net.path"] = "green";
-
+	       ["net.MAC"] = "underline;green";
 	       ["num.*"] = "underline";
 	       ["word.*"] = "yellow";
 	       ["all.identifier"] = "cyan";

@@ -239,8 +239,19 @@ http_command = http_command_name url
 http_version = {"HTTP" "/" [:digit:]+ "." [:digit:]+}     -- e.g. "HTTP1.1"
 
 ---------------------------------------------------------------------------------------------------
+-- MAC addresses
+---------------------------------------------------------------------------------------------------
+cisco = { {[:xdigit:]{4} "."}{2} [:xdigit:]{4} }
+windows = { {[:xdigit:]{2} "-"}{5} [:xdigit:]{2} }
+common = { {[:xdigit:]{2} ":"}{5} [:xdigit:]{2} }
+
+MAC = cisco / windows / common
+
+-- TODO: MAC needs tests
+
+---------------------------------------------------------------------------------------------------
 -- net.any will match common network patterns (but not all the patterns defined above!)
 ---------------------------------------------------------------------------------------------------
 
 -- Match an IP, Host, Email, URL
-any = ip / fqdn_strict / email / url / path
+any = ip / MAC / fqdn_strict / email / url / path

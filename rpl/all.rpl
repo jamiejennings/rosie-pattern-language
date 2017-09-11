@@ -23,8 +23,8 @@ thing = ts.any /					    -- complete timestamps
 	date.any /
 	time.any / 
 	net.any /
-	identifier /
 	num.any /
+	identifier /
 	word.any /
 	punct /
 	unmatched
