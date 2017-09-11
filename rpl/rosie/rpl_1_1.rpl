@@ -34,14 +34,16 @@ alias atmos = { ws? (comment / newline) }* ws?		    -- "atmosphere"
 alias id_char = [[:alnum:]] / [[_]]
 alias id = { [[:alpha:]] id_char* }
 
-alias id_symbol = [[.$~^]]
+dot = "."
+alias unoverloaded_id_symbol = [[$~^]]
+alias id_symbol = dot / unoverloaded_id_symbol
 
 -- It is important that an error consume at least one character here.
 -- As a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
 rest_of_line = { {!"\n" .}+ "\n" / $}
 syntax_error = rest_of_line
 
-localname = {id_symbol !id} / {id !id_symbol}
+localname = unoverloaded_id_symbol / {dot !id} / {id !dot}
 packagename = id
 identifier = { {packagename [[.]]}? localname }
 
@@ -148,7 +150,6 @@ version_spec = { major "." minor }
 
 importpath = quoted_string /		  -- double quoted, interpreted, pattern name is "literal"
              { id {"/" id}* }		  -- quotes not needed when each path segment is an id
-dot = "."
 import_spec = atmos importpath ("as" (packagename / dot))?
 
 ----------------------------------------------------------------------------------------
