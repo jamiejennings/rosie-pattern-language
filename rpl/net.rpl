@@ -223,10 +223,12 @@ uri = { scheme ":" authpath? { "?" query }? { "#" fragment }? }
 -- informal concept" (http://www.w3.org/TR/uri-clarification).  We will take advantage of the
 -- informality to use the name 'url' to refer to a uri that requires an authpath.  A uri will match
 -- "foo:" but a url will not.
+-- We also modify the url pattern to avoid accepting input of the form "xyz::w".
 
-url = { scheme ":" authpath { "?" query }? { "#" fragment }? }
+url = { scheme ":" !":" authpath { "?" query }? { "#" fragment }? }
 
 -- test url rejects "foo:"
+-- test url rejects "xyz::w"
 
 ---------------------------------------------------------------------------------------------------
 -- HTTP commands

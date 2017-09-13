@@ -10,11 +10,12 @@ package all
 import ts, date, time, net, num, id, word
 
 -- Ways of distinguishing identifiers from ordinary words:
-alias all_caps = { [:upper:] ![:lower:] [[:upper:][:digit:][-_$]]* }
-alias any_id_char = [[:alnum:][-_$]]
-alias has_special_chars = { [-_$]+ [:alpha:] any_id_char* } /
-			  { [:alpha:] [:alnum:]* [-_$] any_id_char*}
-identifier = all_caps / has_special_chars / id.dotted / id.guid
+alias starts_with_caps = { [:upper:]{2} [[:alnum:][-_$]]* }
+alias special_char = [-_$:]
+alias any_id_char = [:alnum:] / special_char
+alias has_special_chars = { special_char+ [:alpha:] any_id_char* } /
+			  { [:alpha:] [:alnum:]* special_char any_id_char* !<":"}
+identifier = starts_with_caps / has_special_chars / id.dotted / id.guid
 
 punct = [:punct:]
 unmatched = [:^space:]+
@@ -23,8 +24,8 @@ thing = ts.any /					    -- complete timestamps
 	date.any /
 	time.any / 
 	net.any /
-	num.any /
 	identifier /
+	num.any /
 	word.any /
 	punct /
 	unmatched
