@@ -214,7 +214,7 @@ check(not m)
 
 subheading("Example macro: find")
 
-p = e:compile('find:a')
+p = e:compile('find1:a')
 ok, m, leftover = e:match(p, "xyzw 1 2 3 a")
 check(ok)
 check(m)

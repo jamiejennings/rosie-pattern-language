@@ -110,8 +110,8 @@ function p.setup_engine(en, args)
       end
 
       if (args.command=="grep") then
-	 -- FUTURE: rosie.expr.apply_macro("findall", exp)
-	 local findall = ast.ref.new{localname="findall"}
+	 -- FUTURE: rosie.expr.apply_macro("find", exp)
+	 local findall = ast.ref.new{localname="find"}
 	 AST = ast.application.new{ref=findall,
 				   arglist={ast.ambient_cook_exp(AST)},
 				   sourceref=AST.sourceref}
