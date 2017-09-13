@@ -102,7 +102,8 @@ function repl.repl(en)
 	 local _, _, _, subs = common.decode_match(m)
 	 local name, pos, text, subs = common.decode_match(subs[1])
 	 if name=="identifier" then
-	    local def = en.env:lookup(text)
+	    local packagename, localname = common.split_id(text)
+	    local def = en.env:lookup(localname, packagename)
 	    if def then
 	       local props = ui.properties(text, def)
 	       io.write(props.binding, "\n")
