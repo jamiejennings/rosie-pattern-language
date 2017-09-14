@@ -327,7 +327,6 @@ function common.rmatch(peg, input, start, rmatch_encoder, fn_encoder, total_time
 --   local Cencoder = encode or 0			    -- default is compact byte encoding
 --   if encode==-1 then Cencoder = 0; end		    -- -1 ==> no output
    local m, nextpos, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
-   assert(start, debug.traceback())
    if not m then return false, start, t1, t2; end
    -- TODO: return abend also
    return fn_encoder(m, input, start), nextpos, t1, t2
