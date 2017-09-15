@@ -1,30 +1,97 @@
+![./CHANGELOG](https://img.shields.io/badge/version-1.0.0--alpha-ff79b4.svg)
 [![Build Status](https://travis-ci.org/jamiejennings/rosie-pattern-language.svg?branch=master)](https://travis-ci.org/jamiejennings/rosie-pattern-language)
-# Rosie Pattern Language (v1-preview)
 
-## Rosie will tidy up raw data (text), recognize key pieces of data, and create JSON structured output
+# Rosie Pattern Language
 
-### Better than regex
+Rosie is an alternative to modern Regular Expressions (regex) that is designed
+to scale to big data, many developers, and large collections of patterns.  Rosie
+Pattern Language:
 
-Rosie is a supercharged alternative to Regular Expressions (regex), matching
-patterns against any input text.  Rosie ships with hundreds of sample patterns
-for timestamps, network addresses, email addresses, CSV files, and many more.
+* Looks like a programming language, and plays well with development tools
+* Comes with a library of dozens of useful patterns (timestamps, network addresses, and more)
+* Has development tools: tracing, REPL, color-coded match output
+* Produces JSON output (and other formats)
 
-Unlike most regex tools, Rosie can generate structured (JSON) output.  And,
-Rosie has an interactive pattern development mode to help write and debug
-patterns. 
+![Animated screen capture demonstrating Rosie](doc/images/p1.gif)
 
 
-### Small and fast
+## Contents
 
-The Rosie Pattern Engine takes less than 400KB (yes, *kilobytes*) of disk space, and around 20MB of
-memory.  Typical log files are parsed at around 40,000 lines/second on my 4-year
-old MacBook Pro, where other (popular) solutions do not achieve 10,000 lines/second.
+- [Features](#features)
+- [Building](#building)
+- [Using Rosie's CLI](#using-cli)
+- [Using Rosie's REPL](#using-repl)
+- [Using Rosie in your programs](#using-api)
 
-Rosie Pattern Language is ideal for big data analytics, because Rosie is fast,
-has predictable performance (unlike most regex engines), and generates json
-output for downstream analysis.
+- [API documentation](#api-documentation)
+- [Geek notes](doc/geek.md) for the PL and CS geeks among us
 
-For the PL and CS geeks among us, some technical notes are [here](doc/geek.md).
+- [Project Roadmap](#project-roadmap)
+- [Development and contributing](#development-and-contributing)
+- [Acknowledgements](#acknowledgements)
+
+## Features
+
+- Small: the Rosie compiler/runtime/libraries take up less than 600KB of disk
+- Good performance: **what to say, specifically?**
+- Extensible pattern library
+- Packages of patterns are easy to share
+- Rosie is fluent in UTF-8, ASCII, and the binary language of moisture
+'vaporators (arbitrary byte-encoded data)
+
+## Building
+
+Platforms: OS X, Linux, and probably that Ubuntu-on-Windows thing
+
+1. `make`
+2. `make install`  (optional)
+
+## Using the CLI
+
+- Examples
+- Link to man page
+
+## Using the REPL
+
+- Examples
+- Link to full reference?
+
+## Using Rosie in your own programs
+
+- Language coverage
+- Building librosie
+- Link to full api documentation
+
+## API
+
+- Describe librosie
+- Link to full api doc
+
+## Project roadmap
+
+- [x] Change to semantic versioning
+- [x] v1.0.0-alpha-1 release
+- [ ] Unicode character classes
+- [ ] Brew installer for OS X
+- [ ] RPM and debian packages
+- [ ] API (C)
+- [ ] Python module
+- [ ] C, Go modules
+- [ ] Ruby, node.js modules
+- [ ] Support JSON output for trace, config, list, and other commands
+- [ ] Customize color assignments
+- [ ] Customize initial environment
+- [ ] Generate patterns automatically from locale data
+- [ ] Toolkit for user-developed macros
+- [ ] Toolkit for user-developed output encoders
+- [ ] Compiler optimizations
+- [ ] Additions to standard library
+
+
+
+
+<hr>
+
 
 ## A quick look at Rosie
 
