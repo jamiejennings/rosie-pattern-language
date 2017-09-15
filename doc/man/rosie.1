@@ -1,0 +1,182 @@
+.mso www.tmac
+.TH ROSIE 1 "$Date: 2017/09/20 09:00:00 $"
+.SH NAME
+rosie \- Rosie Pattern Engine (Rosie Pattern Language)
+.SH SYNOPSIS
+.B rosie
+.I command
+[
+.I options
+]
+.I pattern
+.I file
+.I [...]
+.SH DESCRIPTION
+.B Rosie
+searches all given input files for lines that match a pattern.  The pattern
+language is similar to regular expressions, but more powerful.  Also, a set of
+predefined (named) patterns are provided.  The pattern library is extensible.
+Rosie patterns are written in
+.B Rosie Pattern Language (RPL).
+A shared library,
+.BR librosie ,
+provides a programmatic interface to rosie in C, Go, Python, Ruby,
+Javascript, and other languages that support
+.BR libffi .
+.B Rosie
+can be used for data mining on large data sets, or for the kind of smaller tasks
+that
+.B grep
+and other regex tools are used for.  The output can be plain text, like grep
+produces, or can be structured JSON, in the form of a parse tree.  A number of other
+output options are available (see below).
+
+.SH LANGUAGE REFERENCE
+The RPL Language Reference may be found at
+.B to be determined .
+
+.SH COMMANDS
+The primary commands are
+.IR match " and " grep "."
+Help for a command is obtained using the
+.B \-h
+option (see below).
+.TP
+.I grep
+In the style of grep, match the given
+.I pattern
+against lines in the given input files (or the standard input).  In this mode,
+the pattern may match anywhere within a line, and all matches within a line are
+found.  The default output form in this mode is to print the entire line for all
+lines that match.
+.TP
+.I help
+Print help text.
+.TP
+.I config
+Print the configuration of the Rosie installation, including build information
+(if available).
+.TP
+.IR list " [filter]"
+List the available patterns from the library whose name contains the optional
+.I filter
+as a substring.
+.TP
+.I match
+Match the given
+.I pattern
+against lines in the given input files (or the standard input). Patterns in RPL
+begin at the start of the input line. See the
+.I grep
+command for behavior that is more like that utility.
+.TP
+.I repl
+Enter the read-eval-print loop for interactive development and testing of patterns
+.TP
+.I test
+Execute the pattern tests embedded within the listed rpl files.
+.TP
+.I trace
+Perform a match, but generate a trace listing of all the steps performed in
+the matching process.  This can be quite a lot of output.
+.SH OPTIONS
+.TP
+.BI "\-f, \--file" " file"
+Load a file of rpl code.  This option may be repeated.
+.TP
+.B \-h, \--help
+Display help for a command.  This option must be given after the command name, e.g.
+.BR "rosie match \-h" .
+.TP
+.BI "\-o, --output" " style"
+Output match data according to
+.IR style ,
+which may be
+.IR color ,
+.IR nocolor ,
+.IR json ,
+.IR line ,
+and possibly other (installation-dependent) values.  Use
+.B rosie help
+to discover what is available in your installation.  Note the default output
+style is
+.IR color ,
+except for the
+.I grep
+command, which uses
+.I line
+as its default.
+\" For compatibility with grep,
+\" .B \-o
+\" without a style specifier is equivalent to
+\" .B \-o nocolor
+\" \.
+.TP
+.B \--verbose
+When appropriate, output additional information.
+.TP
+.B \--version
+Print the Rosie version and exit.
+.TP
+.B \-w, \-\-wholefile
+Match against the whole input file as if it were a single string.
+.TP
+.B \-F, \-\-fixed\-strings
+Interpret
+.I pattern
+as a set of fixed (literal) strings, instead of an RPL pattern (which reqires
+double quotes around string literals).
+.TP
+.B \-
+Stop reading from the given input files, if any, and start reading from the standard input.
+
+.SH ENVIRONMENT
+.TP
+.B ROSIE_PATH
+A list of directories that Rosie will search when looking for a package of
+patterns to import.  The value is a colon-separated string on Unix, and a
+semi-colon separated string on Windows.  When ROSIE_PATH is not set, Rosie looks
+for imported packages in the standard library within the installation directory.
+.B Important note:
+If you set ROSIE_PATH, you must explicitly include the standard library if you
+want Rosie to include the standard library in its search.
+
+\" .TP
+\" .B ROSIE_COLORS
+\" A colon-separated list of pattern names with ANSI SGR color/attribute options to
+\" use when printing matching text.  For example, when "net.any=1;31" is included
+\" within ROSIE_COLORS, input text that matches the pattern
+\" .I net.any
+\" will be printed in bold (1) red (31) text.  ROSIE_COLORS is only consulted when
+\" the output style
+\" .I color
+\" is selected.  ROSIE_COLORS, when set, replaces Rosie's default color settings.
+
+.SH FILES
+.TP
+.I ~/.rosie/
+.B to be determined.
+
+.SH EXAMPLES
+.I Forthcoming
+
+.SH BUGS
+.B Rosie
+does not automatically normalize Unicode input.  If a pattern contains composed
+characters, for example, these will not match their decomposed equivalents in
+the input (and vice versa).
+.PP
+Bugs and requests for enhancement may be found on 
+.URL https://github.com/jamiejennings/rosie-pattern-language/issues "Rosie's issue page."
+.SH "SEE ALSO"
+.URL https://rosie-lang.org "Rosie's home (news, docs, etc.)"
+.SH AUTHOR
+Jamie A. Jennings
+.br
+.URL mailto://info@rosie-lang.org "email"
+.br
+.URL https://twitter.com/jamietheriveter "@jamietheriveter"
+.PP
+With contributions from the people listed in the
+.URL https://github.com/jamiejennings/rosie-pattern-language "CONTRIBUTORS file."
+
