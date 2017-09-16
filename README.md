@@ -13,7 +13,10 @@ Pattern Language:
 * Produces JSON output (and other formats)
 
 <table>
-<tr><td><img src="doc/images/p1.gif" width="560"></td></tr>
+<tr>
+    <td> </td>
+    <td><img src="doc/images/p1.gif" width="560"></td>
+</tr>
 </table>
 
 
