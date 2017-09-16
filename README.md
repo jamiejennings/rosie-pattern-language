@@ -12,13 +12,13 @@ Pattern Language:
 * Has development tools: tracing, REPL, color-coded match output
 * Produces JSON output (and other formats)
 
-<table border="0">
+<blockquote>
+<table>
 <tr>
-    <td> </td>
     <td><img src="doc/images/p1.gif" width="560"></td>
 </tr>
 </table>
-
+</blockquote>
 
 ## Contents
 
