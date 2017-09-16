@@ -12,7 +12,7 @@ Pattern Language:
 * Has development tools: tracing, REPL, color-coded match output
 * Produces JSON output (and other formats)
 
-<table>
+<table border="0">
 <tr>
     <td> </td>
     <td><img src="doc/images/p1.gif" width="560"></td>
