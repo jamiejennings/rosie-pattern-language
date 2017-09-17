@@ -5,9 +5,9 @@
 Use `rosie repl` to start the interactive read/eval/print loop.  You can
 optionally load rpl files and specify rpl code on the command line, e.g.
 
-```
+```shell 
 $ rosie --rpl 'd=[:digit:]' repl
-Rosie v1-tranche-3
+Rosie 1.0.0-alpha
 Rosie> d
 [:digit:]
 Rosie>
@@ -32,7 +32,7 @@ patterns may be loaded by using the `.load` command to load an RPL file, or the
 
 ```shell
 $ rosie repl
-Rosie v1-tranche-3
+Rosie 1.0.0-alpha
 Rosie> .list
 
 Name                           Cap? Type       Color           Source
@@ -104,7 +104,6 @@ path_windows                        pattern    black (default) ...pattern-langua
 16/16 names shown
 Rosie> 
 ``` 
-
 
 You can see the definition of a pattern by typing its name at the repl prompt.
 Some identifiers are bound to packages, or macros/functions, and not patterns.
