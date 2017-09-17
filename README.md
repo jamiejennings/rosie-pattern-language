@@ -24,16 +24,21 @@ Pattern Language:
 
 - [Features](#features)
 - [Building](#building)
-- [Using Rosie's CLI](#using-cli)
-- [Using Rosie's REPL](#using-repl)
-- [Using Rosie in your programs](#using-api)
-
-- [API documentation](#api-documentation)
-- [Geek notes](doc/geek.md) for the PL and CS geeks among us
+- [Using Rosie's CLI](#using-the-cli)
+- [Using Rosie's REPL](#using-the-repl)
+- [Using Rosie API](#using-the-api)
 
 - [Project Roadmap](#project-roadmap)
-- [Development and contributing](#development-and-contributing)
+- [Contributing](#contributing)
 - [Acknowledgements](#acknowledgements)
+
+See also:
+- The new [Rosie Pattern Language blog](http://tiny.cc/rosie), which has news
+and examples, and will eventually contain posts on the usage and design of
+Rosie.
+- Twitter: [@jamietheriveter](https://twitter.com/jamietheriveter)
+- [Other sources](#other-sources)
+
 
 ## Features
 
@@ -61,7 +66,9 @@ Platforms: OS X, Linux, and probably that Ubuntu-on-Windows thing
 - Examples
 - Link to full reference?
 
-## Using Rosie in your own programs
+## Using the API
+
+...Rosie in your own programs...
 
 - Language coverage
 - Building librosie
@@ -74,15 +81,29 @@ Platforms: OS X, Linux, and probably that Ubuntu-on-Windows thing
 
 ## Project roadmap
 
+### Releases
 - [x] Change to semantic versioning
-- [x] v1.0.0-alpha-1 release
-- [ ] Unicode character classes
+- [x] v1.0.0-alpha release
+- [ ] v1.0.0-beta release
+- [ ] v1.0.0 release
+
+### Installation
 - [ ] Brew installer for OS X
 - [ ] RPM and debian packages
+
+### API and language support
 - [ ] API (C)
 - [ ] Python module
 - [ ] C, Go modules
 - [ ] Ruby, node.js modules
+
+### Packages
+- [ ] Dependency tool to identify dependencies of a set of packages, and to make
+it easy to upload/download those dependencies.
+- [ ] Source code parsing patterns (based on work done at NCSU, Raleigh, NC USA)
+
+### Features
+- [ ] Unicode character classes
 - [ ] Support JSON output for trace, config, list, and other commands
 - [ ] Customize color assignments
 - [ ] Customize initial environment
@@ -93,170 +114,14 @@ Platforms: OS X, Linux, and probably that Ubuntu-on-Windows thing
 - [ ] Additions to standard library
 
 
-
-
 <hr>
 
+## Contributing
 
-## A quick look at Rosie
+### Write new patterns!
 
-For a quick test of Rosie's capabilities, use the Rosie Pattern Engine to look
-for a basic set of patterns in any text file on your system.  Good candidates
-may be `/etc/resolv.conf` or `/var/log/system.log`.  Use the pattern
-`basic.matchall` for this.  In the example below, we use a few lines from the
-Mac OSX system log (from the Rosie test suite):
-
-![Screen capture](doc/images/system.log-example.jpg "Rosie processing a MacOS system log")
-
-Rosie is parsing the log file into fields that are printed in various colors.
-To see which colors correspond to which RPL patterns, type `./bin/rosie -patterns` to
-see all defined and loaded patterns and the color (if any) that is assigned to
-them for output at the terminal.
-
-To see the JSON version of the Rosie output, use the `-encode` option to specify
-`json`.  In the example below, the pattern being matched is `common.word
-basic.network_patterns`.  Rosie finds a line matching this pattern, and the
-pattern matches at position 1 of the input line.  The sub-match `common.word`
-also begins at position 1, and the sub-match `basic.network_patterns` begins at
-position 12:
-
-```
-jamiejennings$ rosie -encode json 'common.word basic.network_patterns' /etc/resolv.conf | rjsonpp
-{"*": 
-   {"pos": 1.0, 
-    "text": "nameserver 10.0.1.1", 
-    "subs": 
-      [{"common.word": 
-         {"text": "nameserver", 
-          "pos": 1.0}}, 
-       {"basic.network_patterns": 
-         {"pos": 12.0, 
-          "text": "10.0.1.1", 
-          "subs": 
-            [{"network.ip_address": 
-               {"text": "10.0.1.1", 
-                "pos": 12.0}}]}}]}}
-jamiejennings$ 
-``` 
-
-(Note: `rjsonpp` is my own json pretty-printer, similar to `json_pp`.)
-
-## How to build: clone the repo, and type 'make'
-
-After cloning the repository, there is just one step: `make`.  The `makefile` will download the
-needed prerequisites, compile them, and run a quick test.
-
-You should see this message if all went well: `Rosie Pattern Engine installed successfully!`
-
-The rosie executable is in `./bin/rosie`.  More installation information is available:
-
-* [Installation details and tips](doc/install.md)
-* [RHEL 7 install tips](doc/rhel.md)
-* [Ubuntu 16 install tips](doc/ubuntu.md)
-* [Windows 10 Anniversary Edition install tips](doc/windows10ae.md)
-* [Sample docker files](docker/) *Note: These may need updating*
-
-## Project status
-
-The current release is v0.99k.  The RPL language syntax and semantics have been
-stable for a while now.  In our current work, which is leading up to release
-v1.0, we are doing some refactoring and also adding new features.  Our goal is
-to release v1.0 in the summer of 2017 in a strictly forward-looking way.  That
-is, we want future versions 1.x to be backwards compatible to v1.0.
-
-At the [Rosie Pattern Language blog](http://tiny.cc/rosie), you can find a
-preview of what is coming in v1.0.
-
-
-## Docs
-
-The new [Rosie Pattern Language blog](http://tiny.cc/rosie) has a preview of the
-forthcoming version 1.0, and will grow to contain documentation and examples.
-
-Current release documentation:
-* [Command Line Interface documentation](doc/cli.md)
-* [Rosie Pattern Language Reference](doc/rpl.md)
-* [Interactive read-eval-print loop (repl)](doc/repl.md)
-
-Rosie on IBM developerWorks Open:
-* [Rosie blogs and talks](https://developer.ibm.com/open/category/rosie-pattern-language/)
-* Including:
-    * [Project Overview](https://developer.ibm.com/open/rosie-pattern-language/)
-    * [Introduction](https://developer.ibm.com/open/2016/02/20/world-data-science-needs-rosie-pattern-language/)
-    * [Parsing Spark logs](https://developer.ibm.com/open/2016/04/26/develop-test-rosie-pattern-language-patterns-part-1-parsing-log-files/)
-    * [Parsing CSV files](https://developer.ibm.com/open/2016/10/14/develop-test-rosie-pattern-language-patterns-part-2-csv-data/)
-
-For an introduction to Rosie and explanations of the key concepts, see
-[Rosie's _raison d'etre_](doc/raisondetre.md).
-
-Rosie's internal components, as well as the utilities needed to build Rosie are
-listed [here](doc/arch.md).
-
-Rosie author on Twitter: [@jamietheriveter](https://twitter.com/jamietheriveter)
-
-## Useful tips
-
-### Sample patterns are in the rpl directory
-
-The file `MANIFEST` lists the Rosie Pattern Language files that Rosie compiles
-on startup.  These files are typically in the `rpl` directory, but could be
-anywhere.  Browse the `rpl` directory to see how patterns are written.
-
-### Write patterns on the command line
-
-You can write patterns on the command line, e.g.:  (output will be in color,
-which is not shown here)
-
-```
-jamiejennings$ rosie 'network.ip_address common.word' /etc/hosts
-127.0.0.1 localhost 
-255.255.255.255 broadcasthost 
-```
-
-And the same command but with JSON output:
-
-``` 
-bash-3.2$ rosie -encode json 'network.ip_address common.word' /etc/hosts 
-{"*":{"1":{"network.ip_address":{"text":"127.0.0.1","pos":1}},"2":{"common.word":{"text":"localhost","pos":11}},"text":"127.0.0.1\tlocalhost","pos":1}}
-{"*":{"1":{"network.ip_address":{"text":"255.255.255.255","pos":1}},"2":{"common.word":{"text":"broadcasthost","pos":17}},"text":"255.255.255.255\tbroadcasthost","pos":1}}
-``` 
-
-### The "-grep" option looks for your pattern anywhere in the input
-
-By default, Rosie matches your pattern against an entire line.  But what if you
-want grep-like functionality, where a pattern may be found anywhere in the
-input?  Try a command like this:
-
-``` 
-rosie -grep basic.network_patterns /etc/resolv.conf
-```
-
-For example:
-
-![Image of command line use of the grep option](doc/images/resolv.conf.example.jpg "Example of the -grep option")
-
-Note that the pattern `basic.network_patterns` contains patterns that match path
-names as well as email addresses, domain names, and ip addresses. 
-
-### Pattern debugging on the command line
-
-Interactive pattern debugging can be done using the read-eval-print loop (see
-[interactive pattern development](doc/repl.md)).  But debugging output can also
-be generated at the command line.
-
-The `-debug` command line option generates verbose output about every step of
-matching.  It is best to use this option with only **one line of input** because
-so much output is generated.
-
-### Adding new patterns for Rosie to load on start-up
-
-When Rosie starts, all the Rosie Pattern Language (rpl) files listed in
-`MANIFEST ` are loaded.  You can write your own patterns and add your
-pattern file to the end of the manifest, so that Rosie will load them.
-(Currently, this is the only way to add new patterns.)
-
-
-## How you can help
+We are happy to add more patterns to the initial library we've started in the
+[rpl directory](rpl), whether they build on what we have or are entirely new.
 
 ### Calling Rosie from Go, Python, node.js, Ruby, Java, or ...?
 
@@ -272,8 +137,80 @@ And since `librosie` is built on `libffi`, it's pretty easy to access Rosie from
 other languages.  This is another great area to make a contribution to the
 project.
 
-### Write new patterns!
+### Wanted: new tools
 
-We are happy to add more patterns to the initial library we've started in the
-[rpl directory](rpl), whether they build on what we have or are entirely new.
+Because RPL is designed like a programming language (and it has an accessible
+parser, [rpl_1_1.rpl](rpl/rosie/rpl_1_1.rpl), new tools are relatively easy to
+write.  Here are some ideas:
 
+- [ ] **Package doc:** Given a package name, display the exported pattern names
+      and, for each, a summary of the strings accepted and rejected.
+
+- [ ] **Improved trace:** The current trace output could be improved,
+  particularly to make it more compact.  A trace is represented internally as a
+  table which could easily be rendered as JSON.  And since this data structure
+  represents a complete trace, it is the right input to a new algorithm that
+  produces a compact summary.  Or an animated output.
+
+- [ ] **Linter:** Users of most programming languages are aided by a linting
+	tool, in part because of correct expressions that are not, in fact, what the
+	programmer wanted.  For example, the character set `[_-.]` is a range in
+	RPL, but it is an empty range.  Probably the author meant to write a set of
+	3 characters, like `[._-]`.
+
+- [ ] **Notebook:** A Rosie kernel for a notebook would be useful to many
+  people.  So would adding Rosie capabilities to a general notebook environment
+  (e.g. [Jupyter](http://jupyter.org)).
+  
+- [ ] **Pattern generators:** A number of techniques hold promise for
+automatically generating RPL patterns, for example:
+  * Convert a format string to pattern, e.g. a `printf` format string, or the
+    posix locale structure's fields that specify how to format numbers,
+    dates/times, and monetary amounts.
+  * Infer the format of each field in a CSV (or JSON, HTML, XML) file using
+  analytics techniques such as statistics and machine learning.
+  * Convert a regular expression to an RPL pattern.
+
+
+## Acknowledgements
+
+In addition to the people listed in the CONTRIBUTORS file, we wish to thank:
+
+-  Roberto Ierusalimschy, Waldemar Celes, and Luiz Henrique de Figueiredo,
+    the creators of [the Lua language](http://www.lua.org) (MIT License);
+
+-  the Lua community (at large);
+
+-  Mark Pulford, the author of
+   [lua-cjson](http://www.kyne.com.au/%7Emark/software/lua-cjson.php) (MIT
+   License); 
+
+-  Brian Nash, the author of
+   [lua-readline](https://github.com/bcnjr5/lua-readline) (MIT License); 
+
+-  Peter Melnichenko, the author of
+   [argparse](https://github.com/mpeterv/argparse) (MIT License);
+
+- and again Roberto Ierusalimschy, for his
+    [lpeg library](http://www.inf.puc-rio.br/~roberto/lpeg), which has been
+    critical to implementing Rosie (MIT License).
+
+
+## Other sources
+
+Rosie on IBM developerWorks Open:
+* [Rosie blogs and talks](https://developer.ibm.com/open/category/rosie-pattern-language/)
+* Including:
+    * [Project Overview](https://developer.ibm.com/open/rosie-pattern-language/)
+    * [Introduction](https://developer.ibm.com/open/2016/02/20/world-data-science-needs-rosie-pattern-language/)
+    * [Parsing Spark logs](https://developer.ibm.com/open/2016/04/26/develop-test-rosie-pattern-language-patterns-part-1-parsing-log-files/)
+    * [Parsing CSV files](https://developer.ibm.com/open/2016/10/14/develop-test-rosie-pattern-language-patterns-part-2-csv-data/)
+
+For an introduction to Rosie and explanations of the key concepts, see
+[Rosie's _raison d'etre_](doc/raisondetre.md).
+
+Rosie's internal components, as well as the utilities needed to build Rosie are
+listed [here](doc/arch.md).
+
+I wrote some [notes](doc/geek.md) on Rosie's design and theoretical foundation
+for my fellow PL and CS enthusiasts.
