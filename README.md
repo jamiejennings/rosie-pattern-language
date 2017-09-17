@@ -20,6 +20,7 @@ Pattern Language:
 </table>
 </blockquote>
 
+
 ## Contents
 
 - [Features](#features)
@@ -28,7 +29,8 @@ Pattern Language:
 - [Using Rosie's REPL](#using-the-repl)
 - [Using Rosie API](#using-the-api)
 
-- [Project Roadmap](#project-roadmap)
+- [Project extras](#project-extras)
+- [Project roadmap](#project-roadmap)
 - [Contributing](#contributing)
 - [Acknowledgements](#acknowledgements)
 - [Other sources](#other-sources)
@@ -36,7 +38,6 @@ Pattern Language:
 See also:
 - [Rosie Pattern Language blog](http://tiny.cc/rosie)
 - [@jamietheriveter](https://twitter.com/jamietheriveter) on Twitter
-
 
 
 ## Features
@@ -87,6 +88,12 @@ Platforms:
 
 - Describe librosie
 - Link to full api doc
+
+## Project extras
+- [Syntax highlighting](extra) for some editors 
+- [Why does Rosie Pattern Language exist?](doc/raisondetre.md)
+- Some interesting [quotes about regex](doc/quotes.txt) and related topics
+
 
 ## Project roadmap
 
