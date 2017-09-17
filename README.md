@@ -31,27 +31,36 @@ Pattern Language:
 - [Project Roadmap](#project-roadmap)
 - [Contributing](#contributing)
 - [Acknowledgements](#acknowledgements)
+- [Other sources](#other-sources)
 
 See also:
-- The new [Rosie Pattern Language blog](http://tiny.cc/rosie), which has news
-and examples, and will eventually contain posts on the usage and design of
-Rosie.
-- Twitter: [@jamietheriveter](https://twitter.com/jamietheriveter)
-- [Other sources](#other-sources)
+- [Rosie Pattern Language blog](http://tiny.cc/rosie)
+- [@jamietheriveter](https://twitter.com/jamietheriveter) on Twitter
+
 
 
 ## Features
 
 - Small: the Rosie compiler/runtime/libraries take up less than 600KB of disk
-- Good performance: **what to say, specifically?**
+- Good performance: faster than
+  [Grok](https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html),
+  slower than [grep](https://en.wikipedia.org/wiki/Grep), does more than both of them
 - Extensible pattern library
-- Packages of patterns are easy to share
-- Rosie is fluent in UTF-8, ASCII, and the binary language of moisture
-'vaporators (arbitrary byte-encoded data)
+- Rosie is fluent in UTF-8, ASCII, and the
+  [binary language of moisture vaporators](http://www.starwars.com/databank/moisture-vaporator)
+  (arbitrary byte-encoded data)
 
 ## Building
 
-Platforms: OS X, Linux, and probably that Ubuntu-on-Windows thing
+Platforms:
+- [x] OS X (macOS Sierra, 10.12.6)
+- [ ] [Arch Linux](https://www.archlinux.org/) September xx, 2017
+- [ ] [Fedora](https://getfedora.org) 26
+- [ ] [CentOS](https://www.centos.org) 7
+- [ ] [Ubuntu](https://www.ubuntu.com/) 17
+- [ ] [RedHat Enterprise Linux](https://www.redhat.com/en/technologies/linux-platforms) 7
+- [ ] [SLES](https://www.suse.com/solutions/enterprise-linux/) 12
+- [ ] That Ubuntu-on-Windows thing
 
 1. `make`
 2. `make install`  (optional)

@@ -1,0 +1,359 @@
+<!-- Creator     : groff version 1.19.2 -->
+<!-- CreationDate: Sun Sep 17 09:06:44 2017 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p     { margin-top: 0; margin-bottom: 0; }
+       pre   { margin-top: 0; margin-bottom: 0; }
+       table { margin-top: 0; margin-bottom: 0; }
+</style>
+<title>ROSIE</title>
+
+</head>
+<body>
+
+<h1 align=center>ROSIE</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#LANGUAGE REFERENCE">LANGUAGE REFERENCE</a><br>
+<a href="#COMMANDS">COMMANDS</a><br>
+<a href="#GLOBAL OPTIONS">GLOBAL OPTIONS</a><br>
+<a href="#COMMAND OPTIONS">COMMAND OPTIONS</a><br>
+<a href="#ENVIRONMENT">ENVIRONMENT</a><br>
+<a href="#FILES">FILES</a><br>
+<a href="#EXAMPLES">EXAMPLES</a><br>
+<a href="#BUGS">BUGS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+
+<hr>
+
+
+<a name="NAME"></a>
+<h2>NAME</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">rosie &minus;
+Rosie Pattern Engine (Rosie Pattern Language)</p>
+
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>rosie</b> [
+<i>global-options</i> ] <i>command</i> [
+<i>command-options</i> ] <i>pattern-expression file
+[...]</i></p>
+
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>Rosie</b>
+searches all given input files for lines that match a
+pattern. The pattern language is similar to regular
+expressions, but more powerful. Also, a set of predefined
+(named) patterns are provided. The pattern library is
+extensible. Rosie patterns are written in <b>Rosie Pattern
+Language (RPL).</b> A shared library, <b>librosie</b>,
+provides a programmatic interface to rosie in C, Go, Python,
+Ruby, Javascript, and other languages that support
+<b>libffi</b>. <b>Rosie</b> can be used for data mining on
+large data sets, or for the kind of smaller tasks that
+<b>grep</b> and other regex tools are used for. The output
+can be plain text, like grep produces, or can be structured
+JSON, in the form of a parse tree. A number of other output
+options are available (see below).</p>
+
+<a name="LANGUAGE REFERENCE"></a>
+<h2>LANGUAGE REFERENCE</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The RPL
+Language Reference may be found via the
+<a href="http://rosie-lang.org">Rosie home page (news, docs, etc.)</a>.</p>
+
+<a name="COMMANDS"></a>
+<h2>COMMANDS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The primary
+commands are <i>match</i> and <i>grep</i>. Help for a
+command is obtained using the <b>&minus;h</b> option (see
+below).</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="9%">
+
+
+<p style="margin-top: 1em" valign="top"><i>grep</i></p></td>
+<td width="2%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">In the style of
+grep, match the given <i>pattern</i> against lines in the
+given input files (or the standard input). In this mode, the
+pattern may match anywhere within a line, and all matches
+within a line are found. The default output form in this
+mode is to print the entire line for all lines that
+match.</p> </td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="9%">
+
+
+<p style="margin-top: 1em" valign="top"><i>help</i></p></td>
+<td width="2%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Print help
+text.</p> </td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="9%">
+
+
+<p style="margin-top: 1em" valign="top"><i>config</i></p></td>
+<td width="2%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Print the
+configuration of the Rosie installation, including build
+information if available.</p></td>
+</table>
+
+<p style="margin-left:11%;"><i>list</i> [filter]</p>
+
+<p style="margin-left:22%;">List the available patterns
+from the library whose name contains the optional
+<i>filter</i> as a substring.</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p style="margin-top: 1em" valign="top"><i>match</i></p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Match the given
+<i>pattern</i> against lines in the given input files (or
+the standard input). Patterns in RPL begin at the start of
+the input line. See the <i>grep</i> command for behavior
+that is more like that utility.</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p style="margin-top: 1em" valign="top"><i>repl</i></p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Enter the
+read-eval-print loop for interactive development and testing
+of patterns</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p style="margin-top: 1em" valign="top"><i>test</i></p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Execute the pattern
+tests embedded within the listed rpl files.</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+<p style="margin-top: 1em" valign="top"><i>trace</i></p></td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Perform a match,
+but generate a trace listing of all the steps performed in
+the matching process. This can be quite a lot of output.</p></td>
+</table>
+
+<a name="GLOBAL OPTIONS"></a>
+<h2>GLOBAL OPTIONS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>&minus;f,
+&minus;-file</b> <i>file</i></p>
+
+<p style="margin-left:22%;">Load a file of rpl code. This
+option may be repeated.</p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>&minus;o,
+--output</b> <i>style</i></p>
+
+<p style="margin-left:22%;">Output match data according to
+<i>style</i>, which may be <i>color</i>, <i>nocolor</i>,
+<i>json</i>, <i>line</i>, and possibly other
+(installation-dependent) values. Use <b>rosie help</b> to
+discover what is available in your installation. Note the
+default output style is <i>color</i>, except for the
+<i>grep</i> command, which uses <i>line</i> as its
+default.</p>
+
+<p style="margin-left:11%;"><b>&minus;-rpl</b>
+<i>source</i></p>
+
+<p style="margin-left:22%;">Define additional patterns,
+import additional packages. The argument passed to
+<b>--rpl</b> is typically enclosed in single quotes so that
+Rosie will see it as a single string with no shell
+expansions performed.</p>
+
+<p style="margin-left:11%;"><b>&minus;-verbose</b></p>
+
+<p style="margin-left:22%;">When appropriate, output
+additional information.</p>
+
+<p style="margin-left:11%;"><b>&minus;-version</b></p>
+
+<p style="margin-left:22%;">Print the Rosie version and
+exit.</p>
+
+<a name="COMMAND OPTIONS"></a>
+<h2>COMMAND OPTIONS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>&minus;h,
+&minus;-help</b></p>
+
+<p style="margin-left:22%;">Display help for a command.
+This option must be given after the command name, e.g.
+<b>rosie match &minus;h</b>.</p>
+
+<p style="margin-left:11%;"><b>&minus;a,
+&minus;&minus;all</b></p>
+
+<p style="margin-left:22%;">Generate some output for all
+input lines. Lines that do not match the pattern are written
+to stderr, while matched output is written to stdout.</p>
+
+<p style="margin-left:11%;"><b>&minus;w,
+&minus;&minus;wholefile</b></p>
+
+<p style="margin-left:22%;">Match against the whole input
+file as if it were a single string.</p>
+
+<p style="margin-left:11%;"><b>&minus;F,
+&minus;&minus;fixed&minus;strings</b></p>
+
+<p style="margin-left:22%;">Interpret <i>pattern</i> as a
+set of fixed (literal) strings, instead of an RPL pattern
+(which reqires double quotes around string literals).</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="1%">
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;</b></p></td>
+<td width="10%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Stop reading from
+the given input files, if any, and start reading from the
+standard input.</p></td>
+</table>
+
+<a name="ENVIRONMENT"></a>
+<h2>ENVIRONMENT</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>ROSIE_PATH</b></p>
+
+<p style="margin-left:22%;">A list of directories that
+Rosie will search when looking for a package of patterns to
+import. The value is a colon-separated string on Unix, and a
+semi-colon separated string on Windows. When ROSIE_PATH is
+not set, Rosie looks for imported packages in the standard
+library within the installation directory. <b>Important
+note:</b> If you set ROSIE_PATH, you must explicitly include
+the standard library if you want Rosie to include the
+standard library in its search.</p>
+
+<a name="FILES"></a>
+<h2>FILES</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><i>~/.rosie/</i></p>
+
+<p style="margin-left:22%;"><b>Forthcoming</b></p>
+
+<a name="EXAMPLES"></a>
+<h2>EXAMPLES</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>Forthcoming</b></p>
+
+<a name="BUGS"></a>
+<h2>BUGS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>Rosie</b>
+does not automatically normalize Unicode input. If a pattern
+contains composed characters, for example, these will not
+match their decomposed equivalents in the input (and vice
+versa).</p>
+
+<p style="margin-left:11%; margin-top: 1em">Bugs and
+requests for enhancement may be found on
+<a href="https://github.com/jamiejennings/rosie-pattern-language/issues">Rosie's issue page.</a></p>
+
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><a href="http://rosie-lang.org">Rosie's home (news, docs, etc.)</a></p>
+
+<a name="AUTHOR"></a>
+<h2>AUTHOR</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Jamie A.
+Jennings <br>
+<a href="mailto:info@rosie-lang.org">email contact</a> <br>
+
+<a href="https://twitter.com/jamietheriveter">@jamietheriveter</a></p>
+
+<p style="margin-left:11%; margin-top: 1em">With
+contributions from the people listed in
+<a href="https://github.com/jamiejennings/rosie-pattern-language/CONTRIBUTORS">the CONTRIBUTORS file.</a></p>
+<hr>
+</body>
+</html>

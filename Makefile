@@ -101,7 +101,7 @@ readlinetest:
 	           cc -std=gnu99 -lreadline -o /dev/null -xc -) && \
 	   echo "READLINE TEST: libreadline and readline.h appear to be installed" || \
 	   (echo "READLINE TEST: Missing readline library or readline.h" && \
-	    echo "READLINE TEST: See https://github.com/jamiejennings/rosie-pattern-language#how-to-build-clone-the-repo-and-type-make" && \
+	    echo "READLINE TEST: Please install the readline and readline development packages for your platform && \
 	    /usr/bin/false)
 
 .PHONY: macosx

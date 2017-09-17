@@ -4,11 +4,14 @@
 rosie \- Rosie Pattern Engine (Rosie Pattern Language)
 .SH SYNOPSIS
 .B rosie
+[
+.I global-options
+]
 .I command
 [
-.I options
+.I command-options
 ]
-.I pattern
+.I pattern-expression
 .I file
 .I [...]
 .SH DESCRIPTION
@@ -32,8 +35,8 @@ produces, or can be structured JSON, in the form of a parse tree.  A number of o
 output options are available (see below).
 
 .SH LANGUAGE REFERENCE
-The RPL Language Reference may be found at
-.B to be determined .
+The RPL Language Reference may be found via the
+.URL http://rosie-lang.org "Rosie home page (news, docs, etc.)".
 
 .SH COMMANDS
 The primary commands are
@@ -54,8 +57,7 @@ lines that match.
 Print help text.
 .TP
 .I config
-Print the configuration of the Rosie installation, including build information
-(if available).
+Print the configuration of the Rosie installation, including build information if available.
 .TP
 .IR list " [filter]"
 List the available patterns from the library whose name contains the optional
@@ -79,14 +81,11 @@ Execute the pattern tests embedded within the listed rpl files.
 .I trace
 Perform a match, but generate a trace listing of all the steps performed in
 the matching process.  This can be quite a lot of output.
-.SH OPTIONS
+.SH GLOBAL OPTIONS
 .TP
 .BI "\-f, \--file" " file"
 Load a file of rpl code.  This option may be repeated.
 .TP
-.B \-h, \--help
-Display help for a command.  This option must be given after the command name, e.g.
-.BR "rosie match \-h" .
 .TP
 .BI "\-o, --output" " style"
 Output match data according to
@@ -123,6 +122,16 @@ When appropriate, output additional information.
 .TP
 .B \--version
 Print the Rosie version and exit.
+
+.SH COMMAND OPTIONS
+.TP
+.B \-h, \--help
+Display help for a command.  This option must be given after the command name, e.g.
+.BR "rosie match \-h" .
+.TP
+.B \-a, \-\-all
+Generate some output for all input lines.  Lines that do not match the pattern
+are written to stderr, while matched output is written to stdout.
 .TP
 .B \-w, \-\-wholefile
 Match against the whole input file as if it were a single string.
@@ -161,10 +170,10 @@ want Rosie to include the standard library in its search.
 .SH FILES
 .TP
 .I ~/.rosie/
-.B to be determined.
+.B Forthcoming
 
 .SH EXAMPLES
-.I Forthcoming
+.B Forthcoming
 
 .SH BUGS
 .B Rosie
@@ -179,10 +188,10 @@ Bugs and requests for enhancement may be found on
 .SH AUTHOR
 Jamie A. Jennings
 .br
-.URL mailto://info@rosie-lang.org "email"
+.URL mailto:info@rosie-lang.org "email contact"
 .br
 .URL https://twitter.com/jamietheriveter "@jamietheriveter"
 .PP
 With contributions from the people listed in 
-.URL https://github.com/jamiejennings/rosie-pattern-language "the CONTRIBUTORS file."
+.URL https://github.com/jamiejennings/rosie-pattern-language/CONTRIBUTORS "the CONTRIBUTORS file."
 

@@ -11,9 +11,7 @@ os:
 branches:
   only:
   - master
-  - v0.99g
-  - v0.99h
-  - v0.99i
+  - preview
   
 before_install:
 - sudo apt-get update -qq
