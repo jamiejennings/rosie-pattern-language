@@ -34,13 +34,16 @@ function run(cmd, expectations)
    print(); print("Command is:", cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
-   for _,s in ipairs(results) do print("* " .. s); end
+--   for _,s in ipairs(results) do print("* " .. s); end
    local mismatch_flag = false;
    if expectations then
       for i=2, #expectations do 		    -- skip 1st line which is greeting
 	 print(results[i])
 	 if expectations then
-	    if results[i]~=expectations[i] then print("Mismatch"); mismatch_flag = true; end
+	    if results[i]~=expectations[i] then
+	       print(string.format("Mismatch:\n  Expected %q\n  Received %q", expectations[i], results[i]))
+	       mismatch_flag = true
+	    end
 	 end
       end -- for
       if mismatch_flag then

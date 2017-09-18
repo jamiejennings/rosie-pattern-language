@@ -1,5 +1,11 @@
 #!/bin/bash
 this=`basename $0`
+rosie=bin/rosie
+if [ "$rosie" == "" ]; then
+    echo "Cannot find bin/rosie"
+    exit -1
+fi
+
 file=$1
 if [ "$2" != "" ]; then
     echo "Only one file name is allowed"
@@ -11,11 +17,12 @@ elif [ ! -f $file ]; then
     echo "Test file does not exist: $file"
     exit -1
 fi
+
 echo "Running test file $file ... "
-lua <<EOF
-ROSIE_HOME="`pwd`"
+$rosie -D <<EOF
+--ROSIE_HOME="`pwd`"
+--rosie=require "rosie"
 TEST_HOME=ROSIE_HOME.."/test"
-rosie=require "rosie"
 import=rosie.import
 termcolor=rosie.import "termcolor"
 test=rosie.import "test"
