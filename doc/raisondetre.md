@@ -71,20 +71,20 @@ By default, Rosie processes input one line at a time, where the marker that sepa
 
 Whatever stage comes after Rosie in the data pipeline can then see every important value in each line of input.  For example, we can use rpl code like this to define a simple `syslog` pattern:
 
-``
+```
 import word, num, ts, net
 message = .*
 process = { word.any "["num.int"]" }
 syslog = ts.rfc3339 net.ip process ":" message
-``
+``` 
 
 The line above defines the pattern named `syslog` to be a datetime, followed by an ip address, a string that is a process followed by a colon (“:”), and a message.  Pattern elements inside braces `{...}` are elements that are glued together with no whitespace separating them, e.g. "[16537]" and not "[ 16537 ]".
 
 Suppose Rosie is asked to match the `syslog` pattern against a raw line of input data like this one:
 
-``
+``` 
 2015-08-23T03:36:25-05:00 10.108.69.93 sshd[16537]: Did not receive identification string from 208.43.117.11
-``
+``` 
 
 The Rosie output will be a structure as follows, if using the REPL or specifying `-o json` at the CLI:
 
