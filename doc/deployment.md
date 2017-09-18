@@ -2,6 +2,7 @@
 
 ### Components compiled from C source
 
+Name    | Description
 --------|----------------------------------
 cjson 	| JSON encoding/decoding library
 lua     | Lua run-time
@@ -35,7 +36,7 @@ The build instructions for Rosie are in its `makefile`, which uses `cc` (MacOSX)
 or `gcc` (Linux) to compile the components needed by the Rosie Pattern Engine.
 Those components (see table above) are downloaded automatically using `curl`.
 
-tool | description
+Tool | Description
 -----|------------
 make | processes makefile to build Rosie
 cc   | on MacOSX, the compiler that is part of Apple's developer tools
