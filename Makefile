@@ -170,7 +170,7 @@ lib/readline.so: $(readline_lib)
 	cp $(readline_lib) lib
 
 $(READLINE_DIR)/readline.so:
-	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUA_INCLUDE_DIR=../$(LUA)/include
+	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUADIR=../$(LUA)
 
 $(EXECROSIE): compile
 	@/usr/bin/env echo "Creating $(EXECROSIE)"

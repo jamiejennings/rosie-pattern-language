@@ -57,12 +57,12 @@ See also:
 
 ## Building
 
-Platforms:
+Platforms: (most of these were tested with docker)
 - [x] OS X (macOS Sierra, 10.12.6)
-- [ ] [Arch Linux](https://www.archlinux.org/) September xx, 2017
-- [ ] [Fedora](https://getfedora.org) 26
-- [ ] [CentOS](https://www.centos.org) 7
-- [ ] [Ubuntu](https://www.ubuntu.com/) 17
+- [x] [Arch Linux](https://www.archlinux.org/) Tested at 2017-09-18T17:29:31
+- [x] [Fedora release 25 (Twenty Five)](https://getfedora.org)
+- [x] [CentOS Linux release 7.4.1708 (Core)](https://www.centos.org) 
+- [x] [Ubuntu 16.04.1 LTS (Xenial Xerus)](https://www.ubuntu.com/)
 - [ ] [RedHat Enterprise Linux](https://www.redhat.com/en/technologies/linux-platforms) 7
 - [ ] [SLES](https://www.suse.com/solutions/enterprise-linux/) 12
 - [ ] That Ubuntu-on-Windows thing
