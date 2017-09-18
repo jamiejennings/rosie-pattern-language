@@ -36,14 +36,19 @@ function run(cmd, expectations)
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
 --   for _,s in ipairs(results) do print("* " .. s); end
    local mismatch_flag = false;
+   local offset = 0
    if expectations then
       for i=2, #expectations do
 	 if expectations then
 	    -- On linux, the first line of the output, after the greeting (Rosie version), is the
 	    -- repl prompt, followed by the .match command.  On OS X, this line is not present.
-	    if results[i]:sub(1,6) ~= "Rosie>" then
-	       if results[i]~=expectations[i] then
-		  print(string.format("Mismatch:\n  Expected %q\n  Received %q", expectations[i], results[i]))
+	    if results[i]:sub(1,6) == "Rosie>" then
+	       offset = offset - 1
+	    else
+	       if results[i+offset]~=expectations[i] then
+		  print(string.format("Mismatch:\n  Expected %q\n  Received %q",
+				      expectations[i],
+				      tostring(results[i+offset])))
 		  mismatch_flag = true
 	       end
 	    end
