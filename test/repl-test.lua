@@ -37,13 +37,18 @@ function run(cmd, expectations)
 --   for _,s in ipairs(results) do print("* " .. s); end
    local mismatch_flag = false;
    if expectations then
-      for i=2, #expectations do 		    -- skip 1st line which is greeting
-	 print(results[i])
+      for i=2, #expectations do
 	 if expectations then
-	    if results[i]~=expectations[i] then
-	       print(string.format("Mismatch:\n  Expected %q\n  Received %q", expectations[i], results[i]))
-	       mismatch_flag = true
+	    -- On linux, the first line of the output, after the greeting (Rosie version), is the
+	    -- repl prompt, followed by the .match command.  On OS X, this line is not present.
+	    if results[i]:sub(1,6) ~= "Rosie>" then
+	       if results[i]~=expectations[i] then
+		  print(string.format("Mismatch:\n  Expected %q\n  Received %q", expectations[i], results[i]))
+		  mismatch_flag = true
+	       end
 	    end
+	 else
+	    print(results[i])
 	 end
       end -- for
       if mismatch_flag then
