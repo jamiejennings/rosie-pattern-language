@@ -34,27 +34,23 @@ function run(cmd, expectations)
    print(); print("Command is:", cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
---   for _,s in ipairs(results) do print("* " .. s); end
    local mismatch_flag = false;
    local offset = 0
    if expectations then
-      for i=2, #expectations do
-	 if expectations then
-	    -- On linux, the first line of the output, after the greeting (Rosie version), is the
-	    -- repl prompt, followed by the .match command.  On OS X, this line is not present.
-	    if results[i]:sub(1,6) == "Rosie>" then
-	       offset = offset - 1
-	    else
-	       if results[i]~=expectations[i+offset] then
-		  print(string.format("Mismatch:\n  Expected %q\n  Received %q",
-				      expectations[i+offset],
-				      tostring(results[i])))
-		  mismatch_flag = true
-	       end
-	    end
+      for i=2, math.max(#expectations, #results) do
+	 -- On linux, the first line of the output, after the greeting (Rosie version), is the
+	 -- repl prompt, followed by the .match command.  On OS X, this line is not present.
+	 if not results[i] then break; end
+	 if results[i]:sub(1,6) == "Rosie>" then
+	    offset = offset - 1
 	 else
-	    print(results[i])
-	 end
+	    if results[i]~=expectations[i+offset] then
+	       print(string.format("Mismatch:\n  Expected %q\n  Received %q",
+				   tostring(expectations[i+offset]),
+				   tostring(results[i])))
+	       mismatch_flag = true
+	    end
+	 end -- if there was an expectation
       end -- for
       if mismatch_flag then
 	 print("MISMATCHED OUTPUT WAS FOUND");
@@ -66,6 +62,9 @@ function run(cmd, expectations)
       end
       check((not mismatch_flag), "Mismatched output compared to expectations", 1)
       check(((#results+offset)==#expectations), "Mismatched number of results compared to expectations", 1)
+   else
+      -- no expectations, so just print the results
+      for _,v in ipairs(results) do print(v); end
    end -- if expectations
    return results
 end
