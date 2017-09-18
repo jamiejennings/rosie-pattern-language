@@ -45,10 +45,10 @@ function run(cmd, expectations)
 	    if results[i]:sub(1,6) == "Rosie>" then
 	       offset = offset - 1
 	    else
-	       if results[i+offset]~=expectations[i] then
+	       if results[i]~=expectations[i+offset] then
 		  print(string.format("Mismatch:\n  Expected %q\n  Received %q",
-				      expectations[i],
-				      tostring(results[i+offset])))
+				      expectations[i+offset],
+				      tostring(results[i])))
 		  mismatch_flag = true
 	       end
 	    end
