@@ -100,8 +100,8 @@ CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
 readlinetest:
 	@(bash -c 'printf "#include <stdio.h>\n#include <readline/readline.h>\nint main() { }\n"' | \
 	           cc -std=gnu99 -lreadline -o /dev/null -xc -) && \
-	   echo "READLINE TEST: libreadline and readline.h appear to be installed" || \
-	   (echo "READLINE TEST: Missing readline library or readline.h" && /usr/bin/false)
+	   echo 'READLINE TEST: libreadline and readline.h appear to be installed' || \
+	   (echo 'READLINE TEST: Missing readline library or readline.h' && /usr/bin/false)
 
 .PHONY: macosx
 macosx: PLATFORM=macosx
