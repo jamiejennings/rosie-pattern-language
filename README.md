@@ -230,7 +230,7 @@ For an introduction to Rosie and explanations of the key concepts, see
 [Rosie's _raison d'etre_](doc/raisondetre.md).
 
 Rosie's internal components, as well as the utilities needed to build Rosie are
-listed [here](doc/arch.md).
+listed [here](doc/deployment.md).
 
 I wrote some [notes](doc/geek.md) on Rosie's design and theoretical foundation
 for my fellow PL and CS enthusiasts.

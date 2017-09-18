@@ -285,14 +285,14 @@ The other scale issue we must consider is the size of the input (data).  When da
 
 In ordinary use on the command line (such as listing files with `ls` or searching in files with `grep`), regex performance is not an issue.  When a regex is used to extract some information from a string in Java, performance is not usually an issue.  But when regex patterns are deployed to parse large amounts of data, two things can go wrong: backtracking done by regex engines can destroy the performance, and malformed input can force so much backtracking that exponential time is required.
 
-Since regexes are not maintainable and fail to scale in both pattern size and input size, Rosie is based instead on a different pattern expression approach: Parse Expression Grammars.
+Since regexes are not maintainable and fail to scale in both pattern size and input size, Rosie is based instead on a different pattern expression approach: Parsing Expression Grammars.
 
 
-## Parse Expression Grammars
+## Parsing Expression Grammars
 
 As we mentioned earlier, the Context Free Grammar is more powerful than the regular expression.  With that power comes inefficient matching (e.g. the widely cited CYK algorithm has an upper bound of _n<sup>3</sup>_, where _n_ is the input length) and a cumbersome way to specify a pattern (always writing a full grammar).
 
-Parse Expression Grammars were defined to avoid the pitfalls of CFGs, at the expense of being less powerful.  It turns out that PEGs are more powerful than regular expressions (and regex), though, and may be seen as sitting somewhere in between regex and CFGs.
+Parsing Expression Grammars were defined to avoid the pitfalls of CFGs, at the expense of being less powerful.  It turns out that PEGs are more powerful than regular expressions (and regex), though, and may be seen as sitting somewhere in between regex and CFGs.
 
 A PEG requires only linear time (in the length of the input) to process an input string.  It does this by limiting backtracking: the "alternation" operator in a PEG is an _ordered choice_.  Instead of using the pipe symbol `|`, which represents equal alternatives in regex, a PEG uses a forward slash `/` to denote an ordered choice between two alternatives.  The PEG pattern `(a / b) c` is read as "a or b, followed by c" and is processed this way:
 
@@ -307,7 +307,7 @@ The difference between the PEG choice operator `/` and the regular expression `|
 
 The order of the alternatives matters in PEG.  The pattern `(a b) / a` will match input "a b", because this pattern looks for the sequence "a b" first.
 
-When writing PEG patterns, then, we must pay attention to the order of choices in an alternation expression.  Ordered choices and sequences are just part of Parse Expression Grammars.  The full capabilities of PEGs are as follows (note the similarity to regexes):
+When writing PEG patterns, then, we must pay attention to the order of choices in an alternation expression.  Ordered choices and sequences are just part of Parsing Expression Grammars.  The full capabilities of PEGs are as follows (note the similarity to regexes):
 
 |  PEG expression | Meaning                      |
 |  -------------- | -------                      |
