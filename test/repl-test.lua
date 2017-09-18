@@ -61,7 +61,7 @@ function run(cmd, expectations)
       else
 	 print("All output matched expectations.");
       end
-      if (not (#results==(#expectations+offset))) then
+      if (not ((#results+offset)==#expectations)) then
 	 print(string.format("********** Mismatched number of results (%d) versus expectations (%d) **********", (#results+offset), #expectations))
       end
       check((not mismatch_flag), "Mismatched output compared to expectations", 1)
