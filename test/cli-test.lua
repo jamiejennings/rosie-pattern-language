@@ -6,15 +6,9 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-test.start(test.current_filename())
+assert(TEST_HOME, "TEST_HOME is not set")
 
--- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
-assert(ROSIE_HOME, "ROSIE_HOME is not set?")
-assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
-import = rosie.import
-if not test then
-   test = import("test")
-end
+test.start(test.current_filename())
 
 list = import "list"
 util = import "util"
@@ -35,7 +29,7 @@ else
 end
 print("Found rosie executable: " .. rosie_cmd)
 
-infilename = ROSIE_HOME .. "/test/resolv.conf"
+infilename = TEST_HOME .. "/resolv.conf"
 
 -- N.B. grep_flag does double duty:
 -- false  ==> use the match command
@@ -215,14 +209,14 @@ test.heading("Test command")
 
 print("\nSniff test of the lightweight test facility (MORE TESTS LIKE THIS ARE NEEDED)")
 -- Passing tests
-cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-pass.rpl"
+cmd = rosie_cmd .. " test " .. TEST_HOME .. "/lightweight-test-pass.rpl"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0)
 check(code==0, "Return code is zero")
 check(results[#results]:find("tests passed"))
 -- Failing tests
-cmd = rosie_cmd .. " test " .. ROSIE_HOME .. "/test/lightweight-test-fail.rpl"
+cmd = rosie_cmd .. " test " .. TEST_HOME .. "/lightweight-test-fail.rpl"
 print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0)
@@ -283,7 +277,7 @@ check(results_table[2]:find("loader"))
 check(results_table[2]:find("cannot open file"))
 check(results_table[3]:find("in test/nested-test.rpl:2:1:", 1, true))
 
-cmd = rosie_cmd .. " --libpath " .. ROSIE_HOME .. "/test -f test/nested-test2.rpl grep foo test/resolv.conf"
+cmd = rosie_cmd .. " --libpath " .. TEST_HOME .. " -f test/nested-test2.rpl grep foo test/resolv.conf"
 print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")

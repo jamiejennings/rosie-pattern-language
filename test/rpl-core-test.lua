@@ -8,17 +8,9 @@
 -- TODO:
 -- test repetition where min > max
 -- test repetition where max==0
--- 
 
 
-
--- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
-assert(ROSIE_HOME, "ROSIE_HOME is not set?")
-assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
-import = rosie.import
-if not test then
-   test = import("test")
-end
+assert(TEST_HOME, "TEST_HOME is not set")
 
 list = import "list"
 cons, map, flatten, member = list.cons, list.map, list.flatten, list.member
@@ -2161,7 +2153,7 @@ check(m and m.type=="*" and m.s==1 and m.e==16 and m.data=='oklocalaliasend')
 heading("Cannot define same id twice in a file")
 
 function check_dup_id(filename)
-   ok, pkgname, errs = e:loadfile(ROSIE_HOME .. "/test/" .. filename)
+   ok, pkgname, errs = e:loadfile(TEST_HOME .. "/" .. filename)
    check(not ok)
    check(not pkgname, "pkgname is: " .. tostring(pkgname))
    msg = table.concat(map(violation.tostring, errs), "\n")
@@ -2172,7 +2164,7 @@ check_dup_id("dup-id1.rpl")
 check_dup_id("dup-id2.rpl")
 check_dup_id("dup-id3.rpl")
 
-e.searchpath = ROSIE_HOME .. "/test:" .. e.searchpath
+e.searchpath = TEST_HOME .. ":" .. e.searchpath
 ok, pkgname, errs = e:import("dup-id4")
 check(not ok)
 check(not pkgname, "pkgname is: " .. tostring(pkgname))

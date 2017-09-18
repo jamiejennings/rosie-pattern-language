@@ -171,26 +171,26 @@ Because RPL is designed like a programming language (and it has an accessible
 parser, [rpl_1_1.rpl](rpl/rosie/rpl_1_1.rpl), new tools are relatively easy to
 write.  Here are some ideas:
 
-- [ ] **Package doc:** Given a package name, display the exported pattern names
+- **Package doc:** Given a package name, display the exported pattern names
       and, for each, a summary of the strings accepted and rejected.
 
-- [ ] **Improved trace:** The current trace output could be improved,
+- **Improved trace:** The current trace output could be improved,
   particularly to make it more compact.  A trace is represented internally as a
   table which could easily be rendered as JSON.  And since this data structure
   represents a complete trace, it is the right input to a new algorithm that
   produces a compact summary.  Or an animated output.
 
-- [ ] **Linter:** Users of most programming languages are aided by a linting
+- **Linter:** Users of most programming languages are aided by a linting
 	tool, in part because of correct expressions that are not, in fact, what the
 	programmer wanted.  For example, the character set `[_-.]` is a range in
 	RPL, but it is an empty range.  Probably the author meant to write a set of
 	3 characters, like `[._-]`.
 
-- [ ] **Notebook:** A Rosie kernel for a notebook would be useful to many
+- **Notebook:** A Rosie kernel for a notebook would be useful to many
   people.  So would adding Rosie capabilities to a general notebook environment
   (e.g. [Jupyter](http://jupyter.org)).
   
-- [ ] **Pattern generators:** A number of techniques hold promise for
+- **Pattern generators:** A number of techniques hold promise for
 automatically generating RPL patterns, for example:
   * Convert a format string to pattern, e.g. a `printf` format string, or the
     posix locale structure's fields that specify how to format numbers,

@@ -330,12 +330,7 @@ test:
 
 .PHONY: installtest
 installtest:
-	@echo Creating links in $(ROSIED) to testing code in $(BUILD_ROOT)
-	-ln -s $(BUILD_ROOT)/src/test-functions.lua $(ROSIED)/src
-	-ln -s $(BUILD_ROOT)/test $(ROSIED)
-	@echo Running tests in test/all.lua
-	echo "ROSIE_HOME=\"$(ROSIED)\"; dofile \"$(ROSIED)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D
-	@echo Removing links in $(ROSIED) to testing code in $(BUILD_ROOT)
-	-rm $(ROSIED)/src/test-functions.lua
-	-rm $(ROSIED)/test
+	@echo Running tests in $(BUILD_ROOT)/test/all.lua
+	echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D
+
 

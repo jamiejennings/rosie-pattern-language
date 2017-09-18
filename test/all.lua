@@ -6,33 +6,31 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- When running rosie as a module within a plain Lua instance:
---   r = require "rosie"
---   ROSIE_DEV=true
---   r.load_module("all", "test")
+-- See Makefile for how these tests are run using the undocumented "-D" option to rosie, which
+-- enters development mode after startup.
 
--- When running rosie as "rosie -D" to get a Lua prompt after rosie is already loaded:
---   dofile "test/all.lua"
-
-rosie = rosie or require("rosie")
+assert(rosie)
 import = rosie.import
 ROSIE_HOME = rosie.env.ROSIE_HOME
+TEST_HOME = "./test"
 
-termcolor = import("termcolor")
-test = import("test")
-json = require "cjson"
+json = import "cjson"
 
-test.dofile(ROSIE_HOME .. "/test/lib-test.lua")
-test.dofile(ROSIE_HOME .. "/test/rpl-core-test.lua")
-test.dofile(ROSIE_HOME .. "/test/rpl-mod-test.lua")
-test.dofile(ROSIE_HOME .. "/test/rpl-appl-test.lua")
+package.path = "./submodules/lua-modules/?.lua"
+termcolor = assert(require("termcolor"))
+test = assert(require("test"))
 
-test.dofile(ROSIE_HOME .. "/test/trace-test.lua")
+test.dofile(TEST_HOME .. "/lib-test.lua")
+test.dofile(TEST_HOME .. "/rpl-core-test.lua")
+test.dofile(TEST_HOME .. "/rpl-mod-test.lua")
+test.dofile(TEST_HOME .. "/rpl-appl-test.lua")
 
-test.dofile(ROSIE_HOME .. "/test/cli-test.lua")
-test.dofile(ROSIE_HOME .. "/test/repl-test.lua")
+test.dofile(TEST_HOME .. "/trace-test.lua")
 
-test.dofile(ROSIE_HOME .. "/test/utf8-test.lua")
+test.dofile(TEST_HOME .. "/cli-test.lua")
+test.dofile(TEST_HOME .. "/repl-test.lua")
+
+test.dofile(TEST_HOME .. "/utf8-test.lua")
 
 passed = test.print_grand_total()
 

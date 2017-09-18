@@ -6,14 +6,7 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
-
--- These tests are designed to run in the Rosie development environment, which is entered with: bin/rosie -D
-assert(ROSIE_HOME, "ROSIE_HOME is not set?")
-assert(type(rosie)=="table", "rosie package not loaded as 'rosie'?")
-import = rosie.import
-if not test then
-   test = import("test")
-end
+assert(TEST_HOME, "TEST_HOME is not set")
 
 list = import "list"
 map = assert(list.map)
@@ -31,7 +24,7 @@ heading("Import")
 ----------------------------------------------------------------------------------------
 
 e = rosie.engine.new()
-e.searchpath = ROSIE_HOME .. "/test"
+e.searchpath = TEST_HOME
 
 ok, _, msgs = e:load("import mod1")
 check(ok)
