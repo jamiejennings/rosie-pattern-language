@@ -647,7 +647,7 @@ function c2.compile_block(a, pkgenv, request, messages)
       if not uncompiled then return false; end
       if #uncompiled >= count then
 	 local msg = "mutual dependencies detected among these statements:\n"
-	 msg = msg .. table.concat(map(ast.tostring, uncompiled), "\n")
+	 msg = msg .. table.concat(list.map(ast.tostring, uncompiled), "\n")
 	 table.insert(messages,
 		      violation.compile.new{who='compiler', message=msg, ast=a})
 	 return false

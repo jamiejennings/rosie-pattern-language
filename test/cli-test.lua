@@ -10,6 +10,7 @@ assert(TEST_HOME, "TEST_HOME is not set")
 
 test.start(test.current_filename())
 
+lpeg = import "lpeg"
 list = import "list"
 util = import "util"
 violation = import "violation"

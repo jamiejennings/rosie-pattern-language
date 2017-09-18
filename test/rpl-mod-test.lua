@@ -12,6 +12,7 @@ list = import "list"
 map = assert(list.map)
 environment = import "environment"
 common = import "common"
+violation = import "violation"
 
 check = test.check
 heading = test.heading

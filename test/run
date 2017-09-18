@@ -1,12 +1,24 @@
 #!/bin/bash
 this=`basename $0`
 file=$1
-if [ "$file" = "" ]; then
-   echo "Usage: ${this} <path_to_rosie_test_file>"
-   exit -1
+if [ "$2" != "" ]; then
+    echo "Only one file name is allowed"
+    exit -1
+elif [ "$file" = "" ]; then
+    echo "Usage: ${this} <path_to_rosie_test_file>"
+    exit -1
 elif [ ! -f $file ]; then
     echo "Test file does not exist: $file"
-   exit -1
+    exit -1
 fi
-echo "Launching test file $file ... "
-lua -e "ROSIE_HOME=\"`pwd`\"; rosie=require'rosie'; rosie.import'termcolor'" $file
+echo "Running test file $file ... "
+lua <<EOF
+ROSIE_HOME="`pwd`"
+TEST_HOME=ROSIE_HOME.."/test"
+rosie=require "rosie"
+import=rosie.import
+termcolor=rosie.import "termcolor"
+test=rosie.import "test"
+dofile("$file")
+EOF
+
