@@ -5,7 +5,7 @@
 Use `rosie repl` to start the interactive read/eval/print loop.  You can
 optionally load rpl files and specify rpl code on the command line, e.g.
 
-```shell 
+``` 
 $ rosie --rpl 'd=[:digit:]' repl
 Rosie 1.0.0-alpha
 Rosie> d
@@ -30,7 +30,7 @@ The `.list` command lists all the patterns currently loaded.  Additional
 patterns may be loaded by using the `.load` command to load an RPL file, or the
 `import` RPL statement (*not* a command, so no dot in front).
 
-```shell
+``` 
 $ rosie repl
 Rosie 1.0.0-alpha
 Rosie> .list

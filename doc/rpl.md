@@ -4,9 +4,7 @@
 <!--  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  -->
 <!--  AUTHOR: Jamie A. Jennings                                                -->
 
-# Rosie 1.0.0-alpha RPL language reference
-
-## This is the RPL language reference for RPL 1.1
+# RPL 1.1 Language Reference
 
 Notes:
 1. The RPL language is versioned independently of Rosie itself.
@@ -17,9 +15,7 @@ Notes:
 - [RPL reference](#rpl-reference)
 - [Pattern libraries](#pattern-libraries)
 
-## RPL reference
-
-### Blocks
+## Blocks
 
 The only aggregation of RPL statements is the _block_, which is defined as follows in [the RPL code for Rosie](../rpl/rosie/rpl_1_1.rpl): 
 
@@ -43,6 +39,7 @@ Each block element is explained in its own section, below.  The compiler enforce
 * If the package declaration is present, it must come before any import declarations.
 * Any import declarations must come before the first statement.  There can be many import declarations.
 * There can be many statements.
+* A given name may only be assigned once.
 
 **Note: An RPL file may contain only one block.**
 
@@ -104,6 +101,8 @@ RPL patterns can contain whitespace and comments.  Statements can be optionally 
 |  `grammar ... end`          | Define a proper grammar; assignments and aliases appear in place of `...` |
 
 
+A statement may have modifiers, which are [explained below](#statement-modifiers).  Briefly, they are:
+
 | Modifier | Meaning                                  | Example                          |
 |----------|------------------------------------------|----------------------------------|
 | `alias`  | Create an alias for a pattern expression | `alias d = [:digit:]`            |
@@ -111,92 +110,92 @@ RPL patterns can contain whitespace and comments.  Statements can be optionally 
 | `local alias`  | The `local` keword must come first | `local alias h = [:xdigit:]` |
 
 
-#### Simple assignments 
+#### Assignment statements 
 
-** LEFT OFF HERE !@# **
+As assignment like `d = [:digit:]` binds the name `d` to the expression on the right hand side of the `=` sign.  On the right hand side may be any [pattern expression](#pattern-expressions).  An assignment achieves two things:
 
-When Rosie matches an identifier, say `int`, the entire matched string is
-returned, along with an ordered list of sub-matches.  Each sub-match corresponds
-to an identifier used to define `int`, such as `d` (for digit).
+* By binding a name, you can use the name in other expressions (in RPL code, on the command line, at the REPL).
+* When Rosie matches this named pattern, the input that matched will be included in the output.
 
-When you don't care about sub-matches, define an `alias` instead.  For example:
-
-```
-d = [:digit:]
-common.int = { [+-]? d+ }
-``` 
-
-When `common.int` is matched against input "421", Rosie will output:
-
-```
-{"common.int":{"1":{"d":{"pos":1,"text":"4"}},"2":{"d":{"pos":2,"text":"2"}},"3":{"d":{"pos":3,"text":"1"}},"pos":1,"text":"421"}}
-```
-
-This is the default behavior because Rosie assumes that if you gave a name (like `d`) to a pattern 
-(like `[:digit:]`), then you must care a lot about this thing
-called `d` and you want to see all of its components.  When that is not the case, use `alias`.
-
-So, in this example, unless you care about the individual digits, you should
-define `d` as an alias:
+When the output is JSON, you can see that the matching text is labeled with the name of the pattern, e.g.
 
 ``` 
-alias d = [:digit:]
-common.int = { [+-]? d+ }
+$ rosie --rpl 'd = [:digit:]' -o json match d
+7
+{"type":"d","s":1,"e":2,"data":"7"}
+$ rosie --rpl 'ds = [:digit:]+' -o json match ds
+123
+{"type":"ds","s":1,"e":4,"data":"123"}
 ``` 
 
-Matching against "421" now gives:
+For more information on the JSON output format, see [this section](#output-json) below.
 
-``` 
-{"common.int":{"pos":1,"text":"421"}}
-``` 
+You can read more about [RPL expressions](#expressions) below.
+
+Note: The `alias` [statement modifier](#statement-modifiers) will make the name an _alias_ (substitution) for the expression on the right hand side.  That way, the name will not appear in the output.  Using an alias is equivalent to inserting the expression itself.  
+
 
 #### Grammar statements
 
-Grammars can have mutually recursive rules.  PEGs allow you to define grammars for recursive structures like nested lists (e.g. JSON, XML) or things like "strings that have an equal number of a's and b's".  Grammars are defined simply by putting a set of assignment/alias statements inside a `grammar`...`end` block, e.g.:
+In general, RPL assignments cannot be mutually recursive.  (The compiler will complain.)  To enable mutual recursion, place the relevant statements inside a _grammar_.  
+
+Mutually recursive patterns can recognize recursive structures like nested lists (e.g. JSON, XML, s-expressions) or things like "strings that have an equal number of a's and b's".  Grammars are defined by putting a set of assignment/alias statements inside a `grammar`...`end` block, e.g.:
 
 ```
+same = S $
 grammar
-  same = S $
   alias S = { {"a" B} / {"b" A} / "" }
   alias A = { {"a" S} / {"b" A A} }
   alias B = { {"b" S} / {"a" B B} }
 end
 ``` 
+Scope:
+* A grammar introduces a new (nested) scope, i.e. the outer scope is visible. 
+* The grammar binds a new name in the outer scope.  This is the name of its first rule.  In the example above, only `S` is visible outside the grammar.
 
-This grammar, above, matches strings that have equal a's and b's in them.  The first line of the grammar defines its name, which in this case is `same`.  The other names, like `S` and `A`, are not globally visible.  They are scoped only to the grammar itself.
+Notes:
+* A grammar may be `local`, but not any of its statements.
+* Any statement in a grammar may be an `alias`, but not the grammar itself.
 
-Here is an interactive Rosie session in which the grammar above has already been loaded.
+If the example above were saved to the file `g.rpl`, we could load that file into Rosie and match either `same` or `S`.  The only difference is that `same` ensures that the entire input is matched.  The grammar `S` matches strings that contain the same number of a's as b's (and no other characters).  The second example below does match, because the input `baabb` has 3 b's and only 2 a's.
 
 ``` 
-Rosie> same
-grammar_
-   assignment same = (S $)
-   alias S = {{("a" B)} / {("b" A)} / ""}
-   alias A = {{("a" S)} / {("b" A A)}}
-   alias B = {{("b" S)} / {("a" B B)}}
-end
-Rosie> .match same "aabaabbb"
-{"same": 
-   {"pos": 1.0, 
-    "text": "aabaabbb"}}
-Rosie> .match same "aab"
-  1..GRAMMAR:
-     new_grammar
-        same = CAPTURE as same: {(S ~ $)}
-        S = {("a" B) / ("b" A) / ""}
-        A = {("a" S) / ("b" A A)}
-        B = {("b" S) / ("a" B B)}
-     end
-     FAILED to match against input "aab"
-
-Repl: No match  (turn debug off to hide the trace output)
-Rosie> 
+$ echo "aabb" | rosie -o json -f g.rpl match same
+{"type":"same","s":1,"e":5,"data":"aabb"}
+$ echo "baabb" | rosie -o json -f g.rpl match same
+$ echo "" | rosie -o json -f g.rpl match same
+{"type":"same","s":1,"e":1,"data":""}
 ``` 
 
-**IMPORTANT NOTE:** Debugging grammars using the `-debug` command line option is not currently supported.  Even worse, the syntax error reporting for grammars is atrocious.  This is on the TO DO list and will be addressed soon.
+** LEFT OFF HERE !@# **
 
 
-### Expressions
+#### Statement modifiers
+
+Alias
+
+``` 
+$ rosie --rpl 'd = [:digit:]; i = [+-]? d+' -o json match i
+0
+{"type":"i","s":1,"subs":[{"type":"d","s":1,"e":2,"data":"0"}],"e":2,"data":"0"}
++42
+{"type":"i","s":1,"subs":[{"type":"d","s":2,"e":3,"data":"4"},{"type":"d","s":3,"e":4,"data":"2"}],"e":4,"data":"+42"}
+-711
+{"type":"i","s":1,"subs":[{"type":"d","s":2,"e":3,"data":"7"},{"type":"d","s":3,"e":4,"data":"1"},{"type":"d","s":4,"e":5,"data":"1"}],"e":5,"data":"-711"}
+~/Work/Dev/public/rosie-pattern-language$ rosie --rpl 'alias d = [:digit:]; i = [+-]? d+' -o json match i
+0
+{"type":"i","s":1,"e":2,"data":"0"}
++42
+{"type":"i","s":1,"e":4,"data":"+42"}
+-711
+{"type":"i","s":1,"e":5,"data":"-711"}
+``` 
+
+
+Local
+
+
+## Expressions
 
 Here are some key things to remember:
 
