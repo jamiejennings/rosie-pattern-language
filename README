@@ -10,11 +10,11 @@ of programming languages.  We also provide an interactive
 read-eval-print loop for pattern development and debugging, and an RPL
 compiler.  The Rosie matching engine is very small and reasonably fast.
 
+Rosie's home page:
+  http://rosie-lang.org
+
 The repository of record for the Rosie project is located at:
   https://github.com/jamiejennings/rosie-pattern-language
-
-To find out the latest available version, look here:
-  https://github.com/jamiejennings/rosie-pattern-language/blob/master/VERSION
 
 Open issues are at:
   https://github.com/jamiejennings/rosie-pattern-language/issues

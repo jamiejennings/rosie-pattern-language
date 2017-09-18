@@ -15,6 +15,10 @@ Pattern Language:
 <blockquote>
 <table>
 <tr>
+Red: network; Red underlined: ipv6 specifically; Blue: date/time; Cyan:
+identifier; Yellow: word
+</tr>
+<tr>
     <td><img src="doc/images/p1.gif" width="600"></td>
 </tr>
 </table>
