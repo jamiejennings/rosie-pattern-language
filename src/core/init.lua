@@ -26,14 +26,14 @@
 --            signaled) when in development mode.  The value of ROSIE_DEV is set by the script
 --            that launches the rosie CLI.
 --
--- ROSIE_LIB is the variable that the rosie code uses to find the standard RPL library.  Its
+-- ROSIE_LIBDIR is the variable that the rosie code uses to find the standard RPL library.  Its
 --           value is ROSIE_HOME/rpl.  Currently, there is no way to change it externally.  If
---           needed, a ROSIE_LIB environment variable could be introduced in future.
+--           needed, a ROSIE_LIBDIR environment variable could be introduced in future.
 --           
--- ROSIE_PATH is a list of directories that will be searched when looking for imported modules.
---           If this variable is not set in the environment or via the API/CLI, its value is the
---           single directory named by ROSIE_LIB.  This is currently the ONLY configuration
---           parameter that the user can control via the environment. 
+-- ROSIE_LIBPATH is a list of directories that will be searched when looking for imported
+--           modules. If this variable is not set in the environment or via the API/CLI, its value
+--           is the single directory named by ROSIE_LIBDIR.  This is currently the ONLY
+--           configuration parameter that the user can control via the environment.
 
 ----------------------------------------------------------------------------------------
 -- Define key globals
@@ -96,16 +96,16 @@ end
 ---------------------------------------------------------------------------------------------------
 
 local function setup_paths()
-   ROSIE_LIB = common.path(ROSIE_HOME, "rpl")
-   ROSIE_PATH = ROSIE_LIB
-   ROSIE_PATH_SOURCE = "lib"
-   local ok, value = pcall(os.getenv, "ROSIE_PATH")
-   if (not ok) then init_error('Internal error: call to os.getenv(ROSIE_PATH)" failed'); end
+   ROSIE_LIBDIR = common.path(ROSIE_HOME, "rpl")
+   ROSIE_LIBPATH = ROSIE_LIBDIR
+   ROSIE_LIBPATH_SOURCE = "lib"
+   local ok, value = pcall(os.getenv, "ROSIE_LIBPATH")
+   if (not ok) then init_error('Internal error: call to os.getenv(ROSIE_LIBPATH)" failed'); end
    if value then
-      ROSIE_PATH = value;
-      ROSIE_PATH_SOURCE = "env";
+      ROSIE_LIBPATH = value;
+      ROSIE_LIBPATH_SOURCE = "env";
    end
-   assert(type(ROSIE_PATH)=="string")
+   assert(type(ROSIE_LIBPATH)=="string")
 end
 
 
@@ -178,7 +178,7 @@ function create_core_engine()
 			   compile_expression = compile.compile_expression,
 		        }
    -- Create a core engine that loads/compiles rpl 0.0
-   local NEWCORE_ENGINE = engine.new("NEW RPL core engine", COREcompiler2, ROSIE_LIB)
+   local NEWCORE_ENGINE = engine.new("NEW RPL core engine", COREcompiler2, ROSIE_LIBDIR)
    announce("NEWCORE_ENGINE", NEWCORE_ENGINE)
    return NEWCORE_ENGINE
 end
@@ -205,11 +205,11 @@ function create_rpl_1_1_engine(e)
 	         compile_expression = compile.compile_expression,
 	   }
 
-   local c2engine = engine.new("NEW RPL 1.1 engine (c2)", compiler2, ROSIE_LIB)
+   local c2engine = engine.new("NEW RPL 1.1 engine (c2)", compiler2, ROSIE_LIBDIR)
 
    -- Make the c2 compiler the default for new engines
    engine_module.set_default_compiler(compiler2)
-   engine_module.set_default_searchpath(ROSIE_PATH)
+   engine_module.set_default_searchpath(ROSIE_LIBPATH)
    
    announce("c2 engine", c2engine)
 
@@ -229,15 +229,16 @@ end
 
 ROSIE_INFO = {}
 
-function populate_info()
+-- FUTURE: re-do this data structure
+local function populate_info()
    local rpl_version = engine_module.get_default_compiler().version
    ROSIE_INFO = {
       {name="ROSIE_VERSION", value=tostring(ROSIE_VERSION),             desc="version of rosie cli/api"},
       {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
       {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),                 desc="true if rosie was started in development mode"},
-      {name="ROSIE_LIB",     value=tostring(ROSIE_LIB),                 desc="location of the standard rpl library"},
-      {name="ROSIE_PATH",    value=tostring(ROSIE_PATH),                desc="directories to search for modules"},
-      {name="ROSIE_PATH_SOURCE", value=tostring(ROSIE_PATH_SOURCE),     desc="env if ROSIE_PATH set by environment"},
+      {name="ROSIE_LIBDIR",  value=tostring(ROSIE_LIBDIR),              desc="location of the standard rpl library"},
+      {name="ROSIE_LIBPATH", value=tostring(ROSIE_LIBPATH),             desc="directories to search for modules"},
+      {name="ROSIE_LIBPATH_SOURCE", value=tostring(ROSIE_LIBPATH_SOURCE), desc="env if ROSIE_LIBPATH set by environment"},
       {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
       {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "",         desc="host on which rosie is running"},
       {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},
@@ -248,17 +249,19 @@ function populate_info()
    for _,entry in ipairs(ROSIE_INFO) do ROSIE_INFO[entry.name] = entry.value; end
 end
 
-----------------------------------------------------------------------------------------
--- Provide an API for setting/checking modes
-----------------------------------------------------------------------------------------
-
--- local mode_table = {}
--- function setmode(name, optional_value)
---    mode_table[name] = (optional_value==nil and false) or optional_value or true
--- end
--- function mode(name)
---    return mode_table[name]
--- end
+local function set_configuration(key, value)
+   for _,entry in ipairs(ROSIE_INFO) do
+      if entry.name == key then
+	 entry.value = value
+	 -- Reindex
+	 for _,entry in ipairs(ROSIE_INFO) do
+	    ROSIE_INFO[entry.name] = entry.value
+	 end
+	 return 
+      end
+   end -- for
+   error("Internal error: configuration key not found: " .. tostring(key))
+end
 
 ----------------------------------------------------------------------------------------
 -- Build the rosie module as seen by the Lua client
@@ -298,10 +301,10 @@ common.add_encoder("subs", 0,
 					  "\n")
 		   end)
 
+rosie_package.config = function(...) return ROSIE_INFO; end
+rosie_package.set_configuration = set_configuration
 rosie_package.encoders = common.encoder_table
-
 rosie_package.engine = engine
-rosie_package.info = function(...) return ROSIE_INFO; end
 rosie_package.import = import
 
 -- rosie_package.setmode = setmode

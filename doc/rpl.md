@@ -1,56 +1,119 @@
 <!--  -*- Mode: GFM; -*-  -->
 <!--
-<!--  © Copyright IBM Corporation 2016.                                        -->
+<!--  © Copyright IBM Corporation 2016, 2017.                                -->
 <!--  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  -->
 <!--  AUTHOR: Jamie A. Jennings                                                -->
 
-# Rosie Pattern Language v0.99
+# Rosie 1.0.0-alpha RPL language reference
 
-## This is the pattern language reference
+## This is the RPL language reference for RPL 1.1
 
-The [Command Line Interface documentation](cli.md) and information about the [Interactive read-eval-print loop (repl)](repl.md) are other places to look for information about how to use Rosie.
+Notes:
+1. The RPL language is versioned independently of Rosie itself.
+2. See also the [Command Line Interface manual](man/rosie.html) and the interactive [read-eval-print loop (repl)](repl.md) documentation.
 
-## How to install new patterns
+## Contents
 
-The only patterns that are truly built-in are `.` (dot) and `$` (dollar sign), which match any character and the end of line, respectively.  Therefore, you'll probably want to build your patterns by starting with some of the ones in the Rosie rpl directory.
-
-Rpl files contain Rosie Pattern Language, which Rosie compiles.  When Rosie starts, a list of rpl files is compiled and loaded.  That list is in the file [MANIFEST](../MANIFEST) in the install directory by default.  The command line switch `-manifest <filename>` lets you specify a different manifest file, which is simply a list of `.rpl` files to load.
-
-Usually, the default manifest loads these rpl files: (your distribution may differ)
-
-| File                           |  Contents |
-| ------------------------------ | --------- |
-| $sys/rpl/basic.rpl	         | patterns for finding a variety of "basic" patterns of semantic interest in arbitrary input |
-| $sys/rpl/common.rpl            | commonly used patterns for numbers, words, identifiers, pathnames |
-| $sys/rpl/csv.rpl		         | patterns for reading csv-formatted files |
-| $sys/rpl/datetime.rpl          | dates and times in a variety of formats |
-| $sys/rpl/grep.rpl		         | a few patterns familiar to users of the unix grep utility |
-| $sys/rpl/language-comments.rpl | extract comments from source code in various languages |
-| $sys/rpl/network.rpl	         | ip address, hostname, http commands, email addresses |
-| $sys/rpl/spark.rpl             | syslog, java exception, and python traceback patterns |
-| $sys/rpl/syslog.rpl            | patterns for the kind of syslog entries produced by Service Exchange |
-
-In file names, the following prefixes are valid and expanded by Rosie when present:
-
-| Prefix   | Meaning   | Notes  |
-| -------- | --------- | ------ |
-| $sys     | Rosie install directory                | valid on the command line and in manifest files |
-| $lib     | directory containing the manifest file | valid only inside a manifest file |
-| $(VAR)   | insert the value of the environment variable $VAR | valid on the command line and in manifest files |
-
-Note that file names can contain embedded spaces as long as they are escaped with a backslash, `'\ '`.
+- [RPL reference](#rpl-reference)
+- [Pattern libraries](#pattern-libraries)
 
 ## RPL reference
 
+### Blocks
+
+The only aggregation of RPL statements is the _block_, which is defined as follows in [the RPL code for Rosie](../rpl/rosie/rpl_1_1.rpl): 
+
+```
+rpl_statements = { {atmos ";" / package_decl / import_decl / language_decl / stmnt / syntax_error}* atmos $}
+```
+
+Knowing that the pattern `atmos` captures whitespace and comments, you can see that a block can contain empty statements (`;`), package declarations, import declarations, language declarations, and statements.  They are the elements of a block.
+
+| Item                 | Meaning                                                          | Example  |
+| ---------------------|------------------------------------------------------------------|----------|
+| language declaration | Declares the minimum RPL version required                        | `rpl 1.1` |
+| package declaration  | The statements that follow define a package with the given name  | `package net` |
+| import declaration   | Load the named package(s) by searching the library path          | `import word, num, net` |
+| statement            | Assign a name to a value (e.g. a pattern)                        | `d = [:digit:]` |
+
+Each block element is explained in its own section, below.  The compiler enforces the following constraints on blocks:
+
+* None of the block elements are required.  Indeed, a block may be empty.
+* If the language declaration is present, it must be the first non-comment, non-whitespace item in the block.
+* If the package declaration is present, it must come before any import declarations.
+* Any import declarations must come before the first statement.  There can be many import declarations.
+* There can be many statements.
+
+**Note: An RPL file may contain only one block.**
+
+
+### Language declaration
+
+This optional element declares that the block requires the given RPL major version, and at least the given minor version.  Major versions are assumed to be incompatible, and minor versions are assumed to be backwards compatible.
+
+### Package declaration
+
+If the block defines a package, it must contain a package declaration element giving the package name.  The name must follow the same rules as other identifiers in RPL, namely:
+
+* It must start with an alphabetic character
+* The remaining characters may be alphanumeric or the underscore
+
+From [the RPL code for Rosie](../rpl/rosie/rpl_1_1.rpl): 
+
+``` 
+alias id_char = [[:alnum:]] / [[_]]
+alias id = { [[:alpha:]] id_char* }
+``` 
+
+The package name is used as a prefix by RPL code that imports a package.  The identifier `net.ipv4` has the prefix `net`, so it is a reference to a package imported under the name `net`.
+
+**Note: While packages are typically stored in files, there is no requirement that the declared package name matches the file name.**
+
+
+### Import declaration
+
+There can be many import declarations (or none).  An import declaration tells the RPL compiler to load the specified package and to make its exported identifiers available for use.
+
+Rosie uses a package _search path_ (a list of file system directories) to find a package:
+* The _search path_ can be set using the environment variable `$ROSIE_LIBPATH` to a colon-separated list, e.g. `"~/rosie-pattern-language/rpl:/usr/local/share/rpl"`. 
+* If `$ROSIE_LIBPATH` is not set, Rosie will search only the `rpl` directory of the Rosie installation.  (This directory is labeled `ROSIE_LIBDIR` in the output of the `rosie config` command.)
+* The _search path_ can also be set on the command line, which takes precedence over the environment variable.
+* If you set the _search path_ yourself, via the environment or the command line, you must include the directory of the Rosie standard library if you want Rosie to search there.
+* The file extension must be `.rpl`.
+
+Variations of the import declaration:
+
+| `import word`                     | Import the `word` package |
+| `import word, num, net`           | Import several packages  |
+| `import num as n`                 | Import the `num` package, but call it `n` |
+| `import word, num as n, net`      | These forms can be combined |
+| `import rosie/rpl_1_0`            | A package reference can specify a subdirectory of a _search path_ directory |
+| `import a/b/c`                    | Or a chain of subdirectories |
+| `import a/b/c as d`               | Import `a/b/c` as `d` instead of the default name, `c` |
+| `import "a a/b/c"`                | If the package's path name contains non-identifier characters, it must be quoted |
+| `import "a a/b/cde-f" as c`       | If the package file name contains non-identifier characters, it must be quoted and imported `as` a valid identifier |
+
+
 ### Statements
 
-RPL patterns can contain whitespace and comments, so you can make your patterns easy to read.  The RPL statements supported in this version of Rosie are:
+RPL patterns can contain whitespace and comments.  Statements can be optionally separated with semi-colons (`;`), such as when combining multiple statements on a single line.
 
-|  RPL statement | Meaning                       |
-|  -------------- | -------                      |
-|  `identifier = expression`         | Assign a name to a pattern expression |
-|  `alias identifier = expression`  | Create an alias for a pattern expression |
-|  `grammar ... end`                | Define a proper grammar; assignments and aliases appear in place of `...` |
+|  RPL statement              | Meaning   |
+|  -------------------------- | ----------|
+|  `identifier = expression`  | Assign a name to a pattern expression |
+|  `grammar ... end`          | Define a proper grammar; assignments and aliases appear in place of `...` |
+
+
+| Modifier | Meaning                                  | Example                          |
+|----------|------------------------------------------|----------------------------------|
+| `alias`  | Create an alias for a pattern expression | `alias d = [:digit:]`            |
+| `local`  | Declares an name to be local to the block where it is defined | `local number = num.signed_number` |
+| `local alias`  | The `local` keword must come first | `local alias h = [:xdigit:]` |
+
+
+#### Simple assignments 
+
+** LEFT OFF HERE !@# **
 
 When Rosie matches an identifier, say `int`, the entire matched string is
 returned, along with an ordered list of sub-matches.  Each sub-match corresponds
@@ -87,7 +150,7 @@ Matching against "421" now gives:
 {"common.int":{"pos":1,"text":"421"}}
 ``` 
 
-### Grammars are an advanced feature you may never need
+#### Grammar statements
 
 Grammars can have mutually recursive rules.  PEGs allow you to define grammars for recursive structures like nested lists (e.g. JSON, XML) or things like "strings that have an equal number of a's and b's".  Grammars are defined simply by putting a set of assignment/alias statements inside a `grammar`...`end` block, e.g.:
 
@@ -383,5 +446,35 @@ Rosie>
 
 A compact alternative to `[:space:]*` is to use the Rosie boundary identifier, `~`, to skip ahead to the next token boundary, consuming whitespace on the way.
 
+
+## Pattern libraries
+
+The only patterns that are truly built-in are `.` (dot) and `$` (dollar sign), which match any character and the end of line, respectively.  Therefore, you'll probably want to build your patterns by starting with some of the ones in the Rosie rpl directory.
+
+Rpl files contain Rosie Pattern Language, which Rosie compiles.  When Rosie starts, a list of rpl files is compiled and loaded.  That list is in the file [MANIFEST](../MANIFEST) in the install directory by default.  The command line switch `-manifest <filename>` lets you specify a different manifest file, which is simply a list of `.rpl` files to load.
+
+Usually, the default manifest loads these rpl files: (your distribution may differ)
+
+| File                           |  Contents |
+| ------------------------------ | --------- |
+| $sys/rpl/basic.rpl	         | patterns for finding a variety of "basic" patterns of semantic interest in arbitrary input |
+| $sys/rpl/common.rpl            | commonly used patterns for numbers, words, identifiers, pathnames |
+| $sys/rpl/csv.rpl		         | patterns for reading csv-formatted files |
+| $sys/rpl/datetime.rpl          | dates and times in a variety of formats |
+| $sys/rpl/grep.rpl		         | a few patterns familiar to users of the unix grep utility |
+| $sys/rpl/language-comments.rpl | extract comments from source code in various languages |
+| $sys/rpl/network.rpl	         | ip address, hostname, http commands, email addresses |
+| $sys/rpl/spark.rpl             | syslog, java exception, and python traceback patterns |
+| $sys/rpl/syslog.rpl            | patterns for the kind of syslog entries produced by Service Exchange |
+
+In file names, the following prefixes are valid and expanded by Rosie when present:
+
+| Prefix   | Meaning   | Notes  |
+| -------- | --------- | ------ |
+| $sys     | Rosie install directory                | valid on the command line and in manifest files |
+| $lib     | directory containing the manifest file | valid only inside a manifest file |
+| $(VAR)   | insert the value of the environment variable $VAR | valid on the command line and in manifest files |
+
+Note that file names can contain embedded spaces as long as they are escaped with a backslash, `'\ '`.
 
 

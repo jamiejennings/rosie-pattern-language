@@ -16,7 +16,7 @@ local p = {}
 -- create Parser
 function p.create(rosie)
    local argparse = assert(rosie.import("argparse"), "failed to load argparse package")
-   local parser = argparse("rosie", "Rosie " .. rosie.info().ROSIE_VERSION)
+   local parser = argparse("rosie", "Rosie " .. rosie.config().ROSIE_VERSION)
    parser:add_help(false)
    parser:require_command(false)
    --:epilog("Additional information.")

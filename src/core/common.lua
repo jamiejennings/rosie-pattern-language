@@ -13,6 +13,7 @@ local NIL = recordtype.NIL
 local math = import "math"
 local string = import "string"
 local table = import "table"
+local os = import "os"
 
 local common = {}				    -- interface
 
@@ -50,13 +51,26 @@ function common.path(...)
    return table.concat({...}, common.dirsep)
 end
 
+-- We support a basic form of tilde expansion when the user enters a file name.  (Only ~/... is
+-- supported, not the ~user/... syntax.)
+local function tilde_expand(dir)
+   if dir:sub(1,2)=="~/" then
+      local ok, HOMEDIR = pcall(os.getenv, "HOME")
+      if (not ok) or (type(HOMEDIR)~="string") then
+	 HOMEDIR = ""
+      end
+      return HOMEDIR .. dir:sub(2)
+   end
+   return dir
+end
+
 function common.get_file(filepath, searchpath, extension)
    extension = extension or ".rpl"
    local dirs = common.parse_pathlist(searchpath)
    if #dirs==0 then return nil, nil, "Error: search path is empty"; end
    local errs = {}
    for _, dir in ipairs(dirs) do
-      local fullpath = dir .. common.dirsep .. filepath .. extension
+      local fullpath = tilde_expand(dir) .. common.dirsep .. filepath .. extension
       local contents, msg = util.readfile(fullpath)
       if contents then
 	 return fullpath, contents, nil

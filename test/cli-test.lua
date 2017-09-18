@@ -280,6 +280,7 @@ check(results_table[3]:find("in test/nested-test.rpl:2:1:", 1, true))
 
 cmd = rosie_cmd .. " --libpath " .. TEST_HOME .. " -f test/nested-test2.rpl grep foo test/resolv.conf"
 print(); print(cmd)
+print("***"); table.print(results, false)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code ~= 0, "return code should not be zero")
@@ -313,7 +314,6 @@ check(results_table[3]:find("in test/mod4.rpl:2:1"))
 check(results_table[3]:find("package !@#"))
 
 cmd = rosie_cmd .. " --libpath test -f test/nested-test3.rpl grep foo test/resolv.conf"
-print(); print(cmd)
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code ~= 0, "return code should not be zero")

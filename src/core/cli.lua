@@ -53,7 +53,7 @@ end
 import = rosie.import
 mod = require "submodule"
 
-ROSIE_VERSION = rosie.info().ROSIE_VERSION
+ROSIE_VERSION = rosie.config().ROSIE_VERSION
 
 engine_module = assert(rosie.import("engine_module"), "failed to load engine_module package")
 common = assert(rosie.import("common"), "failed to open common package")
@@ -71,26 +71,26 @@ parser = argparser.create(rosie)
 function create_cl_engine(args)
    CL_ENGINE = rosie.engine.new("command line engine")
    if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
-   if args.libpath then
-      CL_ENGINE.searchpath = args.libpath
-   else
-      CL_ENGINE.searchpath = rosie.info().ROSIE_PATH
-   end
+   CL_ENGINE.searchpath = rosie.config().ROSIE_LIBPATH
 end
 
-local function print_rosie_info()
+local function print_rosie_config()
    local function printf(fmt, ...)
       print(string.format(fmt, ...))
    end
    local fmt1 = "%20s"
    local fmt = fmt1 .. " = %s"
-   local config = rosie.info()
-   print("Configuration from the environment:")
-   local multi_sourced = {ROSIE_PATH = "ROSIE_PATH_SOURCE"}
+   local config = rosie.config()
+   local multi_sourced = {ROSIE_LIBPATH = "ROSIE_LIBPATH_SOURCE"}
    local any = false
    for name, sourceinfo in pairs(multi_sourced) do
       if config[sourceinfo]=="env" then
-	 print(fmt, name, config[name])
+	 print("Configured from environment variable: ")
+	 printf(fmt, name, config[name])
+	 any = true
+      elseif config[sourceinfo]=="cli" then
+	 print("Configured on command line: ")
+	 printf(fmt, name, config[name])
 	 any = true
       end
    end
@@ -122,6 +122,12 @@ end
 local function run(args)
    if args.verbose then ROSIE_VERBOSE = true; end
 
+   -- Do this BEFORE creating the CL_ENGINE
+   if args.libpath then
+      rosie.set_configuration("ROSIE_LIBPATH", args.libpath)
+      rosie.set_configuration("ROSIE_LIBPATH_SOURCE", "cli")
+   end
+
    ok, msg = pcall(create_cl_engine, args)
    if not ok then print("Error when creating cli engine: " .. msg); os.exit(-1); end
 
@@ -135,7 +141,7 @@ local function run(args)
       end
    end
    if (args.command=="config") then
-      print_rosie_info()
+      print_rosie_config()
       os.exit()
    elseif (args.command=="help") then
       print(parser:get_help())
