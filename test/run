@@ -20,8 +20,6 @@ fi
 
 echo "Running test file $file ... "
 $rosie -D <<EOF
---ROSIE_HOME="`pwd`"
---rosie=require "rosie"
 TEST_HOME=ROSIE_HOME.."/test"
 import=rosie.import
 termcolor=rosie.import "termcolor"
