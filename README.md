@@ -67,8 +67,16 @@ Platforms:
 - [ ] [SLES](https://www.suse.com/solutions/enterprise-linux/) 12
 - [ ] That Ubuntu-on-Windows thing
 
+To install Rosie, clone this repository and `cd rosie-pattern-language` (which
+we will call the _build directory_).  Then:
+
 1. `make`
 2. `make install`  (optional)
+
+After `make`, you can run Rosie from the build directory using `bin/rosie`.
+Running `make install` creates a separate instalaltion directory, by default in
+`/usr/local`.  The executable is `/usr/local/bin/rosie`, and the other needed
+files can be found in `/usr/local/lib/rosie/`.
 
 ## Using the CLI
 
@@ -121,6 +129,7 @@ Platforms:
 - [ ] Dependency tool to identify dependencies of a set of packages, and to make
 it easy to upload/download those dependencies.
 - [ ] Source code parsing patterns (based on work done at NCSU, Raleigh, NC USA)
+- [ ] Log file parsing patterns (based on published examples and new contributions)
 
 ### Features
 - [ ] Unicode character classes
@@ -128,11 +137,10 @@ it easy to upload/download those dependencies.
 - [ ] Customize color assignments
 - [ ] Customize initial environment
 - [ ] Generate patterns automatically from locale data
+- [ ] Linter
 - [ ] Toolkit for user-developed macros
 - [ ] Toolkit for user-developed output encoders
 - [ ] Compiler optimizations
-- [ ] Additions to standard library
-
 
 <hr>
 

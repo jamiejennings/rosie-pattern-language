@@ -180,7 +180,13 @@ $(EXECROSIE): compile
 	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
 	@chmod 755 "$(EXECROSIE)"
 
+lib/strict.luac: $(LUAMOD_DIR)/strict.lua bin/luac
+	bin/luac -o $@ $<
+
 lib/list.luac: $(LUAMOD_DIR)/list.lua bin/luac
+	bin/luac -o $@ $<
+
+lib/thread.luac: $(LUAMOD_DIR)/thread.lua bin/luac
 	bin/luac -o $@ $<
 
 lib/recordtype.luac: $(LUAMOD_DIR)/recordtype.lua bin/luac
@@ -197,7 +203,7 @@ lib/run-rosie:
 	@cp src/run-rosie lib
 
 core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
-other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac
+other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
 compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so lib/run-rosie
@@ -224,7 +230,12 @@ $(ROSIEBIN): compile
 $(INSTALL_ROSIEBIN): $(ROSIEBIN)
 	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
 	mkdir -p `dirname "$(INSTALL_ROSIEBIN)"` "$(ROSIED)"/bin
-	cp "$(BUILD_ROOT)"/bin/rosie "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo -n "exec $(ROSIED)/lib/run-rosie " >> "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo -n ' "$$0"' >> "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo -n " $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo ' "$$@"' >> "$(INSTALL_ROSIEBIN)"
 	@chmod 755 "$(INSTALL_ROSIEBIN)"
 
 # Install the lua interpreter
@@ -235,15 +246,16 @@ install_lua: bin/lua
 
 # Install all of the shared objects
 .PHONY: install_so
-install_so: lib/lpeg.so lib/cjson.so
+install_so: lib/lpeg.so lib/cjson.so lib/readline.so
 	mkdir -p "$(INSTALL_LIB_DIR)"
-	cp lib/lpeg.so lib/cjson.so "$(INSTALL_LIB_DIR)"
+	cp lib/lpeg.so lib/cjson.so lib/readline.so "$(INSTALL_LIB_DIR)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
 install_metadata:
 	mkdir -p "$(ROSIED)"
 	cp CHANGELOG CONTRIBUTORS LICENSE README VERSION "$(ROSIED)"
+	-cp build.log "$(ROSIED)"
 
 # Install the real run script, and the rosie.lua file
 .PHONY: install_run_script
@@ -268,12 +280,6 @@ install_rpl:
 .PHONY: install
 install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
 	install_run_script install_luac_bin install_rpl
-#	@echo 
-#	@echo TO TEST THE INSTALLATION: make installtest
-#	@echo TO UNINSTALL: remove one directory and several files/links, e.g.
-#	@echo     rm -rf $(ROSIED)
-#	@echo     rm $(INSTALL_ROSIEBIN) $(ROSIE_ROOT)/rpl $(ROSIE_ROOT)/pkg $(ROSIE_DOC)/rosie
-#	@echo 
 
 .PHONY: uninstall
 uninstall:
