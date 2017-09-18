@@ -57,15 +57,15 @@ function run(cmd, expectations)
 	 end
       end -- for
       if mismatch_flag then
-	 print("********** SOME MISMATCHED OUTPUT WAS FOUND. **********");
+	 print("MISMATCHED OUTPUT WAS FOUND");
       else
-	 print("END ----------------- All output matched expectations. -----------------");
+	 print("All output matched expectations.");
       end
-      if (not (#results==#expectations)) then
-	 print(string.format("********** Mismatched number of results (%d) versus expectations (%d) **********", #results, #expectations))
+      if (not (#results==(#expectations+offset))) then
+	 print(string.format("********** Mismatched number of results (%d) versus expectations (%d) **********", (#results+offset), #expectations))
       end
       check((not mismatch_flag), "Mismatched output compared to expectations", 1)
-      check((#results==#expectations), "Mismatched number of results compared to expectations", 1)
+      check(((#results+offset)==#expectations), "Mismatched number of results compared to expectations", 1)
    end -- if expectations
    return results
 end
