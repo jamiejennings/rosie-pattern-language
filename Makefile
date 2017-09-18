@@ -70,6 +70,7 @@ LUAMOD_DIR = $(SUBMOD)/$(LUAMOD)
 
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
+INSTALL_RPL_DIR = $(ROSIED)/rpl
 INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
 
 .PHONY: clean
@@ -227,16 +228,18 @@ $(ROSIEBIN): compile
 
 # See comment above re: ROSIEBIN
 .PHONY: $(INSTALL_ROSIEBIN)
-$(INSTALL_ROSIEBIN): $(ROSIEBIN)
+$(INSTALL_ROSIEBIN): compile
 	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
-	mkdir -p `dirname "$(INSTALL_ROSIEBIN)"` "$(ROSIED)"/bin
-	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
+	@mkdir -p "$(DESTDIR)"/bin
 	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(INSTALL_ROSIEBIN)"
 	@/usr/bin/env echo -n "exec $(ROSIED)/lib/run-rosie " >> "$(INSTALL_ROSIEBIN)"
 	@/usr/bin/env echo -n ' "$$0"' >> "$(INSTALL_ROSIEBIN)"
 	@/usr/bin/env echo -n " $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(INSTALL_ROSIEBIN)"
 	@chmod 755 "$(INSTALL_ROSIEBIN)"
+	@/usr/bin/env echo "Creating $(INSTALL_LUA_PACKAGE)"
+	@/usr/bin/env echo "local home = \"$(ROSIED)\"" > "$(INSTALL_LUA_PACKAGE)"
+	@/usr/bin/env echo "return dofile(home .. \"/lib/boot.luac\")(home)" >> "$(INSTALL_LUA_PACKAGE)"
 
 # Install the lua interpreter
 .PHONY: install_lua
@@ -262,7 +265,6 @@ install_metadata:
 install_run_script:
 	mkdir -p "$(INSTALL_LIB_DIR)"
 	@cp src/run-rosie "$(INSTALL_LIB_DIR)"
-	@cp rosie.lua "$(ROSIED)"/
 
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
@@ -273,8 +275,10 @@ install_luac_bin:
 # Install the provided RPL patterns
 .PHONY: install_rpl
 install_rpl:
-	mkdir -p "$(ROSIED)"/rpl
-	cp -r rpl "$(ROSIED)"/
+	mkdir -p "$(INSTALL_RPL_DIR)"
+	cp rpl/*.rpl "$(INSTALL_RPL_DIR)"
+	mkdir -p "$(INSTALL_RPL_DIR)"/rosie
+	cp rpl/rosie/*.rpl "$(INSTALL_RPL_DIR)"/rosie/
 
 # Main install rule
 .PHONY: install
@@ -300,10 +304,10 @@ sniff: $(ROSIEBIN)
 	    echo "";\
             echo "Rosie Pattern Engine built successfully!"; \
 	    if [ -z "$$BREW" ]; then \
-	      	    echo "    Use 'make install' to install into $(DESTDIR)"; \
-	      	    echo "    Use 'make test' to run the test suite here in the build directory"; \
+	      	    echo "    Use 'make install' to install into DESTDIR=$(DESTDIR)"; \
+	      	    echo "    Use 'make uninstall' to uninstall from DESTDIR=$(DESTDIR)"; \
 	      	    echo "    To run rosie from the build directory, use ./bin/rosie"; \
-	            echo "    Try this example, and look for color text output: rosie basic.matchall /etc/resolv.conf"; \
+	            echo "    Try this example, and look for color text output: rosie match all.things test/resolv.conf"; \
 		    echo "";\
 	    fi; \
             true; \
