@@ -219,7 +219,7 @@ $(ROSIEBIN): compile
 	@/usr/bin/env echo -n ' "$$0"' >> "$(ROSIEBIN)"
 	@/usr/bin/env echo -n " $(BUILD_ROOT)" >> "$(ROSIEBIN)"
 	@/usr/bin/env echo ' "$$@"' >> "$(ROSIEBIN)"
-	@mkdir -p "$(ROSIED)"
+	@mkdir -p lib
 	@chmod 755 "$(ROSIEBIN)"
 	@/usr/bin/env echo "Creating $(BUILD_LUA_PACKAGE)"
 	@/usr/bin/env echo "local home = \"$(BUILD_ROOT)\"" > "$(BUILD_LUA_PACKAGE)"
