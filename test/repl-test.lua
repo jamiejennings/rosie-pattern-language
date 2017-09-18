@@ -41,7 +41,7 @@ function run(cmd, expectations)
 	 -- On linux, the first line of the output, after the greeting (Rosie version), is the
 	 -- repl prompt, followed by the .match command.  On OS X, this line is not present.
 	 if not results[i] then break; end
-	 if results[i]:sub(1,6) == "Rosie>" then
+	 if (results[i]:sub(1,6) == "Rosie>") or (results[i]:sub(1,7)=="Exiting") then
 	    offset = offset - 1
 	 else
 	    if results[i]~=expectations[i+offset] then
