@@ -63,9 +63,11 @@ Platforms: (most of these were tested with docker)
 - [x] [Fedora release 25 (Twenty Five)](https://getfedora.org)
 - [x] [CentOS Linux release 7.4.1708 (Core)](https://www.centos.org) 
 - [x] [Ubuntu 16.04.1 LTS (Xenial Xerus)](https://www.ubuntu.com/)
-- [ ] [RedHat Enterprise Linux](https://www.redhat.com/en/technologies/linux-platforms) 7
-- [ ] [SLES](https://www.suse.com/solutions/enterprise-linux/) 12
+- [x] [RedHat Enterprise Linux 7](https://www.redhat.com/en/technologies/linux-platforms)
+- [ ] [SUSE Linux Enterprise Server 12 SP2](https://www.suse.com/solutions/enterprise-linux/)
 - [ ] That Ubuntu-on-Windows thing
+
+Prerequisites: git, make, gcc, readline (readline-common), readline-devel (libreadline-dev)
 
 To install Rosie, clone this repository and `cd rosie-pattern-language` (which
 we will call the _build directory_).  Then:
