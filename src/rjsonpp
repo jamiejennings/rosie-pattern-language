@@ -1,0 +1,14 @@
+#!/usr/bin/env lua
+-- A quick hack for json pretty printing using an internal Rosie function
+ROSIE_DEV=false
+local rosie = require "rosie"
+assert(rosie)
+assert(table.print)
+local json = require "cjson"
+local line = io.stdin:read("l")
+while line do
+   local t = json.decode(line)
+   table.print(t, false)
+   line = io.stdin:read("l")
+end
+   

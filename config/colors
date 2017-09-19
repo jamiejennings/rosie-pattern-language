@@ -1,0 +1,8 @@
+*=30
+json.*=33
+word.*=yellow
+word.id=36:word.dotted_id=36
+num.*=underline
+net.path=32
+net.*=red
+

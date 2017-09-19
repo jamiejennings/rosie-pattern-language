@@ -2,30 +2,50 @@
 ----
 ---- all.lua      run all tests
 ----
----- © Copyright IBM Corporation 2016.
+---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
-test = require "test-functions"
-json = require "cjson"
+-- See Makefile for how these tests are run using the undocumented "-D" option to rosie, which
+-- enters development mode after startup.
 
-local results = {}
+assert(rosie)
+import = rosie.import
+ROSIE_HOME = rosie.env.ROSIE_HOME
+TEST_HOME = "./test"
 
-function do_test(fn)
-   table.insert(results, {fn, dofile(fn)})
-end		   
-      
-do_test(ROSIE_HOME .. "/test/api-test.lua")
-do_test(ROSIE_HOME .. "/test/rpl-core-test.lua")
-do_test(ROSIE_HOME .. "/test/cli-test.lua")
-do_test(ROSIE_HOME .. "/test/eval-test.lua")
+json = import "cjson"
 
-passed = test.print_grand_total(results)
+package.path = "./submodules/lua-modules/?.lua"
+termcolor = assert(require("termcolor"))
+test = assert(require("test"))
+
+test.dofile(TEST_HOME .. "/lib-test.lua")
+test.dofile(TEST_HOME .. "/rpl-core-test.lua")
+test.dofile(TEST_HOME .. "/rpl-mod-test.lua")
+test.dofile(TEST_HOME .. "/rpl-appl-test.lua")
+
+test.dofile(TEST_HOME .. "/trace-test.lua")
+
+test.dofile(TEST_HOME .. "/cli-test.lua")
+test.dofile(TEST_HOME .. "/repl-test.lua")
+
+test.dofile(TEST_HOME .. "/utf8-test.lua")
+
+passed = test.print_grand_total()
+
+
+print("\nTESTING TODO LIST:")
+print("- macros")
+print("- input data with nulls")
+print("- new api")
+print("- more repl tests")
+print("- more trace tests")
+print()
+
 
 -- When running Rosie interactively (i.e. development mode), do not exit.  Otherwise, these tests
 -- were launched from the command line, so we should exit with an informative status.
 if not ROSIE_DEV then
    if passed then os.exit(0) else os.exit(-1); end
 end
-
-

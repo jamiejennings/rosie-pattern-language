@@ -2,10 +2,20 @@
 ----
 ---- rpl-core-test.lua
 ----
----- (c) 2016, Jamie A. Jennings
+---- (c) 2016, 2017, Jamie A. Jennings
 ----
 
-test = require "test-functions"
+-- TODO:
+-- test repetition where min > max
+-- test repetition where max==0
+
+
+assert(TEST_HOME, "TEST_HOME is not set")
+
+list = import "list"
+cons, map, flatten, member = list.cons, list.map, list.flatten, list.member
+common = import "common"
+violation = import "violation"
 
 check = test.check
 heading = test.heading
@@ -13,16 +23,22 @@ subheading = test.subheading
 
 e = false;
 
+global_rplx = false;
+
 function set_expression(exp)
-   local ok, msg = pcall(lapi.configure_engine, e, {expression=exp, encode=false})
-   if not ok then error("Configuration error: " .. msg); end
+   global_rplx, msg = e:compile(exp)
+   if not global_rplx then
+      print("\nThis exp failed to compile: " .. tostring(exp))
+      table.print(msg)
+      error("compile failed in rpl-core-test")
+   end
 end
 
 function check_match(exp, input, expectation, expected_leftover, expected_text, addlevel)
    expected_leftover = expected_leftover or 0
    addlevel = addlevel or 0
    set_expression(exp)
-   local m, leftover = lapi.match(e, input)
+   local m, leftover = global_rplx:match(input)
    check(expectation == (not (not m)), "expectation not met: " .. exp .. " " ..
 	 ((m and "matched") or "did NOT match") .. " '" .. input .. "'", 1+addlevel)
    local fmt = "expected leftover matching %s against '%s' was %d but received %d"
@@ -30,8 +46,7 @@ function check_match(exp, input, expectation, expected_leftover, expected_text, 
       check(leftover==expected_leftover,
 	    string.format(fmt, exp, input, expected_leftover, leftover), 1+addlevel)
       if expected_text and m then
-	 local name, match = next(m)
-	 local text = match.text
+	 local name, pos, text, subs = common.decode_match(m)
 	 local fmt = "expected text matching %s against '%s' was '%s' but received '%s'"
 	 check(expected_text==text,
 	       string.format(fmt, exp, input, expected_text, text), 1+addlevel)
@@ -46,116 +61,129 @@ test.start(test.current_filename())
 heading("Setting up")
 ----------------------------------------------------------------------------------------
 
-check(type(lapi)=="table")
-check(type(lapi.new_engine)=="function")
-e, config_ok, msg = lapi.new_engine({name="rpl core test"})
-check(engine.is(e))
+check(type(rosie)=="table")
+e = rosie.engine.new("rpl core test")
+check(rosie.engine.is(e))
 
 subheading("Setting up assignments")
-t1, t2 = lapi.load_string(e, 'a = "a"  b = "b"  c = "c"  d = "d"')
-check(type(t1)=="table")
-if t2 then check(type(t2)=="table"); end
-t = lapi.get_environment(e, "a")
+success, pkgname, msg = e:load('a = "a"  b = "b"  c = "c"  d = "d"')
+check(type(success)=="boolean")
+check(not pkgname)
+check(type(msg)=="table")
+t = e.env:lookup("a")
 check(type(t)=="table")
 
 set_expression('a')
-match, leftover = lapi.match(e, "a")
+ok, match, leftover = e:match('a', "a")
+check(ok)
 check(type(match)=="table")
 check(type(leftover)=="number")
 check(leftover==0)
-check(next(match)=="a", "the match of an identifier is named for the identifier")
+check(match.type=="a", "the match of an identifier is named for the identifier")
 
-set_expression('(a)')
-match, leftover = lapi.match(e, "a")
-check(next(match)=="a", "the match of an expression is usually anonymous, but cooking an identifier is redundant")
-subs = match["a"].subs
-check(not subs)
+   set_expression('(a)')
+   ok, match, leftover = e:match('(a)', "a")
+   check(ok)
+   check(match.type=="*", "the match of an expression is anonymous")
+   check(match.subs and match.subs[1] and match.subs[1].type=="a")
 
-set_expression('{a}')
-match, leftover = lapi.match(e, "a")
-check(next(match)=="*", "the match of an expression is anonymous")
-subs = match["*"].subs
-check(subs)
-submatchname = next(subs[1])
-check(submatchname=="a", "the only sub of this expression is the identifier in the raw group")
+   set_expression('{a}')
+   ok, match, leftover = e:match('{a}', "a")
+   check(ok)
+   check(match.type=="*", "the match of an expression is anonymous")
+   check(match.subs and match.subs[1] and match.subs[1].type=="a")
 
-ok, msg = pcall(lapi.load_string, e, 'alias plain_old_alias = "p"')
+ok, pkgname, msg = e.load(e, 'alias plain_old_alias = "p"')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_plain_old_alias = plain_old_alias')
+ok, pkgname, msg = e.load(e, 'alias alias_to_plain_old_alias = plain_old_alias')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_a = a')
+ok, pkgname, msg = e.load(e, 'alias alias_to_a = a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alternate_a = a')
+ok, pkgname, msg = e.load(e, 'alternate_a = a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alternate_to_alias_to_a = alias_to_a')
+ok, pkgname, msg = e.load(e, 'alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
+ok, pkgname, msg = e.load(e, 'alias alias_to_alternate_to_alias_to_a = alias_to_a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'uses_a = a a')
+ok, pkgname, msg = e.load(e, 'uses_a = a a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alternate_uses_a = uses_a')
+ok, pkgname, msg = e.load(e, 'alternate_uses_a = uses_a')
 check(ok)
 
-ok, msg = pcall(lapi.load_string, e, 'alias alias_to_uses_a = uses_a')
+ok, pkgname, msg = e.load(e, 'alias alias_to_uses_a = uses_a')
 check(ok)
 
+subheading("Checking for required parse failures")
+ok = e:compile(".")
+check(ok)
+ok = e:compile("..")
+check(ok)
+ok = e:compile(".~")
+check(ok)
+ok = e:compile("a.")
+check(not ok)
+ok = e:compile(".a")
+check(not ok)
+ok = e:compile("a.*")
+check(not ok)
+ok = e:compile("a .*")
+check(ok)
+ok = e:compile("a.b.c")
+check(not ok)
 
 subheading("Testing re-assignments")
 
 check_match('plain_old_alias', "x", false, 1)
 result = check_match('plain_old_alias', "p", true)
-check(next(result)=="*", "the match of an alias is anonymous")
-check(not result["*"].subs, "no subs")
+check(result.type=="*", "the match of an alias is anonymous")
+check(not result.subs, "no subs")
 
 check_match('alias_to_plain_old_alias', "x", false, 1)
 result = check_match('alias_to_plain_old_alias', "p", true)
-check(next(result)=="*", "the match of an alias is anonymous")
-check(not result["*"].subs, "no subs")
+check(result.type=="*", "the match of an alias is anonymous")
+check(not result.subs, "no subs")
 
 match = check_match('alias_to_a', "a", true)
-check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match["*"].subs
-check(subs and #subs==1)
-check(next(subs[1])=="a")
+check(match.type=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+check(match.subs and match.subs[1] and match.subs[1].type=="a")
 
 match = check_match('alternate_a', "a", true)
-check(next(match)=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
-subs = match["alternate_a"].subs
+check(match.type=="alternate_a", 'the match is labeled with the identifier name to which it is bound')
+subs = match.subs
 check(not subs)
 
 match = check_match('alternate_to_alias_to_a', "a", true)
-check(next(match)=="alternate_to_alias_to_a", 'rhs of an assignment can contain an alias, and it will be captured')
-subs = match["alternate_to_alias_to_a"].subs
+check(match.type=="alternate_to_alias_to_a", 'rhs of an assignment can contain an alias, and it will be captured')
+subs = match.subs
 check(not subs)
 
 match = check_match('alias_to_alternate_to_alias_to_a', "a", true)
-check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match["*"].subs
-check(subs and #subs==1)
-check(next(subs[1])=="a")
+check(match.type=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match.subs
+check(subs and subs[1] and subs[1].type=="a")
 
 match = check_match('uses_a', "a a", true)
-check(next(match)=="uses_a", 'the match is labeled with the identifier name to which it is bound')
-subs = match["uses_a"].subs
+check(match.type=="uses_a", 'the match is labeled with the identifier name to which it is bound')
+subs = match.subs
 check(subs and #subs==2)
-check(next(subs[1])=="a")
-check(next(subs[2])=="a")
+check(subs[1].type=="a")
+check(subs[2].type=="a")
 
 match = check_match('alias_to_uses_a', "a a", true)
-check(next(match)=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
-subs = match["*"].subs
-check(subs and #subs==1 and (next(subs[1]))=="uses_a")
-subs = match["*"].subs[1].uses_a.subs
+check(match.type=="*", 'an alias can be used as a top-level exp, and the match is labeled "*"')
+subs = match.subs
+check(subs and #subs==1 and (subs[1].type=="uses_a"))
+subs = match.subs[1].subs
 check(subs and #subs==2)
-check(subs[1] and (next(subs[1])=="a"))
-check(subs[2] and (next(subs[2])=="a"))
+check(subs[1] and (subs[1].type=="a"))
+check(subs[2] and (subs[2].type=="a"))
 
 ----------------------------------------------------------------------------------------
 heading("Literals")
@@ -163,8 +191,9 @@ heading("Literals")
 subheading("Built-ins")
 
 set_expression('.')
-match, leftover = lapi.match(e, "a")
-check(next(match)=="*", "the match of an alias is anonymous")
+ok, match, leftover = e:match('.', "a")
+check(ok)
+check(match.type=="*", "the match of an alias is anonymous")
 
 check_match(".", "a", true)
 check_match(".", "abcd", true, 3, "a")
@@ -199,11 +228,11 @@ heading("Sequences")
 ----------------------------------------------------------------------------------------
 subheading("With built-ins and literals")
 check_match('.*', " Hello\n", true)
-check_match('...', "Hello", false)
-check_match('...', "H e llo", true, 2)
-check_match('(...)', "H e llo", true, 2)
-check_match('(...)', "H e l lo", true, 3)
-check_match('{...}', "H e llo", true, 4, "H e")
+check_match('. . .', "Hello", false)
+check_match('. . .', "H e llo", true, 2)
+check_match('(. . .)', "H e llo", true, 2)
+check_match('(. . .)', "H e l lo", true, 3)
+check_match('{. . .}', "H e llo", true, 4, "H e")
 check_match('.*.', "Hello", false)
 check_match('"hi" "there"', "hi there", true)
 check_match('("hi" "there")', "hi there", true)
@@ -281,23 +310,23 @@ check_match('{a / b} c', " bc", false)
 ----------------------------------------------------------------------------------------
 heading("Look-ahead")
 ----------------------------------------------------------------------------------------
-check_match('@a', "x", false)
-check_match('@a', "a", true, 1, "")
-check_match('@a', "ayz", true, 3, "")		    -- ???
-check_match('@{a}', "ayz", true, 3, "")
-check_match('@(a)', "ayz", true, 3, "")		    -- ???
-check_match('(@a)', "ayz", true, 3, "")
-check_match('(@{a})', "ayz", true, 3, "")
-check_match('(@(a))', "ayz", true, 3, "")
+check_match('>a', "x", false)
+check_match('>a', "a", true, 1, "")
+check_match('>a', "ayz", true, 3, "")		    -- ???
+check_match('>{a}', "ayz", true, 3, "")
+check_match('>(a)', "ayz", true, 3, "")		    -- ???
+check_match('(>a)', "ayz", true, 3, "")
+check_match('(>{a})', "ayz", true, 3, "")
+check_match('(>(a))', "ayz", true, 3, "")
 
-check_match('@a', "xyz", false)
-check_match('(@a)', "xyz", false, 4, "")
-check_match('{@a}', "axyz", true, 4, "")
-check_match('{@a}', "xyz", false, 4, "")
-check_match('@(a)', "axyz", true, 4, "")	    -- ???
-check_match('(@(a))', "axyz", true, 4, "")	    -- ???
-check_match('@{a~}', "a.xyz", true, 5, "")
-check_match('(@(a~))', "a.xyz", true, 5, "")	    -- ???
+check_match('>a', "xyz", false)
+check_match('(>a)', "xyz", false, 4, "")
+check_match('{>a}', "axyz", true, 4, "")
+check_match('{>a}', "xyz", false, 4, "")
+check_match('>(a)', "axyz", true, 4, "")	    -- ???
+check_match('(>(a))', "axyz", true, 4, "")	    -- ???
+check_match('>{a ~}', "a.xyz", true, 5, "")
+check_match('(>(a ~))', "a.xyz", true, 5, "")	    -- ???
 
 ----------------------------------------------------------------------------------------
 heading("Negative look-ahead")
@@ -316,8 +345,8 @@ check_match('(!a)', "axyz", false, 4, "")
 check_match('{!a}', "axyz", false, 4, "")
 check_match('!(a)', "axyz", false, 4, "")	    -- ???
 check_match('(!(a))', "axyz", false, 4, "")	    -- ???
-check_match('!{a~}', "axyz", true, 4, "")
-check_match('!(a~)', "axyz", true, 4, "")	    -- ???
+check_match('!{a ~}', "axyz", true, 4, "")
+check_match('!(a ~)', "axyz", true, 4, "")	    -- ???
 
 
 
@@ -485,7 +514,7 @@ check_match('{(a)*}', ' a a   ', true, 7, "")
 subheading("Explicit boundary pattern")
 check_match('~(a)*', ' a a   ', true, 3, " a a")
 check_match('(~(a)*)', ' a a   ', true, 3, " a a")
-ok, msg = pcall(lapi.load_string, e, "token = { ![[:space:]] . {!~ .}* }")
+ok, msg = pcall(e.load, e, "token = { ![[:space:]] . {!~ .}* }")
 check(ok)
 check_match('token', 'The quick, brown fox.\nSentence fragment!!  ', true, 40, "The")
 check_match('token token token', 'The quick, brown fox.\nSentence fragment!!  ', true, 33, "The quick,")
@@ -504,9 +533,9 @@ check_match('{(token)*}', 'The quick, brown fox.\nSentence fragment!!  ', true, 
 check_match('(token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 44, "")
 check_match('{(token)*}', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 44, "")
 check_match('~(token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 2)
-check_match('(~token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 2)
-check_match('(~token~)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
-check_match('{~token~}*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
+check_match('(~ token)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 2)
+check_match('(~ token ~)*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
+check_match('{~ token ~}*', '\tThe quick, brown fox.\nSentence fragment!!  ', true, 0)
 
 subheading("Boundary idempotence")
 check_match('~~~~~~', '     V', true, 1, "     ")
@@ -596,7 +625,7 @@ check_match('a*', '', true)
 check_match('a*', 'a', true)
 check_match('a*', 'aaaaaa', true)
 check_match('a*', 'aaaaaa ', true, 1)
-check_match('{a*}', 'aaaaaa ', true, 1)		    -- !@# let's not capture the trailing boundary
+check_match('{a*}', 'aaaaaa ', true, 1)		    -- let's not capture the trailing boundary
 check_match('a*', 'x', true, 1, '')
 check_match('{a}*', '', true)
 check_match('{a}*', 'a', true)
@@ -631,10 +660,10 @@ check_match('{{a}+}', 'aaaaaa ', true, 1)
 check_match('{a}+', 'x ', false)
 check_match('(a)+', '', false)
 check_match('(a)+', 'a', true)
-check_match('(a)+', 'aa', false)
+check_match('(a)+', 'aa', true, 1)
 check_match('(a)+', 'a a a a', true)
-check_match('(a)+', 'a a a a    ', true)
-check_match('(a)+', 'a a a a x', true, 1)
+check_match('(a)+', 'a a a a    ', true, 4)	    -- 4 spaces left over
+check_match('(a)+', 'a a a a x', true, 2)
 check_match('(a)+', 'x', false)
 
 subheading("Question")
@@ -728,15 +757,15 @@ check_match('{c{2,}}', 'cc!', true, 1)
 check_match('{c{2,}}', 'cccccccccc#x', true, 2)
 
 subheading("Range with max (cooked)")
-check_match('c{,0}', '', true)
-check_match('c{,0}', 'x', true, 1)		    -- because start of input is a boundary
-check_match('c{,0}', 'c', true)
-check_match('c{,0}', 'cx', true, 1)
-check_match('c{,0}~', 'cx', false)
-check_match('c{,0}', 'c x', true, 2)
-check_match('c{,0}', ' x', true, 2)
-check_match('c{,0}', '!', true, 1)
-check_match('c{,0}', 'cccccccccc x', true, 2)
+-- check_match('c{,0}', '', true)
+-- check_match('c{,0}', 'x', true, 1)		    -- because start of input is a boundary
+-- check_match('c{,0}', 'c', true)
+-- check_match('c{,0}', 'cx', true, 1)
+-- check_match('c{,0}~', 'cx', false)
+-- check_match('c{,0}', 'c x', true, 2)
+-- check_match('c{,0}', ' x', true, 2)
+-- check_match('c{,0}', '!', true, 1)
+-- check_match('c{,0}', 'cccccccccc x', true, 2)
 
 check_match('c{,1}', '', true)
 check_match('c{,1}', 'x', true, 1)
@@ -766,14 +795,14 @@ check_match('(c){,2}', 'cccccccccc#x', true, 11)
 check_match('(c){,2}~', 'cccccccccc#x', false)
 
 subheading("Range with max (raw)")
-check_match('{c{,0}}', '', true)
-check_match('{c{,0}}', 'x', true, 1)		    -- because start of input is a boundary
-check_match('{c{,0}}', 'c', true)
-check_match('{c{,0}}', 'cx', true, 1)
-check_match('{c{,0}}', 'c x', true, 2)
-check_match('{c{,0}}', ' x', true, 2)
-check_match('{c{,0}}', '!', true, 1)
-check_match('{c{,0}}', 'cccccccccc x', true, 2)
+-- check_match('{c{,0}}', '', true)
+-- check_match('{c{,0}}', 'x', true, 1)		    because start of input is a boundary
+-- check_match('{c{,0}}', 'c', true)
+-- check_match('{c{,0}}', 'cx', true, 1)
+-- check_match('{c{,0}}', 'c x', true, 2)
+-- check_match('{c{,0}}', ' x', true, 2)
+-- check_match('{c{,0}}', '!', true, 1)
+-- check_match('{c{,0}}', 'cccccccccc x', true, 2)
 
 check_match('{c{,1}}', '', true)
 check_match('{c{,1}}', 'x', true, 1)
@@ -1092,21 +1121,25 @@ heading("Character sets")
 
 subheading("Rejecting illegal expressions")
 for _, exp in ipairs{"[]]",
-		     "[^]",
-		     "[xyz^]",
+--		     "[^]",
+--		     "[xyz^]",
 		     "[[abc] / [def]]",
 		     "[[a-z] misplaced_identifier [def]]",
 		     "[[a-z] [def]",		    -- no final closing bracket
 		     "[]",			    -- this was legal before v0.99?
                      "[[abc][]]"} do
-   ok, msg = lapi.configure_engine(e, {expression=exp})
-   check(not ok, "this expression was expected to fail: " .. exp)
-   check(msg:find("Syntax error at line 1"), "Did not get syntax error for exp " ..
-      exp .. ".  Message was: " .. msg)
+   pat, msg = e:compile(exp)
+   check(not pat, "this expression was expected to fail: " .. exp)
+   if (type(msg)=="table" and msg[1]) then
+      check(violation.syntax.is(msg[1]))
+   end
+   -- :find("Syntax error at line 1"), "Did not get syntax error for exp " ..
+   -- exp .. ".  Message was: " .. msg .. '\n')
 end
-ok, msg = lapi.configure_engine(e, {expression="[:foobar:]"})
-check(not ok)
-check(msg:find("named charset not defined"))
+success, msg = e:compile("[:foobar:]")
+check(not success)
+check(type(msg)=="table" and msg[1])
+check(violation.compile.is(msg[1])) -- .message:find("named charset not defined"))
 
 subheading("Named character sets")
 
@@ -1143,7 +1176,7 @@ subheading("Character ranges")
 test_charsets("[[a-z]]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[a-z]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[[a-a]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
-test_charsets("[[b-a]]", {}, {"a", "b", "c", "y", "z", " ", "X", "0", "!"}) -- !@# could war
+test_charsets("[[b-a]]", {}, {"a", "b", "c", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[$-&]]", {"$", "%", "&"}, {"^", "-", "z", " ", "X", "0", "!"})
 test_charsets("[[--.]]", {"-", "."}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\[-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})
@@ -1164,12 +1197,15 @@ test_charsets("[[!#$%\\^&*()_-+=|\\\\'`~?/{}{}:;]]",
 	      {"a", "Z", " ", "\r", "\n"})
 
 subheading("Complements")
+test_charsets("[^x-]", {"b", "y", "z", "^", " ", "X", "0", "!"}, {"x", "-"})
+test_charsets("[^-x]", {"b", "y", "z", "^", " ", "X", "0", "!"}, {"x", "-"})
+
 test_charsets("[^a]", {"b", "y", "z", "^", " ", "X", "0", "!"}, {"a"})
 test_charsets("[^abc]", {"d", "y", "z", "^", " ", "X", "0", "!"}, {"a", "b", "c"})
-test_charsets("[:^digit:]", {"a", " ", "!"}, {"0", "9"})
-test_charsets("[[:^space:]]", {"A", "0", "\b"}, {" ", "\t", "\n", "\r"})
 test_charsets("[^a-z]", {" ", "X", "0", "!"}, {"a", "b", "y", "z"})
 test_charsets("[^ab-z]", {"c", "d", " ", "X", "0", "!"}, {"a", "b", "-", "z"}) -- NOT a range!
+test_charsets("[:^digit:]", {"a", " ", "!"}, {"0", "9"})
+test_charsets("[[:^space:]]", {"A", "0", "\b"}, {" ", "\t", "\n", "\r"})
 test_charsets("[^[:^digit:]]+", {"0", "123"}, {"", " ", "d", "@"})
 test_charsets("{[^[:^digit:]]}+", {"0", "123"}, {"", " ", "d", "@"})
 test_charsets("([^[:^digit:]])+", {"0", "1 2 3"}, {"", " ", "d", "@"})
@@ -1205,6 +1241,8 @@ test_charsets("[[:alpha:][$][2-4]]", {"F", "G", "H", "a", "2", "4", "$"}, {"5", 
 
 heading("Grammars")
 
+subheading("Correct")
+
 -- Grammar matches balanced numbers of a's and b's
 g1_defn = [[grammar
   g1 = S ~
@@ -1213,35 +1251,52 @@ g1_defn = [[grammar
   B = { {"b" S} / {"a" B B} }
 end]]
 
-ok, msg = pcall(lapi.load_string, e, g1_defn)
+ok, msg = pcall(e.load, e, g1_defn)
 check(ok)
 check_match('g1', "", true)
 check_match('g1', "ab", true)
-check_match('g1', "baab", true)
 check_match('g1', "abb", false)
 check_match('g1', "a", true, 1)
 check_match('g1', "a#", true, 2)
 
-check_match('g1$', "x", false)
-check_match('g1$', "a", false)
-check_match('g1$', "aabb", true)
+check_match('g1 $', "x", false)
+check_match('g1 $', "a", false)
+check_match('g1 $', "aabb", true)
+
+m, leftover = check_match('g1', "baab", true)
+check(m)
+check(leftover==0)
+check(m.type=="g1")
+m = m.subs[1]
+check(m.type=="g1.S")
+m = m.subs[1]
+check(m.type=="g1.S")
+m = m.subs[1]
+check(m.type=="g1.B")
+m = m.subs[1]
+check(m.type=="g1.S")
+check(not m.subs)
+
 
 set_expression('g1')
-match, leftover = lapi.match(e, "baab!")
-check(next(match)=='g1', "the match of a grammar is named for the identifier bound to the grammar")
+ok, match, leftover = e:match('g1', "baab!")
+check(ok)
+check(match.type=='g1', "the match of a grammar is named for the identifier bound to the grammar")
 check(leftover==1, "one char left over for this match")
 function collect_names(ast)
-   local name = next(ast)
-   if ast[name].subs then
-      return cons(name, flatten(map(collect_names, ast[name].subs)))
+   local name = ast.type
+   if ast.subs then
+      return cons(name, flatten(map(collect_names, ast.subs)))
    else
-      return list(name)
+      return list.new(name)
    end
 end
 ids = collect_names(match)
 check(member('g1', ids))
-check(member('B', ids))
-check(not member('A', ids))			    -- an alias
+check(member('g1.B', ids))			    -- name qualified by grammar id
+check(not member('B', ids))		    -- unqualified name not present 
+check(not member('g1.A', ids))		    -- an alias
+check(not member('A', ids))		    -- ensuring this unqualified name not present
 
 check_match('g1 [[:digit:]]', "ab 4", true)
 check_match('{g1 [[:digit:]]}', "ab 4", true)	    -- because g1 is defined to end on a boundary
@@ -1256,30 +1311,95 @@ g2_defn = [[grammar
   alias B = { {"b" S} / {"a" B B} }
 end]]
 
-ok, msg = pcall(lapi.load_string, e, g2_defn)
+ok, msg = pcall(e.load, e, g2_defn)
 check(ok)
 check_match('g2', "", true, 0, "")
 check_match('g2', "ab", true, 0, "ab")
 check_match('g2', "baab", true, 0, "baab")
 check_match('g2', "abaab", false, 0, "")
 
-ok, ast, warnings = pcall(lapi.load_string, e, 'use_g2 = g1 g2')
+ok, ast, warnings = pcall(e.load, e, 'use_g2 = g1 g2')
 check(ok, "Failed to define use_g2")
 m, leftover = check_match('use_g2', "ab baab", true, 0, "ab baab")
 check(m)
-check(m.use_g2)
-check(m.use_g2.subs)
-check(#m.use_g2.subs==1)
-check(m.use_g2.subs[1].g1)
+check(m.type=="use_g2")
+check(m.subs)
+check(#m.subs==1)
+check(m.subs[1].type=="g1")
+
+subheading("With errors")
+
+g_syntax_error = [[grammar
+  g1 = S ~
+  S = { {"a" B} // {"b" A} / "" }
+  alias A = { {"a"} / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
+end]]
+
+success, pkgname, msg = e:load(g_syntax_error)
+check(not success)
+check(not pkgname)
+check(type(msg)=="table" and msg[1])
+check(violation.syntax.is(msg[1]))
+check(msg[1].message:find("syntax error"))
+
+g_left_recursion = [[grammar
+  g1 = S ~
+  S = { {"a" B} / {"b" A} / "" }
+  alias A = { A {"a" } / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
+end]]
+
+success, pkgname, msg = e:load(g_left_recursion)
+check(not success)
+check(not pkgname)
+check(type(msg)=="table" and msg[1])
+check(violation.compile.is(msg[1])) --.message:find("may be left recursive"))
+
+g_empty_string = [[grammar
+  g1 = S ~
+  S = { {"a" B} / {"b" A} / "" }
+  alias A = { {""}+ / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
+end]]
+
+ok, pkgname, msg = e:load(g_empty_string)
+check(not ok)
+check(type(msg)=="table" and msg[1])
+check(violation.compile.is(msg[1])) --.message:find("can match the empty string"))
+
+g_dup_rules = [[grammar
+  S = { {"a" B} / {"b" A} / "" }
+  A = { {"a" S} / {"b" A A} }
+  B = { {"b" S} / {"a" B B} }
+  A = "this won't work"
+end]]
+ok, pkgname, errs = e:load(g_dup_rules)
+check(not ok)
+check(type(errs)=="table" and errs[1])
+check(violation.compile.is(errs[1])) --.message:find("can match the empty string"))
+msg = table.concat(map(violation.tostring, errs), "\n")
+check(msg:find("more than one rule named 'A'"))
+
+g_missing_rule = [[grammar
+  S = { {"a" B} / {"b" A} / "" }
+  A = { {"a" S} / {"b" A A} }
+end]]
+ok, pkgname, errs = e:load(g_missing_rule)
+check(not ok)
+check(type(errs)=="table" and errs[1])
+check(violation.compile.is(errs[1]))
+msg = table.concat(map(violation.tostring, errs), "\n")
+check(msg:find("unbound identifier: B"))
 
 
 heading("Invariants")
 
 subheading("Raw and cooked versions of . and equiv identifiers")
 
-check((api.load_string(e, "dot = .")))
-check((api.load_string(e, "rawdot = {.}")))
-check((api.load_string(e, "cookeddot = (.)")))
+check((e:load("dot = .")))
+check((e:load("rawdot = {.}")))
+check((e:load("cookeddot = (.)")))
 
 check_match(".", "a", true)
 check_match("dot", "a", true)
@@ -1306,105 +1426,135 @@ check_match("cookeddot", "", false)
 
 subheading("Raw and cooked versions of the same definition")
 
-check((lapi.load_manifest(e, "$sys/MANIFEST")))
+check((e:load("import num   word=[:alpha:]+")))
 
-m = check_match("common.int", "42", true)
-check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
-m = check_match("{common.int}", "42", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
-m = check_match("(common.int)", "42", true)
-check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
---check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+m = check_match("num.int", "42", true)
+check(m.type=="num.int" and (not m.subs))
+m = check_match("{num.int}", "42", true)
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="num.int")
+m = check_match("(num.int)", "42", true)
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="num.int")
+--check(m.type=="num.int" and (not m.subs))
 
-m = check_match("common.int", "42x", true, 1, "42")
-check((not m["*"]) and m["common.int"] and (not m["common.int"].subs))
-m = check_match("{common.int}", "42x", true, 1, "42")
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
-m = check_match("(common.int)", "42x", true, 1)
-m = check_match("(common.int ~)", "42x", false)
+m = check_match("num.int", "42x", true, 1, "42")
+check(m.type=="num.int" and (not m.subs))
+m = check_match("{num.int}", "42x", true, 1, "42")
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="num.int")
+m = check_match("(num.int)", "42x", true, 1)
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="num.int")
+m = check_match("(num.int ~)", "42x", false)
 
-m = check_match("common.int common.word", "42x", false)
-m = check_match("{common.int common.word}", "42x", true, 0, "42x")
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
-m = check_match("(common.int common.word)", "42x", false)
+m = check_match("num.int word", "42x", false)
+m = check_match("{num.int word}", "42x", true, 0, "42x")
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="word")
+m = check_match("(num.int word)", "42x", false)
 
-m = check_match("common.int common.word", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
-m = check_match("{common.int common.word}", "42 x", false)
-m = check_match("(common.int common.word)", "42 x", true)
+m = check_match("num.int word", "42 x", true)
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="word")
+m = check_match("{num.int word}", "42 x", false)
+m = check_match("(num.int word)", "42 x", true)
 
-check((api.load_string(e, "int = common.int word = common.word")))
+check((e:load("int = num.int"))) -- word = word")))
        
 m = check_match("int", "42", true)
---check((not m["*"]) and m["int"] and (#m["int"].subs==1))
-check((not m["*"]) and m["int"] and (not m["int"].subs))
+check(m.type=="int" and (not m.subs))
 m = check_match("{int}", "42", true)
---check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (#m["*"].subs[1]["int"].subs==1))
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (not m["*"].subs[1]["int"].subs))
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="int")
 m = check_match("(int)", "42", true)
---check((not m["*"]) and m["int"] and (#m["int"].subs==1))
-check((not m["*"]) and m["int"] and (not m["int"].subs))
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="int")
 
 m = check_match("int", "42x", true, 1, "42")
---check((not m["*"]) and m["int"] and (#m["int"].subs==1))
-check((not m["*"]) and m["int"] and (not m["int"].subs))
+check(m.type=="int" and (not m.subs))
 m = check_match("{int}", "42x", true, 1, "42")
---check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (#m["*"].subs[1]["int"].subs==1))
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and (not m["*"].subs[1]["int"].subs))
+check(m.type=="*")
+check((m.subs[1]) and m.subs[1].type=="int")
+
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 
 m = check_match("int word", "42x", false)
 m = check_match("{int word}", "42x", true, 0, "42x")
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["word"])
+check((m.subs[1]) and m.subs[1].type=="int" and
+      (m.subs[2]) and m.subs[2].type=="word")
 m = check_match("(int word)", "42x", false)
 
 m = check_match("int word", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["word"])
+check((m.subs[1]) and m.subs[1].type=="int" and
+      (m.subs[2]) and m.subs[2].type=="word")
 m = check_match("{int word}", "42 x", false)
 m = check_match("(int word)", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["word"])
+check((m.subs[1]) and m.subs[1].type=="int" and
+      (m.subs[2]) and m.subs[2].type=="word")
 
-check((lapi.load_string(e, "alias int = common.int alias word = common.word")))
+check((e:load("alias int = num.int alias aword = word")))
        
 m = check_match("int", "42", true)
-check(m["*"] and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check(m.type=="*" and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("{int}", "42", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+
+
+m = check_match("{num.int}", "42", true)
+
+check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("(int)", "42", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 
 m = check_match("int", "42x", true, 1, "42")
-check(m["*"] and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check(m.type=="*" and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("{int}", "42x", true, 1, "42")
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and (not m["*"].subs[1]["common.int"].subs))
+check((m.subs[1]) and m.subs[1].type=="num.int" and (not m.subs[1].subs))
 m = check_match("(int)", "42x", true, 1)
 m = check_match("(int ~)", "42x", false)
 
-m = check_match("int word", "42x", false)
-m = check_match("{int word}", "42x", true, 0, "42x")
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
-m = check_match("(int word)", "42x", false)
+m = check_match("int aword", "42x", false)
+m = check_match("{int aword}", "42x", true, 0, "42x")
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="word")
+m = check_match("(int aword)", "42x", false)
 
-m = check_match("int word", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
-m = check_match("{int word}", "42 x", false)
-m = check_match("(int word)", "42 x", true)
-check((m["*"].subs[1]) and m["*"].subs[1]["common.int"] and
-      (m["*"].subs[2]) and m["*"].subs[2]["common.word"])
+m = check_match("int aword", "42 x", true)
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="word")
+m = check_match("{int aword}", "42 x", false)
+m = check_match("(int aword)", "42 x", true)
+check((m.subs[1]) and m.subs[1].type=="num.int" and
+      (m.subs[2]) and m.subs[2].type=="word")
+
+subheading("Import 'as foo' and 'as .'")
+
+check((e:load("import num as foo")))
+
+m = check_match("foo.float", "42.1", true)
+check(m and m.type=="foo.float" and m.subs)
+m = check_match("num.float", "42.1", true)	    -- and num still works
+check(m.type=="num.float" and m.subs)
+ok, m, left, msg = e:match("float", "42.1")	    -- float is not a top level binding
+check(not ok)
+check(type(m)=="table" and m[1])
+check(violation.compile.is(m[1])) --.message:find("undefined identifier"))
+
+check((e:load("import num as .")))
+
+m = check_match("foo.float", "42.1", true)	    -- foo still works
+check(m and m.type=="foo.float" and m.subs)
+m = check_match("num.float", "42.1", true)	    -- and num still works
+check(m.type=="num.float" and m.subs)
+m = check_match("float", "42.1", true)		    -- and now float works at top level
+check(m.type=="float" and m.subs, true)
 
 subheading("Bindings (equivalence of reference and referent)")
 
-check((lapi.load_string(e, "foo = a / b / c")))
+check((e:load("foo = a / b / c")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m["foo"]); check(#m["foo"].subs==1); check(m["foo"].subs[1]["a"]); 
+check(m.type=="foo"); check(#m.subs==1); check(m.subs[1].type=="a"); 
 
 function test_foo()
    check_match("foo", "a!", true, 1, "a");     check_match("(a / b / c)", "a!", true, 1, "a")
@@ -1418,19 +1568,19 @@ end
 
 test_foo()
 
-check((lapi.load_string(e, "foo = (a / b / c)")))
+check((e:load("foo = (a / b / c)")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m["foo"]); check(#m["foo"].subs==1); check(m["foo"].subs[1]["a"]); 
+check(m.type=="foo"); check(#m.subs==1); check(m.subs[1].type=="a"); 
 test_foo()
 
-check((lapi.load_string(e, "alias foo = a / b / c")))
+check((e:load("alias foo = a / b / c")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m["*"]); check(#m["*"].subs==1); check(m["*"].subs[1]["a"]); 
+check(m.type=="*"); check(#m.subs==1); check(m.subs[1].type=="a"); 
 test_foo()
 
-check((lapi.load_string(e, "alias foo = (a / b / c)")))
+check((e:load("alias foo = (a / b / c)")))
 m = check_match("foo", "a!", true, 1, "a")
-check(m["*"]); check(#m["*"].subs==1); check(m["*"].subs[1]["a"]); 
+check(m.type=="*"); check(#m.subs==1); check(m.subs[1].type=="a"); 
 test_foo()
 
 subheading("Sequences")
@@ -1439,7 +1589,7 @@ function check_bc(exp)
    check_match(exp, "b c", true)
    check_match(exp, "b c!", true, 1)
    check_match(exp, "b cx", true, 1)
-   check_match(exp.."~", "b cx", false)
+   check_match(exp.." ~", "b cx", false)
    check_match(exp, "xb cx", false)
 end
 
@@ -1447,7 +1597,7 @@ check_bc("b c")
 check_bc("(b c)")
 check_bc("{b ~ c}")
 
-check((lapi.load_string(e, "foo = a b c*")))
+check((e:load("foo = a b c*")))
 check_match('a b c*', 'a b x', true, 1, "a b ")
 check_match('foo', 'a b x', true, 1, "a b ")
 
@@ -1482,8 +1632,8 @@ check_qe2("{ {b}? }")
 function check_qe3a(exp)
    check_match(exp, "a b", true, 0, "a b")
    check_match(exp, "a b a b a b", true)
-   check_match(exp, "a b a b a b x y", true, 3)
-   check_match(exp, "a bx", false)
+   check_match(exp, "a b a b a b x y", true, 4)
+   check_match(exp, "a bx", true, 1)
    check_match(exp, "a x", false)
    check_match(exp, "ab a b a b", false)
    check_match(exp, "a.b", false)
@@ -1509,9 +1659,9 @@ check_qe3b("{ {(a b)}+ }")
 
 function check_qe4a(exp)
    check_match(exp, "b", true)
-   check_match(exp, "c b b b b b cx", true, 2)			  -- !@# leftover correct?
-   check_match(exp, "c b b b b b c x", true, 1, "c b b b b b c ") -- !@# trailing space?
-   check_match(exp, "bc", false)
+   check_match(exp, "c b b b b b cx", true, 1)
+   check_match(exp, "c b b b b b c x", true, 2, "c b b b b b c")
+   check_match(exp, "bc", true, 1)
    check_match(exp, "", false)
 end
 
@@ -1579,7 +1729,7 @@ check_choice3("{ a / {b} }")
 function check_choice4(exp)
    check_match(exp, "ax", false)
    check_match(exp, "bca", true, 2)
-   check_match(exp, "a bc", true, 2, "a ")	    -- !@# trailing space?
+   check_match(exp, "a bc", true, 2, "a ")	    -- trailing space?
    check_match(exp, "", false)
    check_match(exp, "c", false)
 end
@@ -1614,12 +1764,12 @@ check_chs2("a / {b c}")
 check_chs2("(a / {b c})")
 check_chs2("{a / {b c}}")
 
-subheading("Idempotency and impotence for cooked expressions")
+subheading("Idempotence and impotence for cooked expressions")
 
 function check_idem_etc_cooked(exp, input, expectation, leftover)
    check_match(exp, input, expectation, leftover)
    check_match("("..exp..")", input, expectation, leftover)	  -- idempotent
-   check_match("{"..exp.."}", input, expectation, leftover)	  -- no-op
+   check_match("{"..exp.."}", input, expectation, leftover)	  -- no-op (impotent)
    check_match("((" .. exp .. "))", input, expectation, leftover) -- idempotent
 end
 
@@ -1663,9 +1813,9 @@ check_idem_etc_cooked('(c)?', "x", true, 1)
 check_idem_etc_cooked('(c)?', "cx", true, 1)
 check_idem_etc_cooked('(c)+', "c", true)
 check_idem_etc_cooked('(c)+', "c c c", true)
-check_idem_etc_cooked('(c)+', "c c cx", true, 2)
+check_idem_etc_cooked('(c)+', "c c cx", true, 1)
 check_idem_etc_cooked('(c)+', "", false)
-check_idem_etc_cooked('(c)+', "ccccx", false)
+check_idem_etc_cooked('(c)+', "ccccx", true, 4)
 check_idem_etc_cooked('(c){2,4}', "c", false)
 check_idem_etc_cooked('(c){2,4}', "cc", false)
 check_idem_etc_cooked('(c){2,4}', "c c", true)
@@ -1719,13 +1869,310 @@ check_idem_etc_raw('{(c)?}', "x", true, 1)
 check_idem_etc_raw('{(c)?}', "cx", true, 1)
 check_idem_etc_raw('{(c)+}', "c", true)
 check_idem_etc_raw('{(c)+}', "c c c", true)
-check_idem_etc_raw('{(c)+}', "c c cx", true, 2)
+check_idem_etc_raw('{(c)+}', "c c cx", true, 1)
 check_idem_etc_raw('{(c)+}', "", false)
-check_idem_etc_raw('{(c)+}', "ccccx", false)
+check_idem_etc_raw('{(c)+}', "ccccx", true, 4)
 check_idem_etc_raw('{(c){2,4}}', "c", false)
 check_idem_etc_raw('{(c){2,4}}', "cc", false)
 check_idem_etc_raw('{(c){2,4}}', "c c", true)
 check_idem_etc_raw('{(c){2,4}}', "c c c c c c", true, 4)
+
+---------------------------------------------------------------------------------------------------
+heading("Hash tags and string literals")
+---------------------------------------------------------------------------------------------------
+
+r, err = e:compile("#x")
+check(not r)					    -- not a pattern
+
+function check_message(msg_text)
+   r, err = e:compile("message:#" .. msg_text)
+   check(r, "did not compile", 1)
+   if not r then return; end
+   m, last = r:match("")
+   check(m, "did not match", 1)
+   check(m.type=="*", "type not anon", 1)
+   check(m.subs and m.subs[1], "no subs???", 1)
+   check(m.subs[1].type=="message", "sub not called 'message'", 1)
+   -- strip quotes off
+   if msg_text:sub(1,1)=='"' then msg_text = msg_text:sub(2, -2); end
+   check(m.subs[1].data==msg_text, "data not '" .. msg_text .. "' (was '" .. m.subs[1].data .. "')", 1)
+end
+
+check_message("x")
+check_message("xyz_123")
+check_message('"This is a long message!"')
+
+data = 'abcdef123ghi'
+-- COOKED
+r, err = e:compile("message:(#" .. data .. ")")
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="message")
+check(m.subs[1].data==data)
+-- RAW
+r, err = e:compile("message:{#" .. data .. "}")
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="message")
+check(m.subs[1].data==data)
+
+r, err = e:compile('message:(#"", #msg_name)')
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="msg_name")
+check(m.subs[1].data=="")
+
+r, err = e:compile('message:(#"hello world", #"")')
+check(not r, "should not have compiled")
+check(violation.tostring(err[1]):find("not a tag"))
+check(violation.tostring(err[1]):find("string value"))
+
+r, err = e:compile('message:(#"message text here", #msg_name)')
+check(r, "did not compile")
+m = r:match("foo")
+check(m, "did not match")
+check(m.subs and m.subs[1] and m.subs[1].type=="msg_name")
+check(m.subs[1].data=="message text here")
+
+r, err = e:compile('message:(#msg_text, #"message name")')
+check(not r, "should not compile because second arg not a tag")
+check(violation.tostring(err[1]):find("not a tag"))
+check(violation.tostring(err[1]):find("string value"))
+
+r, err = e:compile("message:abc")
+check(not r)					    -- abc is undefined
+check(violation.tostring(err[1]):find("unbound identifier: abc"))
+r, err = e:compile('message:("hi", "bye", "three")')
+check(not r)					    -- too many args
+check(violation.tostring(err[1]):find("3 given"))
+r, err = e:compile('message:()')
+check(not r)					    -- too few args
+check(violation.tostring(err[1]):find("extraneous input"))
+r, err = e:compile('message:(message)')
+check(not r)					    -- wrong arg type (pfunction, not pattern)
+
+---------------------------------------------------------------------------------------------------
+heading("Lookarounds")
+---------------------------------------------------------------------------------------------------
+
+function check_look(invert, extra_prefix)
+
+   local not_fn = function(x) return not x end
+   local identity = function(x) return x end
+   local pre = (extra_prefix or "")
+   local switch = invert and not_fn or identity
+
+   check_match(pre..'>"x"', 'x', switch(true), 1)
+   check_match(pre..'>"x"', 'xyz', switch(true), 3)
+   check_match(pre..'>"x"', '', switch(false), 0)
+   check_match(pre..'>"x"', 'y', switch(false), 1)
+
+   check_match('{"w"'..pre..'>"x"}', 'wx', switch(true), 1)
+   check_match('{"w"'..pre..'>"x"}', 'wxyz', switch(true), 3)
+   check_match('{"w"'..pre..'>"x"}', 'w', switch(false), 0)
+   check_match('{"w"'..pre..'>"x"}', 'wy', switch(false), 1)
+
+   check_match('"w"'..pre..'>"x"', 'w x', switch(true), 1)
+   check_match('"w"'..pre..'>"x"', 'w xyz', switch(true), 3)
+   check_match('"w"'..pre..'>"x"', 'w', switch(false), 0)
+   check_match('"w"'..pre..'>"x"', 'w \t\t', switch(false), 0)
+   check_match('"w"'..pre..'>"x"', 'w y', switch(false), 1)
+
+end
+
+check_look(false)
+check_look(true, "!")
+check_look(false, "!!")				    -- two wrongs make a right :)
+
+check_look(false, ">")
+check_look(false, ">>")
+check_look(false, ">!>!")
+check_look(false, "!!>!>!")
+
+check_look(true, "!>")
+check_look(true, "!>")
+check_look(true, "!!>!")
+check_look(true, "!!>>!")
+check_look(true, "!!>!>!!")
+
+function check_lookbehind(invert, extra_prefix)
+
+   local not_fn = function(x) return not x end
+   local identity = function(x) return x end
+   local pre = (extra_prefix or "")
+   local switch = invert and not_fn or identity
+
+   check_match(pre..'{.<"x"}', 'x', switch(true), 0)
+   check_match(pre..'{.<"x"}', 'xyz', switch(true), 2)
+   check_match(pre..'{<"x"}', '', switch(false), 0)
+   check_match(pre..'{.<"x"}', 'y', switch(false), 1)
+
+   check_match('{"w".'..pre..'<"x"}', 'wx', switch(true), 0)
+   check_match('{"w".'..pre..'<"x"}', 'wxyz', switch(true), 2)
+   check_match('{"w".'..pre..'<"x"}', 'w/', switch(false), 0)
+   check_match('{"w".'..pre..'<"x"}', 'wyz', switch(false), 1)
+
+   check_match('"w".'..pre..'<"x"', 'w x', switch(true), 0)
+   check_match('"w"{.'..pre..'<"x"}', 'w xyz', switch(true), 2)
+   check_match('"w"{.'..pre..'<"x"}', 'w 3333', switch(false), 3)
+   check_match('"w"'..pre..'<"x"', 'w \t\t', switch(false), 0)
+   check_match('"w".'..pre..'<"x"', 'w y', switch(false), 0)
+
+end
+
+check_lookbehind(false)
+check_lookbehind(true, "!")
+
+---------------------------------------------------------------------------------------------------
+heading("Allowing bindings in any order in a block")
+
+s = 'a = "a"; a = "b"'
+ok, _, errs = e:load(s)
+check(not ok)
+m = table.concat(map(violation.tostring, errs), "\n")
+check(m:find("already bound"))
+
+s = 'b = "b"; a = "a"'
+ok, _, errs = e:load(s)
+check(ok)
+check_match("a b a", "a b a", true, 0)
+
+s = 'a = "a"; b = a'
+ok, _, errs = e:load(s)
+check(ok)
+check_match("a b a", "a a a", true, 0)
+
+s = 'b = a; a = "a"'
+ok, _, errs = e:load(s)
+check(ok)
+check(#errs==0)
+check_match("a b a", "a a a", true, 0)
+
+s = 'a = b; b = a'
+ok, _, errs = e:load(s)
+check(not ok)
+msg = table.concat(map(violation.tostring, errs), "\n")
+check(msg:find("mutual dependencies"))
+
+
+---------------------------------------------------------------------------------------------------
+heading("Ok to use 'alias' and 'local' as identifiers")
+	
+check((e:load('alias = "foo"')))
+ok, m = e:match('alias', "foo")
+check(ok)
+check(m and m.type=="alias" and m.s==1 and m.e==4 and m.data=='foo')
+check((e:load('local alias = "bar"')))
+ok, m = e:match('alias', "foo")
+check(ok)
+check(not m)
+ok, m = e:match('alias', "bar")
+check(ok)
+check(m and m.type=="alias" and m.s==1 and m.e==4 and m.data=='bar')
+
+check((e:load('local alias alias = "bar"')))
+ok, m = e:match('alias', "bar")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==4 and m.data=='bar')
+
+check((e:load('local = "oklocal"')))
+ok, m = e:match('local', "oklocal")
+check(ok)
+check(m and m.type=="local" and m.s==1 and m.e==8 and m.data=='oklocal')
+
+check((e:load('local local = "oklocallocal"')))
+ok, m = e:match('local', "oklocal")
+check(ok)
+check(not m)
+
+ok, m = e:match('local', "oklocallocal")
+check(m and m.type=="local" and m.s==1 and m.e==13 and m.data=='oklocallocal')
+
+check((e:load('local alias local = "oklocalaliaslocal"')))
+ok, m = e:match('local', "oklocallocal")
+check(ok)
+check(not m)
+
+ok, m = e:match('local', "oklocalaliaslocal")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==18 and m.data=='oklocalaliaslocal')
+
+check((e:load('grammar = "okgrammar"')))
+ok, m = e:match('grammar', "okgrammar")
+check(ok)
+check(m and m.type=="grammar" and m.s==1 and m.e==10 and m.data=='okgrammar')
+
+check((e:load('alias grammar = "okaliasgrammar"')))
+ok, m = e:match('grammar', "okgrammar")
+check(ok)
+check(not m)
+
+ok, m = e:match('grammar', "okaliasgrammar")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==15 and m.data=='okaliasgrammar')
+
+check(not ((e:load('alias local grammar = "wrong order of declaration keywords"'))))
+
+check((e:load('local alias grammar = "oklocalaliasgrammar"')))
+ok, m = e:match('grammar', "okaliasgrammar")
+check(ok)
+check(not m)
+
+ok, m = e:match('grammar', "oklocalaliasgrammar")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==20 and m.data=='oklocalaliasgrammar')
+
+check((e:load('end = "okend"')))
+ok, m = e:match('end', "okend")
+check(ok)
+check(m and m.type=="end" and m.s==1 and m.e==6 and m.data=='okend')
+
+check((e:load('alias end = "okaliasend"')))
+ok, m = e:match('end', "okend")
+check(ok)
+check(not m)
+
+ok, m = e:match('end', "okaliasend")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==11 and m.data=='okaliasend')
+
+check(not ((e:load('alias local end = "wrong order of declaration keywords"'))))
+
+check((e:load('local alias end = "oklocalaliasend"')))
+ok, m = e:match('end', "okaliasend")
+check(ok)
+check(not m)
+
+ok, m = e:match('end', "oklocalaliasend")
+check(ok)
+check(m and m.type=="*" and m.s==1 and m.e==16 and m.data=='oklocalaliasend')
+
+heading("Cannot define same id twice in a file")
+
+function check_dup_id(filename)
+   ok, pkgname, errs = e:loadfile(TEST_HOME .. "/" .. filename)
+   check(not ok)
+   check(not pkgname, "pkgname is: " .. tostring(pkgname))
+   msg = table.concat(map(violation.tostring, errs), "\n")
+   check(msg:find("identifier already bound"), "error was:\n" .. msg)
+end
+
+check_dup_id("dup-id1.rpl")
+check_dup_id("dup-id2.rpl")
+check_dup_id("dup-id3.rpl")
+
+e.searchpath = TEST_HOME .. ":" .. e.searchpath
+ok, pkgname, errs = e:import("dup-id4")
+check(not ok)
+check(not pkgname, "pkgname is: " .. tostring(pkgname))
+msg = table.concat(map(violation.tostring, errs), "\n")
+check(msg:find("identifier already bound"), "error was:\n" .. msg)
+
+
+
 
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:

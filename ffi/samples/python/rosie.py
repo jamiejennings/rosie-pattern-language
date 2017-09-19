@@ -34,6 +34,8 @@ struct rosieL_stringArray {
      struct rosieL_string **ptr;
 };
 
+void libdir();
+
 struct rosieL_string *rosieL_new_string(byte_ptr msg, size_t len);
 struct rosieL_stringArray *rosieL_new_stringArray();
 void rosieL_free_string(struct rosieL_string s);
@@ -41,7 +43,7 @@ void rosieL_free_string_ptr(struct rosieL_string *s);
 void rosieL_free_stringArray(struct rosieL_stringArray r);
 void rosieL_free_stringArray_ptr(struct rosieL_stringArray *r);
 
-void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs);
+void *rosieL_initialize(struct rosieL_string *rosie_home);
 void rosieL_finalize(void *L);
 
 struct rosieL_stringArray rosieL_load_manifest(void *L, struct rosieL_string *manifest_file);
@@ -94,7 +96,7 @@ class initialize():
         # TODO: Catch an exception here, if ffi cannot open the dynamic library
         self.rosie = ffi.dlopen(librosie_path)
         self.rosie_home = rosie_home
-
+        
     def engine(self):
         return engine(self)
     
@@ -110,7 +112,7 @@ class initialize():
         free(messages) #self.rosie.rosie.rosieL_free_stringArray(messages)
         code = retvals[0]
         if code != 'true':
-            raise RuntimeError(retvals[1]) # exception indicating that the call failed
+            raise RuntimeError("get_retvals failed")
         return retvals[1:]
 
 
@@ -119,20 +121,10 @@ class engine ():
     'put docstring here'
 
     def __init__(self, rosie_instance):
-        # if not rosie:
-        #     raise #"Exception indicating that rosie was not initialized"
-        # if not rosie_home:
-        #     raise #"Exception indicating that rosie_home is not set"
-        self.name = "anonymous"
         self.rosie = rosie_instance
-        self.id = None
-        messages = self.rosie.rosie.rosieL_new_stringArray()
-        self.engine = self.rosie.rosie.rosieL_initialize(to_cstr_ptr(self.rosie.rosie, self.rosie.rosie_home), messages)
-        #printArray(messages, "initialize")
-        retvals = self.rosie.get_retvals_from_ptr(messages)
-        self.id = retvals[0]
+        self.engine = self.rosie.rosie.rosieL_initialize(to_cstr_ptr(self.rosie.rosie, self.rosie.rosie_home))
         if self.engine == ffi.NULL:
-            raise RuntimeError(retvals[1]) #"Error initializing librosie.  Exiting..."
+            raise RuntimeError("Error initializing librosie.  Exiting...")
         return
 
     def configure(self, config_string):
@@ -170,24 +162,8 @@ class engine ():
         return retvals
 
     def __del__(self):
-        if self.id:
-            print "Garbage collecting engine", self.id
-            self.rosie.rosie.rosieL_finalize(self.engine)
+        print "Garbage collecting engine", self
+        self.rosie.rosie.rosieL_finalize(self.engine)
 
-    def match_file(self, input, output, error, wholefileflag):
-        return self._match_file(input, output, error, wholefileflag, self.rosie.rosie.rosieL_match_file)
 
-    def eval_file(self, input, output, error, wholefileflag):
-        return self._match_file(input, output, error, wholefileflag, self.rosie.rosie.rosieL_eval_file)
-
-    def _match_file(self, input, output, error, wholefileflag, operation):
-        if ( (wholefileflag != True) and (wholefileflag != False) ):
-            raise ValueError("The wholefileflag must be a python boolean, i.e. True or False")
-        input_file_string = to_cstr_ptr(self.rosie.rosie, input)
-        output_file_string = to_cstr_ptr(self.rosie.rosie, output)
-        error_file_string = to_cstr_ptr(self.rosie.rosie, error)
-        flag_string = to_cstr_ptr(self.rosie.rosie, wholefileflag and "true" or "false")
-        r = operation(self.engine, input_file_string, output_file_string, error_file_string, flag_string);
-        retvals = self.rosie.get_retvals(r)
-        return retvals
-
+    

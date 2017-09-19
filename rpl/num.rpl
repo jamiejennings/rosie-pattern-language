@@ -1,0 +1,57 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- num.rpl   Common numeric patterns in Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+rpl 1.1
+
+package num
+
+alias digit = [:digit:]
+alias hex_letter = [[a-f][A-F]]
+alias hex_digit = digit / hex_letter
+--alias hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
+
+int = { [+-]? digit+ !hex_letter}	     -- at least one digit, and not a hex number
+-- test int accepts "34", "+34", "-34"
+-- test int rejects "BEEF", "0x20"
+
+frac = { [.] digit+ }
+-- test frac accepts ".0", ".01", ".3210009831", ".1"
+-- test frac rejects "0.", "1.1", "-.1"
+
+mantissa = { [+-]? digit+ "." digit+ }  -- float with digits on either side of radix
+-- test mantissa accepts "1.23", "+1.23", "-1.23"
+-- test mantissa rejects "12", "bob", "1."
+
+exp = { [eE] [+-]? digit+ }
+-- test exp accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
+-- test exp rejects "e0.", "e0a", "e+-10", "Ef"
+
+float = { mantissa exp? } 
+-- test float accepts "6.02e23", "3.00E08", "0.123", "-2.0", "-2.0e1", "0.456e-101"
+-- test float rejects "6.02F23", "3.00E--08", "123"
+-- test float accepts "-1.32", "6.02E23", "+0.314e1"
+-- test float rejects "0x01", "--2", "a", "-1", "+0", "3e", "3.14e"
+-- test float includes mantissa "6.02e23"
+-- test float includes exp "6.02e23"
+-- test float excludes exp "3.1415"
+
+hex = hex_digit+ 		     --  use with care! will match words and decimal numbers
+-- test hex accepts "BEEF", "f4c3b00c"
+-- test hex rejects "0xBEEF", "Facebook"
+
+denoted_hex = { "0x" hex }
+-- test denoted_hex accepts "0xBEEF", "0x20"
+-- test denoted_hex rejects "BEEF", "0x2o"
+
+-- N.B. signed_number matches the JSON spec for numbers
+signed_number = (float / int)
+any =  { {denoted_hex /  float / int / hex} >~}
+-- test any accepts "0", "01", "-1", "-1.0", "+1", "+0", "+0.0", "-0.3e+1", "+1.1E-1", "0x1a", "face"
+-- 'any' should accept these with 1 character left over: "2.7a", "2.7x", "123!"
+-- test any includes hex "83a", "0f"

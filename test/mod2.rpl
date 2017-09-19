@@ -1,0 +1,7 @@
+package mod2
+
+local x = "hello"
+y = "world"
+
+
+

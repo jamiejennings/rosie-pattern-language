@@ -2,14 +2,16 @@
 ----
 ---- csv.rpl     RPL patterns for CSV files
 ----
----- © Copyright IBM Corporation 2016.
+---- © Copyright IBM Corporation 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+package csv
+
 -- A pattern for unquoted fields, i.e. match everything until the next delimeter:
-csv.uqf_comma = [^,]*
-csv.uqf_semicolon = [^;]*
-csv.uqf_pipe = [^|]*
+local uqf_comma = [^,]*
+local uqf_semicolon = [^;]*
+local uqf_pipe = [^|]*
 
 -- Next, we build up some definitions needed for parsing quoted fields.
 
@@ -17,35 +19,35 @@ csv.uqf_pipe = [^|]*
 -- So we will defined an escaped quote as either the escape character (\) followed by a quote, or
 -- two quotes in a row.  And for good measure, also for two escaped quotes in a row.
 
-alias csv.escaped_dquote = "\\\"" / "\\\"\\\"" / "\"\""   -- \" or \"\" or "" 
-alias csv.escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
+local alias escaped_dquote = "\\\"" / "\\\"\\\"" / {["]["]}   -- \" or \"\" or "" 
+local alias escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
 
 -- The character set that contains one double quote character can be written ["], but this can
 -- interfere with syntax highlighting in some editors.  So we will use [\"] instead.  This is
 -- equivalent because in rpl any character can be escaped.  (Some characters, like 'n', have special
 -- meanings when escaped: \n means newline.)
 
-csv.dquoted_field_contents = {csv.escaped_dquote / [^\"]}*         -- contents of a quoted field
-csv.dquoted_field = [\"] csv.dquoted_field_contents [\"]	   -- the actual quoted field
+local dquoted_field_contents = {escaped_dquote / [^\"]}*         -- contents of a quoted field
+local dquoted_field = [\"] dquoted_field_contents [\"]		 -- the actual quoted field
 
-csv.squoted_field_contents = {csv.escaped_squote / [^']}*          -- contents of a quoted field
-csv.squoted_field = ['] csv.squoted_field_contents [']             -- the actual quoted field
+local squoted_field_contents = {escaped_squote / [^']}*          -- contents of a quoted field
+local squoted_field = ['] squoted_field_contents [']             -- the actual quoted field
 
 -- No need to see 'quoted_field' in the json output, so make it an alias:
-alias csv.quoted_field = csv.dquoted_field / csv.squoted_field
+local alias quoted_field = dquoted_field / squoted_field
 
 -- Patterns to match a single field:
-alias csv.field_comma = csv.quoted_field / csv.uqf_comma
-alias csv.field_semicolon = csv.quoted_field / csv.uqf_semicolon
-alias csv.field_pipe = csv.quoted_field / csv.uqf_pipe
+alias field_comma = quoted_field / uqf_comma
+alias field_semicolon = quoted_field / uqf_semicolon
+alias field_pipe = quoted_field / uqf_pipe
 
 
 -----------------------------------------------------------------------------
 -- Top level patterns
 -----------------------------------------------------------------------------
 
-csv.comma = csv.field_comma {[,] csv.field_comma}* $
-csv.semicolon = csv.field_semicolon {[;] csv.field_semicolon}* $
-csv.pipe = csv.field_pipe {[|] csv.field_pipe}* $
+comma = field_comma {[,] field_comma}* $
+semicolon = field_semicolon {[;] field_semicolon}* $
+pipe = field_pipe {[|] field_pipe}* $
 
 

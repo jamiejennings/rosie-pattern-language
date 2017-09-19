@@ -1,9 +1,0 @@
--- -*- Mode: rpl; -*- 
---
--- test-manifest.rpl   Rosie Pattern Language tests that compile ok
---
--- (c) 2016, Jamie A. Jennings
---
-
-manifest_ok = "manifest loaded ok if this definition is in the environment"
-

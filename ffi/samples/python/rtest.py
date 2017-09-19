@@ -10,7 +10,7 @@
 # Developed using MacOSX Python 2.7.10, cffi 1.7.0
 # easy_install --user cffi
 
-import os, json, sys
+import os, json
 import rosie
 
 ROSIE_HOME = os.getenv("ROSIE_HOME")
@@ -28,8 +28,7 @@ print "Obtained a rosie matching engine:", engine, "with id", engine.id
 config = json.dumps( {'expression': '[:digit:]+',
                       'encode': 'json'} )
 r = engine.configure(config)
-if not r: print "Engine reconfigured to look for digits\n"
-else: print "Error reconfiguring engine!", r
+if r: print r
 
 r = engine.inspect()
 print r
@@ -67,8 +66,7 @@ print_match_results(r)
 
 config = json.dumps( {'expression': '(basic.network_patterns)+'} )
 r = engine.configure(config)
-if not r: print "Engine reconfigured to look for basic.network_patterns\n"
-else: print "Error reconfiguring engine!", r
+print_match_results(r)
 
 input_string = "10.0.0.1 www.ibm.com foobar@example.com"
 r = engine.match(input_string, None)
@@ -80,7 +78,6 @@ r = engine.match(input_string, None)
 print_match_results(r)
 
 # Repeat using eval instead
-print "Calling eval on the same pattern and input, to see an explanation of the failure:"
 r = engine.eval(input_string, None)
 print "Results of eval are:"
 for s in r: print s
@@ -89,11 +86,6 @@ engine = None
 
 engine = Rosie.engine()
 print "Obtained a rosie matching engine:", engine, "with id", engine.id
-
-r = engine.load_manifest("$sys/MANIFEST")
-config = json.dumps( {'expression': 'common.word',
-                      'encode': 'json'} )
-r = engine.configure(config)
 
 print "The next call is to match_file, which will print 3 small JSON structures to stdout."
 r = engine.match_file("testfile", "", "", False)

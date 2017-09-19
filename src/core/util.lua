@@ -2,17 +2,17 @@
 ----
 ---- util.lua
 ----
----- © Copyright IBM Corporation 2016.
+---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
+local io = require "io"
+local math = require "math"
+local lpeg = require "lpeg"
+local json = require "cjson"
+local string = require "string"
 
-math = require "math"
-lpeg = require "lpeg"
-json = require "cjson"
-local string = string				    -- defensive
-
-util = {}
+local util = {}
 
 -- Split a string into lines, returning them one at a time
 function util.string_nextline(str)
@@ -74,7 +74,7 @@ local function keys_are_numbers(t)
 end
 
 -- my gosh, this has grown ugly over the years!  must rewrite someday.
-function util.table_to_pretty_string(t, max_item_length, js_style)
+function util.table_to_pretty_string(t, max_item_length, js_style, optional_keysort)
    if not t then
       error("Nil table")
       return;
@@ -104,10 +104,19 @@ function util.table_to_pretty_string(t, max_item_length, js_style)
 	 local js_array = js_style and keys_are_numbers(t)
 	 if js_array then output = output .. js_array_open
 	 else output = output .. open; end
-	 local offset
-	 for k,v in pairs(t) do
-	    local pretty_k
-	    if k~=next(t) then output = output .. string.rep(" ", indent); end
+	 local offset, keytable
+	 if optional_keysort then
+	    keytable = {}; for k,_ in pairs(t) do table.insert(keytable, k); end
+	    table.sort(keytable)
+	 end
+	 local itable = (optional_keysort and keytable) or t
+	 for k,v in pairs(itable) do
+	    local index, pretty_k
+	    if optional_keysort then index = k; k = v; v = t[k]; end
+	    local indent_needed
+	    if (optional_keysort and index > 1) or ((not optional_keysort) and k~=next(t)) then
+	       output = output .. string.rep(" ", indent);
+	    end
 	    pretty_k, offset = key(k, (type(v)=="table") and next(v), js_array, key_value_sep, indent)
 	    output = output .. pretty_k
 	    if type(v)=="table" then
@@ -120,7 +129,9 @@ function util.table_to_pretty_string(t, max_item_length, js_style)
 	    else
 	       output = output .. limit(tostring(v),max)
 	    end -- switch on type(v)
-	    if next(t, k) then output = output .. sep .. "\n"; end
+	    if (optional_keysort and next(keytable, index)) or ((not optional_keysort) and next(t, k)) then
+	       output = output .. sep .. "\n";
+	    end
 	 end -- for pairs
 	 if js_array then output = output .. js_array_close
 	 else output = output .. close; end
@@ -138,9 +149,9 @@ end
 -- JSON printing
 ----------------------------------------------------------------------------------------
 
-function util.prettify_json(s)
+function util.prettify_json(s, optional_keysort)
    local t = json.decode(s)
-   return (t==json.null and "null") or util.table_to_pretty_string(t, nil, true)
+   return (t==json.null and "null") or util.table_to_pretty_string(t, nil, true, optional_keysort)
 end
 
 
@@ -194,16 +205,27 @@ end
 -- numbers, except for tz_sign, which is always either "-" or "+" or nil.
 -- Return an integer number of milliseconds, ignoring any fractions of a millisecond.
 function util.time_since_epoch(year, month, day, hour, min, sec, tz_sign, tz_hours, tz_mins)
+   if type(year)=="table" then
+      -- we were given a table of the kind used by os.date, os.time
+      local dt = year
+      year = dt.year
+      month = dt.month
+      day = dt.day
+      hour = dt.hour
+      min = dt.min
+      sec = dt.sec
+      tz_sign = nil				    -- no timezone info 
+   end
    -- cast to numbers, in case they were passed as strings such as after parsing
-   local year = tonumber(year)
-   local month = tonumber(month)
-   local day = tonumber(day)
-   local hour = tonumber(hour)
-   local min = tonumber(min)
-   local sec = tonumber(sec)
+   year = tonumber(year)
+   month = tonumber(month)
+   day = tonumber(day)
+   hour = tonumber(hour)
+   min = tonumber(min)
+   sec = tonumber(sec)
    local days_since_epoch = day_of_year(year, month, day) + 
                             365 * (year - 1970) + 
-                           (leap_years_through(year-1) - leap_years_through_1970) - 1;
+                            (leap_years_through(year-1) - leap_years_through_1970) - 1;
    local seconds = (days_since_epoch * seconds_per_day)
           + (hour * seconds_per_hour)
           + (min * 60)
@@ -264,10 +286,15 @@ function util.os_execute_capture(command, mode, readmode)
       str = handle:read(readmode)
    end
    local ok, status, code = handle:close()
-   if not ok then
-      error("Command '" .. command .. "' failed, returning:\n" ..
-	    table.tostring{results, status, code})
-   end
+   -- Turns out that the first return value of handle:close() simply reflects whether the value of
+   -- the error code is 0 or not.  We will pass the code back to the caller and let the user
+   -- decide which codes indicate success.
+   --
+   -- if not ok then
+   --    error("Command '" .. command .. "' failed, returning:\n" ..
+   -- 	    table.tostring{results, status, code})
+   -- end
+   --
    return results, status, code
 end
    
@@ -302,12 +329,39 @@ function util.extract_source_line_from_pos(source, pos)
 	 candidate = string.find(source, "\n", candidate+1, true)
       end
    end
-   -- return the line, and the new position of pos in the line, and the number of this line
-   return string.sub(source, start, eol), pos-start, count
+   -- Return the line, and the new position of pos in the line, and the number of this line.  Both
+   -- the line number and the pos in the line are 1-based.
+   return string.sub(source, start, eol), pos-start+1, count
 end
       
-function util.split_path(path, optional_separator)
-   local separator = optional_separator or common.dirsep
+function util.trim(str)
+   -- remove whitespace from beginning and end of str
+   return str:match("%s*(.-)%s*$")
+end
+
+function util.split(str, separator)
+   assert( (type(separator)=="string") and (#separator > 0) )
+   local i
+   local start = 1
+   local results = {}
+   while true do 
+      i = str:find(separator, start, true)
+      if not i then
+	 results[#results+1] = str:sub(start)
+	 break;
+      else
+	 results[#results+1] = str:sub(start, i-1)
+	 start = i + #separator
+      end
+   end
+   return results
+end
+		
+-- FUTURE: Rewrite split_path to use util.split so that the separator can be any string.
+-- Currently, if separator contains a Lua pattern special character (like "."), then split_path
+-- will fail.
+function util.split_path(path, separator)
+   -- separator is typically common.dirsep
    if #separator~=1 then
       error(string.format("Separator is not a one character string: %q", separator))
    end
@@ -329,15 +383,24 @@ function util.split_path(path, optional_separator)
    return path:sub(1,lastpos-1), results[#results], results
 end
 
+-- tests if the path is absolute, returning evidence if so, or nil otherwise.
+-- relies on common.dirsep to tell if we are on unix or windows.  this may be a bad idea.
+function util.absolutepath(path)
+   assert(type(path)=="string")
+   return ((path:sub(1,1)==common.dirsep and common.dirsep) or
+	   ((common.dirsep=="\\" and path:sub(1,2):match("%a:")))) or nil
+end
+
 function util.readfile(fullpath)
    local ok, f = pcall(io.open, fullpath);
    if (not ok) or (not f) then
-      return false, string.format('Error: cannot open file %q', tostring(fullpath))
+      return false, string.format('Error: cannot open file %s', tostring(fullpath))
    end
    local data = f:read("a")
    f:close()
    if (not data) then
-      return false, string.format('Error: cannot read file %q', fullpath)
+      -- Return nil to distinguish read error from file not found
+      return nil, string.format('Error: cannot read file %s', tostring(fullpath))
    end
    return data
 end
@@ -353,6 +416,15 @@ function util.where(lua_function)
    end
 end
 
-
+-- This is string.gsub if that function allowed a 'plain' flag like string.find does.
+-- Probably slow.
+function util.string_replace(input, plain_substring, replacement, start)
+   local s, e = string.find(input, plain_substring, start, true)
+   if not s then return input; end
+   return util.string_replace(input:sub(1, s-1) .. replacement .. input:sub(e+1),
+			      plain_substring,
+			      replacement,
+			      s+#replacement)
+end
 	 
 return util

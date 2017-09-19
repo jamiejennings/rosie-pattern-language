@@ -1,0 +1,29 @@
+#!/bin/bash
+this=`basename $0`
+rosie=bin/rosie
+if [ "$rosie" == "" ]; then
+    echo "Cannot find bin/rosie"
+    exit -1
+fi
+
+file=$1
+if [ "$2" != "" ]; then
+    echo "Only one file name is allowed"
+    exit -1
+elif [ "$file" = "" ]; then
+    echo "Usage: ${this} <path_to_rosie_test_file>"
+    exit -1
+elif [ ! -f $file ]; then
+    echo "Test file does not exist: $file"
+    exit -1
+fi
+
+echo "Running test file $file ... "
+$rosie -D <<EOF
+TEST_HOME=ROSIE_HOME.."/test"
+import=rosie.import
+termcolor=rosie.import "termcolor"
+test=rosie.import "test"
+dofile("$file")
+EOF
+

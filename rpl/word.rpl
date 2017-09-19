@@ -1,0 +1,44 @@
+---- -*- Mode: rpl; -*-                                                                             
+----
+---- word.rpl   Patterns in Rosie Pattern Language for word variations
+----
+---- © Copyright IBM Corporation 2017
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+rpl 1.1
+
+package word
+
+-- Note: These patterns make use of ASCII (Posix) character classes, which is a limitation that will
+-- be lifted when Unicode character classes are introduced.
+
+sp = [:space:]						    -- whitespace
+ltr = [:alpha:]						    -- letter
+
+-- test sp accepts " ", "\t", "\n"
+-- test sp rejects "\b", "A", "!"
+-- test ltr accepts "a", "z", "A", "Z"
+-- test ltr rejects " ", "!", "0", "-"
+
+any = [:alpha:]+					    -- mixed case
+uc = [:upper:]+						    -- upper case
+lc = [:lower:]+						    -- lower case
+tc = {[:upper:] [:lower:]*}				    -- title case
+
+-- Quoted strings, using single or double quote.
+-- Within a string, the quote character can be escaped using a backslash.
+
+local alias dquote = ["]			      -- "
+local alias escaped_dquote = { [\\] dquote }
+local alias squote = [']			      -- '
+local alias escaped_squote = { [\\] squote }
+
+sq = {squote {escaped_squote / {!squote .}}* squote}
+dq = {dquote {escaped_dquote / {!dquote .}}* dquote}
+
+-- word.q is a quoted word, with either single or double quotes
+q = sq / dq
+
+-- test sq accepts "''", "'abc 92'", "'abc \\'def\\' ghi'"
+-- test dq accepts "\"\"", "\"abc 92\"", "\"abc \\\"def\\\"\""

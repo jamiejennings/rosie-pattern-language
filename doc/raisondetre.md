@@ -69,64 +69,142 @@ On start-up, Rosie loads a set of files containing Rosie Pattern Language, i.e. 
 
 By default, Rosie processes input one line at a time, where the marker that separates lines is a single newline character.  Rosie generates one JSON structure (output) for each line of input.  The output structure contains an entry for each named component of the match pattern.  Every important field within a pattern has a name, and Rosie’s output pairs each name with the corresponding value parsed out of the input line.
 
-Whatever stage comes after Rosie in the data pipeline can then see every important value in each line of input.  For example, we can use a pattern like this one to parse a simple log entry:
+Whatever stage comes after Rosie in the data pipeline can then see every important value in each line of input.  For example, we can use rpl code like this to define a simple `syslog` pattern:
 
-``
-syslog = datetime_RFC3339 ip_address {process ":"} message
-``
+```
+import word, num, ts, net
+message = .*
+process = { word.any "["num.int"]" }
+syslog = ts.rfc3339 net.ip process ":" message
+``` 
 
-The line above defines the pattern named `syslog` to be a datetime, followed by an ip address, a string that is a process followed by a colon (“:”), and a message.  Each of the identifiers used to define `syslog` (`datetime_RFC3339`, etc.) are defined separately.  For example, `process` is defined as:
-
-``
-process = { word {"["int"]"}? }
-``
-
-... and matches strings like "sshd[16537]" and "syslogd".  For now, note that pattern elements inside braces `{...}` are elements that are glued together with no whitespace separating them, e.g. "[16537]" and not "[ 16537 ]".
+The line above defines the pattern named `syslog` to be a datetime, followed by an ip address, a string that is a process followed by a colon (“:”), and a message.  Pattern elements inside braces `{...}` are elements that are glued together with no whitespace separating them, e.g. "[16537]" and not "[ 16537 ]".
 
 Suppose Rosie is asked to match the `syslog` pattern against a raw line of input data like this one:
 
-``
+``` 
 2015-08-23T03:36:25-05:00 10.108.69.93 sshd[16537]: Did not receive identification string from 208.43.117.11
-``
+``` 
 
-The Rosie output will be a structure as follows: (see NOTE below)
+The Rosie output will be a structure as follows, if using the REPL or specifying `-o json` at the CLI:
 
-``
-[{"datetime_RFC3339":["2015-08-23T03:36:25-05:00",
-                      {“date_RFC3339":["2015-08-23"]},
-                      {"time_RFC3339":["03:36:25-05:00"]}]},
- {"ip_address":["10.108.69.93"]},
- {"process":["sshd[16537]",
-             {“word":["sshd"]},
-             {"int":["16537"]}]},
- {"NO_ID":["Did not receive identification string from 208.43.117.11",
-           {"ip_address":["208.43.117.11"]}]}]}]
-``
+```json 
+{"data": "2015-08-23T03:36:25-05:00 10.108.69.93 sshd[16537]: Did not receive identification string from 208.43.117.11", 
+ "e": 109, 
+ "s": 1, 
+ "subs": 
+   [{"data": "2015-08-23T03:36:25-05:00", 
+     "e": 26, 
+     "s": 1, 
+     "subs": 
+       [{"data": "2015-08-23", 
+         "e": 11, 
+         "s": 1, 
+         "subs": 
+           [{"data": "2015", 
+             "e": 5, 
+             "s": 1, 
+             "type": "date.year"}, 
+            {"data": "08", 
+             "e": 8, 
+             "s": 6, 
+             "type": "date.month"}, 
+            {"data": "23", 
+             "e": 11, 
+             "s": 9, 
+             "type": "date.day"}], 
+         "type": "date.rfc3339"}, 
+        {"data": "03:36:25-05:00", 
+         "e": 26, 
+         "s": 12, 
+         "subs": 
+           [{"data": "03:36:25", 
+             "e": 20, 
+             "s": 12, 
+             "subs": 
+               [{"data": "03", 
+                 "e": 14, 
+                 "s": 12, 
+                 "type": "time.hour"}, 
+                {"data": "36", 
+                 "e": 17, 
+                 "s": 15, 
+                 "type": "time.minute"}, 
+                {"data": "25", 
+                 "e": 20, 
+                 "s": 18, 
+                 "type": "time.second"}], 
+             "type": "time.rfc3339_time"}, 
+            {"data": "-05:00", 
+             "e": 26, 
+             "s": 20, 
+             "subs": 
+               [{"data": "-05:00", 
+                 "e": 26, 
+                 "s": 20, 
+                 "subs": 
+                   [{"data": "05", 
+                     "e": 23, 
+                     "s": 21, 
+                     "type": "time.hour"}, 
+                    {"data": "00", 
+                     "e": 26, 
+                     "s": 24, 
+                     "type": "time.minute"}], 
+                 "type": "time.numoffset"}], 
+             "type": "time.offset"}], 
+         "type": "time.rfc3339_strict"}], 
+     "type": "ts.rfc3339"}, 
+    {"data": "10.108.69.93", 
+     "e": 39, 
+     "s": 27, 
+     "subs": 
+       [{"data": "10.108.69.93", 
+         "e": 39, 
+         "s": 27, 
+         "type": "net.ipv4"}], 
+     "type": "net.ip"}, 
+    {"data": "sshd[16537]", 
+     "e": 51, 
+     "s": 40, 
+     "subs": 
+       [{"data": "sshd", 
+         "e": 44, 
+         "s": 40, 
+         "type": "word.any"}, 
+        {"data": "16537", 
+         "e": 50, 
+         "s": 45, 
+         "type": "num.int"}], 
+     "type": "process"}, 
+    {"data": "Did not receive identification string from 208.43.117.11", 
+     "e": 109, 
+     "s": 53, 
+     "type": "message"}], 
+ "type": "syslog"}
+``` 
 		   
 
 From this output, we can see that:
-*	Rosie collected each piece of the `syslog` pattern and labeled the parts, e.g. `datetime_RFC3339`  and `ip_address`.
-*	The definition of the pattern `datetime_RFC3339` appears to have two parts, a date and a time, and those are separated out and labeled as well.
-*	The `message` pattern must be an alias for some other patterns, because instead of seeing "message" as a label in the output, we see instead `NO_ID`.
-*	The definition of the `NO_ID` pattern includes an ip address, we can infer, because Rosie parsed an `ip_address` out of the message and labeled it.
+*	Rosie collected each piece of the `syslog` pattern and labeled the parts, e.g. `ts.rfc3339`  and `net.ip` and `process`.
+*	Most of the patterns used to define `syslog` have sub-patterns, and those are separated out and labeled as well.
 
 With structured output such as that above, the raw data has been transformed into something structured, with semantic tags.  It is now possible to work with the data, such as in an analytics process.
 
-**NOTE:**
-
-There are several output formats; JSON is shown.  Also, the entire original line of input (which matches the `syslog` pattern as a whole) can optionally be included in the output, but is omitted along with some other output for clarity.
 
 ## The Rosie Pattern Engine is meant to be used early in a pipeline
 
 As a stand-alone executable, Rosie is suitable for processing files containing lines of input.  Rosie may also be used to process streaming input, or "micro-batches".  Rosie’s small executable size and quick start-up time make it possible to invoke Rosie as part of a data processing pipeline.
 
-In addition to simply recognizing items of interest in the input, Rosie can be instructed to transform values, enumerate values, and perform other operations while processing each line.  Normalization is one kind of transformation, e.g. timestamps in various formats may be normalized to an integer number of milliseconds since the epoch.  Sanitizing, such as encryption of sensitive fields, is another kind of transformation.
+In future work, we envision extending Rosie to perform certain kinds of transformations on the values that are recognized.  Of particular interest is the class of transformations that can be done in linear time using only the match data and a constant amount of additional data as input.
 
-Enumeration, on the other hand, is a meta-data calculation.  If Rosie is instructed to enumerate a particular field, then all values for that field that appear in the input will be collected into a table.  For example, which host names were seen in the input?  Or, which queue names?  An enumeration table is one piece of meta-data, and is saved so it can be used by subsequent stages in the data processing pipeline.
+A trivial transformation might be to omit the sub-matches from a specific match.  E.g. if we do not want to see the hours, minutes, and seconds fields of a time value like `time.rfc3339`, then we want to instruct Rosie to omit them.  Or, perhaps we want to convert a timestamp into a different form, such as milliseconds since the epoch.  In that case, we want to instruct Rosie to replace `ts.rfc3339` with a new JSON structure containing an appropriate label and the calculated value.
 
-Another piece of meta-data is the range of values that a particular field has in the given input.  When a field has values that can be compared in the sense of "value x precedes value y", Rosie can be instructed to save the range of a field seen in the input.  When processing a file of log entries, for example, the range of the timestamp field tells you the time period spanned by those entries.
+In addition to transformations, we envision that Rosie could be instructed to enumerate values, normalize them, or even "sanitize" them.  Sanitizing is hiding sensitive data by omitting it, encrypting it, or mapping it to a code (and keeping the mapping a secret).
 
-Since Rosie’s extension language is Lua, a full language, real-time processing such as transformations and enumerations can have side effects and access stored state.  As a result, some interesting new uses of Rosie are possible.  One example is to instruct Rosie to parse particular values out of an input stream and take action (send a message, run a script) as the values change in a specified way.
+Another way that we envision Rosie could process input is to track the range of values that a particular field has in the given input.  When a field has values that can be compared in the sense of "value x precedes value y", Rosie can be instructed to save the range of a field seen in the input.  When processing a file of log entries, for example, the range of the timestamp field tells you the time period spanned by those entries.
+
+Since Rosie’s extension language is Lua, a full programming language, real-time processing such as transformations and enumerations can have side effects and access stored state.  As a result, some interesting new uses of Rosie are possible.  One example is to instruct Rosie to parse particular values out of an input stream and take action (send a message, run a script) as the values change in a specified way.
 
 ## Rosie Pattern Language is similar to Regular Expressions
 
@@ -137,6 +215,10 @@ Rosie's pattern language, RPL, inverts the usual regex concept that characters m
 A string of characters outside of quotes, like `word` or `syslog` is an identifier that refers to a previously defined pattern.  In this way, RPL is like a programming language: you can give names to patterns, and build new patterns out of old ones.
 
 Outside of a quoted string, there are familiar operators that have the same meanings as they do in regex, such as ".", "*", "?", etc.  There's never any confusion about when these characters are operators and when they are literal characters to be matched.  If a character appears in a character set `[...]` or a literal string `"..."`, then it's a literal character to be matched.
+
+### More on character set syntax
+
+**Future:** Describe how we made the character set syntax more sane than in regex.  At the cost of being slightly more verbose, we have made character sets less open to mis-reading.
 
 ### Grouping
 
@@ -175,12 +257,7 @@ However...
 
 These properties hold only for regular expressions that stick to the formal definition.  In practice, what we call “regex” libraries (like PCRE, Perl regex,  Java regex) contain significant extensions to the regular expression formalism, such as numbered/named captures, counted repetition, and back references.  With these extensions, it becomes very hard to robustly compose regexes, and the performance of matching using a regex is quite variable. It can take exponential time in the length of the input!
 
-Some other limitations are shared by the formal regular expressions and the
-widely used regex tools, such as the inability to match recursively defined
-input, such as XML or JSON.  In computing theory, one turns to a context-free
-grammar (CFG) to write such patterns.  Programming tools for using a CFG are not commonly
-available, though, and consequently most programmers are familiar only with one
-matching technology: the regex.
+Some other limitations are shared by the formal regular expressions and the widely used regex tools, such as the inability to match recursively defined input, such as XML or JSON.  In computing theory, one turns to a context-free grammar (CFG) to write such patterns.  Programming tools for using a CFG are not commonly available, though, and consequently most programmers are familiar only with one matching technology: the regex. 
 
 In ordinary use, the regex technology works well.  Small regex patterns embedded in large programs allow easy extraction of data from strings; and regex patterns composed on the command line greatly aid administrative tasks.  But when we have lots of patterns, regex solutions are fragile and unmaintinable.  And when we have large amounts of data, the variable nature of regex performance can impact an entire solution.
 
@@ -196,7 +273,7 @@ Some examples comparing regex-based tools like Grok to Rosie are in the table be
 
 | Grok and other regex tools        | Rosie Pattern Language | Comment       |
 | --------------------------------- | ---------------------- | --------       |
-| `INT = (?:[+-]?(?:[0-9]+))`       | `int = { [+-]? digit+ }` | These are comparable in readability.  In RPL, `digit` is an alias for `[:digit:]`.        |
+| `INT = (?:[+-]?(?:[0-9]+))`       | `int = { [+-]? d+ }` | These are comparable in readability.  Here, `d` is an alias for `[0-9]`.        |
 | <code>PATH (?:%{UNIXPATH}&#124;%{WINPATH})</code> |  `path = unix_path / windows_path` | RPL is a bit cleaner, and uses `/` to mean "ordered choice". |
 | <code>UNIXPATH (?>/(?>[\w_%!$@:.,~-]+&#124;\\.)&#42;)+</code> | `unix_path = {"/" {[:alnum:]/[_%!$@:.,~-]}+ }+`| What is `(?>` in regex? Should look that up. |
 | <code>WINPATH (?>[A-Za-z]+:&#124;\\)(?:\\[&#94;\\?&#42;]&#42;)+</code> | `windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] any}* }+ }` | The RPL `!` means "not looking at" |
@@ -208,14 +285,14 @@ The other scale issue we must consider is the size of the input (data).  When da
 
 In ordinary use on the command line (such as listing files with `ls` or searching in files with `grep`), regex performance is not an issue.  When a regex is used to extract some information from a string in Java, performance is not usually an issue.  But when regex patterns are deployed to parse large amounts of data, two things can go wrong: backtracking done by regex engines can destroy the performance, and malformed input can force so much backtracking that exponential time is required.
 
-Since regexes are not maintainable and fail to scale in both pattern size and input size, Rosie is based instead on a different pattern expression approach: Parse Expression Grammars.
+Since regexes are not maintainable and fail to scale in both pattern size and input size, Rosie is based instead on a different pattern expression approach: Parsing Expression Grammars.
 
 
-## Parse Expression Grammars
+## Parsing Expression Grammars
 
 As we mentioned earlier, the Context Free Grammar is more powerful than the regular expression.  With that power comes inefficient matching (e.g. the widely cited CYK algorithm has an upper bound of _n<sup>3</sup>_, where _n_ is the input length) and a cumbersome way to specify a pattern (always writing a full grammar).
 
-Parse Expression Grammars were defined to avoid the pitfalls of CFGs, at the expense of being less powerful.  It turns out that PEGs are more powerful than regular expressions (and regex), though, and may be seen as sitting somewhere in between regex and CFGs.
+Parsing Expression Grammars were defined to avoid the pitfalls of CFGs, at the expense of being less powerful.  It turns out that PEGs are more powerful than regular expressions (and regex), though, and may be seen as sitting somewhere in between regex and CFGs.
 
 A PEG requires only linear time (in the length of the input) to process an input string.  It does this by limiting backtracking: the "alternation" operator in a PEG is an _ordered choice_.  Instead of using the pipe symbol `|`, which represents equal alternatives in regex, a PEG uses a forward slash `/` to denote an ordered choice between two alternatives.  The PEG pattern `(a / b) c` is read as "a or b, followed by c" and is processed this way:
 
@@ -230,7 +307,7 @@ The difference between the PEG choice operator `/` and the regular expression `|
 
 The order of the alternatives matters in PEG.  The pattern `(a b) / a` will match input "a b", because this pattern looks for the sequence "a b" first.
 
-When writing PEG patterns, then, we must pay attention to the order of choices in an alternation expression.  Ordered choices and sequences are just part of Parse Expression Grammars.  The full capabilities of PEGs are as follows (note the similarity to regexes):
+When writing PEG patterns, then, we must pay attention to the order of choices in an alternation expression.  Ordered choices and sequences are just part of Parsing Expression Grammars.  The full capabilities of PEGs are as follows (note the similarity to regexes):
 
 |  PEG expression | Meaning                      |
 |  -------------- | -------                      |
@@ -238,11 +315,11 @@ When writing PEG patterns, then, we must pay attention to the order of choices i
 |  `pat*`         | Zero or more instances of `pat`                      |
 |  `pat+`         | One or more instances of `pat`                      |
 |  `!pat`         | Not looking at `pat` (consumes no input)                      |
-|  `@pat`         | Looking at `pat` (consumes no input)                       |
+|  `>pat`         | Looking at `pat` (consumes no input)                       |
 |  `p / q`        | Ordered choice between `p` and `q`     |
 |  `p q`          | Sequence of `p` followed by `q`     |
 
-**NOTE:**  The "quantified expressions" `pat?`, `pat*`, `pat+`, and `pat?` are greedy versions of those used in regular expressions.  They will consume as many repetitions as possible, always.
+**NOTE:**  The "quantified expressions" `pat?`, `pat*`, `pat+`, and `pat?` are greedy and possessive versions of those used in regular expressions.  They will consume as many repetitions as possible, always.
 
 The Rosie Pattern Language adds some additional features to the PEG formalism:
 
@@ -251,6 +328,9 @@ The Rosie Pattern Language adds some additional features to the PEG formalism:
 |  `(...)`         | Grouping, as in mathematics, to force order of operations |
 |  `{...}`         | Raw group, which tells Rosie to process character by character |
 |  `pat{n,m}`         | Bounded repetition of `pat`.  Each of `n` and `m` are optional. |
+|  `pat{n}`         | Bounded repetition of `pat`, matching exactly `n` occurrences. |
+|  `<pat`         | Looking backwards at `pat` (consumes no input)                       |
+|  `!<pat` or `!<pat`  | Not looking backwards at `pat` (consumes no input)                       |
 
 
 ## Captures in Rosie Pattern Language
@@ -259,31 +339,11 @@ The Rosie Pattern Language adds some additional features to the PEG formalism:
 
 Any pattern matching technology is made more useful with the concept of a capture, which simply refers to the portion of the input that matched a pattern.  When writing RPL patterns, we assume there are certain portions of the input you want to single out and label, e.g. the command name and the URL in an HTTP command.
 
-Since RPL patterns can be made out of other patterns, you can write a pattern that matches an entire line of input by using patterns that have already been defined.  For example,
-
-``` 
-http_command = http_command_name (url / path)
-```
-
-
-is a statement in RPL that defines a pattern named `http_command` as an `http_command_name` followed by either a `url` or a `path` – i.e. the definition refers to three other patterns.
-
-When Rosie matches the pattern `http_command`, the resulting output is a data structure that reflects the structure of the match.  By default, the output includes the portion of the input that matched, e.g. "GET http://ibm.com/index.html", as well as the matches for `http_command` and (in this case) `url`.  Such output, in JSON, might look like this:
-
-``` 
-{"http_command": ["GET http://ibm.com/index.html",
-                   {"http_command_name":["GET"]},
-                   {"url":["http://ibm.com/index.html"]}]}
-``` 
+Since RPL patterns can be made out of other patterns, you can write a pattern that matches an entire line of input by using patterns that have already been defined, as we saw already with `syslog`.
 				   
-This is default behavior, and it allows the consumer of Rosie's output to see all of the important "fields" (like `url`) and their values (like http://ibm.com/index.html).
+By default, all named sub-patterns appear in the Rosie JSON output.  It allows the consumer of Rosie's output to see all of the important fields (like `time.hour`) and their values.
 
-Rosie provides additional controls over what is captured and what is discarded.  For instance, you may not have any need for the entire original input (i.e. the string that matched http_command above), so you can tell Rosie to discard it.  And you may want to annotate this particular `http_command` with additional information based on where it occurred in the input. Finally, you may want to transform some matched values, or enumerate the values seen, etc.
-
-RPL provides statements that serve as instructions for Rosie to do all of these things.
-
-**NOTE:** Documentation of these features is forthcoming and will appear here as
-  the syntax for those features is finalized.
+Rosie provides one control over what is captured and what is discarded, which is the `alias`.  Other controls over how much output is emitted are envisioned for the future.
 
 ### Aliases
 
@@ -291,32 +351,55 @@ In RPL, patterns are often built from other patterns.  But sometimes you know th
 
 ``` 
 d = [:digit:]
-common.int = { [+-]? d+ }
+int = { [+-]? d+ }
 ``` 
 
-The curly braces that surround the expression on the right hand side of `common.int` are a _raw group_, which Rosie will process character by character instead of separating the input into tokens first.  The definition of `common.int` reads this way: an optional sign, followed by one or more digits. In this example, `d` is a shorthand to avoid writing `[:digit:]`.  Matching `common.int` against "421" produces:
+The curly braces that surround the expression on the right hand side of `int` make a _raw group_, which Rosie will process character by character instead of separating the input into tokens.  The definition of `int` reads this way: an optional sign, followed by one or more digits. In this example, `d` is simply a shorthand to avoid writing `[:digit:]`.  In this transcript, we use the Rosie REPL to match `int` against "421":
 
 ``` 
-{"common.int":["421",{"d":["4"]},{"d":["2"]},{"d":["1"]}]}
+Rosie> d = [:digit:]
+Rosie> int = { [+-]? d+ }
+Rosie> .match int "421"
+{"data": "421", 
+ "e": 4, 
+ "s": 1, 
+ "subs": 
+   [{"data": "4", 
+     "e": 2, 
+     "s": 1, 
+     "type": "d"}, 
+    {"data": "2", 
+     "e": 3, 
+     "s": 2, 
+     "type": "d"}, 
+    {"data": "1", 
+     "e": 4, 
+     "s": 3, 
+     "type": "d"}], 
+ "type": "int"}
+Rosie> 
 ``` 
 
 Assuming we don’t need the individual digits of "421" in subsequent processing, we can avoid capturing them at all by defining `d` as an _alias_:
 
 ```
-alias d = [:digit:]
-common.int = { [+-]? d+ }
+Rosie> alias d = [:digit:]
+Rosie> int = { [+-]? d+ }
+Rosie> .match int "421"
+{"data": "421", 
+ "e": 4, 
+ "s": 1, 
+ "type": "int"}
+ Rosie>
 ``` 
 
-Matching against "421" now gives:
+**Note:** In our interactive session, we needed to repeat the definition of `int`, because RPL has a notion of [lexical closures](https://en.wikipedia.org/wiki/Closure_(computer_programming)), which in this example means that the value of `d` used in the definition of `int` is the one that existed when `int` was defined.  In the future, we may enhance the REPL to automate the step of recompiling a pattern (like `int`) after one of its dependencies changes (like `d`).
 
-``` 
-{"common.int":["421"]}
-```  
 
 ## If you know regex, this is Rosie
 <a name="regex_and_rpl"></a>
 
-Forthcoming summary of the differences will go here.
+Check out the blog post [here on Rosie's home page](https://rosie-lang.github.io/preview/2017/08/30/Rosie-v1.0-preview-6.html)!
 
 ---
 *Disclaimer:* In these notes, as in other posted material, I speak for myself, and not on behalf of IBM.

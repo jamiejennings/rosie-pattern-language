@@ -1,0 +1,214 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- rpl-1.1.rpl     RPL language version 1.1, written in RPL version 0 (core)
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHOR: Jamie A. Jennings
+
+-- TODO:
+-- (1) Add to rosie tests the parsing of the following extensions:
+--   repetition with a single parameter, e.g. e{5}
+--   optional semi-colons between statements, incl. empty statement
+--   nested charset_exps, e.g. [^[[[a-z]][^0-9]]] 
+--   set intersection, e.g. [[a-z]&&[xyz]]
+--   set difference, e.g. [[a-z]-[xyz]]
+-- (2) Add stubs to compiler for these exps, with informative error messages
+--
+-- DONE:
+-- + x.y.z is a parse error. Else the second "." would parse as dot
+-- + .y.z is a parse error.  Else the first "." would parse as dot
+-- + Sequences of the one-char identifiers need no whitespace separating them:
+--    ... is NOT a parse error.
+--    .~ is NOT a parse error.
+--    .$ is NOT a parse error.  
+
+package rpl_1_1
+
+alias ws = [[ \t]]+
+newline = "\n"
+comment = { "--" {!newline .}* newline / $ }
+alias atmos = { ws? (comment / newline) }* ws?		    -- "atmosphere"
+
+alias id_char = [[:alnum:]] / [[_]]
+alias id = { [[:alpha:]] id_char* }
+
+dot = "."
+alias unoverloaded_id_symbol = [[$~^]]
+alias id_symbol = dot / unoverloaded_id_symbol
+
+-- It is important that an error consume at least one character here.
+-- As a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
+rest_of_line = { {!"\n" .}+ "\n" / $}
+syntax_error = rest_of_line
+
+localname = unoverloaded_id_symbol / {dot !id} / {id !dot}
+packagename = id
+identifier = { {packagename [[.]]}? localname }
+
+alias dquote = [[\"]]
+alias esc =    [[\\]]
+literal = { {!{esc/dquote} .} / {esc .} }* 
+alias quoted_string = { dquote literal dquote }
+
+alias hash_mark = [[#]]
+tag = localname
+hash_exp = {hash_mark {tag / quoted_string}}
+
+star =     [[*]]
+question = [[?]]
+plus =     [[+]]
+alias end_token = { "end" !id_char }
+alias keyword_list = "local" / "alias" / "grammar" / "end"
+keyword = { keyword_list !id_char }
+
+complement = "^"
+character = { {!esc !"[" !"]" .} / {esc .} }
+range = { complement? character [[-]] !"]" character } 
+charlist = { complement? {!"]" character}+ }		    -- cannot be empty
+name = {!":" .}+
+named_charset = { complement? name } 
+alias simple_charset = { "[" { ":" named_charset ":]" } /
+	                  { range "]" } /
+		          { charlist "]" } /
+		          syntax_error
+		    }
+grammar
+   charset_exp = compound_charset / simple_charset
+   compound_charset = { "[" complement? combination atmos "]" }
+   alias combination = { atmos charset_exp { atmos op atmos charset_exp }* }
+   op = intersection / difference / union
+   union = ""
+   intersection = "&"
+   difference = "-"
+end
+
+low =  [[0-9]]*				    -- an int or nothing
+high = [[0-9]]* 
+repetition = { "{" atmos low atmos {"," atmos high atmos}? "}" }
+	          
+int = atmos [[0-9]]+
+
+alias quantifier = star / question / plus / repetition
+
+assignment_prefix = identifier atmos "="
+stmnt_prefix = {keyword / assignment_prefix}
+
+alias slash =         [[/]]
+alias open =          [[(]]
+alias openraw =       [[{]]
+alias close =         [[)]]
+alias closeraw =      [[}]]
+
+negation = [[!]]
+lookahead = [[>]]
+lookbehind = [[<]]
+alias predicate_symbol = negation / lookahead / lookbehind
+	    
+grammar
+   alias exp = {atmos { syntax_error /
+	                 choice /
+	                 sequence /
+	                 quantified_exp / 
+	                 plain_exp} }
+   syntax_error = { stmnt_prefix rest_of_line }
+   application = { identifier ":" } atmos (arg / arglist / rawarglist )
+   arglist = { atmos open int_or_exp { atmos "," int_or_exp }* close }
+   rawarglist = { atmos openraw int_or_exp { atmos "," int_or_exp }* closeraw }
+   arg = quantified_exp / plain_exp / int
+   alias int_or_exp = atmos int / exp
+   choice = { {quantified_exp / plain_exp} atmos slash exp }
+   sequence = { {quantified_exp / plain_exp} {atmos !stmnt_prefix exp}+ }
+   alias plain_exp = { atmos 
+		        {application /
+		         identifier /
+		         quoted_string /
+		         raw /
+		         cooked /
+		         charset_exp /
+		         predicate /
+		         hash_exp} }
+   quantified_exp = { plain_exp quantifier }
+   cooked = { open exp atmos close }
+   raw = { openraw exp atmos closeraw }
+   predicate = { predicate_symbol ws? {quantified_exp / plain_exp} }
+end
+
+grammar
+   alias stmnt = local_ / exported
+   alias exported = alias_ / grammar_ / assignment_
+   local_ = "local" atmos alias_ / grammar_ / assignment_ 
+   alias_ = "alias" atmos identifier ws? "=" exp 
+   grammar_ = "grammar" { atmos { alias_ / assignment_ } }+ atmos end_token
+   assignment_ = identifier ws? "=" exp 
+end
+
+major = [[0-9]]{1,2}
+minor = major
+version_spec = { major "." minor }
+
+importpath = quoted_string /		  -- double quoted, interpreted, pattern name is "literal"
+             { id {"/" id}* }		  -- quotes not needed when each path segment is an id
+import_spec = atmos importpath ("as" (packagename / dot))?
+
+----------------------------------------------------------------------------------------
+-- Top level patterns
+----------------------------------------------------------------------------------------
+
+language_decl = { "rpl" ws version_spec {ws? ";"}? }
+package_decl = { "package" ws packagename {ws? ";"}? }
+import_decl = { "import" import_spec } ("," atmos import_spec)* ws? ";"?
+
+rpl_statements = { {atmos ";" / package_decl / import_decl / language_decl / stmnt / syntax_error}* atmos $}
+rpl_expression = {exp atmos} / syntax_error
+
+preparse = atmos language_decl
+
+-- RPL module structure:
+-- rpl_module = language_decl? package_decl import_decl* statement* atmos
+
+---------------------------------------------------------------------------------------------------
+-- Tests
+---------------------------------------------------------------------------------------------------
+
+-- test preparse rejects "rpl", "rpl ", "rpl a", "rpl 1.a", "rpl 1.", "rpl 1.123", "rpl 1.\n1"
+-- test preparse accepts "rpl 0.0", "  rpl 1.0\n", "rpl 52.99", "rpl 99.99", "rpl 1.1 -- Comment\n"
+
+-- test package_decl accepts "package foo", "package fooBar", "package f_oo"
+-- test package_decl rejects "package", "package _foo", "package 6foo", "package .foo", "package foo.bar"
+-- test package_decl rejects "package \n foo"
+
+-- test import_decl rejects "import"
+
+-- importpath can be QUOTED STRING:
+-- test import_decl rejects "import \"foo/bar\","
+-- test import_decl accepts "import \"foo/bar\""
+-- test import_decl accepts "import \"foo/bar\", \"/usr/local/baz\", \"/usr/bin/time\""
+-- test import_decl accepts "import \"foo/bar\" as foo"
+-- test import_decl accepts "import \"foo/bar\" as foo, \"/usr/local/baz\", \"/usr/bin/time\""
+-- test import_decl accepts "import \"foo/bar\" as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
+
+-- importpath can be PLAIN SYMBOL, uninterpreted:
+--    (But a path must be relative, and a symbol starts with [:alpha:])
+-- test import_decl rejects "import foo,"
+-- test import_decl rejects "import foo["
+-- test import_decl accepts "import foo/bar/baz"
+-- test import_decl accepts "import foo/bar", usr/lo-cal/b_az, \"/usr/bin/time\""
+-- test import_decl accepts "import foo/bar as foo"
+-- test import_decl accepts "import foo/bar as foo, \"/usr/local/baz\", bin/time"
+-- test import_decl accepts "import f_o_o as foo, local/baz as ., bin/time"
+-- test import_decl accepts "import f_o_o/bar as foo, \"/usr/local/baz\" as ., \"/usr/bin/time\""
+
+-- test rpl_expression accepts "foo_1:x", "pkg.f:x", "f:\"hello\"", "f:!x", "f:x+", "f:(x y z)", "f:{x y z}"
+-- test rpl_expression accepts "f:(x, y)", "foo:{a, b}"
+-- test rpl_expression accepts "f:(a, 55)", "foo.bar:(1, 2, 3, a b c, d / e, {f}*)", "f:{a / b, 3}+"
+-- test rpl_expression rejects "f:", "pkg.f:"
+-- test rpl_expression includes arglist "f:(x, y)", "f:(3)"
+-- test rpl_expression excludes arglist "f:(x y)"
+-- test rpl_expression includes arg "f:(x)", f:(x y)", "f:x", "f:5", "f:{x y}", "f:{x}",
+-- test rpl_expression includes arg "f:{a / b}+", "f:{(a)}", "f:{[:set:]}"
+-- test rpl_expression includes rawarglist "f:{5}", "f:{7, x, a / b / c+}", "f:{(a),b}", "f:{[:set:]{1,2},\"hi\"}"
+
+
+

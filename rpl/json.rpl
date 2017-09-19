@@ -2,52 +2,55 @@
 ----
 ---- json.rpl    some rpl patterns for processing json input
 ----
----- © Copyright IBM Corporation 2016.
+---- © Copyright IBM Corporation 2016, 2017.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
 
 ---------------------------------------------------------------------------------------------------
--- The rpl definition 'json' matches JSON input and returns it as a monolithic entity with no
--- sub-matches at all.
+-- Note:
 --
--- If you want Rosie to parse out some individual JSON values, you can do this by:
--- (1) Selectively removing 'alias' in some definitions, and/or
--- (2) Adding some definitions of your own to create Rosie captures, as we did below by defining
--- 'json' to be a capturing version of 'json.json_discard'.
+-- A language-integrated parser built specifically to parse JSON is usually the best way to process
+-- json-encoded documents.  Occasionally, though, there will be a json-encoded field within non-json
+-- data, e.g. log files in which some entries contain json data in the message field.
 --
--- Note: There are simpler ways of matching an entire JSON input string in the case where validation
--- is not necessary.  Simply matching text with balanced [] and {} pairs will consume JSON arrays
--- and objects, respectively.
---
--- When matching against the 'json' pattern at the command line, use the -nocolor switch to output
--- the JSON itself.  Or use the -json switch to produce the usual Rosie json structure.  The 'text'
--- field will contain the matched (JSON) string from the input, as always.
+-- When using Rosie to parse such mixed input, it is useful to have a pattern in RPL that will match
+-- a json-encoded value so that the structured data in this value can be extracted later, as needed.
+-- 
 ---------------------------------------------------------------------------------------------------
 
-alias json.string = "\""  {"\\\"" / {! [\"] .}}* "\""
+package json
 
-alias json.int = { [-]? {[1-9][0-9]+} / [0-9] }
-alias json.frac = { [.] [0-9]+ }
-alias json.exp = { [eE] [+-]? [0-9]+ }
-alias json.number = { json.int json.frac? json.exp? }
+import word, num
 
-alias json.true = "true"
-alias json.false = "false"
-alias json.null = "null"
+local key = word.dq
+local string = word.dq
+local number = num.signed_number
+
+local true = "true"
+local false = "false"
+local null = "null"
 
 grammar
-   alias json.json_discard = json.value
-   alias json.value = json.string / json.number / json.object / json.array / json.true / json.false / json.null
-   alias json.member = json.string ":" json.value
-   alias json.object = "{" (json.member ("," json.member)*)? "}"
-   alias json.array = "[" (json.value ("," json.value)*)? "]"
+   value = ~ string / number / object / array / true / false / null
+   member = key ":" value
+   object = "{" (member ("," member)*)? "}"
+   array = "[" (value ("," value)*)? "]"
 end
 
----------------------------------------------------------------------------------------------------
---
--- Match against 'json' to capture a json value: (at the command line, don't forget the -nocolor switch)
---
+-- test value accepts "true", "false", "null"
+-- test value rejects "ture", "f", "NULL"
+-- test value accepts "0", "123", "-1", "1.1001", "1.2e10", "1.2e-10", "+3.3"
+-- test value accepts "\"hello\"", "\"this string has \\\"embedded\\\" double quotes\""
+-- test value rejects "hello", "\"this string has no \\\"final quote\\\" "
+-- test value rejects "--2", "9.1.", "9.1.2", "++2", "2E02."
 
-json = json.json_discard
+-- test value accepts "[]", "[1, 2, 3.14, \"V\", 6.02e23, true]", "[1, 2, [7], [[8]]]"
+-- test value rejects "[]]", "[", "[[]", "{1, 2}"
+
+-- test value accepts "{\"one\":1}", "{ \"one\" :1}", "{ \"one\" : 1  }"
+-- test value accepts "{\"one\":1, \"two\": 2}", "{\"one\":1, \"two\": 2, \"array\":[1,2]}"
+-- test value accepts "[{\"v\":1}, {\"v\":2}, {\"v\":3}]"
+
+
 

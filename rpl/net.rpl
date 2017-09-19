@@ -1,0 +1,259 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- net.rpl     Rosie Pattern Language patterns for hostnames, ip addresses, and such
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+-- FUTURE: Refactor ipv6_mixed and ip_address_v6 for efficiency?
+
+rpl 1.1
+
+package net
+
+-- RFC1035 Domain Names - Implementation and Specification
+--   (https://tools.ietf.org/html/rfc1035)
+-- RFC1123 Requirements for Internet Hosts -- Application and Support
+--   (https:--tools.ietf.org/html/rfc1123) 
+-- RFC3696 Application Techniques for Checking and Transformation of Names
+--   (https:--tools.ietf.org/html/rfc3696)
+-- RFC5952 A Recommendation for IPv6 Address Text Representation
+--   (https://tools.ietf.org/html/rfc5952)
+-- RFC2181 Clarifications to the DNS Specification
+--   (https://tools.ietf.org/html/rfc2181#section-11)
+
+---------------------------------------------------------------------------------------------------
+-- IP ADDRESSES
+---------------------------------------------------------------------------------------------------
+local alias ipv4_component = [:digit:]{1,3}
+local alias ip_address_v4 = { ipv4_component {"." ipv4_component}{3} }
+
+local alias ipv6_component = [:xdigit:]{1,4}
+local alias ipv6_rest = { ":" !>ipv4 ipv6_component }
+
+-- ipv6 per RFC5952
+local alias ip_address_v6 = { ipv6_component ipv6_rest{7} } /
+			    { ipv6_component "::" ipv6_component ipv6_rest{0,4} } /
+			    { ipv6_component ipv6_rest{1} "::" ipv6_component ipv6_rest{0,3} } /
+			    { ipv6_component ipv6_rest{2} "::" ipv6_component ipv6_rest{0,2} } /
+			    { ipv6_component ipv6_rest{3} "::" ipv6_component ipv6_rest{0,1} } /
+			    { ipv6_component ipv6_rest{4} "::" ipv6_component } /
+			    { ipv6_component ipv6_rest{5} "::" } /
+			    { "::" ipv6_component ipv6_rest{0,5} } /
+			    { "::" }  -- undefined address
+
+-- TODO: Currently, cannot test locals
+-- -- test ip_address_v6 rejects "::192.9.5.5", "::FFFF:129.144.52.38"
+
+local alias ipv6_end = {":" ipv4 / ipv6_component}
+
+alias ipv6_mixed = { ipv6_component ipv6_rest{6} ipv6_end } /
+	     { ipv6_component "::" ipv6_component ipv6_rest{0,3} ipv6_end} /
+	     { ipv6_component ipv6_rest{1} "::" ipv6_component ipv6_rest{0,2} ipv6_end} /
+	     { ipv6_component ipv6_rest{2} "::" ipv6_component ipv6_rest{0,1} ipv6_end} /
+	     { ipv6_component ipv6_rest{3} "::" ipv6_component ipv6_end } /
+	     { ipv6_component ipv6_rest{4} "::" ipv4 } /
+	     { "::" ipv6_component ipv6_rest{0,4} ipv6_end} /
+	     { "::" ipv4 }
+
+ipv4 = ip_address_v4
+-- test ipv4 accepts "0.0.0.0", "1.2.234.123", "999.999.999.999"
+-- test ipv4 rejects "1234.1.2.3", "1.2.3", "111.222.333.", "111.222.333..444"
+
+ipv6 = ipv6_mixed / ip_address_v6
+-- test ipv6 includes ipv4 "::192.9.5.5", "::FFFF:129.144.52.38"
+-- test ipv6 excludes ipv4 "1080::8:800:200C:417A", "2010:836B:4179::836B:4179"
+
+-- test ipv6 accepts "::", "::1", "::face:b00c"
+-- test ipv6 accepts "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8:0:0:0:ff00:42:8329", "2001:db8::ff00:42:8329"
+-- test ipv6 accepts "FEDC:BA98:7654:3210:FEDC:BA98:7654:3210", "1080:0:0:0:8:800:200C:4171", "3ffe:2a00:100:7031::1"
+-- test ipv6 accepts "1080::8:800:200C:417A", "::192.9.5.5", "::FFFF:129.144.52.38", "2010:836B:4179::836B:4179"
+-- TODO: add some rejecting tests
+
+ip = ipv4 / ipv6
+-- the above tests validate ip
+-- test ip includes ipv4 "1.2.3.4"
+-- test ip includes ipv6 "::192.9.5.5"
+-- test ip includes ipv4 "::192.9.5.5"
+
+---------------------------------------------------------------------------------------------------
+-- DOMAIN NAMES
+---------------------------------------------------------------------------------------------------
+-- Notes:
+-- (1) RFC1035 specifies a grammar for domain names that is MORE RESTRICTIVE than the host names
+--     defined in the URI specification, RFC3986.
+-- (2) RFC2181 (section 11) says that domain names submitted as queries to DNS can contain any
+--     characters.  Domain names that can be used as hostnames are a subset of the names that could
+--     be submitted to DNS, and so our domain name pattern does NOT allow any characters at all.
+-- (3) We define the pattern 'fqdn' to match hostnames that contain AT LEAST one dot (.) even though
+--     such names may actually be only partially qualified.  A better name for this pattern would be
+--     'pqdn' but this is not an easily recognized abbreviation, whereas 'fqdn' is.
+
+port = [0-9]+
+local alias port_spec = { ":" port }
+local alias let = [[A-Z][a-z]]
+local alias let_dig = let / [0-9]
+local alias let_dig_hyp = let_dig / {"-" let_dig}
+local alias subdomain = { let_dig let_dig_hyp* }		    -- Per RFC1123, can start with digit now
+
+alias fqdn_strict_alias = { subdomain {"." subdomain}+ "."?}
+fqdn_strict = fqdn_strict_alias
+fqdn = { {fqdn_strict_alias / subdomain} port_spec? }
+
+-- test fqdn accepts "a.edu", "A.BC.EDU", "X-Y.CS.CORNELL.EDU", "SRI-NIC.ARPA"
+-- test fqdn accepts "ibm.com.", "9in.nails.band", "1AAA.SRI-NIC.ARPA"
+-- test fqdn accepts "ibm.com:443", "ibm.com.:80"
+-- test fqdn rejects ".EDU", "XY-.CS.CORNELL.EDU", 
+-- test fqdn rejects "ibm.com:", "ibm.com:x"
+
+-- test fqdn_strict rejects "ibm.com:443"
+-- test fqdn_strict rejects "a", "abc", "ZZZZZZ", "Z-9"
+
+
+---------------------------------------------------------------------------------------------------
+-- EMAIL ADDRESSES
+---------------------------------------------------------------------------------------------------
+-- Notes:
+-- (1) Per RFC3696, the name part of an email address has some minor restrictions, such as that a
+--     dot "." cannot be the last character of the name, which are not enforced here.
+-- (2) Per RFC3696, any ASCII character may be part of the name as long as it is escaped with a
+--     backslash.  The escaped form is NOT SUPPORTED IN the 'name' pattern below, as it is rarely seen
+--     in practice (and subject to debate in the Errata).
+
+local alias name_char = { [:alnum:] / [!#$%&'*+-/=?^_`.{|}~] }
+local alias unquoted_name = { name_char {name_char / "."}* }
+local alias quoted_name = { ["] [^"]+ ["] }		    -- " cannot be inside the name
+name = quoted_name / unquoted_name
+email = { name "@" host }
+-- test email accepts "me@here.com", "you+filter@somewhere.org", "k!!{}@example.com", "9name@gmail.com"
+-- test email accepts "customer/department=shipping@example.com", "$A12345@example.com"
+-- test email accepts "!def!xyz%abc@example.com", "_somename@example.com", "\"Joe.\\Blow\"@example.com"
+-- test email accepts "\"John Doe\"@example.com", "\"Can put @ signs here!\"@example.com"
+-- test email rejects "here.com", "foo@bar@example.com"
+
+---------------------------------------------------------------------------------------------------
+-- URI (https://tools.ietf.org/html/rfc3986)
+---------------------------------------------------------------------------------------------------
+-- Notes:
+-- (1) The "future ip literal" is not implemented (page 19, https://tools.ietf.org/html/rfc3986)
+-- (2) Relative URIs of the form "/foo/bar.txt" will match 'path' but not 'uri'
+
+local alias sub_delims = [!$&'()*+,;=]
+local alias gen_delims = [:/?#\[\]@]
+local alias pct_encoded = { "%" [[0-9][A-F][a-f]]{2} }
+local alias unreserved =  [[:alnum:][-._~]]
+local alias pchar = unreserved / pct_encoded / sub_delims / ":" / "@"
+
+local alias regname = { [:alnum:] {unreserved / pct_encoded / sub_delims}* }
+registered_name = { regname {"." regname}* "."? }
+ip_literal = { "[" ipv6 "]" }
+host = ip_literal / ipv4 / registered_name
+
+-- test host accepts "a", "abc", "ZZZZZZ", "Z-9"
+-- test host accepts "a.edu", "A.BC.EDU", "X-Y.CS.CORNELL.EDU", "SRI-NIC.ARPA"
+-- test host accepts "ibm.com.", "9in.nails.band", "1AAA.SRI-NIC.ARPA"
+-- test host accepts "XY-.CS.CORNELL.EDU" (not a valid domain name, but a valid URI hostname)
+-- test host accepts "[FEDC:BA98:7654:3210:FEDC:BA98:7654:3210]", "[1080:0:0:0:8:800:200C:417A]"
+-- test host accepts "[3ffe:2a00:100:7031::1]"
+-- test host accepts "[1080::8:800:200C:417A]", "[::192.9.5.5]", "[::FFFF:129.144.52.38]", "[2010:836B:4179::836B:4179]"
+
+-- test host rejects "ibm.com:443", "example.com.:80"
+-- test host rejects ".EDU"
+-- test host rejects "ibm.com:", "ibm.com:x"
+
+userinfo = { unreserved / pct_encoded / sub_delims / ":" }*
+authority = { { userinfo "@" }? {host port_spec?}? }
+-- test authority accepts ""
+
+local alias segment_nz_nc = { unreserved / pct_encoded / sub_delims / "@" }+
+local alias segment_nz = pchar+
+local alias segment = pchar*
+
+local alias path_empty = ""
+local alias path_rootless = { segment_nz { "/" segment }* }
+local alias path_noscheme = { segment_nz_nc { "/" segment }* }
+local alias path_absolute = { "/" { segment_nz { "/" segment }* }* }
+local alias path_abempty = { "/" segment }*
+
+path = { "/" segment }+ / { segment_nz { "/" segment }+ }
+-- test path accepts "/other/link.html" (Sometimes called a "relative URL")
+-- test path accepts "/", "/a/b", "a/b", "a.b/", "a/b/c.d"
+-- test path rejects "a", "a.b" (no slashes)
+
+-- This is called 'hier_part' in the IETF specifications.  We chose a more informative name,
+-- indicating that this part of a URI contains the authority (if present) and path (if present). 
+authpath = { "//" authority path_abempty } /
+	    path_absolute /
+	    path_rootless
+
+
+local fragment = { pchar / "/" / "?" }*
+local query = { pchar / "/" / "?" }*
+
+scheme = { [:alpha:] [[:alnum:][+.-]]* }
+
+uri = { scheme ":" authpath? { "?" query }? { "#" fragment }? }
+
+-- test uri accepts "ftp://ftp.is.co.za/rfc/rfc1808.txt"
+-- test uri accepts "http://www.ietf.org/rfc/rfc2396.txt"
+-- test uri accepts "ldap://[2001:db8::7]/c=GB?objectClass?one"
+-- test uri accepts "mailto:John.Doe@example.com"
+-- test uri accepts "news:comp.infosystems.www.servers.unix"
+-- test uri accepts "tel:+1-816-555-1212"
+-- test uri accepts "telnet://192.0.2.16:80/"
+-- test uri accepts "urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
+
+-- test uri accepts "http://www.google.com", "http://google.com/"
+-- test uri accepts "https://www.github.com/jamiejennings/rosie-pattern-language"
+-- test uri accepts "ftp://some.ftp.net/path/to/file.zip"
+-- test uri accepts "http://example.com/mypage.html", "ftp://example.com/download.zip"
+-- test uri accepts "mailto:user@example.com", "file:///home/user/file.txt", "tel:1-888-555-5555"
+-- test uri accepts "telnet://192.0.2.16:80/", "http://example.com/resource?foo=bar#fragment"
+
+-- test uri accepts "foo:"
+-- test uri rejects "foo"
+
+---------------------------------------------------------------------------------------------------
+-- URL
+---------------------------------------------------------------------------------------------------
+
+-- "The term 'URL' does not refer to a formal partition of URI space; rather, URL is a useful but
+-- informal concept" (http://www.w3.org/TR/uri-clarification).  We will take advantage of the
+-- informality to use the name 'url' to refer to a uri that requires an authpath.  A uri will match
+-- "foo:" but a url will not.
+-- We also modify the url pattern to avoid accepting input of the form "xyz::w".
+
+url = { scheme ":" !":" authpath { "?" query }? { "#" fragment }? }
+
+-- test url rejects "foo:"
+-- test url rejects "xyz::w"
+
+---------------------------------------------------------------------------------------------------
+-- HTTP commands
+---------------------------------------------------------------------------------------------------
+
+-- Some very simple HTTP patterns
+http_command_name = "GET" / "HEAD" / "PUT" / "POST" / "DELETE" / 
+                     "TRACE" / "OPTIONS" / "CONNECT" / "PATCH"
+http_command = http_command_name url
+http_version = {"HTTP" "/" [:digit:]+ "." [:digit:]+}     -- e.g. "HTTP1.1"
+
+---------------------------------------------------------------------------------------------------
+-- MAC addresses
+---------------------------------------------------------------------------------------------------
+cisco = { {[:xdigit:]{4} "."}{2} [:xdigit:]{4} }
+windows = { {[:xdigit:]{2} "-"}{5} [:xdigit:]{2} }
+common = { {[:xdigit:]{2} ":"}{5} [:xdigit:]{2} }
+
+MAC = cisco / windows / common
+
+-- TODO: MAC needs tests
+
+---------------------------------------------------------------------------------------------------
+-- net.any will match common network patterns (but not all the patterns defined above!)
+---------------------------------------------------------------------------------------------------
+
+-- Match an IP, Host, Email, URL
+any = ip / MAC / fqdn_strict / email / url / path

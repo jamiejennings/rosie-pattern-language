@@ -10,6 +10,7 @@
 #define FALSE 0
 
 #include <stdint.h>
+#include <sys/param.h>		/* MAXPATHLEN */
 
 typedef uint8_t * byte_ptr;
 
@@ -33,8 +34,10 @@ void rosieL_free_string_ptr(struct rosieL_string *s);
 void rosieL_free_stringArray(struct rosieL_stringArray r);
 void rosieL_free_stringArray_ptr(struct rosieL_stringArray *r);
 
-void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs);
-void rosieL_finalize(void *L);
+/* void *rosieL_initialize(struct rosieL_string *rosie_home, struct rosieL_stringArray *msgs); */
+/* void rosieL_finalize(void *L); */
 
-#include "librosie_gen.h"
+void *rosieL_initialize(struct rosieL_string *rosie_home);
+
+/* #include "librosie_gen.h" */
 

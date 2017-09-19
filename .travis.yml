@@ -1,22 +1,14 @@
-# 
+# Rosie Pattern Language
 os:
   - linux
-#  - osx
-
-# osx_image:
-#   - xcode7.3
-#   - xcode8
-#   - xcode8.1
+  - osx
 
 branches:
   only:
   - master
-  - v0.99g
-  - v0.99h
-  - v0.99i
+  - preview
   
 before_install:
-- sudo apt-get update -qq
 
 language: C
 compiler: gcc

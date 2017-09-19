@@ -1,0 +1,113 @@
+---- -*- Mode: rpl; -*-                                                                             
+---- vim:syn=rosie
+----
+---- date.rpl    Common date patterns in Rosie Pattern Language
+----
+---- © Copyright IBM Corporation 2016, 2017.
+---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+---- AUTHORS: Jamie A. Jennings, Kevin Zander
+
+rpl 1.1
+
+package date
+
+-- RFC3339
+--
+--   date-fullyear   = 4DIGIT
+--   date-month      = 2DIGIT  ; 01-12
+--   date-mday       = 2DIGIT  ; 01-28, 01-29, 01-30, 01-31 based on month/year
+--
+-- Note: These patterns do NOT enforce 'date-month' ranges based on month/year.  They allow a
+-- 'date-month' to be 1-31 for any month/year.
+
+year = [0-9]{4,4}
+-- test year accepts "1960", "1999", "2010", "9999"
+-- test year rejects "99", "00", "12345", "year"
+
+month = {"1" [0-2]} /
+	{"0"? [1-9]}
+-- test month accepts "01", "1", "06", "10", "12"
+-- test month rejects "00", "13", "99"
+
+day = {"3" [01]} /
+      {[12] [0-9]} /
+      {"0"? [1-9]}
+-- test day accepts "01", "2", "06", "10", "16", "20", "29", "31"
+-- test day rejects "0", "00", "32", "99"
+
+rfc3339 = { year "-" month "-" day }
+-- test rfc3339 accepts "2017-04-28", "1999-10-31"
+-- test rfc3339 rejects "99-01-01", "2010-15-03", "1999-12-32"
+
+
+-- RFC2822 was obsoleted by RFC5322, but many documents still cite RFC2822 as the specification for
+-- timestamps written in the "Internet Message Format".
+-- 
+-- day-name        =       "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
+-- date            =       day month year
+-- year            =       4*DIGIT
+-- month-name      =       "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / 
+--                         "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
+-- day             =       1*2DIGIT
+
+day_shortname = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
+day_longname = "Monday" / "Tuesday" / "Wednesday" / "Thursday" / "Friday" / "Saturday" / "Sunday"
+day_name = { day_longname / day_shortname }
+month_shortname = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" / "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
+month_longname = "January" / "February" / "March" / "April" / "May" / "June" / "July" / "August" / "September" / "October" / "November" / "December"
+month_name = { month_longname / month_shortname }
+
+rfc2822 = ( day_name "," )? day month_name year
+-- test rfc2822 accepts "Fri, 28 Apr 2017", "Fri, 31 Dec 1999", "31 Dec 2001"
+-- test rfc2822 rejects "Dec 31 2001", "Monday, May 22, 2017"
+-- test rfc2822 rejects "Fri 28, Apr 2010", "Tue, Feb 31st 2001", "31 Dec 01"
+
+
+-- Misc common formats, named for which separator they use and/or where they are popular
+
+dashed = { year "-" month "-" day }
+-- test dashed accepts "2017-04-28", "1999-10-31"
+-- test dashed rejects "77899-01-01", "2010-15-03", "1999-12-32"
+
+slashed = { year "/" month "/" day }
+-- test slashed accepts "2017/04/28", "1999/10/31"
+-- test slashed rejects "77899/01/01", "2010/15/03", "1999/12/32"
+
+spaced = { year " " month " " day }
+-- test spaced accepts "2017 04 28", "1999 10 31", 
+-- test spaced rejects "77899 01 01", "2010 15 03", "1999 12 32", "1999 10   03"
+
+spaced_en = { year " " month_name " " day }
+-- test spaced_en accepts "2017 Apr 28", "1999 October 31", 
+-- test spaced_en rejects "77899 January 01", "2010 Saturn 03", "1999 Dec 32", "2010 May   03"
+
+short_long_year = [0-9]{4} / [0-9]{2}
+
+us_dashed = { month "-" day "-" short_long_year }
+-- test us_dashed accepts "4-28-2017", "04-28-2017", "10-31-1999", "1-1-01"
+-- test us_dashed rejects "01-01-77899", "15-03-2010", "12-32-1999"
+
+us_slashed = { month "/" day "/" short_long_year }
+-- test us_slashed accepts "04/28/2017", "10/31/1999", "1/1/01"
+-- test us_slashed rejects "01/01/77899", "15/03/2010", "12/32/1999"
+
+eur = { day "." month "." short_long_year }
+--test eur accepts "31.12.1991", "15.4.74"
+--test eur rejects "1.13.1991", "45.4.74"
+
+us_short = day month_name year
+
+us_long = (day_name ","?)? month_name day ","? year?
+-- test us_long accepts "April 1, 1900", "Jan 23 2017", "Apr     8"
+-- test us_long accepts "Dec 31 2016", "March 3 1999",
+-- test us_long rejects "1 October 1900", "Superbowl 1965", "Apr     48"
+-- test us_long accepts "Sat Aug 12"
+
+-- Note: us_long also matches the output of the unix 'date' command (in English/U.S. locale), using
+-- the default output format, which is: day_shortname month_shortname day year?
+
+alias us = us_dashed / us_slashed / us_long / us_short
+
+any = us / eur / dashed / slashed / rfc2822 / rfc3339 / spaced_en / spaced
+
+

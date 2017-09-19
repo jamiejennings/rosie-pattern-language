@@ -1,0 +1,15 @@
+package name_is_unexpectedly_different_from_file_name
+
+local x = "hello"
+y = x "world"
+
+local grammar
+   gx = "hello"
+end
+
+grammar
+   gy = gx "world"
+end
+
+
+
