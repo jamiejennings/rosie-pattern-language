@@ -82,30 +82,32 @@ files can be found in `/usr/local/lib/rosie/`.
 
 ## Using the CLI
 
-- Examples
-- Link to man page
+**Examples forthcoming**
+
+The [CLI man page](doc/man/rosie.1] and [an html version](doc/man/rosie.html)
+are available.  A markdown version is forthcoming.
 
 ## Using the REPL
 
-- Examples
-- Link to full reference?
+**Examples forthcoming**
+
+See the [REPL documentation](doc/repl.md).
 
 ## Using the API
 
-...Rosie in your own programs...
+Use Rosie in your own programs!  Until this section is complete, see the
+high-level notes [in this section](#api-help) below.
 
+**Examples forthcoming**
+
+**To be written:**
 - Language coverage
 - Building librosie
-- Link to full api documentation
+- Full api documentation
 
-## API
-
-- Describe librosie
-- Link to full api doc
 
 ## Project extras
 - [Syntax highlighting](extra) for some editors 
-- [Why does Rosie Pattern Language exist?](doc/raisondetre.md)
 - Some interesting [quotes about regex](doc/quotes.txt) and related topics
 
 
@@ -153,7 +155,7 @@ it easy to upload/download those dependencies.
 We are happy to add more patterns to the initial library we've started in the
 [rpl directory](rpl), whether they build on what we have or are entirely new.
 
-### Calling Rosie from Go, Python, node.js, Ruby, Java, or ...?
+### Calling Rosie from Go, Python, node.js, Ruby, Java, or ...?  <a name="api-help"></a> 
 
 Rosie is available as a [C library](ffi) that is callable from these
 languages.  There are [sample programs](ffi/samples) that demonstrate it, and
@@ -206,10 +208,12 @@ automatically generating RPL patterns, for example:
 
 In addition to the people listed in the CONTRIBUTORS file, we wish to thank:
 
--  Roberto Ierusalimschy, Waldemar Celes, and Luiz Henrique de Figueiredo,
-    the creators of [the Lua language](http://www.lua.org) (MIT License);
+- Roberto Ierusalimschy, Waldemar Celes, and Luiz Henrique de Figueiredo, the
+  creators of [the Lua language](http://www.lua.org) (MIT License); and again
+  Roberto, for his [lpeg library](http://www.inf.puc-rio.br/~roberto/lpeg) (MIT
+  License), which has been critical to implementing Rosie.
 
--  the Lua community (at large);
+-  The Lua community (at large);
 
 -  Mark Pulford, the author of
    [lua-cjson](http://www.kyne.com.au/%7Emark/software/lua-cjson.php) (MIT
@@ -220,11 +224,6 @@ In addition to the people listed in the CONTRIBUTORS file, we wish to thank:
 
 -  Peter Melnichenko, the author of
    [argparse](https://github.com/mpeterv/argparse) (MIT License);
-
-- and again Roberto Ierusalimschy, for his
-    [lpeg library](http://www.inf.puc-rio.br/~roberto/lpeg), which has been
-    critical to implementing Rosie (MIT License).
-
 
 ## Other sources
 
