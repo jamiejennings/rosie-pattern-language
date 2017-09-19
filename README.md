@@ -84,7 +84,7 @@ files can be found in `/usr/local/lib/rosie/`.
 
 **Examples forthcoming**
 
-The [CLI man page](doc/man/rosie.1] and [an html version](doc/man/rosie.html)
+The [CLI man page](doc/man/rosie.1) and [an html version](doc/man/rosie.html)
 are available.  A markdown version is forthcoming.
 
 ## Using the REPL
