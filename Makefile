@@ -323,14 +323,21 @@ sniff: $(ROSIEBIN)
 	    false; \
         fi
 
+# -----------------------------------------------------------------------------
+# Tests need to be done with dumb terminal type because the cli and
+# repl tests compare the expected output to the actual output byte by
+# byte.  With other terminal types, the ANSI color codes emitted by
+# Rosie can be munged by the terminal, making some tests fail when
+# they should not.
+
 .PHONY: test
 test:
 	@echo Running tests in test/all.lua
-	echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D
+	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D)
 
 .PHONY: installtest
 installtest:
 	@echo Running tests in $(BUILD_ROOT)/test/all.lua
-	echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D
+	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D)
 
 
