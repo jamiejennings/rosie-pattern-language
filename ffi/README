@@ -1,14 +1,2 @@
-Unix-like OS's expect to find dynamically linked libraries, like
-librosie.so, in a few special places in the filesystem.  In order to
-run one of the sample Rosie drivers, you may not want to "install"
-librosie by copying it into a system directory.
-
-Two common ways to avoid installing librosie are:
-
-1. Copy it to (or create a link to it in) the directory of the driver
-   program you are running.  The setup.sh script should create such a
-   link for you.
-2. Set the LD_LIBRARY_PATH (Linux) or DYLD_LIBRARY_PATH (OSX) to
-   include the directory where librosie lives.  The script C/rtest.sh
-   does this, and then runs the rtest binary.
+The Rosie API for Rosie version 1.0.0-alpha will be available soon.
 
