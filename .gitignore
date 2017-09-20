@@ -8,36 +8,23 @@
 **/*~
 *.tar.gz
 
-# The build process creates rosie.lua.  The user should copy this to
-# wherever they want to use it (via lua 'require') to load rosie into
-# a regular lua interpreter. 
-rosie.lua
-
-# The bin and lib directories, and some files, are created from scratch during the build
+# The bin and lib directories, and the files listed here, are created
+# from scratch during the build
 bin
 lib
 rosie.lua
 build.log
+librosie.a
+librosie.so
 
 # The CMake tool creates a build dir
 build
 
-ffi/librosie/liblua/*
-ffi/librosie/liblpeg/*
-ffi/librosie/librosie_gen.c
-ffi/librosie/librosie_gen.h
-ffi/samples/C/rtest
-ffi/samples/**/setvars
-ffi/samples/nodejs/node_modules/*
-ffi/samples/python/*.pyc
+# Places where object files are kept while building librosie
+src/librosie/liblua/*
+src/librosie/liblpeg/*
+src/librosie/libcjson/*
 
-src/c/repl/rosie
-src/c/librosie/node_modules/*
-src/c/librosie/go/src/ffi/libs/*
-src/c/librosie/go/src/hello/
-
-# These are symlinks within the repo:
-src/c/librosie/go/src/ffi/librosie.c
-src/c/librosie/go/src/ffi/librosie.h
+# The following are symlinks within the repo
 
 
