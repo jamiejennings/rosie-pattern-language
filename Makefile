@@ -54,7 +54,7 @@ ROSIED = $(DESTDIR)/lib/rosie
 #ROSIE_ROOT = $(DESTDIR)/share/rosie
 
 .PHONY: default
-default: $(PLATFORM) save_build_info
+default: $(PLATFORM)
 
 SUBMOD = submodules
 ROSIEBIN = $(BUILD_ROOT)/bin/rosie
@@ -81,6 +81,7 @@ clean:
 	-cd $(JSON_DIR) && make clean
 	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
 	rm -f $(submodule_sentinel)
+	rm -f build.log
 
 .PHONY: none
 none:
@@ -134,6 +135,7 @@ $(submodule_sentinel):
 	git submodule update --checkout
 	cd $(LUA_DIR) && rm -f include && ln -sf src include
 	cp -p $(LUA_DIR)/README $(submodule_sentinel)
+	@$(BUILD_ROOT)/src/build_info.sh "git_submodules" $(BUILD_ROOT) "git" >> $(BUILD_ROOT)/build.log
 
 bin/lua: $(LUA_DIR)/src/lua
 	mkdir -p bin
@@ -141,6 +143,7 @@ bin/lua: $(LUA_DIR)/src/lua
 
 $(LUA_DIR)/src/lua: $(submodules)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM) $(LINUX_CFLAGS) $(LINUX_LDFLAGS)
+	@$(BUILD_ROOT)/src/build_info.sh "lua" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 bin/luac: bin/lua
 	cp $(LUA_DIR)/src/luac bin
@@ -152,6 +155,7 @@ lib/lpeg.so: $(lpeg_lib)
 
 $(lpeg_lib): $(submodules)
 	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../$(LUA)
+	@$(BUILD_ROOT)/src/build_info.sh "lpeg" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 json_lib = $(JSON_DIR)/cjson.so
 lib/cjson.so: $(json_lib)
@@ -160,9 +164,11 @@ lib/cjson.so: $(json_lib)
 
 $(json_lib): $(submodules)
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
+	@$(BUILD_ROOT)/src/build_info.sh "json" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
-lib/argparse.luac: submodules/argparse/src/argparse.lua
+lib/argparse.luac: submodules/argparse/src/argparse.lua bin/luac
 	bin/luac -o $@ $<
+	@$(BUILD_ROOT)/src/build_info.sh "argparse" $(BUILD_ROOT) "bin/luac" >> $(BUILD_ROOT)/build.log
 
 readline_lib = $(READLINE_DIR)/readline.so
 lib/readline.so: $(readline_lib)
@@ -171,6 +177,7 @@ lib/readline.so: $(readline_lib)
 
 $(READLINE_DIR)/readline.so:
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUADIR=../$(LUA)
+	@$(BUILD_ROOT)/src/build_info.sh "readline_stub" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 $(EXECROSIE): compile
 	@/usr/bin/env echo "Creating $(EXECROSIE)"
@@ -196,6 +203,7 @@ lib/submodule.luac: $(LUAMOD_DIR)/submodule.lua bin/luac
 
 lib/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
+	@$(BUILD_ROOT)/src/build_info.sh $@ $(BUILD_ROOT) "bin/luac" >> $(BUILD_ROOT)/build.log
 
 lib/run-rosie:
 	mkdir -p lib
@@ -258,7 +266,7 @@ install_so: lib/lpeg.so lib/cjson.so lib/readline.so
 install_metadata:
 	mkdir -p "$(ROSIED)"
 	cp CHANGELOG CONTRIBUTORS LICENSE README VERSION "$(ROSIED)"
-	-cp build.log "$(ROSIED)"
+	-cp $(BUILD_ROOT)/build.log "$(ROSIED)"
 
 # Install the real run script, and the rosie.lua file
 .PHONY: install_run_script
@@ -291,10 +299,6 @@ uninstall:
 	@-rm -vf $(INSTALL_ROSIEBIN)
 	@echo "Removing $(ROSIED)"
 	@-rm -Rvf $(ROSIED)/
-
-.PHONY: save_build_info
-save_build_info: $(ROSIEBIN)
-	@$(BUILD_ROOT)/src/build_info.sh $(BUILD_ROOT) $(CC) > $(BUILD_ROOT)/build.log
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)

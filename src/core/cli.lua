@@ -51,7 +51,7 @@ else
 end
 
 import = rosie.import
-mod = require "submodule"
+mod = import "submodule"
 
 ROSIE_VERSION = rosie.config().ROSIE_VERSION
 
@@ -82,36 +82,31 @@ local function print_rosie_config()
    local fmt = fmt1 .. " = %s"
    local config = rosie.config()
    local multi_sourced = {ROSIE_LIBPATH = "ROSIE_LIBPATH_SOURCE"}
-   local any = false
-   for name, sourceinfo in pairs(multi_sourced) do
-      if config[sourceinfo]=="env" then
-	 print("Configured from environment variable: ")
-	 printf(fmt, name, config[name])
-	 any = true
-      elseif config[sourceinfo]=="cli" then
-	 print("Configured on command line: ")
-	 printf(fmt, name, config[name])
-	 any = true
+   local function print_if_source(sourcetype)
+      for name, sourcename in pairs(multi_sourced) do
+	 if config[sourcename] == sourcetype then
+	    printf(fmt, name, config[name])
+	 end
       end
    end
-   if not any then printf(fmt1, "None"); end
+   print("Configured from environment variable: ")
+   print_if_source("env")
    print()
-   
+   print("Configured on command line: ")
+   print_if_source("cli")
+   print()
    print("Internal configuration:")
    for _,info in ipairs(config) do printf(fmt, info.name, info.value); end
 
    print()
-   print("Build log:")
-   local log = io.open(ROSIE_HOME .. "/build.log", "r")
-   if not log then
-      printf(fmt1, "Not found")
+   io.write("Build log: ")
+   local buildlogfile = ROSIE_HOME .. "/build.log"
+   local log = io.open(buildlogfile, "r")
+   if log then
+      io.write(buildlogfile, "\n")
+      log:close()
    else
-      local line = log:read("l")
-      while line do
-	 local name, val = line:match('([^ ]+) (.*)')
-	 printf(fmt, name, val)
-	 line = log:read("l")
-      end
+      io.write("Not found\n")
    end
 end
 
