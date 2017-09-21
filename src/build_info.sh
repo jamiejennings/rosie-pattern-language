@@ -9,18 +9,16 @@ component=$1
 dir=$2
 cc=$3
 
-echo "# Build start"
+echo "# Build step"
 echo "COMPONENT: $component"
+echo "COMPILER: $cc"
 echo "BUILD_DATE: $(date)"
 echo "BUILD_USER: $(whoami)"
-echo "BUILD_DIR: $(pwd)"
 echo "BUILD_OSTYPE: $OSTYPE"
 echo "BUILD_HOSTNAME: $HOSTNAME"
-echo "BUILD_HOSTTYPE: $HOSTTYPE"
 echo "BUILD_PLATFORM: $((uname -o || uname -s) 2> /dev/null)"
 echo "BUILD_PLATFORM_VER: $((uname -r) 2> /dev/null)"
 echo "BUILD_PLATFORM_HW: $((uname -m) 2> /dev/null)"
-echo "COMPILER: $cc"
 
 if [ ! -d "$dir" ]; then
     echo "ERROR: BUILD_ROOT \"$dir\" not a directory"

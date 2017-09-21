@@ -14,7 +14,7 @@
 --     line argument to the Rosie run script, will launch Rosie in development mode.  The code
 --     below does not need to process that switch.
 
-ROSIE_COMMAND = arg[1]
+rosie_command = arg[1]
 ROSIE_HOME = arg[2]
 ROSIE_DEV = (arg[3]=="true")
 
@@ -54,6 +54,7 @@ import = rosie.import
 mod = import "submodule"
 
 ROSIE_VERSION = rosie.config().ROSIE_VERSION
+rosie.set_configuration("ROSIE_COMMAND", rosie_command)
 
 engine_module = assert(rosie.import("engine_module"), "failed to load engine_module package")
 common = assert(rosie.import("common"), "failed to open common package")
@@ -83,16 +84,22 @@ local function print_rosie_config()
    local config = rosie.config()
    local multi_sourced = {ROSIE_LIBPATH = "ROSIE_LIBPATH_SOURCE"}
    local function print_if_source(sourcetype)
+      local any = false
       for name, sourcename in pairs(multi_sourced) do
 	 if config[sourcename] == sourcetype then
+	    if not any then
+	       print()
+	       any = true
+	    end
 	    printf(fmt, name, config[name])
 	 end
-      end
+      end -- for
+      if not any then print("  None"); end
    end
-   print("Configured from environment variable: ")
+   io.write("Configured from environment variable: ")
    print_if_source("env")
    print()
-   print("Configured on command line: ")
+   io.write("Configured on command line: ")
    print_if_source("cli")
    print()
    print("Internal configuration:")

@@ -153,29 +153,29 @@ lib/lpeg.so: $(lpeg_lib)
 	mkdir -p lib
 	cp $(lpeg_lib) lib
 
-$(lpeg_lib): $(submodules)
+$(lpeg_lib): $(submodule) $(LUA_DIR)/src/lua
 	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../$(LUA)
 	@$(BUILD_ROOT)/src/build_info.sh "lpeg" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
-json_lib = $(JSON_DIR)/cjson.so
-lib/cjson.so: $(json_lib)
+json_lib=$(JSON_DIR)/cjson.so
+lib/cjson.so: $(json_lib) 
 	mkdir -p lib
 	cp $(json_lib) lib
 
-$(json_lib): $(submodules)
+$(json_lib): $(submodules) $(LUA_DIR)/src/lua
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	@$(BUILD_ROOT)/src/build_info.sh "json" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
-lib/argparse.luac: submodules/argparse/src/argparse.lua bin/luac
-	bin/luac -o $@ $<
+lib/argparse.luac: $(submodules) submodules/argparse/src/argparse.lua bin/luac
+	bin/luac -o lib/argparse.luac submodules/argparse/src/argparse.lua
 	@$(BUILD_ROOT)/src/build_info.sh "argparse" $(BUILD_ROOT) "bin/luac" >> $(BUILD_ROOT)/build.log
 
 readline_lib = $(READLINE_DIR)/readline.so
-lib/readline.so: $(readline_lib)
+lib/readline.so: $(readline_lib) 
 	mkdir -p lib
 	cp $(readline_lib) lib
 
-$(READLINE_DIR)/readline.so:
+$(READLINE_DIR)/readline.so: $(submodules)
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUADIR=../$(LUA)
 	@$(BUILD_ROOT)/src/build_info.sh "readline_stub" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
