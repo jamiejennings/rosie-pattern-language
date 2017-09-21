@@ -153,7 +153,7 @@ lib/lpeg.so: $(lpeg_lib)
 	mkdir -p lib
 	cp $(lpeg_lib) lib
 
-$(lpeg_lib): $(submodule) $(LUA_DIR)/src/lua
+$(lpeg_lib): $(submodules) 
 	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../$(LUA)
 	@$(BUILD_ROOT)/src/build_info.sh "lpeg" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
@@ -162,7 +162,7 @@ lib/cjson.so: $(json_lib)
 	mkdir -p lib
 	cp $(json_lib) lib
 
-$(json_lib): $(submodules) $(LUA_DIR)/src/lua
+$(json_lib): $(submodules) 
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
 	@$(BUILD_ROOT)/src/build_info.sh "json" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
