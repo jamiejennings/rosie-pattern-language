@@ -248,9 +248,6 @@ check(code==0, "Return code is zero")
 check(results[1]:find("ROSIE_HOME"))      
 check(results[1]:find("ROSIE_VERSION"))      
 check(results[1]:find("ROSIE_COMMAND"))      
-check(results[1]:find("BUILD_DATE"))      
-check(results[1]:find("GIT_BRANCH"))      
-check(results[1]:find("GIT_COMMIT"))      
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Help command")
