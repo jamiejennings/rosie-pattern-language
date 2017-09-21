@@ -243,7 +243,7 @@ local function populate_info()
       {name="HOSTNAME",      value=os.getenv("HOSTNAME") or "",         desc="host on which rosie is running"},
       {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},
       {name="OSTYPE",        value=os.getenv("OSTYPE") or "",           desc="type of OS on which rosie is running"},
-      {name="CWD",           value=os.getenv("PWD") or "",              desc="current working directory"},
+--      {name="CWD",           value=os.getenv("PWD") or "",              desc="current working directory"},
       {name="ROSIE_COMMAND", value=ROSIE_COMMAND or "",                 desc="invocation command, if rosie invoked through the CLI"}
    }
    for _,entry in ipairs(ROSIE_INFO) do ROSIE_INFO[entry.name] = entry.value; end
@@ -301,8 +301,17 @@ common.add_encoder("subs", 0,
 					  "\n")
 		   end)
 
-rosie_package.config = function(...) return ROSIE_INFO; end
+
 rosie_package.set_configuration = set_configuration
+rosie_package.config = function(...) return ROSIE_INFO; end
+rosie_package.config_json = function(...)
+			       local array = {}
+			       for i, entry in ipairs(ROSIE_INFO) do
+				  array[i] = entry
+			       end
+			       return cjson.encode(array)
+			    end
+
 rosie_package.encoders = common.encoder_table
 rosie_package.engine = engine
 rosie_package.import = import
