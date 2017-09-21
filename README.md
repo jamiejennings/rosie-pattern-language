@@ -76,7 +76,7 @@ we will call the _build directory_).  Then:
 2. `make install`  (optional)
 
 After `make`, you can run Rosie from the build directory using `bin/rosie`.
-Running `make install` creates a separate instalaltion directory, by default in
+Running `make install` creates a separate installation directory, by default in
 `/usr/local`.  The executable is `/usr/local/bin/rosie`, and the other needed
 files can be found in `/usr/local/lib/rosie/`.
 
