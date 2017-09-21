@@ -375,7 +375,7 @@ common.rpl_version =
 		     return common.rpl_version.factory{major=maj; minor=min};
 		  end,
 		  function(v)
-		     return "<rpl version " .. tostring(v.major).."."..tostring(v.minor) .. ">"
+		     return tostring(v.major).."."..tostring(v.minor)
 		  end)
 
 common.compiler = 
