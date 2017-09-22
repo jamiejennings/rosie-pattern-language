@@ -497,9 +497,7 @@ local identity_fn = function(...) return ... end
 
 common.encoder_table = 
    setmetatable({ line = {2, identity_fn},
-		  json = {1, function(m, input, start)
-				return lpeg.getdata(m)
-			     end},
+		  json = {1, identity_fn},
 		  byte = {0, identity_fn},
 		  none = {0, function(...)
 				return nil
@@ -509,7 +507,8 @@ common.encoder_table =
 		{__index = function(...) return {} end})
 
 function common.encoder_returns_userdata(encoder)
-   return (encoder=="byte") or (encoder=="line")
+   local fn = common.encoder_table[encoder]
+   return fn and (fn[2] == identity_fn) and true
 end
 
 function common.add_encoder(name, rmatch_arg, fn)
