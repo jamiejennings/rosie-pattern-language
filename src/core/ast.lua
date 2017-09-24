@@ -274,34 +274,34 @@ local function flatten_cexp_in_place(a, target_type)
    end
 end
 
-local convert_char_exp;
+-- local convert_char_exp;
 
-local function infix_to_prefix(exps, sref)
-   -- exps := exp (op exp)*
-   assert(sref)
-   local rest = filter(not_atmosphere, exps)
-   local first = rest[1]
-   local op = rest[2]
-   if not op then return convert_char_exp(first, sref); end
-   local optype = op.subs[1].type
-   assert(optype)
-   rest = list.cdr(list.cdr(rest))
-   if optype=="charset_exp.intersection" then
-      return ast.cs_intersection.new{cexps = {convert_char_exp(first, sref),
-					      infix_to_prefix(rest, sref)},
-				     sourceref=sref}
-   elseif optype=="charset_exp.difference" then
-      return ast.cs_difference.new{first = convert_char_exp(first, sref),
-				   second = infix_to_prefix(rest, sref),
-				   sourceref=sref}
-   elseif optype=="charset_exp.union" then
-      return ast.cs_union.new{cexps = {convert_char_exp(first, sref), 
-				       infix_to_prefix(rest, sref)}, 
-			      sourceref=sref}
-   else
-      error("Internal error: do not know how to convert charset op " .. tostring(optype))
-   end
-end
+-- local function infix_to_prefix(exps, sref)
+--    -- exps := exp (op exp)*
+--    assert(sref)
+--    local rest = filter(not_atmosphere, exps)
+--    local first = rest[1]
+--    local op = rest[2]
+--    if not op then return convert_char_exp(first, sref); end
+--    local optype = op.subs[1].type
+--    assert(optype)
+--    rest = list.cdr(list.cdr(rest))
+--    if optype=="charset_exp.intersection" then
+--       return ast.cs_intersection.new{cexps = {convert_char_exp(first, sref),
+-- 					      infix_to_prefix(rest, sref)},
+-- 				     sourceref=sref}
+--    elseif optype=="charset_exp.difference" then
+--       return ast.cs_difference.new{first = convert_char_exp(first, sref),
+-- 				   second = infix_to_prefix(rest, sref),
+-- 				   sourceref=sref}
+--    elseif optype=="charset_exp.union" then
+--       return ast.cs_union.new{cexps = {convert_char_exp(first, sref), 
+-- 				       infix_to_prefix(rest, sref)}, 
+-- 			      sourceref=sref}
+--    else
+--       error("Internal error: do not know how to convert charset op " .. tostring(optype))
+--    end
+-- end
 
 local function convert_cs_named(pt, sref)
    assert(sref)
@@ -318,22 +318,42 @@ local function convert_cs_named(pt, sref)
 			   sourceref=sref}
 end
 
-function convert_char_exp(pt, sref)
+function convert_bracket(pt, sref)
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
+   assert(pt.type=="exp.bracket")
    local exps, compflag
-   if pt.type=="charset_exp" then
-      assert(pt.subs and pt.subs[1])
-      pt = pt.subs[1]
-      exps = list.from(pt.subs)
-      compflag = (pt.subs[1].type=="complement")
-      if compflag then
-	 exps = list.cdr(exps)
-	 assert(pt.subs[2])
-      end
+
+   exps = filter(not_atmosphere, pt.subs)
+   assert(exps[1])
+   compflag = (exps[1].type=="complement")
+   if compflag then
+      exps = list.cdr(exps)
+   end
+   if exps[2] then
+      print("***"); table.print(exps); end
+   assert(exps[1] and (not exps[2]))
+   local cexp
+--   print("*** exps[1].type = ", exps[1].type)
+--   print("*** #exps[1].subs = ", #exps[1].subs)
+   if exps[1].type=="exp.sequence" then
+      -- TEMPORARILY USE cs_union UNTIL WE CHANGE THE COMPILER
+      local explist = filter(not_atmosphere, flatten(exps[1], "exp.sequence"))
+      cexp = ast.cs_union.new{cexps = map(function(exp) return convert_exp(exp, sref) end,
+					  explist),
+			      sourceref=sref}
    else
-      -- We have something that appeared inside a charset_exp.
-      exps = list.from(pt.subs)
-      compflag = false
+      cexp = convert_exp(exps[1], sref)
+   end
+   return ast.bracket.new{cexp = cexp,
+			  complement = compflag,
+			  sourceref=sref}
+end
+
+function convert_simple_charset(pt, sref)
+   local exps = list.from(pt.subs)
+   local compflag = (pt.subs[1].type=="complement")
+   if compflag then
+      exps = list.cdr(exps)
    end
    if pt.type=="named_charset" then
       return convert_cs_named(pt, sref)
@@ -346,21 +366,7 @@ function convert_char_exp(pt, sref)
 			      last = exps[2].data,
 			      complement = compflag,
 			      sourceref=sref}
-   elseif pt.type=="charset_exp.compound_charset" then
-      assert(exps[1])
-      local prefix_cexp
-      if not exps[2] then
-	 -- There is only one charset expression inside the compound charset
-	 local cexp = convert_char_exp(exps[1], sref)
-	 if compflag then cexp.complement = not cexp.complement; end
-	 return cexp
-      end
-      prefix_cexp = infix_to_prefix(exps, sref)
-      flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
-      flatten_cexp_in_place(prefix_cexp, ast.cs_union)
-      return ast.bracket.new{cexp = prefix_cexp,
-			    complement = compflag,
-			    sourceref=sref}
+   
    else
       error("Internal error: do not know how to convert charset exp type: " .. tostring(pt.type))
    end
@@ -478,8 +484,10 @@ function convert_exp(pt, sref)
       else
 	 assert(false, "unexpected sub-match in hash_exp parse tree")
       end
-   elseif pt.type=="charset_exp" then
-      return convert_char_exp(pt, sref)
+   elseif pt.type=="named_charset" or pt.type=="charlist" or pt.type=="range" then
+      return convert_simple_charset(pt, sref)
+   elseif pt.type=="exp.bracket" then
+      return convert_bracket(pt, sref)
    elseif pt.type=="exp.quantified_exp" then
       return convert_quantified_exp(pt, convert_exp, sref)
    elseif pt.type=="exp.application" then
@@ -619,6 +627,15 @@ ast.from_parse_tree = convert
 -- Convert a parse tree produced by the rpl core parser
 ---------------------------------------------------------------------------------------------------
 
+function convert_core_charset_exp(pt, sref)
+   assert(pt.type=="charset_exp")
+   local cs_exps = map(function(exp) return convert_simple_charset(exp, sref) end, pt.subs)
+   return ast.bracket.new{cexp = ast.cs_union.new{cexps=cs_exps,
+						  sourceref=sref},
+			  complement = false,
+			  sourceref=sref}
+end
+
 function convert_core_exp(pt, sref)
    local sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local function convert1(pt)
@@ -641,7 +658,7 @@ function convert_core_exp(pt, sref)
       assert(text:sub(1,1)=='"' and text:sub(-1,-1)=='"', "literal not in quotes: " .. text)
       return ast.literal.new{value = pt.data:sub(2, -2), sourceref=sref}
    elseif pt.type=="charset_exp" then
-      return convert_char_exp(pt, sref)
+      return convert_core_charset_exp(pt, sref)
    elseif pt.type=="named_charset0" then
       local text = pt.data
       assert(text:sub(1,2)=="[:" and text:sub(-2,-1)==":]")

@@ -62,18 +62,16 @@ name = {!":" .}+
 named_charset = { complement? name } 
 alias simple_charset = { "[" { ":" named_charset ":]" } /
 	                  { range "]" } /
-		          { charlist "]" } /
-		          syntax_error
-		    }
-grammar
-   charset_exp = compound_charset / simple_charset
-   compound_charset = { "[" complement? combination atmos "]" }
-   alias combination = { atmos charset_exp { atmos op atmos charset_exp }* }
-   op = intersection / difference / union
-   union = ""
-   intersection = "&"
-   difference = "-"
-end
+		          { charlist "]" } }
+-- grammar
+--    charset_exp = compound_charset / simple_charset
+--    compound_charset = { "[" complement? combination atmos "]" }
+--    alias combination = { atmos charset_exp { atmos op atmos charset_exp }* }
+--    op = intersection / difference / union
+--    union = ""
+--    intersection = "&"
+--    difference = "-"
+-- end
 
 low =  [[0-9]]*				    -- an int or nothing
 high = [[0-9]]* 
@@ -90,8 +88,10 @@ alias slash =         [[/]]
 alias and =           [[&]]
 alias open =          [[(]]
 alias openraw =       [[{]]
+alias openbracket =   [[\[]]
 alias close =         [[)]]
 alias closeraw =      [[}]]
+alias closebracket =  [[\]]]
 
 negation = [[!]]
 lookahead = [[>]]
@@ -120,9 +120,11 @@ grammar
 	           quoted_string /
 	           raw /
 	           cooked /
-	           charset_exp /
+	           simple_charset /
+	           bracket /
 	           predicate /
    	           hash_exp} quantifier? }
+   bracket = { openbracket complement? exp atmos closebracket }
    cooked = { open exp atmos close }
    raw = { openraw exp atmos closeraw }
    predicate = { predicate_symbol ws? term }

@@ -316,7 +316,8 @@ function bracket(a, env, prefix, messages)
       a.pat = pattern.new{name="bracket", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
       return a.pat
    else
-      assert(false, "compile: unknown cexp inside bracket", a)
+      table.print(a.cexp)
+      assert(false, "compile: unknown cexp inside bracket: " .. tostring(a.cexp))
    end
 end
 

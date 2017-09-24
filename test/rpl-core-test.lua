@@ -1123,15 +1123,15 @@ subheading("Rejecting illegal expressions")
 for _, exp in ipairs{"[]]",
 --		     "[^]",
 --		     "[xyz^]",
-		     "[[abc] / [def]]",
-		     "[[a-z] misplaced_identifier [def]]",
+--		     "[[abc] / [def]]",
+--		     "[[a-z] misplaced_identifier [def]]",
 		     "[[a-z] [def]",		    -- no final closing bracket
 		     "[]",			    -- this was legal before v0.99?
                      "[[abc][]]"} do
    pat, msg = e:compile(exp)
    check(not pat, "this expression was expected to fail: " .. exp)
    if (type(msg)=="table" and msg[1]) then
-      check(violation.syntax.is(msg[1]))
+      check(violation.syntax.is(msg[1]), "No violation for: " .. exp)
    end
    -- :find("Syntax error at line 1"), "Did not get syntax error for exp " ..
    -- exp .. ".  Message was: " .. msg .. '\n')
