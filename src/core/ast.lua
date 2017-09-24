@@ -433,7 +433,14 @@ function convert_exp(pt, sref)
    local function convert1(pt)
       return convert_exp(pt, sref)
    end
-   if pt.type=="exp.predicate" then
+   if pt.type=="exp.term" then
+      assert(pt.subs and pt.subs[1])
+      if pt.subs[2] then
+	 return convert_quantified_exp(pt, convert_exp, sref)
+      else
+	 return convert_exp(pt.subs[1], sref)
+      end
+   elseif pt.type=="exp.predicate" then
       return ast.predicate.new{type = subs[1].type,
 			       exp = convert_exp(subs[2], sref),
 			       sourceref=sref}

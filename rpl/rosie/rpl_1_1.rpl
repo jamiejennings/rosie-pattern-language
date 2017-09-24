@@ -7,22 +7,13 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- TODO:
--- (1) Add to rosie tests the parsing of the following extensions:
---   repetition with a single parameter, e.g. e{5}
---   optional semi-colons between statements, incl. empty statement
---   nested charset_exps, e.g. [^[[[a-z]][^0-9]]] 
---   set intersection, e.g. [[a-z]&&[xyz]]
---   set difference, e.g. [[a-z]-[xyz]]
--- (2) Add stubs to compiler for these exps, with informative error messages
---
--- DONE:
--- + x.y.z is a parse error. Else the second "." would parse as dot
--- + .y.z is a parse error.  Else the first "." would parse as dot
--- + Sequences of the one-char identifiers need no whitespace separating them:
---    ... is NOT a parse error.
---    .~ is NOT a parse error.
---    .$ is NOT a parse error.  
+-- TODO: Ensure there are tests for these recent changes.
+--   - x.y.z is a parse error. Else the second "." would parse as dot
+--   - .y.z is a parse error.  Else the first "." would parse as dot
+--   - Sequences of the one-char identifiers need no whitespace separating them:
+--      ... is NOT a parse error.
+--      .~ is NOT a parse error.
+--      .$ is NOT a parse error.  
 
 package rpl_1_1
 
@@ -96,6 +87,7 @@ assignment_prefix = identifier atmos "="
 stmnt_prefix = {keyword / assignment_prefix}
 
 alias slash =         [[/]]
+alias and =           [[&]]
 alias open =          [[(]]
 alias openraw =       [[{]]
 alias close =         [[)]]
@@ -110,29 +102,30 @@ grammar
    alias exp = {atmos { syntax_error /
 	                 choice /
 	                 sequence /
-	                 quantified_exp / 
-	                 plain_exp} }
+--	                 and_exp /
+	                 term
+	              }
+	       }
    syntax_error = { stmnt_prefix rest_of_line }
    application = { identifier ":" } atmos (arg / arglist / rawarglist )
    arglist = { atmos open int_or_exp { atmos "," int_or_exp }* close }
    rawarglist = { atmos openraw int_or_exp { atmos "," int_or_exp }* closeraw }
-   arg = quantified_exp / plain_exp / int
+   arg = term / int
    alias int_or_exp = atmos int / exp
-   choice = { {quantified_exp / plain_exp} atmos slash exp }
-   sequence = { {quantified_exp / plain_exp} {atmos !stmnt_prefix exp}+ }
-   alias plain_exp = { atmos 
-		        {application /
-		         identifier /
-		         quoted_string /
-		         raw /
-		         cooked /
-		         charset_exp /
-		         predicate /
-		         hash_exp} }
-   quantified_exp = { plain_exp quantifier }
+   choice = { term atmos slash exp }
+   and_exp = { term atmos and exp }
+   sequence = { term {atmos !stmnt_prefix exp}+ }
+   term = { atmos {application /
+	           identifier /
+	           quoted_string /
+	           raw /
+	           cooked /
+	           charset_exp /
+	           predicate /
+   	           hash_exp} quantifier? }
    cooked = { open exp atmos close }
    raw = { openraw exp atmos closeraw }
-   predicate = { predicate_symbol ws? {quantified_exp / plain_exp} }
+   predicate = { predicate_symbol ws? term }
 end
 
 grammar
