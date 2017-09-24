@@ -2179,6 +2179,18 @@ check_match('"a" & "b"', "", false)
 check_match('"a" & "b"', "b", false)
 check_match('"a" & "b"', "ab", false)
 
+-- Check that whitespace is not needed
+check_match('"a"& "a"', "a", true, 0)
+check_match('"a" &"a"', "a", true, 0)
+check_match('"a"&"a"', "a", true, 0)
+check_match('.& "a"', "a", true, 0)
+check_match('"a" &.', "a", true, 0)
+check_match('.&.', "a", true, 0)
+check_match('"a"&"a"&"a"', "a", true, 0)
+check_match('"a"&"a"&.', "a", true, 0)
+check_match('"a"&.&"a"', "a", true, 0)
+check_match('.&"a"&"a"', "a", true, 0)
+
 check_match('"a" & "a"', "a", true, 0)
 check_match('"a" & "aa"', "a", false)
 check_match('"a" & "aa"', "aa", true, 0)
