@@ -286,16 +286,16 @@ end
 
 local cexp;
 
-function cs_exp(a, env, prefix, messages)
-   if ast.cs_exp.is(a.cexp) then
+function bracket(a, env, prefix, messages)
+   if ast.bracket.is(a.cexp) then
       if not a.complement then
-	 -- outer cs_exp does not affect semantics, so drop it
-	 return cs_exp(a.cexp, env, prefix, messages)
+	 -- outer bracket does not affect semantics, so drop it
+	 return bracket(a.cexp, env, prefix, messages)
       else
-	 -- either: inner cs_exp does not affect semantics, so drop it,
+	 -- either: inner bracket does not affect semantics, so drop it,
 	 -- or: complement of a complement cancels out.
-	 local new = ast.cs_exp{complement=(not a.cexp.complement), cexp=a.cexp.cexp, s=a.s, e=e.s}
-	 return cs_exp(new, env, prefix, messages)
+	 local new = ast.bracket{complement=(not a.cexp.complement), cexp=a.cexp.cexp, s=a.s, e=e.s}
+	 return bracket(new, env, prefix, messages)
       end
    elseif ast.cs_union.is(a.cexp) then
       assert(#a.cexp.cexps > 0, "empty character set union?")
@@ -303,7 +303,7 @@ function cs_exp(a, env, prefix, messages)
       for i = 2, #a.cexp.cexps do
 	 alternatives = alternatives + expression(a.cexp.cexps[i], env, prefix, messages).peg
       end
-      a.pat = pattern.new{name="cs_exp",
+      a.pat = pattern.new{name="bracket",
 			 peg=((a.complement and (1-alternatives)) or alternatives),
 			 ast=a}
       return a.pat
@@ -313,10 +313,10 @@ function cs_exp(a, env, prefix, messages)
       raise_error("character set difference is not implemented", a)
    elseif ast.simple_charset_p(a.cexp) then
       local p = expression(a.cexp, env, prefix, messages)
-      a.pat = pattern.new{name="cs_exp", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
+      a.pat = pattern.new{name="bracket", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
       return a.pat
    else
-      assert(false, "compile: unknown cexp inside cs_exp", a)
+      assert(false, "compile: unknown cexp inside bracket", a)
    end
 end
 
@@ -514,7 +514,7 @@ local dispatch = { [ast.string] = rpl_string,
 		   [ast.choice] = choice,
 		   [ast.and_exp] = and_exp,
 		   [ast.ref] = ref,
-		   [ast.cs_exp] = cs_exp,
+		   [ast.bracket] = bracket,
 		   [ast.cs_named] = cs_named,
 		   [ast.cs_range] = cs_range,
 		   [ast.cs_list] = cs_list,

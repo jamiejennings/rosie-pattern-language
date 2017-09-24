@@ -96,11 +96,11 @@ ast.literal = recordtype.new("literal",			    -- interpolated string literals
 			      pat = NIL;
 			      sourceref = NIL;})
 
-ast.cs_exp = recordtype.new("cs_exp",		    -- [ [exp1] ... ]
-			  {complement = false;
-			   cexp = {};
-			   pat = NIL;
-			   sourceref = NIL;})
+ast.bracket = recordtype.new("bracket",		    -- [ [exp1] ... ]
+			     {complement = false;
+			      cexp = {};
+			      pat = NIL;
+			      sourceref = NIL;})
 
 ast.cs_named = recordtype.new("cs_named",	    -- [:name:]
 			      {complement = false;
@@ -263,7 +263,7 @@ local function flatten_cexp_in_place(a, target_type)
       a.cexps = lift(exps)
    elseif ast.cs_intersection.is(a) or ast.cs_union.is(a) then
       list.foreach(function(exp) flatten_cexp_in_place(exp, target_type) end, a.cexps)
-   elseif ast.cs_exp.is(a) then
+   elseif ast.bracket.is(a) then
       flatten_cexp_in_place(a.cexp, target_type)
    elseif ast.cs_difference.is(a) then
       flatten_cexp_in_place(a.first, target_type)
@@ -358,7 +358,7 @@ function convert_char_exp(pt, sref)
       prefix_cexp = infix_to_prefix(exps, sref)
       flatten_cexp_in_place(prefix_cexp, ast.cs_intersection)
       flatten_cexp_in_place(prefix_cexp, ast.cs_union)
-      return ast.cs_exp.new{cexp = prefix_cexp,
+      return ast.bracket.new{cexp = prefix_cexp,
 			    complement = compflag,
 			    sourceref=sref}
    else
@@ -763,7 +763,7 @@ function ast.dependencies_of(a)
 	   ast.hashtag.is(a) or
 	   ast.string.is(a) or
 	   ast.int.is(a) or
-	   ast.cs_exp.is(a) or 
+	   ast.bracket.is(a) or 
 	   ast.cs_named.is(a) or
 	   ast.cs_list.is(a) or
 	   ast.cs_range.is(a) or
@@ -855,7 +855,7 @@ function ast.tostring(a, already_grouped)
       return "{" .. ast.tostring(a.exp, true) .. "}"
    elseif ast.literal.is(a) then
       return '"' .. a.value .. '"'
-   elseif ast.cs_exp.is(a) then
+   elseif ast.bracket.is(a) then
       return "[" .. (a.complement and "^" or "") .. ast.tostring(a.cexp) .. "]"
    elseif ast.cs_named.is(a) then
       return "[:" .. (a.complement and "^" or "") .. a.name .. ":]"

@@ -338,7 +338,7 @@ local function atmost(e, a, input, start, expected, nextpos)
    return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
 end
 
-local function cs_explanation(a, input, start, m, complement)
+local function bracket_explanation(a, input, start, m, complement)
    return (" " .. ast.tostring(a) ..
 	   " Looking at input pos " .. tostring(start) .. ": " ..
            input:sub(start) .. " And match is: " .. tostring(m) .. 
@@ -354,40 +354,40 @@ local function cs_simple(e, a, input, start, expected, nextpos)
    if expected ~= nil then
       if (m and (not complement)) or ((not m) and complement) then
 	 assert(expected, "simple character set match differs from expected: " ..
-		cs_explanation(a, input, start, m, complement))
+		bracket_explanation(a, input, start, m, complement))
 	 if m then
 	    assert(nextstart==nextpos, "simple character set nextpos differs from expected")
 	 end
       else
 	 assert(not expected, "simple character set non-match differs from expected: " ..
-		cs_explanation(a, input, start, m, complement))
+		bracket_explanation(a, input, start, m, complement))
       end
    end -- if there is an expectation that we can check against
    return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
 end
 
-local function cs_exp(e, a, input, start, expected, nextpos)
+local function bracket(e, a, input, start, expected, nextpos)
    if ast.simple_charset_p(a) then
       return cs_simple(e, a, input, start, expected, nextpos)
-   elseif ast.cs_exp.is(a.cexp) then
-      local result = cs_exp(e, a.exp, input, start, nil, nextpos)
+   elseif ast.bracket.is(a.cexp) then
+      local result = bracket(e, a.exp, input, start, nil, nextpos)
       if expected ~= nil then
 	 if (result.match and (not a.complement)) or ((not result.match) and a.complement) then
-	    assert(expected, "cs_exp match differs from expected")
+	    assert(expected, "bracket match differs from expected")
 	    if result.match then
-	       assert(result.nextpos==nextpos, "cs_exp nextpos differs from expected")
+	       assert(result.nextpos==nextpos, "bracket nextpos differs from expected")
 	    end
 	 else
-	    assert(not expected, "cs_exp non-match differs from expected")
+	    assert(not expected, "bracket non-match differs from expected")
 	 end
       end -- if there is an expectation that we can check against
       return {match=result.match, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
    elseif ast.cs_union.is(a.cexp) then
-      -- This is identical to 'choice' except for a.cexps, cs_exp, and the assert messages.
+      -- This is identical to 'choice' except for a.cexps, bracket, and the assert messages.
       -- Should re-factor, unless there's a reason to treat union/choice differently?
       local matches = {}
       for _, exp in ipairs(a.cexp.cexps) do
-	 local result = cs_exp(e, exp, input, start, nil, nextpos)
+	 local result = bracket(e, exp, input, start, nil, nextpos)
 	 table.insert(matches, result)
 	 if result.match then break; end
       end -- for
@@ -400,12 +400,12 @@ local function cs_exp(e, a, input, start, expected, nextpos)
 		      "cs_union nextpos differs from expected:" ..
 			 " incoming nextpos: " .. tostring(nextpos) ..
 		         ", computed nextpos: " .. tostring(last.nextpos) .. "\n" ..
-		         cs_explanation(a, input, start, last, a.complement))
+		         bracket_explanation(a, input, start, last, a.complement))
 	    end
 	 else
 	    assert(not expected,
 		   "cs_union non-match differs from expected:" ..
-		      cs_explanation(a, input, start, last, a.complement))
+		      bracket_explanation(a, input, start, last, a.complement))
 	 end
       end -- if there is an expectation that we can check against
       return {match=last.match, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
@@ -414,7 +414,7 @@ local function cs_exp(e, a, input, start, expected, nextpos)
    elseif ast.cs_difference.is(a.cexp) then
       throw("character set difference is not implemented", a)
    else
-      assert(false, "trace: unknown cexp inside cs_exp", a)
+      assert(false, "trace: unknown cexp inside bracket", a)
    end
 end
       
@@ -461,8 +461,8 @@ function expression(e, a, input, start)
    assert(type(nextpos)=="number")
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
-   elseif ast.cs_exp.is(a) then
-      return cs_exp(e, a, input, start, m, nextpos)
+   elseif ast.bracket.is(a) then
+      return bracket(e, a, input, start, m, nextpos)
    elseif ast.simple_charset_p(a) then
       return cs_simple(e, a, input, start, m, nextpos)
    elseif ast.sequence.is(a) then
