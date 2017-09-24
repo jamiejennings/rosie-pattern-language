@@ -11,7 +11,7 @@ local NIL = recordtype.NIL
 local list = require "list"
 local map = list.map; apply = list.apply; append = list.append; foreach = list.foreach; filter = list.filter
 
-not_atmosphere = common.not_atmosphere
+not_atmosphere = common.not_atmosphere		    -- Predicate on ast type
 
 local ast = {}
 
@@ -410,7 +410,6 @@ end
 -- already explicitly cooked or raw.  
 function ast.ambient_cook_exp(ex)
    assert(ex.sourceref)
---   if not (ast.raw.is(ex) or ast.cooked.is(ex)) then
    if ast.sequence.is(ex) then
       return ast.cooked.new{exp=ex, sourceref=ex.sourceref}
    else
@@ -434,11 +433,7 @@ function convert_exp(pt, sref)
    local function convert1(pt)
       return convert_exp(pt, sref)
    end
-   if pt.type=="capture" then
-      return ast.cap.new{name = subs[1].data,
-			 exp = convert_exp(subs[2], sref),
-		         sourceref=sref}
-   elseif pt.type=="exp.predicate" then
+   if pt.type=="exp.predicate" then
       return ast.predicate.new{type = subs[1].type,
 			       exp = convert_exp(subs[2], sref),
 			       sourceref=sref}
@@ -614,9 +609,7 @@ function convert_core_exp(pt, sref)
    local function convert1(pt)
       return convert_core_exp(pt, sref)
    end
-   if pt.type=="capture" then
-      return ast.cap.new{name = pt.subs[1].data, exp = convert1(pt.subs[2]), sourceref=sref}
-   elseif pt.type=="predicate" then
+   if pt.type=="predicate" then
       return ast.predicate.new{type = pt.subs[1].type, exp = convert1(pt.subs[2]), sourceref=sref}
    elseif pt.type=="cooked" then
       return ast.cooked.new{exp = convert1(pt.subs[1]), sourceref=sref}
