@@ -197,6 +197,18 @@ local function choice(a, env, prefix, messages)
    return a.pat
 end
 
+local function and_exp(a, env, prefix, messages)
+   assert(#a.exps > 0, "empty and_exp?")
+   local last = #a.exps
+   local peg = expression(a.exps[last], env, prefix, messages).peg
+   for i = last-1, 1, -1 do
+      local lookat = expression(a.exps[i], env, prefix, messages)
+      peg = #lookat.peg * peg
+   end
+   a.pat = pattern.new{name="and_exp", peg=peg, ast=a}
+   return a.pat
+end
+
 local function predicate(a, env, prefix, messages)
    local peg = expression(a.exp, env, prefix, messages).peg
    if a.type=="lookahead" then
@@ -500,6 +512,7 @@ local dispatch = { [ast.string] = rpl_string,
 		   [ast.literal] = literal,
 		   [ast.sequence] = sequence,
 		   [ast.choice] = choice,
+		   [ast.and_exp] = and_exp,
 		   [ast.ref] = ref,
 		   [ast.cs_exp] = cs_exp,
 		   [ast.cs_named] = cs_named,

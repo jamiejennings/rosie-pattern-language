@@ -433,6 +433,11 @@ local function predicate(e, a, input, start, expected, nextpos)
    return {match=expected, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
 end
 
+local function and_exp(e, a, input, start, expected, nextpos)
+   -- TODO: 
+   return {match=expected, nextpos=nextpos, ast=a, input=input, start=start}
+end
+
 local function grammar(e, a, input, start, expected, nextpos)
    -- FUTURE: Simulate a grammar using its pieces.  This will require some careful bouncing in and
    -- out of lpeg because we cannot attempt a match against an lpeg.V(rulename) peg.
@@ -464,6 +469,8 @@ function expression(e, a, input, start)
       return sequence(e, a, input, start, m, nextpos)
    elseif ast.choice.is(a) then
       return choice(e, a, input, start, m, nextpos)
+   elseif ast.and_exp.is(a) then
+      return and_exp(e, a, input, start, m, nextpos)
    elseif ast.ref.is(a) then
       return ref(e, a, input, start, m, nextpos)
    elseif ast.atleast.is(a) then

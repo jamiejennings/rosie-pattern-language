@@ -61,6 +61,11 @@ ast.choice = recordtype.new("choice",
 			     pat = NIL;
 			     sourceref = NIL;})
 
+ast.and_exp = recordtype.new("and_exp",
+			     {exps = {};
+			      pat = NIL;
+			      sourceref = NIL;})
+
 ast.predicate = recordtype.new("predicate",
 			  {type = NIL;
 			   exp = NIL;
@@ -453,6 +458,9 @@ function convert_exp(pt, sref)
    elseif pt.type=="exp.choice" then
       return ast.choice.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "exp.choice"))),
 			    sourceref=sref}
+   elseif pt.type=="exp.and_exp" then
+      return ast.and_exp.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "exp.and_exp"))),
+			     sourceref=sref}
    elseif pt.type=="exp.sequence" then
       return ast.sequence.new{exps = map(convert1,
 					 filter(not_atmosphere, flatten(pt, "exp.sequence"))),
@@ -809,6 +817,10 @@ function ast.tostring(a, already_grouped)
       local choices = map(ast.tostring, a.exps)
       assert(#choices > 0, "empty choice ast?")
       return pre .. table.concat(choices, " / ") .. post
+   elseif ast.and_exp.is(a) then
+      local pre = already_grouped and "" or "{"
+      local post = already_grouped and "" or "}"
+      return pre .. table.concat(map(ast.tostring, a.exps), " & ") .. post
    elseif ast.predicate.is(a) then
       local symbol = predicate_name_table[a.type] or "UNKNOWN PREDICATE "
       return symbol .. ast.tostring(a.exp)

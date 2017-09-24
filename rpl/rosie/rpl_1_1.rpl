@@ -102,7 +102,7 @@ grammar
    alias exp = {atmos { syntax_error /
 	                 choice /
 	                 sequence /
---	                 and_exp /
+	                 and_exp /
 	                 term
 	              }
 	       }

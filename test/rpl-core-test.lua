@@ -2171,7 +2171,40 @@ check(not pkgname, "pkgname is: " .. tostring(pkgname))
 msg = table.concat(map(violation.tostring, errs), "\n")
 check(msg:find("identifier already bound"), "error was:\n" .. msg)
 
+heading("And-exp")
 
+-- These cannot succeed, no matter what the input
+check_match('"a" & "b"', "a", false)
+check_match('"a" & "b"', "", false)
+check_match('"a" & "b"', "b", false)
+check_match('"a" & "b"', "ab", false)
+
+check_match('"a" & "a"', "a", true, 0)
+check_match('"a" & "aa"', "a", false)
+check_match('"a" & "aa"', "aa", true, 0)
+check_match('"aa" & "a"', "aa", true, 1)
+
+check_match('"a" & ("a"/"b")', "a", true, 0)
+check_match('("a"/"b") & "a"', "a", true, 0)
+check_match('("a"/"b") & "b"', "b", true, 0)
+
+check_match('[:alpha:] & [:alpha:] & "a"', "a", true, 0)
+check_match('[:alpha:] & [:alpha:] & "x"', "x", true, 0)
+check_match('[:alpha:] & [:alpha:] & "x"', "a", false)
+check_match('[:alpha:] & [:alpha:] & [:alpha:] & [:alpha:]', "q", true, 0)
+check_match('[:alpha:] & [:alpha:] & [:alpha:] & [:alpha:]', "1", false)
+
+check_match('[:alpha:] & . & [:alpha:] & [:alpha:]', "q", true, 0)
+check_match('[:alpha:] & [:alpha:] & [:alpha:] & . ', "q", true, 0)
+check_match('[:alpha:] & [:alpha:] & [:alpha:] & . ', "1", false)
+
+check_match('{"a"{3} "b"} & .*', "aaab", true, 0)
+check_match('{"a"{3} "b"} & .*', "aaabdef", true, 0)
+check_match('{"a"{3} "b"} & .*', "xaaab", false)
+
+check_match('.* & {"a"{3} "b"}', "aaab", true, 0)
+check_match('.* & {"a"{3} "b"}', "aaabdef", true, 3)
+check_match('.* & {"a"{3} "b"}', "xaaab", false)
 
 
 -- return the test results in case this file is being called by another one which is collecting

@@ -46,7 +46,7 @@ local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 
 -- Return a one-element sequence containing exp, if needed.
 local function sequence_wrap(exp)
-   if ast.sequence.is(exp) or ast.choice.is(exp) then
+   if ast.sequence.is(exp) or ast.choice.is(exp) or ast.and_exp.is(exp) then
       return exp
    else
       return ast.sequence.new{exps = {exp}, sourceref = exp.sourceref}
@@ -66,6 +66,8 @@ local function remove_raw_exp(ex)
       return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
       return ast.choice.new{exps=map(remove_raw_exp, ex.exps), sourceref=ex.sourceref}
+   elseif ast.and_exp.is(ex) then
+      return ast.and_exp.new{exps=map(remove_raw_exp, ex.exps), sourceref=ex.sourceref}
    elseif ast.sequence.is(ex) then
       -- do not introduce boundary references between the exps
       local exps = map(remove_raw_exp, ex.exps)
@@ -104,6 +106,8 @@ function remove_cooked_exp(ex)
       return ast.predicate.new{type=ex.type, exp=remove_cooked_exp(ex.exp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
       return ast.choice.new{exps=map(remove_cooked_exp, ex.exps), sourceref=ex.sourceref}
+   elseif ast.and_exp.is(ex) then
+      return ast.and_exp.new{exps=map(remove_cooked_exp, ex.exps), sourceref=ex.sourceref}
    elseif ast.sequence.is(ex) then
       local exps = map(remove_cooked_exp, ex.exps)
       assert(#exps > 0, "received an empty sequence")
@@ -251,6 +255,9 @@ function remove_repetition(ex)
       ex.exp = remove_repetition(ex.exp)
       return ex
    elseif ast.choice.is(ex) then
+      ex.exps = map(remove_repetition, ex.exps)
+      return ex
+   elseif ast.and_exp.is(ex) then
       ex.exps = map(remove_repetition, ex.exps)
       return ex
    elseif ast.sequence.is(ex) then
