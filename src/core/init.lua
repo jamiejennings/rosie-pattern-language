@@ -292,11 +292,15 @@ common.add_encoder("text", 0,
 common.add_encoder("subs", 0,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
-		      return table.concat(list.map(function(sub)
-						      return sub.data
-						   end,
-						   m.subs),
-					  "\n")
+		      if m.subs then
+			 return table.concat(list.map(function(sub)
+							 return sub.data
+						      end,
+						      m.subs),
+					     "\n")
+		      else
+			 return m.data
+		      end
 		   end)
 
 
