@@ -338,15 +338,10 @@ local function insert_input_text(m, input)
 end
 
 function common.rmatch(peg, input, start, rmatch_encoder, fn_encoder, total_time, lpegvm_time)
---   local Cencoder = encode or 0			    -- default is compact byte encoding
---   if encode==-1 then Cencoder = 0; end		    -- -1 ==> no output
    local m, nextpos, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
    if not m then return false, start, t1, t2; end
    -- TODO: return abend also
    return fn_encoder(m, input, start), nextpos, t1, t2
---   if not encode then return insert_input_text(lpeg.decode(m), input), nextpos, t1, t2
---   elseif encode==-1 then return nil, nextpos, t1, t2
---   else return m, nextpos, t1, t2; end
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the

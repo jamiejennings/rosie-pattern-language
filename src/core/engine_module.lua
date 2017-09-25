@@ -236,7 +236,7 @@ end
 
 ----------------------------------------------------------------------------------------
 
--- Built-in encoder options:
+-- Built-in (rosie-lpeg) encoder options:
 -- false = return lua table as usual
 -- -1 = no output
 --  0 = compact byte encoding with only start/end indices (no text)
@@ -396,12 +396,6 @@ engine =
 		     error=engine_error,
 
 		     id=recordtype.id,
-
---		     encode_function=false,	      -- false or nil ==> use default encoder
---		     output=get_set_encoder_function,
-
---		     lookup=environment_lookup,
---		     clear=environment_clear,
 
 		     load=load,
 		     loadfile=loadfile,

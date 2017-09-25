@@ -90,6 +90,25 @@ results_num_any =
 
 run('.match num.any "0x123"', results_num_any)
 
+results = run('rpl 1.0', {''})
+check(results)
+results = run('rpl 1.1', {''})
+check(results)
+
+results = run('rpl 1.99')
+check(results)
+output = table.concat(results, '\n')
+check(output:find('rpl declaration requires version 1.99'))
+
+results = run('rpl 2.0')
+check(results)
+output = table.concat(results, '\n')
+check(output:find('rpl declaration requires version 2.0'))
+
+results = run('rpl 1.')
+check(results)
+output = table.concat(results, '\n')
+check(output:find('syntax error while reading statement'))
 
 
 return test.finish()

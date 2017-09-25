@@ -66,7 +66,7 @@ function p2.make_preparser(rplx_preparse, supported_version)
 		common.note("-> Parser noted rpl version declaration ", vstr(major, minor))		
 		if incompatible(major, minor, supported_version) then
 		   return nil, nil, nil,
-		   "Error: loading rpl that requires version " .. vstr(major, minor) ..
+		   "rpl declaration requires version " .. vstr(major, minor) ..
 		   " but engine is at version " .. vstr(supported_version.major, supported_version.minor)
 	        end
 		if major < supported_version.major then
