@@ -12,17 +12,12 @@
 
 local p = {}
 
-
 -- create Parser
 function p.create(rosie)
    local argparse = assert(rosie.import("argparse"), "failed to load argparse package")
    local parser = argparse("rosie", "Rosie " .. rosie.config().ROSIE_VERSION)
    parser:add_help(false)
    parser:require_command(false)
-   --:epilog("Additional information.")
-   -- global flags/options can go here
-   -- -h,--help is generated automatically
-   -- usage message is generated automatically
    parser:flag("--version", "Print rosie version")
    :action(function(args,_,exceptions)
 	      io.write(ROSIE_VERSION, "\n")

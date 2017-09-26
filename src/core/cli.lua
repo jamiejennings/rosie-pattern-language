@@ -75,6 +75,8 @@ function create_cl_engine(args)
    CL_ENGINE.searchpath = rosie.config().ROSIE_LIBPATH
 end
 
+local multi_sourced = {ROSIE_LIBPATH = "ROSIE_LIBPATH_SOURCE"}
+
 local function print_rosie_config()
    local function printf(fmt, ...)
       print(string.format(fmt, ...))
@@ -82,7 +84,6 @@ local function print_rosie_config()
    local fmt1 = "%20s"
    local fmt = fmt1 .. " = %s"
    local config = rosie.config()
-   local multi_sourced = {ROSIE_LIBPATH = "ROSIE_LIBPATH_SOURCE"}
    local function print_if_source(sourcetype)
       local any = false
       for name, sourcename in pairs(multi_sourced) do
@@ -121,6 +122,15 @@ local function greeting()
    io.write("Rosie " .. ROSIE_VERSION .. "\n")
 end
 
+local function make_help_epilog(args)
+   local config = rosie.config()
+   local libpath = config.ROSIE_LIBPATH
+   local dirs = common.parse_pathlist(libpath or "")
+   local msg = {"The RPL 'import' statement will search these directories in order (this is the libpath):"}
+   for _, dir in ipairs(dirs) do table.insert(msg, "\t" .. dir); end
+   return table.concat(msg, '\n')
+end
+
 local function run(args)
    if args.verbose then ROSIE_VERBOSE = true; end
 
@@ -146,6 +156,8 @@ local function run(args)
       print_rosie_config()
       os.exit()
    elseif (args.command=="help") then
+      local text = make_help_epilog(args)
+      if text then parser:epilog(text); end
       print(parser:get_help())
       os.exit()
    end
