@@ -113,7 +113,7 @@ local function compile_expression(e, input)
    if not ast then return false, messages; end
    local pat = e.compiler.compile_expression(ast, e.env, messages)
    if not pat then return false, messages; end
-   return rplx.new(e, pat)   
+   return rplx.new(e, pat), messages
 end
 
 local function really_load(e, source, origin)
