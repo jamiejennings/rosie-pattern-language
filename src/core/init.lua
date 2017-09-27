@@ -110,7 +110,7 @@ end
 
 
 local function load_all()
-   cjson = import("cjson")
+   cjson = import("cjson.safe")
    lpeg = import("lpeg")
 
    -- These MUST have a partial order so that dependencies can be loaded first
