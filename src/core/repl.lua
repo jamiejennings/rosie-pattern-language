@@ -15,10 +15,11 @@ local repl = {}
 -- N.B. 'rosie' is a global defined by init and loaded by cli.lua, which calls the repl
 
 local rosie = require "rosie"
+local readline = rosie.import "readline"
+
 local common = require "common"
 local ui = require "ui"
 local environment = require "environment"
-local readline = require "readline"
 local lpeg = require "lpeg"
 local os = require "os"
 

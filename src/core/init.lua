@@ -112,7 +112,6 @@ end
 local function load_all()
    cjson = import("cjson")
    lpeg = import("lpeg")
-   readline = import("readline")
 
    -- These MUST have a partial order so that dependencies can be loaded first
    recordtype = import("recordtype")
