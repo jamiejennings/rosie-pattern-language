@@ -16,6 +16,6 @@
 [submodule "submodules/lua-modules"]
 	path = submodules/lua-modules
 	url = https://github.com/jamiejennings/lua-modules
-[submodule "luafilesystem"]
+[submodule "luafilesystem/luafilesystem"]
 	path = submodules/luafilesystem
 	url = https://github.com/keplerproject/luafilesystem.git
