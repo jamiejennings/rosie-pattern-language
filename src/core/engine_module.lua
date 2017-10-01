@@ -209,7 +209,10 @@ end
 -- FUTURE: Maybe cache expressions?
 -- returns matches, leftover, total match time, total spent in lpeg vm
 local function engine_match_trace(e, match_trace_fn, expression, input, start, encoder, total_time_accum, lpegvm_time_accum)
-   if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
+   local t = type(input)
+   if (t ~= "userdata") and (t ~= "string") then
+      engine_error(e, "Input not a buffer or string: " .. tostring(input))
+   end
    start = start or 1
    if type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
    local compiled_exp, msgs
