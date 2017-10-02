@@ -416,13 +416,14 @@ engine =
 
 ----------------------------------------------------------------------------------------
 
+-- TODO: Since rplx is already compiled, arrange for rplx.match to call a streamlined version of
+-- engine_match that does not need to check to see if the expression is a string and compile it.
 local create_rplx = function(en, pattern)			    
 		       return rplx.factory{ engine=en,
 					    pattern=pattern,
 					    match=function(self, input, start, encoder, t0, t1)
 						     local ok, m, left, t0, t1 =
 							engine_match(en, self, input, start, encoder, t0, t1)
-						     assert(ok, "precompiled pattern failed to compile?")
 						     return m, left, t0, t1
 						  end,
 					 };
