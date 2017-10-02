@@ -206,8 +206,7 @@ local function _trace(r, input, start, encoder, style)
    return trace.expression(r, input, start, style)
 end
    
--- FUTURE: Maybe cache expressions?
--- returns matches, leftover, total match time, total spent in lpeg vm
+-- Returns matches, leftover, total match time, total spent in lpeg vm
 local function engine_match_trace(e, match_trace_fn, expression, input, start, encoder, total_time_accum, lpegvm_time_accum)
    local t = type(input)
    if (t ~= "userdata") and (t ~= "string") then
@@ -218,7 +217,6 @@ local function engine_match_trace(e, match_trace_fn, expression, input, start, e
    local compiled_exp, msgs
    if type(expression)=="string" then
       -- Expression has not been compiled.
-      -- If in future we cache the string expressions, then look up expression in the cache here.
       compiled_exp, msgs = e:compile(expression)
       if not compiled_exp then return false, msgs; end
    elseif rplx.is(expression) then
