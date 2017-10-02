@@ -6,7 +6,7 @@
 ## LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ## AUTHOR: Jamie A. Jennings
 
-## Use "DEBUG=1" on the command line to enable verbose debugging output
+## Use "DEBUG=1" on the command line to enable logging to stderr
 
 HOME = $(shell cd ../..; pwd)
 ROSIE = "$(HOME)/bin/rosie"
