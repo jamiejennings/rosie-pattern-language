@@ -191,7 +191,7 @@ end
 local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
    encoder = encoder or "default"
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
-   local match, nextpos, t0, t1 = 
+   local match, leftover, t0, t1 = 
       rmatch(rplx_exp.pattern.peg,
 	     input,
 	     start,
@@ -199,7 +199,7 @@ local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_
 	     fn_encoder,
 	     total_time_accum,
 	     lpegvm_time_accum)
-   return match, #input-nextpos+1, t0, t1
+   return match, leftover, t0, t1
 end
 
 local function _trace(r, input, start, encoder, style)
@@ -339,12 +339,10 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    local _, m, leftover, trace_string
    local trace_flag = (op ~= "match")
    local trace_style = op
-   local m, nextpos
+   local m, leftover
    while l do
       if trace_flag then _, trace_string = e:trace(expression, l, 1, nil, trace_style); end
-      m, nextpos = matcher(l);		    -- This is nextpos, NOT leftover.
-      -- What to do with leftover?  User might want to see it.
-      -- local leftover = (#input - nextpos + 1);
+      m, leftover = matcher(l);		  -- What to do with leftover?  User might want to see it.
       if trace_string then o_write(outfile, trace_string, "\n"); end
       if m then
 	 o_write(outfile, m);

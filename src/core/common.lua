@@ -338,10 +338,10 @@ local function insert_input_text(m, input)
 end
 
 function common.rmatch(peg, input, start, rmatch_encoder, fn_encoder, total_time, lpegvm_time)
-   local m, nextpos, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
+   local m, leftover, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
    if not m then return false, start, t1, t2; end
    -- TODO: return abend also
-   return fn_encoder(m, input, start), nextpos, t1, t2
+   return fn_encoder(m, input, start), leftover, t1, t2
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the
