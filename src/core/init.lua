@@ -25,6 +25,7 @@
 --            normally fatal will instead return control to the Lua interpreter (after being
 --            signaled) when in development mode.  The value of ROSIE_DEV is set by the script
 --            that launches the rosie CLI.
+--            FUTURE: Rename this to ROSIE_CLI and reverse its sense?
 --
 -- ROSIE_LIBDIR is the variable that the rosie code uses to find the standard RPL library.  Its
 --           value is ROSIE_HOME/rpl.  Currently, there is no way to change it externally.  If
@@ -149,9 +150,10 @@ end
 --
 
 local function announce(name, engine)
-   if ROSIE_DEV then
-      print(name .. " created, accepting ".. tostring(engine.compiler.version))
-   end
+-- FUTURE: Create a way to check if logging is enabled, and announce engine creation only then.
+   -- if ROSIE_DEV then
+   --    print(name .. " created, accepting ".. tostring(engine.compiler.version))
+   -- end
 end
 
 function create_core_engine()

@@ -10,7 +10,7 @@ return function(home)
 				    "src/core;src;submodules/lua-modules;submodules/argparse/src", -- .lua
 				    "lib")	    -- .so
 	  mod.import("submodule", rosie_mod)
-	  -- TODO: implement mod.set, mod.get
+	  -- FUTURE: implement mod.set, mod.get
 	  mod.eval('ROSIE_HOME="' .. home .. '"', rosie_mod)
 	  mod.eval('ROSIE_COMMAND="' .. '"', rosie_mod)
 	  rosie = mod.import("init", rosie_mod)
