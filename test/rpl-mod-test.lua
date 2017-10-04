@@ -40,7 +40,7 @@ check(common.pattern.is(p))
 p = e.env:lookup("A", "mod1")
 check(not p)					    -- A is a local grammar
 
-ok, m, left, t0, t1, msgs = e:match("mod1.S", "baab")
+ok, m, left, abend, t0, t1, msgs = e:match("mod1.S", "baab")
 check(ok)
 check(m)
 check(left==0)

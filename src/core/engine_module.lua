@@ -191,15 +191,13 @@ end
 local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
    encoder = encoder or "default"
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
-   local match, leftover, t0, t1 = 
-      rmatch(rplx_exp.pattern.peg,
-	     input,
-	     start,
-	     rmatch_encoder,
-	     fn_encoder,
-	     total_time_accum,
-	     lpegvm_time_accum)
-   return match, leftover, t0, t1
+   return rmatch(rplx_exp.pattern.peg,
+		 input,
+		 start,
+		 rmatch_encoder,
+		 fn_encoder,
+		 total_time_accum,
+		 lpegvm_time_accum)
 end
 
 local function _trace(r, input, start, encoder, style)
@@ -420,9 +418,9 @@ local create_rplx = function(en, pattern)
 		       return rplx.factory{ engine=en,
 					    pattern=pattern,
 					    match=function(self, input, start, encoder, t0, t1)
-						     local ok, m, left, t0, t1 =
+						     local ok, m, left, abend, t0, t1 =
 							engine_match(en, self, input, start, encoder, t0, t1)
-						     return m, left, t0, t1
+						     return m, left, abend, t0, t1
 						  end,
 					 };
 		    end

@@ -277,20 +277,20 @@ ROSIE_ENGINE = create_rpl_1_1_engine(CORE_ENGINE)
 assert(ROSIE_ENGINE)
 populate_info()
 
-common.add_encoder("color", 0,
+common.add_encoder("color", 3,
 		   function(m, input, start)
 		      return color.match(common.byte_to_lua(m, input), color.colormap)
 		   end)
-common.add_encoder("nocolor", 0,
+common.add_encoder("nocolor", 3,
 		   function(m, input, start)
 		      return color.match(common.byte_to_lua(m, input), {})
 		   end)
-common.add_encoder("text", 0,
+common.add_encoder("text", 3,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      return m.data
 		   end)
-common.add_encoder("subs", 0,
+common.add_encoder("subs", 3,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      if m.subs then
