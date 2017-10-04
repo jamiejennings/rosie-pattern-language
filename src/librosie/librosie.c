@@ -56,6 +56,7 @@ static char bootscript[MAXPATHLEN];
  */
 enum KEYS {
   engine_key = 0,
+  engine_match_key,
   rosie_key,
   rplx_table_key,
   json_encoder_key,
@@ -162,6 +163,15 @@ static void display (const char *msg) {
   fprintf(stderr, "%s: ", libname);
   fprintf(stderr, "%s\n", msg);
   fflush(NULL);
+}
+
+static int encoder_name_to_code(const char *name) {
+  r_encoder_t *entry = r_encoders;
+  while (entry->name) {
+    if (!strncmp(name, entry->name, MAX_ENCODER_NAME_LENGTH)) return entry->code;
+    entry++;
+  }
+  return 0;
 }
 
 static void set_libinfo() {
@@ -306,7 +316,7 @@ void *rosie_new() {
   t = lua_getfield(L, -1, "engine");
   CHECK_TYPE("engine", t, LUA_TTABLE);
   t = lua_getfield(L, -1, "new");
-  CHECK_TYPE("new", t, LUA_TFUNCTION);
+  CHECK_TYPE("engine.new", t, LUA_TFUNCTION);
   t = lua_pcall(L, 0, 1, 0);
   if (t != LUA_OK) {
     display("rosie.engine.new() failed");
@@ -315,6 +325,9 @@ void *rosie_new() {
 
   /* engine instance is at top of stack */
   set_registry(engine_key);
+  t = lua_getfield(L, -1, "match");
+  CHECK_TYPE("engine.match", t, LUA_TFUNCTION);
+  set_registry(engine_match_key);
 
 #if (LOGGING)
   display(luaL_tolstring(L, -1, NULL));
@@ -491,8 +504,8 @@ void collect_if_needed(lua_State *L) {
   }
 }
 
-int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, match *match) {
-  int t, top;
+int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input, match *match) {
+  int t, encoder;
   size_t temp_len;
   unsigned char *temp_str;
   rBuffer *buf;
@@ -508,67 +521,45 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, mat
     return SUCCESS;
   }
   
-  /* TODO: store peg instead of full rplx object */
   CHECK_TYPE("rplx object", t, LUA_TTABLE);
-  t = lua_getfield(L, -1, "pattern");
-  CHECK_TYPE("rplx pattern slot", t, LUA_TTABLE);
-  t = lua_getfield(L, -1, "peg");
-  CHECK_TYPE("rplx pattern peg slot", t, LUA_TUSERDATA);
 
-  /* TODO: The encoder values that do not require Lua processing
-   * should take a different code path from the ones that do.  When no
+  /* The encoder values that do not require Lua processing
+   * take a different code path from the ones that do.  When no
    * Lua processing is needed, we can (1) use a lightuserdata to hold
    * a ptr to the rosie_string holding the input, and (2) call into a
-   * refactored rmatch such that it expects this.  While we are doing
-   * this, we should bypass the overhead of the rplx.match function,
-   * which calls _match which checks to make sure the input is
-   * compiled -- and in our case it always is.
+   * refactored rmatch such that it allows this. 
    *
-   * OTHERWISE: If we are going to use Lua to generate the output,
-   * then we will wrap the input in a userdata using r_newbuffer_wrap,
-   * and call the rplx.match function like we do now.
-   *
-   * IMPLICATION: The api has to have a table of encoders or a way to
-   * know which ones need Lua.  ALSO, it's better in several ways to
-   * use a small integer to specify an encoder.  SO, maybe on the Lua
-   * side, maintain a table of encoders, and assign a number to each
-   * one.  Better, maintain TWO tables:
-
-   * In the BUILT-IN table, list the names of the output types
-   * produced by rpeg, and for each one the code to pass to rpeg.
-
-   * In the EXTENSION table, list the names of the output types
-   * produced by registered Lua encoders, and for each one the code to
-   * pass to rpeg and the lua function to call.
-
-   * The EXTENSION table can be handled entirely by Lua -- from
-   * librosie, we just have to wrap the input into a userdata and call
-   * a Lua entrypoint to do the match and process the result.
-
-   * When the librosie client wants an encoder that is in the BUILT-IN
-   * table, we should be able to bypass Lua entirely and call a new
-   * rpeg entry point with the input pointer and length.  No
-   * lightuserdata is needed.
-
-   * PERHAPS assign negative numbers to the BUILT-IN entries, positive
-   * numbers to the EXTENSION entries, and leave 0 for the default?
-
+   * Otherwise, we call the lua function engine.match().
    */
 
-  lua_pushcfunction(L, r_match_C);
-  lua_copy(L, -1, 1);
-  lua_copy(L, -2, 2);
-  lua_settop(L, 2);
-
-  /* Don't make a copy of the input.  Wrap it in an rbuf, which will
-     be gc'd later (but will not free the original source data. */
-  /* buf = r_newbuffer_wrap(L, (char *)input->ptr, input->len); */
-  lua_pushlightuserdata(L, input); 
-  lua_pushinteger(L, start);
-
-  /* lua_pushstring(L, encoder);   */
-  /* TEMP: hardcoded force encoder to be 1 */
-  lua_pushinteger(L, 1);
+  encoder = encoder_name_to_code(encoder_name);
+  if (!encoder) {
+    /* Path through Lua */
+    t = lua_getfield(L, -1, "match");
+    CHECK_TYPE("rplx.match()", t, LUA_TFUNCTION);
+    lua_replace(L, 1);
+    lua_settop(L, 2);
+    /* Don't make a copy of the input.  Wrap it in an rbuf, which will
+       be gc'd later (but will not free the original source data. */
+    r_newbuffer_wrap(L, (char *)input->ptr, input->len); 
+    lua_pushinteger(L, start);
+    lua_pushstring(L, encoder_name);
+    assert(lua_gettop(L) == 5);
+  }
+  else {
+    /* Path through C */
+    t = lua_getfield(L, -1, "pattern");
+    CHECK_TYPE("rplx pattern slot", t, LUA_TTABLE);
+    t = lua_getfield(L, -1, "peg");
+    CHECK_TYPE("rplx pattern peg slot", t, LUA_TUSERDATA);
+    lua_pushcfunction(L, r_match_C);
+    lua_copy(L, -1, 1);
+    lua_copy(L, -2, 2);
+    lua_settop(L, 2);
+    lua_pushlightuserdata(L, input); 
+    lua_pushinteger(L, start);
+    lua_pushinteger(L, encoder);
+  }
   
   t = lua_pcall(L, 4, LUA_MULTRET, 0); 
   if (t != LUA_OK) { 
@@ -577,10 +568,9 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, mat
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED; 
   } 
-
   if (lua_gettop(L) != 5) {
     int actual = lua_gettop(L);
-    LOGf("Internal error: wrong number of return values (expected 4, received %d)\n", actual);
+    LOGf("Internal error: wrong number of return values (expected 5, received %d)\n", actual);
     LOGstack(L);
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED;
