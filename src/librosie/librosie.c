@@ -118,27 +118,26 @@ static int key_array[KEY_ARRAY_SIZE];
 static void stackDump (lua_State *L) {
       int i;
       int top = lua_gettop(L);
-      if (top==0) { printf("EMPTY STACK\n"); return;}
+      if (top==0) { fprintf(stderr, "EMPTY STACK\n"); return;}
       for (i = top; i >= 1; i--) {
         int t = lua_type(L, i);
         switch (t) {
           case LUA_TSTRING:  /* strings */
-	       printf("%d: '%s'", i, lua_tostring(L, i));
+	    fprintf(stderr, "%d: '%s'", i, lua_tostring(L, i));
             break;
           case LUA_TBOOLEAN:  /* booleans */
-	       printf("%d: %s", i, (lua_toboolean(L, i) ? "true" : "false"));
+	    fprintf(stderr, "%d: %s", i, (lua_toboolean(L, i) ? "true" : "false"));
             break;
           case LUA_TNUMBER:  /* numbers */
-	       printf("%d: %g", i, lua_tonumber(L, i));
+	    fprintf(stderr, "%d: %g", i, lua_tonumber(L, i));
             break;
           default:  /* other values */
-	       printf("%d: %s", i, lua_typename(L, t));
+	    fprintf(stderr, "%d: %s", i, lua_typename(L, t));
             break;
         }
-        printf("  ");
+        fprintf(stderr, "  ");
       }
-      printf("\n");
-      fflush(NULL);
+      fprintf(stderr, "\n");
     }
 
 
@@ -529,7 +528,7 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
    * a ptr to the rosie_string holding the input, and (2) call into a
    * refactored rmatch such that it allows this. 
    *
-   * Otherwise, we call the lua function engine.match().
+   * Otherwise, we call the lua function rplx.match().
    */
 
   encoder = encoder_name_to_code(encoder_name);
@@ -561,13 +560,16 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
     lua_pushinteger(L, encoder);
   }
   
-  t = lua_pcall(L, 4, LUA_MULTRET, 0); 
-  if (t != LUA_OK) { 
-    LOG("match() failed\n"); 
-    LOGstack(L);
-    lua_settop(L, 0);
-    return ERR_ENGINE_CALL_FAILED; 
-  } 
+  t = lua_pcall(L, 4, 5, 0); 
+  /* t = lua_pcall(L, 4, LUA_MULTRET, 0);   */
+  if (t != LUA_OK) {  
+    LOG("match() failed\n");  
+    LOGstack(L); 
+    lua_settop(L, 0); 
+    return ERR_ENGINE_CALL_FAILED;  
+  }  
+
+  /* TODO: remove this check */
   if (lua_gettop(L) != 5) {
     int actual = lua_gettop(L);
     LOGf("Internal error: wrong number of return values (expected 5, received %d)\n", actual);
@@ -578,6 +580,7 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
 
   (*match).tmatch = lua_tointeger(L, -1);
   (*match).ttotal = lua_tointeger(L, -2);
+  /* TODO */
   /* (*match).abend = lua_toboolean(L, -3); */
   (*match).leftover = lua_tointeger(L, -4);
   lua_pop(L, 4);
@@ -592,6 +595,12 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
     (*match).data.len = 0;
   }
   else if (lua_isstring(L, -1)) {
+    if (encoder) {
+      LOG("Invalid return type from rmatch (string)\n");
+      match = NULL;
+      lua_settop(L, 0);
+      return ERR_ENGINE_CALL_FAILED;
+    }
     /* The client does not need to manage the storage for match
      * results when they are in an rBuffer, so we do not want the
      * client to manage the storage when it has the form of a Lua
@@ -611,6 +620,13 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
     set_registry(prev_string_result_key);
     (*match).data.ptr = rs->ptr;
     (*match).data.len = rs->len;
+  }
+  else {
+    t = lua_type(L, -1);
+    LOGf("Invalid return type from rmatch (%d)\n", t);
+    match = NULL;
+    lua_settop(L, 0);
+    return ERR_ENGINE_CALL_FAILED;
   }
 
   lua_settop(L, 0);
