@@ -138,7 +138,7 @@ local function run(args)
    if not args.command then
       if ROSIE_DEV then greeting(); return
       else
-	 print("Usage: rosie command [options] pattern file [...])")
+	 print("Usage: rosie command [options] pattern file [...]")
 	 os.exit(-1)
       end
    end

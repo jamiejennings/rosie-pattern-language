@@ -121,11 +121,6 @@ ast.cs_range = recordtype.new("cs_range",	    -- [a-z]
 			       pat = NIL;
 			       sourceref = NIL;})
 
-ast.cs_union = recordtype.new("cs_union",	    -- [ [exp1] ... ]
-				{cexps = {};
-				 pat = NIL;
-				 sourceref = NIL;})
-
 ast.cs_intersection = recordtype.new("cs_intersection", -- [ [exp1]&&[exp2]&& ... ]
 				       {cexps = {};
 					pat = NIL;
@@ -244,65 +239,6 @@ local function flatten(pt, pt_type)
    return flatten(pt)
 end
 
-local function flatten_cexp_in_place(a, target_type)
-   local function lift(exps)
-      if list.null(exps) then return list.from({}); end
-      local first = exps[1]
-      local lift1
-      if target_type.is(first) then
-	 local subs = list.from(first.cexps)
-	 lift1 = lift(subs)
-      else
-	 flatten_cexp_in_place(first, target_type)
-	 lift1 = list.new(first)
-      end
-      return append(lift1, lift(list.cdr(exps)))
-   end
-   if target_type.is(a) then
-      local exps = list.from(a.cexps)
-      a.cexps = lift(exps)
-   elseif ast.cs_intersection.is(a) or ast.cs_union.is(a) then
-      list.foreach(function(exp) flatten_cexp_in_place(exp, target_type) end, a.cexps)
-   elseif ast.bracket.is(a) then
-      flatten_cexp_in_place(a.cexp, target_type)
-   elseif ast.cs_difference.is(a) then
-      flatten_cexp_in_place(a.first, target_type)
-      flatten_cexp_in_place(a.second, target_type)
-   else
-      -- else we have a "simple" cexp, which has no cexps inside it
-      assert(ast.simple_charset_p(a))
-   end
-end
-
--- local convert_char_exp;
-
--- local function infix_to_prefix(exps, sref)
---    -- exps := exp (op exp)*
---    assert(sref)
---    local rest = filter(not_atmosphere, exps)
---    local first = rest[1]
---    local op = rest[2]
---    if not op then return convert_char_exp(first, sref); end
---    local optype = op.subs[1].type
---    assert(optype)
---    rest = list.cdr(list.cdr(rest))
---    if optype=="charset_exp.intersection" then
---       return ast.cs_intersection.new{cexps = {convert_char_exp(first, sref),
--- 					      infix_to_prefix(rest, sref)},
--- 				     sourceref=sref}
---    elseif optype=="charset_exp.difference" then
---       return ast.cs_difference.new{first = convert_char_exp(first, sref),
--- 				   second = infix_to_prefix(rest, sref),
--- 				   sourceref=sref}
---    elseif optype=="charset_exp.union" then
---       return ast.cs_union.new{cexps = {convert_char_exp(first, sref), 
--- 				       infix_to_prefix(rest, sref)}, 
--- 			      sourceref=sref}
---    else
---       error("Internal error: do not know how to convert charset op " .. tostring(optype))
---    end
--- end
-
 local function convert_cs_named(pt, sref)
    assert(sref)
    assert(pt.subs and pt.subs[1])
@@ -333,14 +269,11 @@ function convert_bracket(pt, sref)
       print("***"); table.print(exps); end
    assert(exps[1] and (not exps[2]))
    local cexp
---   print("*** exps[1].type = ", exps[1].type)
---   print("*** #exps[1].subs = ", #exps[1].subs)
    if exps[1].type=="exp.sequence" then
-      -- TEMPORARILY USE cs_union UNTIL WE CHANGE THE COMPILER
       local explist = filter(not_atmosphere, flatten(exps[1], "exp.sequence"))
-      cexp = ast.cs_union.new{cexps = map(function(exp) return convert_exp(exp, sref) end,
-					  explist),
-			      sourceref=sref}
+      cexp = ast.choice.new{exps = map(function(exp) return convert_exp(exp, sref) end,
+				       explist),
+			    sourceref=sref}
    else
       cexp = convert_exp(exps[1], sref)
    end
@@ -630,8 +563,8 @@ ast.from_parse_tree = convert
 function convert_core_charset_exp(pt, sref)
    assert(pt.type=="charset_exp")
    local cs_exps = map(function(exp) return convert_simple_charset(exp, sref) end, pt.subs)
-   return ast.bracket.new{cexp = ast.cs_union.new{cexps=cs_exps,
-						  sourceref=sref},
+   return ast.bracket.new{cexp = ast.choice.new{exps=cs_exps,
+						sourceref=sref},
 			  complement = false,
 			  sourceref=sref}
 end
@@ -784,7 +717,6 @@ function ast.dependencies_of(a)
 	   ast.cs_named.is(a) or
 	   ast.cs_list.is(a) or
 	   ast.cs_range.is(a) or
-	   ast.cs_union.is(a) or
 	   ast.cs_intersection.is(a) or
 	   ast.cs_difference.is(a)) then
       return {}
@@ -885,8 +817,6 @@ function ast.tostring(a, already_grouped)
       return ( "[" .. (a.complement and "^" or "") ..
 	       a.first .. "-" .. a.last ..
 	       "]" )
-   elseif ast.cs_union.is(a) then
-      return table.concat(map(ast.tostring, a.cexps), " ")
    elseif ast.cs_intersection.is(a) then
       return table.concat(map(ast.tostring(a.cexps)), "&&")
    elseif ast.cs_difference.is(a) then

@@ -297,11 +297,11 @@ function bracket(a, env, prefix, messages)
 	 local new = ast.bracket{complement=(not a.cexp.complement), cexp=a.cexp.cexp, s=a.s, e=e.s}
 	 return bracket(new, env, prefix, messages)
       end
-   elseif ast.cs_union.is(a.cexp) then
-      assert(#a.cexp.cexps > 0, "empty character set union?")
-      local alternatives = expression(a.cexp.cexps[1], env, prefix, messages).peg
-      for i = 2, #a.cexp.cexps do
-	 alternatives = alternatives + expression(a.cexp.cexps[i], env, prefix, messages).peg
+   elseif ast.choice.is(a.cexp) then
+      assert(#a.cexp.exps > 0, "empty character set union?")
+      local alternatives = expression(a.cexp.exps[1], env, prefix, messages).peg
+      for i = 2, #a.cexp.exps do
+	 alternatives = alternatives + expression(a.cexp.exps[i], env, prefix, messages).peg
       end
       a.pat = pattern.new{name="bracket",
 			 peg=((a.complement and (1-alternatives)) or alternatives),

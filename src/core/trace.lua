@@ -382,33 +382,6 @@ local function bracket(e, a, input, start, expected, nextpos)
 	 end
       end -- if there is an expectation that we can check against
       return {match=result.match, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
-   elseif ast.cs_union.is(a.cexp) then
-      -- This is identical to 'choice' except for a.cexps, bracket, and the assert messages.
-      -- Should re-factor, unless there's a reason to treat union/choice differently?
-      local matches = {}
-      for _, exp in ipairs(a.cexp.cexps) do
-	 local result = bracket(e, exp, input, start, nil, nextpos)
-	 table.insert(matches, result)
-	 if result.match then break; end
-      end -- for
-      local last = matches[#matches]
-      if expected ~= nil then
-	 if (last.match and (not a.complement)) or ((not last.match) and a.complement) then
-	    assert(expected, "cs_union match differs from expected")
-	    if last.match then
-	       assert(last.nextpos==nextpos,
-		      "cs_union nextpos differs from expected:" ..
-			 " incoming nextpos: " .. tostring(nextpos) ..
-		         ", computed nextpos: " .. tostring(last.nextpos) .. "\n" ..
-		         bracket_explanation(a, input, start, last, a.complement))
-	    end
-	 else
-	    assert(not expected,
-		   "cs_union non-match differs from expected:" ..
-		      bracket_explanation(a, input, start, last, a.complement))
-	 end
-      end -- if there is an expectation that we can check against
-      return {match=last.match, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
    elseif ast.cs_intersection.is(a.cexp) then
       throw("character set intersection is not implemented", a)
    elseif ast.cs_difference.is(a.cexp) then
