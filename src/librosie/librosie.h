@@ -7,7 +7,7 @@
 /*  AUTHOR: Jamie A. Jennings                                                */
 
 #define INITIAL_RPLX_SLOTS 32
-#define INITIAL_ALLOC_LIMIT_MB 100
+#define INITIAL_ALLOC_LIMIT_MB 0
 #define MIN_ALLOC_LIMIT_MB 10
 
 #define TRUE 1
@@ -20,13 +20,9 @@
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
+#include "../../submodules/rosie-lpeg/src/rpeg.h"
 
-typedef uint8_t * byte_ptr;
-
-typedef struct rosie_string {
-     uint32_t len;
-     byte_ptr ptr;
-} str;
+typedef struct rosie_string str;
 
 typedef struct rosie_matchresult {
      str data;
@@ -44,7 +40,7 @@ void *rosie_new();
 void rosie_finalize(void *L);
 int rosie_set_alloc_limit(lua_State *L, int newlimit);
 int rosie_config(lua_State *L, str *retvals);
-int rosie_compile(lua_State *L, str expression, int *pat, str *errors);
+int rosie_compile(lua_State *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(lua_State *L, int pat);
 int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, match *match);
 int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors);

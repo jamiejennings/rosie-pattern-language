@@ -116,12 +116,6 @@ macosx: CFLAGS += -std=gnu99
 windows:
 	@echo Windows installation not yet supported.
 
-# gen_C:
-# librosie_gen.c:
-# librosie_gen.h:
-# 	@echo Generating librosie C functions and headers
-# 	echo 'api = require "api"; api.write_C_FILES();' | $(ROSIE) -D >/dev/null
-
 ## Targets that do not create files
 .PHONY: default o a clean echo none
 

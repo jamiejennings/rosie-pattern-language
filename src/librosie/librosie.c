@@ -26,7 +26,6 @@
 #include "lualib.h"
 
 #include "librosie.h"
-#include "../../submodules/rosie-lpeg/src/rbuf.h"
 
 #include <dlfcn.h>
 #include <libgen.h>
@@ -61,6 +60,7 @@ enum KEYS {
   rplx_table_key,
   json_encoder_key,
   alloc_limit_key,
+  prev_string_result_key,
   KEY_ARRAY_SIZE
 };
 
@@ -225,16 +225,58 @@ static int boot (lua_State *L) {
   return TRUE;
 }
 
+str *to_json_string(lua_State *L, int pos) {
+     size_t len;
+     byte_ptr str;
+     int t;
+     int top = lua_gettop(L);
+     get_registry(json_encoder_key);
+     lua_pushvalue(L, pos-1);	/* offset becaus we pushed json_encoder */
+     t = lua_pcall(L, 1, LUA_MULTRET, 0);
+     if (t != LUA_OK) {
+       /* TODO: return a message? */
+       LOG("call to json encoder failed\n");
+       LOGstack(L);
+       return NULL;
+     }
+     if ((lua_gettop(L) - top) > 1) {
+       /* Top of stack is error msg */
+       LOG("call to json encoder returned more than one value\n");
+       if (lua_isstring(L, -1) && lua_isnil(L, -2)) {
+	 /* TO DO: return something to indicate the error */
+	 LOGf("error message from json encoder: %s\n", lua_tolstring(L, -1, NULL));
+	 LOGstack(L);
+	 return NULL;
+       }
+       else {
+	 /* TO DO: something really strange happened! what to return? */
+	 LOG("call to json encoder returned unexpected values\n");
+	 LOGstack(L);
+	 return NULL;
+       }
+     }
+     str = (byte_ptr) lua_tolstring(L, -1, &len);
+     return rosie_new_string_ptr(str, len);
+}
+
 /* ----------------------------------------------------------------------------------------
  * Exported functions
  * ----------------------------------------------------------------------------------------
  */
 
 int rosie_set_alloc_limit(lua_State *L, int newlimit) {
-  if (newlimit < MIN_ALLOC_LIMIT_MB) return ERR_ENGINE_CALL_FAILED;
+  int memusg, actual_limit;
+  if ((newlimit != 0) && (newlimit < MIN_ALLOC_LIMIT_MB)) return ERR_ENGINE_CALL_FAILED;
   else {
-    lua_pushinteger(L, newlimit * 1024);
+    lua_gc(L, LUA_GCCOLLECT, 0);
+    lua_gc(L, LUA_GCCOLLECT, 0);	/* second time to free resources marked for finalization */
+    memusg = lua_gc(L, LUA_GCCOUNT, 0); /* KB */
+    actual_limit = memusg + (newlimit * 1024);
+    lua_pushinteger(L, (newlimit == 0) ? 0 : actual_limit);
     set_registry(alloc_limit_key);
+    lua_pop(L, 1);
+    if (newlimit == 0) LOGf("set alloc limit to UNLIMITED above current usage level of %0.1f MB\n", memusg/1024.0);
+    else LOGf("set alloc limit to %d MB above current usage level of %0.1f MB\n", newlimit, memusg/1024.0);
   }
   return SUCCESS;
 }
@@ -296,40 +338,6 @@ void *rosie_new() {
   lua_settop(L, 0);
   LOG("Engine created\n");
   return L;
-}
-
-str *to_json_string(lua_State *L, int pos) {
-     size_t len;
-     byte_ptr str;
-     int t;
-     int top = lua_gettop(L);
-     get_registry(json_encoder_key);
-     lua_pushvalue(L, pos-1);	/* offset becaus we pushed json_encoder */
-     t = lua_pcall(L, 1, LUA_MULTRET, 0);
-     if (t != LUA_OK) {
-       /* TODO: return a message? */
-       LOG("call to json encoder failed\n");
-       LOGstack(L);
-       return NULL;
-     }
-     if ((lua_gettop(L) - top) > 1) {
-       /* Top of stack is error msg */
-       LOG("call to json encoder returned more than one value\n");
-       if (lua_isstring(L, -1) && lua_isnil(L, -2)) {
-	 /* TO DO: return something to indicate the error */
-	 LOGf("error message from json encoder: %s\n", lua_tolstring(L, -1, NULL));
-	 LOGstack(L);
-	 return NULL;
-       }
-       else {
-	 /* TO DO: something really strange happened! what to return? */
-	 LOG("call to json encoder returned unexpected values\n");
-	 LOGstack(L);
-	 return NULL;
-       }
-     }
-     str = (byte_ptr) lua_tolstring(L, -1, &len);
-     return rosie_new_string_ptr(str, len);
 }
 
 str rosie_new_string(byte_ptr msg, size_t len) {
@@ -401,7 +409,7 @@ int rosie_free_rplx(lua_State *L, int pat) {
 }
 
 /* N.B. Client must free errors */
-int rosie_compile(lua_State *L, str expression, int *pat, str *errors) {
+int rosie_compile(lua_State *L, str *expression, int *pat, str *errors) {
   int t;
   str *temp_rs;
 
@@ -410,6 +418,12 @@ int rosie_compile(lua_State *L, str expression, int *pat, str *errors) {
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED;
   }
+  if (!expression) {
+    LOG("null pointer passed to compile for expression argument");
+    lua_settop(L, 0);
+    return ERR_ENGINE_CALL_FAILED;
+  }  
+
   get_registry(rplx_table_key);
 
   get_registry(engine_key);
@@ -419,10 +433,10 @@ int rosie_compile(lua_State *L, str expression, int *pat, str *errors) {
   lua_replace(L, -2);
   get_registry(engine_key);
 
-  lua_pushlstring(L, (const char *)expression.ptr, expression.len);
+  lua_pushlstring(L, (const char *)expression->ptr, expression->len);
   t = lua_pcall(L, 2, 2, 0);
   if (t != LUA_OK) {
-    display("compile() failed");
+    LOG("compile() failed");
     LOGstack(L);
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED;
@@ -459,55 +473,114 @@ int rosie_compile(lua_State *L, str expression, int *pat, str *errors) {
   return SUCCESS;
 }
 
+void collect_if_needed(lua_State *L) {
+  int limit, memusg;
+  get_registry(alloc_limit_key);
+  limit = lua_tointeger(L, -1);	/* nil will convert to zero */
+  lua_pop(L, 1);
+  if (limit) {
+    memusg = lua_gc(L, LUA_GCCOUNT, 0);
+    if (memusg > limit) {
+      LOGf("invoking collection of %0.1f MB heap\n", memusg/1024.0);
+      lua_gc(L, LUA_GCCOLLECT, 0);
+#if (LOGGING)
+      memusg = lua_gc(L, LUA_GCCOUNT, 0);
+      LOGf("post-collection heap has %0.1f MB\n", memusg/1024.0);
+#endif
+    }
+  }
+}
+
 int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, match *match) {
   int t, top;
   size_t temp_len;
   unsigned char *temp_str;
   rBuffer *buf;
-  int limit, memusg;
-  
-  get_registry(alloc_limit_key);
-  limit = lua_tointeger(L, -1);
-  memusg = lua_gc(L, LUA_GCCOUNT, 0);
-  if (memusg > limit) {
-    LOG("invoking collection\n");
-    lua_gc(L, LUA_GCCOLLECT, 0);
-  }
 
+  collect_if_needed(L);
+  
   get_registry(rplx_table_key);
   t = lua_geti(L, -1, pat);
   if (t == LUA_TNIL) {
-    /* TODO message = "Invalid rplx" */
     LOGf("rosie_match() called with invalid compiled pattern reference: %d\n", pat);
-    LOGstack(L);
     match = NULL;
     lua_settop(L, 0);
     return SUCCESS;
   }
   
+  /* TODO: store peg instead of full rplx object */
   CHECK_TYPE("rplx object", t, LUA_TTABLE);
+  t = lua_getfield(L, -1, "pattern");
+  CHECK_TYPE("rplx pattern slot", t, LUA_TTABLE);
+  t = lua_getfield(L, -1, "peg");
+  CHECK_TYPE("rplx pattern peg slot", t, LUA_TUSERDATA);
 
-  t = lua_getfield(L, -1, "match");
-  CHECK_TYPE("rplx match function", t, LUA_TFUNCTION);
-  top = lua_gettop(L);
-  lua_pushvalue(L, -2);		/* push rplx object again */
+  /* TODO: The encoder values that do not require Lua processing
+   * should take a different code path from the ones that do.  When no
+   * Lua processing is needed, we can (1) use a lightuserdata to hold
+   * a ptr to the rosie_string holding the input, and (2) call into a
+   * refactored rmatch such that it expects this.  While we are doing
+   * this, we should bypass the overhead of the rplx.match function,
+   * which calls _match which checks to make sure the input is
+   * compiled -- and in our case it always is.
+   *
+   * OTHERWISE: If we are going to use Lua to generate the output,
+   * then we will wrap the input in a userdata using r_newbuffer_wrap,
+   * and call the rplx.match function like we do now.
+   *
+   * IMPLICATION: The api has to have a table of encoders or a way to
+   * know which ones need Lua.  ALSO, it's better in several ways to
+   * use a small integer to specify an encoder.  SO, maybe on the Lua
+   * side, maintain a table of encoders, and assign a number to each
+   * one.  Better, maintain TWO tables:
+
+   * In the BUILT-IN table, list the names of the output types
+   * produced by rpeg, and for each one the code to pass to rpeg.
+
+   * In the EXTENSION table, list the names of the output types
+   * produced by registered Lua encoders, and for each one the code to
+   * pass to rpeg and the lua function to call.
+
+   * The EXTENSION table can be handled entirely by Lua -- from
+   * librosie, we just have to wrap the input into a userdata and call
+   * a Lua entrypoint to do the match and process the result.
+
+   * When the librosie client wants an encoder that is in the BUILT-IN
+   * table, we should be able to bypass Lua entirely and call a new
+   * rpeg entry point with the input pointer and length.  No
+   * lightuserdata is needed.
+
+   * PERHAPS assign negative numbers to the BUILT-IN entries, positive
+   * numbers to the EXTENSION entries, and leave 0 for the default?
+
+   */
+
+  lua_pushcfunction(L, r_match_C);
+  lua_copy(L, -1, 1);
+  lua_copy(L, -2, 2);
+  lua_settop(L, 2);
 
   /* Don't make a copy of the input.  Wrap it in an rbuf, which will
      be gc'd later (but will not free the original source data. */
-  buf = r_newbuffer_wrap(L, (char *)input->ptr, input->len);
+  /* buf = r_newbuffer_wrap(L, (char *)input->ptr, input->len); */
+  lua_pushlightuserdata(L, input); 
   lua_pushinteger(L, start);
-  lua_pushstring(L, encoder);  
 
+  /* lua_pushstring(L, encoder);   */
+  /* TEMP: hardcoded force encoder to be 1 */
+  lua_pushinteger(L, 1);
+  
   t = lua_pcall(L, 4, LUA_MULTRET, 0); 
   if (t != LUA_OK) { 
-    LOG("match() failed"); 
+    LOG("match() failed\n"); 
     LOGstack(L);
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED; 
   } 
 
-  if ((lua_gettop(L) - top + 1) != 4) {
-    LOGf("Wrong number of return values: current top: %d, previous top %d\n", lua_gettop(L), top);
+  if (lua_gettop(L) != 5) {
+    int actual = lua_gettop(L);
+    LOGf("Internal error: wrong number of return values (expected 4, received %d)\n", actual);
     LOGstack(L);
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED;
@@ -515,8 +588,9 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, mat
 
   (*match).tmatch = lua_tointeger(L, -1);
   (*match).ttotal = lua_tointeger(L, -2);
-  (*match).leftover = lua_tointeger(L, -3);
-  lua_pop(L, 3);
+  /* (*match).abend = lua_toboolean(L, -3); */
+  (*match).leftover = lua_tointeger(L, -4);
+  lua_pop(L, 4);
 
   buf = lua_touserdata(L, -1);
   if (buf) {
@@ -528,13 +602,25 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, mat
     (*match).data.len = 0;
   }
   else if (lua_isstring(L, -1)) {
-    /* TODO: How/when to free the string that we copied with rosie_new_string?
-       Soln: Keep the rosie_string in the lua state, and free it on next
-       entry to match (and when we close the lua State).
+    /* The client does not need to manage the storage for match
+     * results when they are in an rBuffer, so we do not want the
+     * client to manage the storage when it has the form of a Lua
+     * string (returned by common.rmatch).  So we alloc the string,
+     * and stash a pointer to it in the registry, to be freed the next
+     * time around.
     */
+    get_registry(prev_string_result_key);
+    if (lua_isuserdata(L, -1)) {
+      str *rs = lua_touserdata(L, -1);
+      rosie_free_string_ptr(rs);
+      lua_pop(L, 1);
+    }
     temp_str = (unsigned char *)lua_tolstring(L, -1, &temp_len);
-    (*match).data = rosie_new_string(temp_str, temp_len);
-    display("Got string");
+    str *rs = rosie_new_string_ptr(temp_str, temp_len);
+    lua_pushlightuserdata(L, (void *) rs);
+    set_registry(prev_string_result_key);
+    (*match).data.ptr = rs->ptr;
+    (*match).data.len = rs->len;
   }
 
   lua_settop(L, 0);
@@ -589,6 +675,12 @@ int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
 }
 
 void rosie_finalize(void *L) {
-     lua_close(L);
+  get_registry(prev_string_result_key);
+  if (lua_isuserdata(L, -1)) {
+    str *rs = lua_touserdata(L, -1);
+    rosie_free_string_ptr(rs);
+    lua_pop(L, 1);
+  }
+  lua_close(L);
 }
 
