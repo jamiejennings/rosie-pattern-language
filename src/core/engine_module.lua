@@ -143,6 +143,8 @@ local function load(e, input, fullpath)
    return really_load(e, input, origin)
 end
 
+-- Force a reloading of the imported package, as opposed to e:load('import foo') which will not
+-- re-load a package that is already loaded.
 local function import(e, packagename, as_name)
    local messages = {}
    local ok, pkgname = loadpkg.import(e.compiler,
