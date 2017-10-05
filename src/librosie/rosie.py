@@ -1,7 +1,7 @@
 # coding: utf-8
 #  -*- Mode: Python; -*-                                              
 # 
-#  rosie.py     An interface to librosie
+#  rosie.py     An interface to librosie from Python
 # 
 #  © Copyright IBM Corporation 2016, 2017.
 #  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
@@ -13,14 +13,12 @@
 #   cffi 1.9.1 (installed with: pip install cffi)
 
 from cffi import FFI
-import json, os, sys
+import json
 
 ffi = FFI()
 NULL = ffi.NULL
 
-##
 ## N.B. We can't use ffi.string (because it uses NULL to mark the end of a string, like C does)
-##
 
 # See librosie.h
 ffi.cdef("""
@@ -57,10 +55,19 @@ int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 lib = None                # single instance of dynamic library
 home = None               # path to ROSIE_HOME directory
 
-def to_cstr_ptr(py_string):
+def cstr(py_string):
     return lib.rosie_new_string_ptr(py_string, len(py_string))
 
-def from_cstr_ptr(cstr_ptr):
+def cstr_ptr():
+    return ffi.new("struct rosie_string *")
+
+def free_cstr(cstr_obj):
+    lib.rosie_free_string_ptr(cstr_obj)
+
+def free_cstr_ptr(local_cstr_obj):
+    lib.rosie_free_string(local_cstr_obj[0])
+
+def read_cstr(cstr_ptr):
     return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
 
 # FUTURE: Support an optional argument for the engine name (helps when debugging)
@@ -79,70 +86,66 @@ class engine ():
         return
 
     def config(self):
-        Cresp = ffi.new("struct rosie_string *")
+        Cresp = cstr_ptr()
         ok = lib.rosie_config(self.engine, Cresp)
         if ok != 0:
             # TODO: Test call failure.
             # Want to show err msgs in the exception, but will this (below) work?
             raise RuntimeError("config() failed")
-        resp = from_cstr_ptr(Cresp)
-        lib.rosie_free_string(Cresp[0])
+        resp = read_cstr(Cresp)
+        free_cstr_ptr(Cresp)
         return resp
 
     def compile(self, exp):
-        Cerrs = ffi.new("struct rosie_string *")
-        Cexp = lib.rosie_new_string_ptr(exp, len(exp))
+        Cerrs = cstr_ptr()
+        Cexp = cstr(exp)
         Cpat = ffi.new("int *")
         ok = lib.rosie_compile(self.engine, Cexp, Cpat, Cerrs)
-        lib.rosie_free_string(Cexp[0])
+        free_cstr(Cexp)
         if ok != 0:
             # TODO: Test call failure.
-            raise RuntimeError("compile() failed", from_cstr_ptr(errs))
+            raise RuntimeError("compile() failed", read_cstr(errs))
         # TODO: create a python rplx object and define __del__ to call rosie_free_rplx()
         if Cpat[0] == 0:
-            errs = from_cstr_ptr(Cerrs)
-            lib.rosie_free_string(Cerrs[0])
+            errs = read_cstr(Cerrs)
+            free_cstr_ptr(Cerrs)
         else:
             errs = None
         return Cpat, errs
 
     def load(self, src):
-        Cerrs = ffi.new("struct rosie_string *")
-        Csrc = to_cstr_ptr(src)
+        Cerrs = cstr_ptr()
+        Csrc = cstr(src)
         Csuccess = ffi.new("int *")
-        Cpkgname = ffi.new("struct rosie_string *")
+        Cpkgname = cstr_ptr()
         ok = lib.rosie_load(self.engine, Csuccess, Csrc, Cpkgname, Cerrs)
         if ok != 0:
             # TODO: Test call failure.
-            raise RuntimeError("compile() failed", from_cstr_ptr(errs))
-        errs = from_cstr_ptr(Cerrs)
-        lib.rosie_free_string(Cerrs[0])
-        return Csuccess[0], from_cstr_ptr(Cpkgname), errs
+            raise RuntimeError("compile() failed", read_cstr(errs))
+        errs = read_cstr(Cerrs)
+        free_cstr_ptr(Cerrs)
+        pkgname = read_cstr(Cpkgname)
+        free_cstr_ptr(Cpkgname)
+        return Csuccess[0], pkgname, errs
 
     def free_rplx(self, Cpat):
         lib.rosie_free_rplx(self.engine, Cpat[0])
-        return None
-
-## FUTURE:  Avoid using rosie_new_string_ptr / rosie_free_string_ptr.
-## Maybe read the input data with f.readinto(buf), where buf is pre-allocated?
-## Or is there a way to initialize a ffi.new("struct rosie_string *") using ffi.from_buffer()?
 
     def match(self, Cpat, input, start, encoder):
-        match = ffi.new("struct rosie_matchresult *")
-        Cinput = lib.rosie_new_string_ptr(input, len(input))
-        ok = lib.rosie_match(self.engine, Cpat[0], start, encoder, Cinput, match)
-        lib.rosie_free_string_ptr(Cinput)
+        Cmatch = ffi.new("struct rosie_matchresult *")
+        Cinput = cstr(input)
+        ok = lib.rosie_match(self.engine, Cpat[0], start, encoder, Cinput, Cmatch)
+        free_cstr(Cinput)
         if ok != 0:
-            # TODO: Test call failure.
-            raise RuntimeError("match() failed with system error")
-        left = match.leftover
-        ttotal = match.ttotal
-        tmatch = match.tmatch
-        if match == ffi.NULL:
+            raise RuntimeError("match() failed with an internal error (please report this as a bug)")
+        if Cmatch == ffi.NULL:
             raise ValueError("invalid compiled pattern (already freed?)")
-        if match.data.ptr == ffi.NULL:
+        left = Cmatch.leftover
+        ttotal = Cmatch.ttotal
+        tmatch = Cmatch.tmatch
+        if Cmatch.data.ptr == ffi.NULL:
             return None, left, ttotal, tmatch
-        data_buffer = ffi.buffer(match.data.ptr, match.data.len)
+        data_buffer = ffi.buffer(Cmatch.data.ptr, Cmatch.data.len)
         return data_buffer, left, ttotal, tmatch
 
     def set_alloc_limit(self, newlimit):
@@ -150,7 +153,7 @@ class engine ():
             raise ValueError("new allocation limit must be 10 MB or higher (or zero for unlimited)")
         ok = lib.rosie_set_alloc_limit(self.engine, newlimit)
         if ok != 0:
-            raise RuntimeError("set_alloc_limit() failed")
+            raise RuntimeError("set_alloc_limit() failed with an internal error (please report this as a bug)")
 
     def __del__(self):
         if self.engine != ffi.NULL:

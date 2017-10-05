@@ -602,11 +602,11 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
       return ERR_ENGINE_CALL_FAILED;
     }
     /* The client does not need to manage the storage for match
-     * results when they are in an rBuffer, so we do not want the
-     * client to manage the storage when it has the form of a Lua
-     * string (returned by common.rmatch).  So we alloc the string,
-     * and stash a pointer to it in the registry, to be freed the next
-     * time around.
+     * results when they are in an rBuffer (userdata), so we do not
+     * want the client to manage the storage when it has the form of a
+     * Lua string (returned by common.rmatch).  So we alloc the
+     * string, and stash a pointer to it in the registry, to be freed
+     * the next time around.
     */
     get_registry(prev_string_result_key);
     if (lua_isuserdata(L, -1)) {
@@ -681,12 +681,13 @@ int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
 }
 
 void rosie_finalize(void *L) {
-  get_registry(prev_string_result_key);
-  if (lua_isuserdata(L, -1)) {
-    str *rs = lua_touserdata(L, -1);
-    rosie_free_string_ptr(rs);
-    lua_pop(L, 1);
-  }
+  /* get_registry(prev_string_result_key); */
+  /* if (lua_isuserdata(L, -1)) { */
+  /*   str *rs = lua_touserdata(L, -1); */
+  /*   rosie_free_string_ptr(rs); */
+  /*   lua_pop(L, 1); */
+  /* } */
+  LOGf("Finalizing engine %p\n", L);
   lua_close(L);
 }
 
