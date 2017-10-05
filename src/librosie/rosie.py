@@ -57,6 +57,13 @@ lib = None                # single instance of dynamic library
 home = None               # path to ROSIE_HOME directory
 libname = "librosie.so"
 
+def new_rplx(engine):
+    def free_rplx(obj):
+        if obj[0] and engine.engine:
+            lib.rosie_free_rplx(engine.engine, obj[0])
+    obj = ffi.new("int *")
+    return ffi.gc(obj, free_rplx)
+
 def new_cstr(py_string=None):
     def free_cstr_ptr(local_cstr_obj):
         lib.rosie_free_string(local_cstr_obj[0])
@@ -108,11 +115,10 @@ class engine ():
     def compile(self, exp):
         Cerrs = new_cstr()
         Cexp = new_cstr(exp)
-        Cpat = ffi.new("int *")
+        Cpat = new_rplx(self)
         ok = lib.rosie_compile(self.engine, Cexp, Cpat, Cerrs)
         if ok != 0:
             raise RuntimeError("compile() failed (please report this as a bug)")
-        # TODO: create a python rplx object and define __del__ to call rosie_free_rplx()
         if Cpat[0] == 0:
             errs = read_cstr(Cerrs)
         else:
@@ -141,9 +147,6 @@ class engine ():
             raise RuntimeError("import() failed (please report this as a bug)")
         errs = read_cstr(Cerrs)
         return Csuccess[0], pkgname, errs
-
-    def free_rplx(self, Cpat):
-        lib.rosie_free_rplx(self.engine, Cpat[0])
 
     def match(self, Cpat, input, start, encoder):
         Cmatch = ffi.new("struct rosie_matchresult *")
