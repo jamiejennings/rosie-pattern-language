@@ -40,7 +40,7 @@ str *rosie_new_string_ptr(byte_ptr msg, size_t len);
 void rosie_free_string_ptr(str *s);
 void rosie_free_string(str s);
 
-void *rosie_new();
+void *rosie_new(str *errors);
 void rosie_finalize(void *L);
 int rosie_set_alloc_limit(void *L, int newlimit);
 int rosie_config(void *L, str *retvals);
@@ -68,9 +68,14 @@ def new_cstr(py_string=None):
 def read_cstr(cstr_ptr):
     return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
 
-# FUTURE: Support an optional argument for the engine name (helps when debugging)
+
 class engine ():
-    'TODO: docstring'
+    '''
+    Create a Rosie pattern matching engine.  The first call to engine()
+    will load librosie from one of the standard shared library
+    directories for your system, or from a custom path provided as an
+    argument.
+    '''
 
     def __init__(self, custom_libpath=None):
         global lib, libname, home
@@ -84,9 +89,10 @@ class engine ():
                 if not libpath:
                     raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
             lib = ffi.dlopen(libpath)
-        self.engine = lib.rosie_new()
+        Cerrs = new_cstr()
+        self.engine = lib.rosie_new(Cerrs)
         if self.engine == ffi.NULL:
-            raise RuntimeError("error initializing librosie (please report this as a bug)")
+            raise RuntimeError("librosie: " + read_cstr(Cerrs))
         return
 
     def config(self):

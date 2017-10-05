@@ -36,7 +36,7 @@ str *rosie_new_string_ptr(byte_ptr msg, size_t len);
 void rosie_free_string(str s);
 void rosie_free_string_ptr(str *s);
 
-void *rosie_new();
+void *rosie_new(str *errors);
 void rosie_finalize(void *L);
 int rosie_set_alloc_limit(lua_State *L, int newlimit);
 int rosie_config(lua_State *L, str *retvals);

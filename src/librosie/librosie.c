@@ -173,6 +173,45 @@ static int encoder_name_to_code(const char *name) {
   return 0;
 }
 
+static str string_from_const(const char *msg) {
+  size_t len = strnlen(msg, MAXPATHLEN); /* arbitrary but small-ish limit */
+  return rosie_new_string((byte_ptr) msg, len);
+}
+
+str rosie_new_string(byte_ptr msg, size_t len) {
+  str retval;
+  retval.len = len;
+  retval.ptr = malloc(len+1);
+  if (!retval.ptr) {
+    display("Out of memory (new1)");
+    return retval;
+  }
+  memcpy((char *)retval.ptr, msg, retval.len);    /* sure it is allocated on the heap. */
+  retval.ptr[len]=0;		/* add null terminator. */
+  return retval;
+}
+
+str *rosie_new_string_ptr(byte_ptr msg, size_t len) {
+  str temp = rosie_new_string(msg, len);
+  str *retval = malloc(sizeof(str));
+  if (!retval) {
+    display("Out of memory (new2)");
+    return NULL;
+  }
+  retval->len = temp.len;
+  retval->ptr = temp.ptr;
+  return retval;
+}     
+
+void rosie_free_string_ptr(str *ref) {
+     free(ref->ptr);
+     free(ref);
+}
+
+void rosie_free_string(str s) {
+     free(s.ptr);
+}
+
 static void set_libinfo() {
   Dl_info dl;
   int ok = dladdr((void *)set_libinfo, &dl);
@@ -207,19 +246,32 @@ static void set_bootscript() {
   LOGf("Bootscript filename set to %s\n", bootscript);
 }
 
-static int boot (lua_State *L) {
+static int boot (lua_State *L, str *errors) {
+  char *msg = NULL;
   if (!*bootscript) set_bootscript();
   assert(bootscript);
   LOGf("Booting rosie from %s\n", bootscript);
   int status = luaL_loadfile(L, bootscript);
   if (status != LUA_OK) {
     LOG("Failed to read boot code (using loadfile)\n");
+    if (asprintf(&msg, "missing or corrupt rosie boot loader %s", bootscript)) {
+      *errors = string_from_const(msg);
+    }
+    else {
+      *errors = string_from_const("cannot find rosie boot code");
+    }
     return FALSE;
   }
   LOG("Reading of boot code succeeded (using loadfile)\n");
   status = lua_pcall(L, 0, LUA_MULTRET, 0);
   if (status != LUA_OK) {
     LOG("Loading of boot code failed\n");
+    if (asprintf(&msg, "loading failed for %s", bootscript)) {
+      *errors = string_from_const(msg);
+    }
+    else {
+      *errors = string_from_const("loading of boot code failed");
+    }
     return FALSE;
   }
   LOG("Loading of boot code succeeded\n");
@@ -228,6 +280,7 @@ static int boot (lua_State *L) {
   if (status!=LUA_OK) {
     LOG("Boot function failed.  Lua stack is: \n");
     LOGstack(L);
+    *errors = string_from_const("execution of boot loader failed");
     return FALSE;
   }
   LOG("Boot function succeeded\n");
@@ -252,7 +305,7 @@ str *to_json_string(lua_State *L, int pos) {
        /* Top of stack is error msg */
        LOG("call to json encoder returned more than one value\n");
        if (lua_isstring(L, -1) && lua_isnil(L, -2)) {
-	 /* TO DO: return something to indicate the error */
+	 /* TO DO: return something to indicate the nature of the error */
 	 LOGf("error message from json encoder: %s\n", lua_tolstring(L, -1, NULL));
 	 LOGstack(L);
 	 return NULL;
@@ -290,22 +343,22 @@ int rosie_set_alloc_limit(lua_State *L, int newlimit) {
   return SUCCESS;
 }
 
-void *rosie_new() {
+void *rosie_new(str *errors) {
   int t;
   lua_State *L = luaL_newstate();
   if (L == NULL) {
-    display("Cannot initialize: not enough memory");
+    *errors = string_from_const("not enough memory to initialize");
     return NULL;
   }
   luaL_checkversion(L);		/* Ensures several critical things needed to use Lua */
   luaL_openlibs(L);
 
-  if (!boot(L)) {
-    display("Cannot initialize: bootstrap failed\n");
-    return NULL;
+  if (!boot(L, errors)) {
+    return NULL;		/* errors already set by boot */
   }
   if (!lua_checkstack(L, 6)) {
     display("Cannot initialize: not enough memory for stack");
+    *errors = string_from_const("not enough memory for stack");
     return NULL;
   }
   t = lua_getglobal(L, "rosie");
@@ -319,6 +372,7 @@ void *rosie_new() {
   t = lua_pcall(L, 0, 1, 0);
   if (t != LUA_OK) {
     display("rosie.engine.new() failed");
+    *errors = string_from_const("rosie.engine.new() failed");
     return NULL;
   }
 
@@ -352,55 +406,19 @@ void *rosie_new() {
   return L;
 }
 
-str rosie_new_string(byte_ptr msg, size_t len) {
-  str retval;
-  retval.len = len;
-  retval.ptr = malloc(len+1);
-  if (!retval.ptr) {
-    display("Out of memory (new1)");
-    return retval;
-  }
-  memcpy((char *)retval.ptr, msg, retval.len);    /* sure it is allocated on the heap. */
-  retval.ptr[len]=0;		/* add null terminator. */
-  return retval;
-}
-
-str *rosie_new_string_ptr(byte_ptr msg, size_t len) {
-  str temp = rosie_new_string(msg, len);
-  str *retval = malloc(sizeof(str));
-  if (!retval) {
-    display("Out of memory (new2)");
-    return NULL;
-  }
-  retval->len = temp.len;
-  retval->ptr = temp.ptr;
-  return retval;
-}     
-
-void rosie_free_string_ptr(str *ref) {
-     free(ref->ptr);
-     free(ref);
-}
-
-void rosie_free_string(str s) {
-     free(s.ptr);
-}
-
+/* N.B. Client must free retval */
 int rosie_config(lua_State *L, str *retval) {
   int t;
   str *r;
   get_registry(rosie_key);
-  /* t = lua_getfield(L, -1, "config_json"); */
   t = lua_getfield(L, -1, "config");
-  CHECK_TYPE("config_json", t, LUA_TFUNCTION);
+  CHECK_TYPE("config", t, LUA_TFUNCTION);
   t = lua_pcall(L, 0, 1, 0);
   if (t != LUA_OK) {
-    /* LOG("rosie.config_json() failed"); */
     LOG("rosie.config() failed");
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED;
   }
-  /* Client must free retval */
   r = to_json_string(L, -1);
   if (r == NULL) {
     lua_settop(L, 0);
@@ -441,8 +459,8 @@ int rosie_compile(lua_State *L, str *expression, int *pat, str *errors) {
   get_registry(engine_key);
   t = lua_getfield(L, -1, "compile");
   CHECK_TYPE("compile", t, LUA_TFUNCTION);
-  /* overwrite engine table with compile function */
-  lua_replace(L, -2);
+
+  lua_replace(L, -2); /* overwrite engine table with compile function */
   get_registry(engine_key);
 
   lua_pushlstring(L, (const char *)expression->ptr, expression->len);
@@ -485,7 +503,7 @@ int rosie_compile(lua_State *L, str *expression, int *pat, str *errors) {
   return SUCCESS;
 }
 
-void collect_if_needed(lua_State *L) {
+static inline void collect_if_needed(lua_State *L) {
   int limit, memusg;
   get_registry(alloc_limit_key);
   limit = lua_tointeger(L, -1);	/* nil will convert to zero */
@@ -519,7 +537,6 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
     lua_settop(L, 0);
     return SUCCESS;
   }
-  
   CHECK_TYPE("rplx object", t, LUA_TTABLE);
 
   /* The encoder values that do not require Lua processing
@@ -567,15 +584,6 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
     lua_settop(L, 0); 
     return ERR_ENGINE_CALL_FAILED;  
   }  
-
-  /* TODO: remove this check */
-  /* if (lua_gettop(L) != 5) { */
-  /*   int actual = lua_gettop(L); */
-  /*   LOGf("Internal error: wrong number of return values (expected 5, received %d)\n", actual); */
-  /*   LOGstack(L); */
-  /*   lua_settop(L, 0); */
-  /*   return ERR_ENGINE_CALL_FAILED; */
-  /* } */
 
   (*match).tmatch = lua_tointeger(L, -1);
   (*match).ttotal = lua_tointeger(L, -2);
@@ -680,12 +688,12 @@ int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
 }
 
 void rosie_finalize(void *L) {
-  /* get_registry(prev_string_result_key); */
-  /* if (lua_isuserdata(L, -1)) { */
-  /*   str *rs = lua_touserdata(L, -1); */
-  /*   rosie_free_string_ptr(rs); */
-  /*   lua_pop(L, 1); */
-  /* } */
+  get_registry(prev_string_result_key); 
+  if (lua_isuserdata(L, -1)) { 
+    str *rs = lua_touserdata(L, -1); 
+    rosie_free_string_ptr(rs); 
+    lua_pop(L, 1); 
+  } 
   LOGf("Finalizing engine %p\n", L);
   lua_close(L);
 }
