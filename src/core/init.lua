@@ -307,13 +307,6 @@ common.add_encoder("subs", 3,
 
 rosie_package.set_configuration = set_configuration
 rosie_package.config = function(...) return ROSIE_INFO; end
-rosie_package.config_json = function(...)
-			       local array = {}
-			       for i, entry in ipairs(ROSIE_INFO) do
-				  array[i] = entry
-			       end
-			       return cjson.encode(array)
-			    end
 
 rosie_package.encoders = common.encoder_table
 rosie_package.engine = engine
