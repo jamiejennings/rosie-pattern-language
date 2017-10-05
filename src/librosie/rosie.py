@@ -13,12 +13,11 @@
 #   cffi 1.9.1 (installed with: pip install cffi)
 
 from cffi import FFI
+from ctypes.util import find_library
+from os import path
 import json
 
 ffi = FFI()
-NULL = ffi.NULL
-
-## N.B. We can't use ffi.string (because it uses NULL to mark the end of a string, like C does)
 
 # See librosie.h
 ffi.cdef("""
@@ -54,8 +53,9 @@ int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 
 lib = None                # single instance of dynamic library
 home = None               # path to ROSIE_HOME directory
+libname = "librosie.so"
 
-def cstr(py_string=None):
+def new_cstr(py_string=None):
     def free_cstr_ptr(local_cstr_obj):
         lib.rosie_free_string(local_cstr_obj[0])
     if py_string:
@@ -70,60 +70,57 @@ def read_cstr(cstr_ptr):
 
 # FUTURE: Support an optional argument for the engine name (helps when debugging)
 class engine ():
-    'put docstring here'
+    'TODO: docstring'
 
-    def __init__(self, librosie_path):
-        global lib, home
+    def __init__(self, custom_libpath=None):
+        global lib, libname, home
         if not lib:
-            lib = ffi.dlopen(librosie_path)
-            # TODO: Throw exception if ffi cannot open the dynamic library
-
+            if custom_libpath:
+                libpath = path.join(custom_libpath, libname)
+                if not path.isfile(libpath):
+                    raise RuntimeError("Cannot find librosie at " + libpath)
+            else:
+                libpath = find_library(libname)
+                if not libpath:
+                    raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
+            lib = ffi.dlopen(libpath)
         self.engine = lib.rosie_new()
         if self.engine == ffi.NULL:
-            raise RuntimeError("Error initializing librosie.  Exiting...")
+            raise RuntimeError("error initializing librosie (please report this as a bug)")
         return
 
     def config(self):
-        Cresp = cstr()#_ptr()
+        Cresp = new_cstr()
         ok = lib.rosie_config(self.engine, Cresp)
         if ok != 0:
-            # TODO: Test call failure.
-            # Want to show err msgs in the exception, but will this (below) work?
-            raise RuntimeError("config() failed")
+            raise RuntimeError("config() failed (please report this as a bug)")
         resp = read_cstr(Cresp)
-#        free_cstr_ptr(Cresp)
         return resp
 
     def compile(self, exp):
-        Cerrs = cstr()#_ptr()
-        Cexp = cstr(exp)
+        Cerrs = new_cstr()
+        Cexp = new_cstr(exp)
         Cpat = ffi.new("int *")
         ok = lib.rosie_compile(self.engine, Cexp, Cpat, Cerrs)
-#        free_cstr(Cexp)
         if ok != 0:
-            # TODO: Test call failure.
-            raise RuntimeError("compile() failed", read_cstr(errs))
+            raise RuntimeError("compile() failed (please report this as a bug)")
         # TODO: create a python rplx object and define __del__ to call rosie_free_rplx()
         if Cpat[0] == 0:
             errs = read_cstr(Cerrs)
-#            free_cstr_ptr(Cerrs)
         else:
             errs = None
         return Cpat, errs
 
     def load(self, src):
-        Cerrs = cstr()#_ptr()
-        Csrc = cstr(src)
+        Cerrs = new_cstr()
+        Csrc = new_cstr(src)
         Csuccess = ffi.new("int *")
-        Cpkgname = cstr()#_ptr()
+        Cpkgname = new_cstr()
         ok = lib.rosie_load(self.engine, Csuccess, Csrc, Cpkgname, Cerrs)
         if ok != 0:
-            # TODO: Test call failure.
-            raise RuntimeError("compile() failed", read_cstr(errs))
+            raise RuntimeError("load() failed (please report this as a bug)")
         errs = read_cstr(Cerrs)
-#        free_cstr_ptr(Cerrs)
         pkgname = read_cstr(Cpkgname)
-#        free_cstr_ptr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
     def free_rplx(self, Cpat):
@@ -131,11 +128,10 @@ class engine ():
 
     def match(self, Cpat, input, start, encoder):
         Cmatch = ffi.new("struct rosie_matchresult *")
-        Cinput = cstr(input)
+        Cinput = new_cstr(input)
         ok = lib.rosie_match(self.engine, Cpat[0], start, encoder, Cinput, Cmatch)
-#        free_cstr(Cinput)
         if ok != 0:
-            raise RuntimeError("match() failed with an internal error (please report this as a bug)")
+            raise RuntimeError("match() failed (please report this as a bug)")
         if Cmatch == ffi.NULL:
             raise ValueError("invalid compiled pattern (already freed?)")
         left = Cmatch.leftover
@@ -151,10 +147,10 @@ class engine ():
             raise ValueError("new allocation limit must be 10 MB or higher (or zero for unlimited)")
         ok = lib.rosie_set_alloc_limit(self.engine, newlimit)
         if ok != 0:
-            raise RuntimeError("set_alloc_limit() failed with an internal error (please report this as a bug)")
+            raise RuntimeError("set_alloc_limit() failed (please report this as a bug)")
 
     def __del__(self):
-        if self.engine != ffi.NULL:
+        if hasattr(self, 'engine') and (self.engine != ffi.NULL):
             lib.rosie_finalize(self.engine)
 
 
