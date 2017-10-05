@@ -649,13 +649,13 @@ int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
   
   get_registry(engine_key);
   t = lua_getfield(L, -1, "load");
-  CHECK_TYPE("engine load function", t, LUA_TFUNCTION);
+  CHECK_TYPE("engine.load()", t, LUA_TFUNCTION);
   lua_pushvalue(L, -2);		/* push engine object again */
   lua_pushlstring(L, (const char *)src->ptr, src->len);
 
   t = lua_pcall(L, 2, 3, 0); 
   if (t != LUA_OK) { 
-    display("load() failed"); 
+    display("engine.load() failed"); 
     /* TODO: Return error msg */
     LOGstack(L);
     lua_settop(L, 0);
@@ -664,7 +664,60 @@ int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
 
   if (lua_isboolean(L, -3)) {
     *ok = lua_toboolean(L, -3);
-    LOGf("load() %s\n", ok ? "succeeded" : "failed");
+    LOGf("engine.load() %s\n", ok ? "succeeded" : "failed");
+  }
+  
+  if (lua_isstring(L, -2)) {
+    temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
+    *pkgname = rosie_new_string(temp_str, temp_len);
+  }
+  else {
+    pkgname = NULL;
+  }
+  
+  temp_rs = to_json_string(L, -1);
+    if (temp_rs == NULL) {
+      lua_settop(L, 0);
+      return ERR_ENGINE_CALL_FAILED;
+    }
+  errors->len = temp_rs->len;
+  errors->ptr = temp_rs->ptr;
+
+  lua_settop(L, 0);
+  return SUCCESS;
+}
+
+/* N.B. Client must free 'errors' */
+int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors) {
+  int t;
+  size_t temp_len;
+  unsigned char *temp_str;
+  str *temp_rs;
+  
+  get_registry(engine_key);
+  t = lua_getfield(L, -1, "import");
+  CHECK_TYPE("engine.import()", t, LUA_TFUNCTION);
+  lua_pushvalue(L, -2);		/* push engine object again */
+  lua_pushlstring(L, (const char *)pkgname->ptr, pkgname->len);
+  if (as) {
+    lua_pushlstring(L, (const char *)as->ptr, as->len);
+  }
+  else {
+    lua_pushnil(L);
+  }
+
+  t = lua_pcall(L, 3, 3, 0); 
+  if (t != LUA_OK) { 
+    display("engine.import() failed"); 
+    /* TODO: Return error msg */
+    LOGstack(L);
+    lua_settop(L, 0);
+    return ERR_ENGINE_CALL_FAILED; 
+  } 
+
+  if (lua_isboolean(L, -3)) {
+    *ok = lua_toboolean(L, -3);
+    LOGf("engine.import() %s\n", ok ? "succeeded" : "failed");
   }
   
   if (lua_isstring(L, -2)) {

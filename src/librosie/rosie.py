@@ -10,7 +10,8 @@
 # Development environment:
 #   Mac OS X Sierra (10.12.6)
 #   Python 2.7.10 (distributed with OS X)
-#   cffi 1.9.1 (installed with: pip install cffi)
+#   cffi-1.11.1 pycparser-2.18 (installed with: pip install cffi)
+
 
 from cffi import FFI
 from ctypes.util import find_library
@@ -48,6 +49,7 @@ int rosie_compile(void *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(void *L, int pat);
 int rosie_match(void *L, int pat, int start, char *encoder, str *input, match *match);
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
+int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
 
 """)
 
@@ -127,6 +129,17 @@ class engine ():
             raise RuntimeError("load() failed (please report this as a bug)")
         errs = read_cstr(Cerrs)
         pkgname = read_cstr(Cpkgname)
+        return Csuccess[0], pkgname, errs
+
+    def import_pkg(self, pkgname, as_name=None):
+        Cerrs = new_cstr()
+        Cas_name = new_cstr(as_name) if as_name else ffi.NULL
+        Cpkgname = new_cstr(pkgname)
+        Csuccess = ffi.new("int *")
+        ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cerrs)
+        if ok != 0:
+            raise RuntimeError("import() failed (please report this as a bug)")
+        errs = read_cstr(Cerrs)
         return Csuccess[0], pkgname, errs
 
     def free_rplx(self, Cpat):

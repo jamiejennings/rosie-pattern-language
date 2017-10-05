@@ -44,6 +44,7 @@ int rosie_compile(lua_State *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(lua_State *L, int pat);
 int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, match *match);
 int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors);
+int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors);
 
 /*
 
@@ -59,7 +60,7 @@ Administrative:
 
 RPL:
 +  status:int, pkgname:string, errors:strings = load(void *engine, const char *rpl)
-  status:int, pkgname:string, errors:strings = import(packageref)
++  status:int, pkgname:string, errors:strings = import(packageref, localname)
   status:int = undefine(id)
   test(rpl)?
   testfile(filename)?
