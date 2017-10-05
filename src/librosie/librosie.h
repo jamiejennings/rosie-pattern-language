@@ -27,6 +27,7 @@ typedef struct rosie_string str;
 typedef struct rosie_matchresult {
      str data;
      int leftover;
+     int abend;
      int ttotal;
      int tmatch;
 } match;
@@ -73,59 +74,18 @@ Match/trace:
   status:int, tracestring:*buffer = trace(void *engine, int pat, buffer *input, int start, int encoder, int tracestyle)
 
   status:int, cin:int, cout:int, cerr:int, errors:strings =
-  matchfile(void *engine, int pat, const char *infilename, const char *outfilename, const char *errfilename, int start, int encoder, int wholefile)
+    matchfile(void *engine, int pat, 
+       const char *infilename, const char *outfilename, const char *errfilename, 
+       int start, int encoder, int wholefile)
 
   status:int, cin:int, cout:int, cerr:int, errors:strings =
-  tracefile(void *engine, void pat, const char *infilename, const char *outfilename, const char *errfilename, int start, int encoder, int readmethod, int tracestyle)
+    tracefile(void *engine, void pat, 
+       const char *infilename, const char *outfilename, const char *errfilename, 
+       int start, int encoder, int readmethod, int tracestyle)
 
 Debugging:
   status:int, desc:string = lookup(void *engine, const char *id)
   status:int, expr:string, errors:strings = expand(void *engine, const char *expr)
   status:int, descs:strings = list(void *engine, const char *localnamefilter, const char *packagenamefilter)
-
-
-Inventory of functions accessible from Lua:
-
-    > for k,v in pairs(rosie) do print(k,v) end
-X    env	table: 0x7fdb744105d0
-X    import	function: 0x7fdb74410a80
-X    config	function: 0x7fdb74643280
-    config_json	function: 0x7fdb7462b630
-X    engine	<recordtype: 0x7fdb7684bec0>
-X    encoders	table: 0x7fdb7442afa0
-X    set_configuration	function: 0x7fdb74700c80
-
-    > for k,v in pairs(rosie.engine) do print(k,v) end
-X    is	function: 0x7fdb7444e9e0
-M    new	function: 0x7fdb7444e350
-X    factory	function: 0x7fdb7444e8f0
-
-    > for k,v in pairs(e) do print(k,v) end
-X    name	function: 0x7fdb746b5af0
-X    error	function: 0x7fdb7444e3a0
-X    id	function: 0x7fdb7441ce70
-X    pkgtable	<module_table>
-X    compiler	table: 0x7fdb746a3ff0
-*    searchpath	/Users/jjennings/Dev/public/rosie-pattern-language/rpl
-    compile	function: 0x7fdb7444daf0
-    import	function: 0x7fdb7444dc60
-    load	function: 0x7fdb7444dc10
-    loadfile	function: 0x7fdb7444dcc0
-    match	function: 0x7fdb7444de70
-    matchfile	function: 0x7fdb7444e270
-J    trace	function: 0x7fdb7444dee0
-    tracefile	function: 0x7fdb7444e2e0
-X    env	<environment: 0x7fdb7684cc30>
-    > 
-
-    > for k,v in pairs(e.env) do print(k,v) end
-X    bind	function: 0x7fdb74632f00
-X    parent	<environment: 0x7fdb76855950>
-M    unbind	function: 0x7fdb74632f30
-J    lookup	function: 0x7fdb74632ea0
-X    bindings	function: 0x7fdb746330b0
-X    store	table: 0x7fdb74504ba0
-X    exported	false
-    > 
 
 */

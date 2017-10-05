@@ -293,11 +293,10 @@ str *to_json_string(lua_State *L, int pos) {
      int t;
      int top = lua_gettop(L);
      get_registry(json_encoder_key);
-     lua_pushvalue(L, pos-1);	/* offset becaus we pushed json_encoder */
+     lua_pushvalue(L, pos-1);                /* offset because we pushed json_encoder */
      t = lua_pcall(L, 1, LUA_MULTRET, 0);
      if (t != LUA_OK) {
-       /* TODO: return a message? */
-       LOG("call to json encoder failed\n");
+       LOG("call to json encoder failed\n"); /* more detail may not be useful to the user */
        LOGstack(L);
        return NULL;
      }
@@ -305,13 +304,13 @@ str *to_json_string(lua_State *L, int pos) {
        /* Top of stack is error msg */
        LOG("call to json encoder returned more than one value\n");
        if (lua_isstring(L, -1) && lua_isnil(L, -2)) {
-	 /* TO DO: return something to indicate the nature of the error */
+	 /* FUTURE: return the error from the json encoder to the client */
 	 LOGf("error message from json encoder: %s\n", lua_tolstring(L, -1, NULL));
 	 LOGstack(L);
 	 return NULL;
        }
        else {
-	 /* TO DO: something really strange happened! what to return? */
+	 /* Something really strange happened!  Is there any useful info to return? */
 	 LOG("call to json encoder returned unexpected values\n");
 	 LOGstack(L);
 	 return NULL;
@@ -587,8 +586,7 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
 
   (*match).tmatch = lua_tointeger(L, -1);
   (*match).ttotal = lua_tointeger(L, -2);
-  /* TODO */
-  /* (*match).abend = lua_toboolean(L, -3); */
+  (*match).abend = lua_toboolean(L, -3);
   (*match).leftover = lua_tointeger(L, -4);
   lua_pop(L, 4);
 
@@ -656,7 +654,7 @@ int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
   t = lua_pcall(L, 2, 3, 0); 
   if (t != LUA_OK) { 
     display("engine.load() failed"); 
-    /* TODO: Return error msg */
+    /* Details will likely not be helpful to the user */
     LOGstack(L);
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED; 
