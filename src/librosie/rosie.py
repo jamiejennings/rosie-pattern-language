@@ -56,20 +56,14 @@ lib = None                # single instance of dynamic library
 home = None               # path to ROSIE_HOME directory
 
 def cstr(py_string=None):
+    def free_cstr_ptr(local_cstr_obj):
+        lib.rosie_free_string(local_cstr_obj[0])
     if py_string:
         obj = lib.rosie_new_string_ptr(py_string, len(py_string))
         return ffi.gc(obj, lib.rosie_free_string_ptr)
     else:
         obj = ffi.new("struct rosie_string *")
         return ffi.gc(obj, free_cstr_ptr)
-
-
-def cstr_ptr():
-    obj = ffi.new("struct rosie_string *")
-    return ffi.gc(obj, free_cstr_ptr)
-
-def free_cstr_ptr(local_cstr_obj):
-    lib.rosie_free_string(local_cstr_obj[0])
 
 def read_cstr(cstr_ptr):
     return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
