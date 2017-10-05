@@ -561,7 +561,6 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
   }
   
   t = lua_pcall(L, 4, 5, 0); 
-  /* t = lua_pcall(L, 4, LUA_MULTRET, 0);   */
   if (t != LUA_OK) {  
     LOG("match() failed\n");  
     LOGstack(L); 
@@ -570,13 +569,13 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
   }  
 
   /* TODO: remove this check */
-  if (lua_gettop(L) != 5) {
-    int actual = lua_gettop(L);
-    LOGf("Internal error: wrong number of return values (expected 5, received %d)\n", actual);
-    LOGstack(L);
-    lua_settop(L, 0);
-    return ERR_ENGINE_CALL_FAILED;
-  }
+  /* if (lua_gettop(L) != 5) { */
+  /*   int actual = lua_gettop(L); */
+  /*   LOGf("Internal error: wrong number of return values (expected 5, received %d)\n", actual); */
+  /*   LOGstack(L); */
+  /*   lua_settop(L, 0); */
+  /*   return ERR_ENGINE_CALL_FAILED; */
+  /* } */
 
   (*match).tmatch = lua_tointeger(L, -1);
   (*match).ttotal = lua_tointeger(L, -2);
@@ -612,8 +611,8 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
     if (lua_isuserdata(L, -1)) {
       str *rs = lua_touserdata(L, -1);
       rosie_free_string_ptr(rs);
-      lua_pop(L, 1);
     }
+    lua_pop(L, 1);
     temp_str = (unsigned char *)lua_tolstring(L, -1, &temp_len);
     str *rs = rosie_new_string_ptr(temp_str, temp_len);
     lua_pushlightuserdata(L, (void *) rs);
