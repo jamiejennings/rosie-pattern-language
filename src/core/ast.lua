@@ -759,6 +759,11 @@ function ast.tostring(a, already_grouped)
    elseif ast.sequence.is(a) then
       local pre = already_grouped and "" or "{"
       local post = already_grouped and "" or "}"
+      if #a.exps==1 then
+	 if ast.simple_charset_p(a.exps[1]) then
+	    return ast.tostring(a.exps[1])
+	 end
+      end
       return pre .. table.concat(map(ast.tostring, a.exps), " ") .. post
    elseif ast.choice.is(a) then
       local pre = already_grouped and "" or "{"
@@ -805,7 +810,7 @@ function ast.tostring(a, already_grouped)
    elseif ast.literal.is(a) then
       return '"' .. a.value .. '"'
    elseif ast.bracket.is(a) then
-      return "[" .. (a.complement and "^" or "") .. ast.tostring(a.cexp) .. "]"
+      return "[" .. (a.complement and "^" or "") .. ast.tostring(a.cexp, true) .. "]"
    elseif ast.cs_named.is(a) then
       return "[:" .. (a.complement and "^" or "") .. a.name .. ":]"
    elseif ast.cs_list.is(a) then

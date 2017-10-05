@@ -367,8 +367,10 @@ local function cs_simple(e, a, input, start, expected, nextpos)
 end
 
 local function bracket(e, a, input, start, expected, nextpos)
-   if ast.simple_charset_p(a) then
-      return cs_simple(e, a, input, start, expected, nextpos)
+   if ast.simple_charset_p(a.cexp) then
+      return cs_simple(e, a.cexp, input, start, expected, nextpos)
+   elseif ast.choice.is(a.cexp) then
+      return choice(e, a.cexp, input, start, expected, nextpos)
    elseif ast.bracket.is(a.cexp) then
       local result = bracket(e, a.exp, input, start, nil, nextpos)
       if expected ~= nil then
@@ -387,7 +389,7 @@ local function bracket(e, a, input, start, expected, nextpos)
    elseif ast.cs_difference.is(a.cexp) then
       throw("character set difference is not implemented", a)
    else
-      assert(false, "trace: unknown cexp inside bracket", a)
+      assert(false, "trace: unknown cexp inside bracket: " .. tostring(a.cexp))
    end
 end
       

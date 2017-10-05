@@ -64,6 +64,8 @@ local function remove_raw_exp(ex)
       return sequence_wrap(remove_raw_exp(ex.exp))
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=remove_raw_exp(ex.exp), sourceref=ex.sourceref}
+   elseif ast.bracket.is(ex) then
+      return ast.bracket.new{complement=ex.complement, cexp=remove_raw_exp(ex.cexp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
       return ast.choice.new{exps=map(remove_raw_exp, ex.exps), sourceref=ex.sourceref}
    elseif ast.and_exp.is(ex) then
@@ -104,6 +106,8 @@ function remove_cooked_exp(ex)
       return sequence_wrap(remove_raw_exp(ex.exp))
    elseif ast.predicate.is(ex) then
       return ast.predicate.new{type=ex.type, exp=remove_cooked_exp(ex.exp), sourceref=ex.sourceref}
+   elseif ast.bracket.is(ex) then
+      return ast.bracket.new{complement=ex.complement, cexp=remove_cooked_exp(ex.cexp), sourceref=ex.sourceref}
    elseif ast.choice.is(ex) then
       return ast.choice.new{exps=map(remove_cooked_exp, ex.exps), sourceref=ex.sourceref}
    elseif ast.and_exp.is(ex) then
@@ -256,6 +260,9 @@ function remove_repetition(ex)
       return ex
    elseif ast.choice.is(ex) then
       ex.exps = map(remove_repetition, ex.exps)
+      return ex
+   elseif ast.bracket.is(ex) then
+      ex.cexp = remove_repetition(ex.cexp)
       return ex
    elseif ast.and_exp.is(ex) then
       ex.exps = map(remove_repetition, ex.exps)

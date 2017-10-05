@@ -284,7 +284,7 @@ function cs_list(a, env, prefix, messages)
    return a.pat
 end
 
-local cexp;
+--local cexp;
 
 function bracket(a, env, prefix, messages)
    if ast.bracket.is(a.cexp) then
