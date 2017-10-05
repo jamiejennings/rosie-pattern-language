@@ -55,14 +55,18 @@ int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 lib = None                # single instance of dynamic library
 home = None               # path to ROSIE_HOME directory
 
-def cstr(py_string):
-    return lib.rosie_new_string_ptr(py_string, len(py_string))
+def cstr(py_string=None):
+    if py_string:
+        obj = lib.rosie_new_string_ptr(py_string, len(py_string))
+        return ffi.gc(obj, lib.rosie_free_string_ptr)
+    else:
+        obj = ffi.new("struct rosie_string *")
+        return ffi.gc(obj, free_cstr_ptr)
+
 
 def cstr_ptr():
-    return ffi.new("struct rosie_string *")
-
-def free_cstr(cstr_obj):
-    lib.rosie_free_string_ptr(cstr_obj)
+    obj = ffi.new("struct rosie_string *")
+    return ffi.gc(obj, free_cstr_ptr)
 
 def free_cstr_ptr(local_cstr_obj):
     lib.rosie_free_string(local_cstr_obj[0])
@@ -86,46 +90,46 @@ class engine ():
         return
 
     def config(self):
-        Cresp = cstr_ptr()
+        Cresp = cstr()#_ptr()
         ok = lib.rosie_config(self.engine, Cresp)
         if ok != 0:
             # TODO: Test call failure.
             # Want to show err msgs in the exception, but will this (below) work?
             raise RuntimeError("config() failed")
         resp = read_cstr(Cresp)
-        free_cstr_ptr(Cresp)
+#        free_cstr_ptr(Cresp)
         return resp
 
     def compile(self, exp):
-        Cerrs = cstr_ptr()
+        Cerrs = cstr()#_ptr()
         Cexp = cstr(exp)
         Cpat = ffi.new("int *")
         ok = lib.rosie_compile(self.engine, Cexp, Cpat, Cerrs)
-        free_cstr(Cexp)
+#        free_cstr(Cexp)
         if ok != 0:
             # TODO: Test call failure.
             raise RuntimeError("compile() failed", read_cstr(errs))
         # TODO: create a python rplx object and define __del__ to call rosie_free_rplx()
         if Cpat[0] == 0:
             errs = read_cstr(Cerrs)
-            free_cstr_ptr(Cerrs)
+#            free_cstr_ptr(Cerrs)
         else:
             errs = None
         return Cpat, errs
 
     def load(self, src):
-        Cerrs = cstr_ptr()
+        Cerrs = cstr()#_ptr()
         Csrc = cstr(src)
         Csuccess = ffi.new("int *")
-        Cpkgname = cstr_ptr()
+        Cpkgname = cstr()#_ptr()
         ok = lib.rosie_load(self.engine, Csuccess, Csrc, Cpkgname, Cerrs)
         if ok != 0:
             # TODO: Test call failure.
             raise RuntimeError("compile() failed", read_cstr(errs))
         errs = read_cstr(Cerrs)
-        free_cstr_ptr(Cerrs)
+#        free_cstr_ptr(Cerrs)
         pkgname = read_cstr(Cpkgname)
-        free_cstr_ptr(Cpkgname)
+#        free_cstr_ptr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
     def free_rplx(self, Cpat):
@@ -135,7 +139,7 @@ class engine ():
         Cmatch = ffi.new("struct rosie_matchresult *")
         Cinput = cstr(input)
         ok = lib.rosie_match(self.engine, Cpat[0], start, encoder, Cinput, Cmatch)
-        free_cstr(Cinput)
+#        free_cstr(Cinput)
         if ok != 0:
             raise RuntimeError("match() failed with an internal error (please report this as a bug)")
         if Cmatch == ffi.NULL:
@@ -157,7 +161,6 @@ class engine ():
 
     def __del__(self):
         if self.engine != ffi.NULL:
-            print "Garbage collecting engine", self
             lib.rosie_finalize(self.engine)
 
 
