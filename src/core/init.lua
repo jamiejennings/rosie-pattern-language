@@ -304,9 +304,16 @@ common.add_encoder("subs", 3,
 		      end
 		   end)
 
-
 rosie_package.set_configuration = set_configuration
 rosie_package.config = function(...) return ROSIE_INFO; end
+
+-- Set the default libpath for any engines created later
+rosie_package.set_libpath =
+   function(newlibpath, bywhom)
+      set_configuration("ROSIE_LIBPATH", tostring(newlibpath))
+      set_configuration("ROSIE_LIBPATH_SOURCE", tostring(bywhom or "unknown"))
+      engine_module.set_default_searchpath(newlibpath)
+   end
 
 rosie_package.encoders = common.encoder_table
 rosie_package.engine = engine

@@ -420,11 +420,37 @@ int rosie_config(lua_State *L, str *retval) {
   }
   r = to_json_string(L, -1);
   if (r == NULL) {
+    LOG("in config(), could not convert config information to json\n");
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED;
   }
   retval->len = r->len;
   retval->ptr = r->ptr;
+  lua_settop(L, 0);
+  return SUCCESS;
+}
+
+int rosie_setlibpath_engine(lua_State *L, char *newpath) {
+  int t;
+  get_registry(engine_key);
+  t = lua_getfield(L, -1, "set_libpath");
+  CHECK_TYPE("engine.set_libpath()", t, LUA_TFUNCTION);
+  lua_pushvalue(L, -2);
+  lua_pushstring(L, (const char *)newpath);
+  t = lua_pcall(L, 2, 0, 0);
+  if (t != LUA_OK) {
+    LOG("engine.set_libpath() failed\n");
+    lua_settop(L, 0);
+    return ERR_ENGINE_CALL_FAILED;
+  }
+#if LOGGING
+  do {
+    int t;
+    get_registry(engine_key);
+    t = lua_getfield(L, -1, "searchpath");
+    LOGf("searchpath is now: %s\n", lua_tostring(L, -1));
+  } while (0);
+#endif
   lua_settop(L, 0);
   return SUCCESS;
 }
@@ -453,6 +479,10 @@ int rosie_compile(lua_State *L, str *expression, int *pat, str *errors) {
     return ERR_ENGINE_CALL_FAILED;
   }  
 
+#if LOGGING
+  if (lua_gettop(L)) LOG("Entering compile(), stack is NOT EMPTY!\n");
+#endif  
+
   get_registry(rplx_table_key);
 
   get_registry(engine_key);
@@ -476,6 +506,7 @@ int rosie_compile(lua_State *L, str *expression, int *pat, str *errors) {
     CHECK_TYPE("compile errors", lua_type(L, -1), LUA_TTABLE);
     temp_rs = to_json_string(L, -1);
     if (temp_rs == NULL) {
+      LOG("in compile() could not convert compile errors to json\n");
       lua_settop(L, 0);
       return ERR_ENGINE_CALL_FAILED;
     }
@@ -488,10 +519,14 @@ int rosie_compile(lua_State *L, str *expression, int *pat, str *errors) {
   lua_pushvalue(L, -2);
   CHECK_TYPE("new rplx object", lua_type(L, -1), LUA_TTABLE);
   *pat = luaL_ref(L, 1);
+#if LOGGING
+  if (*pat == LUA_REFNIL) LOG("error storing rplx object\n");
+#endif
   LOGf("storing rplx object at index %d\n", *pat);
 
   temp_rs = to_json_string(L, -1);
     if (temp_rs == NULL) {
+      LOG("in compile(), could not convert warning information to json\n");
       lua_settop(L, 0);
       return ERR_ENGINE_CALL_FAILED;
     }
@@ -520,6 +555,12 @@ static inline void collect_if_needed(lua_State *L) {
   }
 }
 
+#define set_match_error(match, errno) \
+  do { (*(match)).data.ptr = NULL;    \
+    (*(match)).data.len = (errno);    \
+  } while (0);
+
+
 int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input, match *match) {
   int t, encoder;
   size_t temp_len;
@@ -527,16 +568,18 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
   rBuffer *buf;
 
   collect_if_needed(L);
-  
-  get_registry(rplx_table_key);
-  t = lua_geti(L, -1, pat);
-  if (t == LUA_TNIL) {
+  if (!pat)
     LOGf("rosie_match() called with invalid compiled pattern reference: %d\n", pat);
-    match = NULL;
-    lua_settop(L, 0);
-    return SUCCESS;
+  else {
+    get_registry(rplx_table_key);
+    t = lua_rawgeti(L, -1, pat);
+    if (t == LUA_TTABLE) goto have_pattern;
   }
-  CHECK_TYPE("rplx object", t, LUA_TTABLE);
+  set_match_error(match, ERR_NO_PATTERN);
+  lua_settop(L, 0);
+  return SUCCESS;
+
+have_pattern:
 
   /* The encoder values that do not require Lua processing
    * take a different code path from the ones that do.  When no
@@ -596,8 +639,7 @@ int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input
     (*match).data.len = buf->n;
   }
   else if (lua_isboolean(L, -1)) {
-    (*match).data.ptr = NULL;
-    (*match).data.len = 0;
+    set_match_error(match, ERR_NO_MATCH);
   }
   else if (lua_isstring(L, -1)) {
     if (encoder) {
@@ -675,6 +717,7 @@ int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
   
   temp_rs = to_json_string(L, -1);
     if (temp_rs == NULL) {
+      LOG("in load(), could not convert error information to json\n");
       lua_settop(L, 0);
       return ERR_ENGINE_CALL_FAILED;
     }
@@ -706,21 +749,19 @@ int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors) {
 
   t = lua_pcall(L, 3, 3, 0); 
   if (t != LUA_OK) { 
-    display("engine.import() failed"); 
-    /* TODO: Return error msg */
+    LOG("engine.import() failed"); 
     LOGstack(L);
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED; 
   } 
 
-  if (lua_isboolean(L, -3)) {
-    *ok = lua_toboolean(L, -3);
-    LOGf("engine.import() %s\n", ok ? "succeeded" : "failed");
-  }
+  *ok = lua_toboolean(L, -3);
+  LOGf("engine.import() %s\n", ok ? "succeeded" : "failed");
   
   if (lua_isstring(L, -2)) {
     temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
     *pkgname = rosie_new_string(temp_str, temp_len);
+    LOGf("engine.import reports that package %s was loaded\n", temp_str);
   }
   else {
     pkgname = NULL;
@@ -728,6 +769,7 @@ int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors) {
   
   temp_rs = to_json_string(L, -1);
     if (temp_rs == NULL) {
+      LOG("in import(), could not convert error information to json\n");
       lua_settop(L, 0);
       return ERR_ENGINE_CALL_FAILED;
     }

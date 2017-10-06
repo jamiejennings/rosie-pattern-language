@@ -135,10 +135,7 @@ local function run(args)
    if args.verbose then ROSIE_VERBOSE = true; end
 
    -- Do this BEFORE creating the CL_ENGINE
-   if args.libpath then
-      rosie.set_configuration("ROSIE_LIBPATH", args.libpath)
-      rosie.set_configuration("ROSIE_LIBPATH_SOURCE", "cli")
-   end
+   if args.libpath then rosie.set_libpath(args.libpath, "cli"); end
 
    ok, msg = pcall(create_cl_engine, args)
    if not ok then print("Error when creating cli engine: " .. msg); os.exit(-1); end

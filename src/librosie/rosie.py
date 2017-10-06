@@ -33,6 +33,7 @@ typedef struct rosie_string {
 typedef struct rosie_matchresult {
      str data;
      int leftover;
+     int abend;
      int ttotal;
      int tmatch;
 } match;
@@ -43,6 +44,7 @@ void rosie_free_string(str s);
 
 void *rosie_new(str *errors);
 void rosie_finalize(void *L);
+int rosie_setlibpath_engine(void *L, char *newpath);
 int rosie_set_alloc_limit(void *L, int newlimit);
 int rosie_config(void *L, str *retvals);
 int rosie_compile(void *L, str *expression, int *pat, str *errors);
@@ -56,6 +58,9 @@ int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
 lib = None                # single instance of dynamic library
 home = None               # path to ROSIE_HOME directory
 libname = "librosie.so"
+
+# -----------------------------------------------------------------------------
+# ffi utilities
 
 def new_rplx(engine):
     def free_rplx(obj):
@@ -77,6 +82,34 @@ def new_cstr(py_string=None):
 def read_cstr(cstr_ptr):
     return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
 
+# -----------------------------------------------------------------------------
+
+# Problem: Can't make use of Rosie-level defaults because we create a new Rosie instance for every engine.
+#
+# Observation: The librosie implementation currently allows just one
+#   ROSIE_HOME (globally).  This fixes the values of ROSIE_LIBDIR,
+#   ROSIE_VERSION, and RPL_VERSION.  So the only default that can
+#   matter on a per-engine basis is ROSIE_LIBPATH.
+#
+# Solution:
+# - We could store that default here in Python, and set it each time we create a new engine.
+
+# TODO:
+# - Create a rosie class
+# - Move config() to the rosie class
+# - Define setlibpath for this class
+# - When creating a new engine, set the engine's libpath (needed functionality) and the rosie
+#   libpath (so that the config() method will show the right values).
+#
+# TO BE CONTINUED!
+
+# def setlibpath(libpath):
+#     ok = lib.rosie_setlibpath_default(lib, libpath)
+#     if ok != 0:
+#         raise RuntimeError("setpath() failed (please report this as a bug)")
+
+
+# -----------------------------------------------------------------------------
 
 class engine ():
     '''
@@ -145,24 +178,34 @@ class engine ():
         ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cerrs)
         if ok != 0:
             raise RuntimeError("import() failed (please report this as a bug)")
+        actual_pkgname = read_cstr(Cpkgname)
         errs = read_cstr(Cerrs)
-        return Csuccess[0], pkgname, errs
+        return Csuccess[0], actual_pkgname, errs
 
     def match(self, Cpat, input, start, encoder):
+        if Cpat[0] == 0:
+            raise ValueError("invalid compiled pattern")
         Cmatch = ffi.new("struct rosie_matchresult *")
         Cinput = new_cstr(input)
         ok = lib.rosie_match(self.engine, Cpat[0], start, encoder, Cinput, Cmatch)
         if ok != 0:
             raise RuntimeError("match() failed (please report this as a bug)")
-        if Cmatch == ffi.NULL:
-            raise ValueError("invalid compiled pattern (already freed?)")
         left = Cmatch.leftover
+        abend = Cmatch.abend
         ttotal = Cmatch.ttotal
         tmatch = Cmatch.tmatch
         if Cmatch.data.ptr == ffi.NULL:
-            return None, left, ttotal, tmatch
+            if Cmatch.data.len == 0:
+                return None, left, abend, ttotal, tmatch
+            elif Cmatch.data.len == 1:
+                raise ValueError("invalid compiled pattern (already freed?)")
         data_buffer = ffi.buffer(Cmatch.data.ptr, Cmatch.data.len)
-        return data_buffer, left, ttotal, tmatch
+        return data_buffer, left, abend, ttotal, tmatch
+
+    def setlibpath(self, libpath):
+        ok = lib.rosie_setlibpath_engine(self.engine, libpath)
+        if ok != 0:
+            raise RuntimeError("setpath() failed (please report this as a bug)")
 
     def set_alloc_limit(self, newlimit):
         if (newlimit != 0) and (newlimit < 10):

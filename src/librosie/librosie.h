@@ -18,6 +18,9 @@
 #define ERR_SYSCALL_FAILED -3
 #define ERR_ENGINE_CALL_FAILED -4
 
+#define ERR_NO_MATCH 0
+#define ERR_NO_PATTERN 1
+
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
 #include "../../submodules/rosie-lpeg/src/rpeg.h"
@@ -39,6 +42,7 @@ void rosie_free_string_ptr(str *s);
 
 void *rosie_new(str *errors);
 void rosie_finalize(void *L);
+int rosie_setlibpath(lua_State *L, char *newpath);
 int rosie_set_alloc_limit(lua_State *L, int newlimit);
 int rosie_config(lua_State *L, str *retvals);
 int rosie_compile(lua_State *L, str *expression, int *pat, str *errors);

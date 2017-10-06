@@ -200,7 +200,7 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
       return false
    end
    common.pkgtableset(pkgtable, origin.importpath, origin.prefix, origin.packagename, env)
-   return true, a.pdecl.name, env
+   return true, origin.packagename, env
 end
 
 local function find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
@@ -288,7 +288,7 @@ function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, en
    local ok, pkgname, pkgenv = import_one_force(compiler, pkgtable, searchpath, source_record, {}, messages)
    if not ok then return false; end 		    -- message already in 'messages'
    create_package_bindings(origin.prefix or pkgname, pkgenv, env)
-   return true
+   return true, pkgname
 end
 
 -- load_dependencies recursively loads each import in ideclist.

@@ -237,20 +237,6 @@ end
 
 ----------------------------------------------------------------------------------------
 
--- Built-in (rosie-lpeg) encoder options:
--- false = return lua table as usual
--- -1 = no output
---  0 = compact byte encoding with only start/end indices (no text)
---  1 = compact json encoding with only start/end indices (no text)
--- local function get_set_encoder_function(en, f)
---    if f==nil then return en.encode_function; end
---    if f==false or type(f)=="number" or type(f)=="function" then
---       en.encode_function = f;
---    else engine_error(en, "Invalid output encoder: " .. tostring(f)); end
--- end
-
----------------------------------------------------------------------------------------------------
-
 local default_compiler = false
 
 local function set_default_compiler(compiler)
@@ -399,6 +385,7 @@ engine =
 		     load=load,
 		     loadfile=loadfile,
 		     import=import,
+		     set_libpath = function(self, newlibpath) self.searchpath = newlibpath; end,
 		     searchpath="",
 
 		     compile=compile_expression,
