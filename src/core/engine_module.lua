@@ -202,7 +202,7 @@ local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_
 		 lpegvm_time_accum)
 end
 
-local function _trace(r, input, start, encoder, style)
+local function _trace(r, input, start, style)
    return trace.expression(r, input, start, style)
 end
    
@@ -231,8 +231,8 @@ local function engine_match(e, expression, input, start, encoder, t0, t1)
    return engine_match_trace(e, _match, expression, input, start, encoder, t0, t1)
 end
 
-local function engine_trace(e, expression, input, start, encoder, style)
-   return engine_match_trace(e, _trace, expression, input, start, encoder, style)
+local function engine_trace(e, expression, input, start, style)
+   return engine_match_trace(e, _trace, expression, input, start, style)
 end
 
 ----------------------------------------------------------------------------------------
@@ -276,8 +276,6 @@ local function open3(e, infilename, outfilename, errfilename)
    else errfile, msg = io.open(errfilename, "w"); if not errfile then e:error(msg); end; end
    return infile, outfile, errfile
 end
-
-local operation = {match=1, condensed=2, full=3}
 
 local function engine_process_file(e, expression, op, infilename, outfilename, errfilename, encoder, wholefileflag)
    local r, msgs
@@ -323,11 +321,11 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    local ok, l = pcall(nextline);
    if not ok then e:error(l); end
    local _, m, leftover, trace_string
-   local trace_flag = (op ~= "match")
-   local trace_style = op
+   local trace_flag = (op == "trace")
+   local trace_style = encoder
    local m, leftover
    while l do
-      if trace_flag then _, trace_string = e:trace(expression, l, 1, nil, trace_style); end
+      if trace_flag then _, _, trace_string = e:trace(expression, l, 1, trace_style); end
       m, leftover = matcher(l);		  -- What to do with leftover?  User might want to see it.
       if trace_string then o_write(outfile, trace_string, "\n"); end
       if m then
@@ -349,8 +347,8 @@ function process_input_file.match(e, expression, infilename, outfilename, errfil
    return engine_process_file(e, expression, "match", infilename, outfilename, errfilename, encoder, wholefileflag)
 end
 
-function process_input_file.trace(e, expression, infilename, outfilename, errfilename, encoder, wholefileflag, trace_style)
-   return engine_process_file(e, expression, trace_style, infilename, outfilename, errfilename, encoder, wholefileflag)
+function process_input_file.trace(e, expression, infilename, outfilename, errfilename, trace_style, wholefileflag )
+   return engine_process_file(e, expression, "trace", infilename, outfilename, errfilename, trace_style, wholefileflag)
 end
 
 ---------------------------------------------------------------------------------------------------

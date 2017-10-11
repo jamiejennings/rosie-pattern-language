@@ -18,8 +18,10 @@
 #define ERR_SYSCALL_FAILED -3
 #define ERR_ENGINE_CALL_FAILED -4
 
+/* These codes are returned in the length field of an str whose ptr is NULL */
 #define ERR_NO_MATCH 0
 #define ERR_NO_PATTERN 1
+#define ERR_NO_TRACESTYLE 2
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
@@ -48,6 +50,7 @@ int rosie_config(lua_State *L, str *retvals);
 int rosie_compile(lua_State *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(lua_State *L, int pat);
 int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, match *match);
+int rosie_trace(lua_State *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors);
 
@@ -57,7 +60,7 @@ Administrative:
 +  status:int, engine:void* = new(const char *name)
 +  status:int = finalize(void *engine)
 +  status:int, desc:string = config(void *engine)
-  status:int = setlibpath(void *engine, const char *libpath)
+*  status:int = setlibpath(void *engine, const char *libpath)
 +  set soft memory limit to m MB, with optional logging of when it is hit
   logging level (to stderr)?
   clone an engine?  (to avoid setup cost; but cloned engine must be in new Lua state)

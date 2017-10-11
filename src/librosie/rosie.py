@@ -50,6 +50,7 @@ int rosie_config(void *L, str *retvals);
 int rosie_compile(void *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(void *L, int pat);
 int rosie_match(void *L, int pat, int start, char *encoder, str *input, match *match);
+int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
 
@@ -201,6 +202,24 @@ class engine ():
                 raise ValueError("invalid compiled pattern (already freed?)")
         data_buffer = ffi.buffer(Cmatch.data.ptr, Cmatch.data.len)
         return data_buffer, left, abend, ttotal, tmatch
+
+    def trace(self, Cpat, input, start, style):
+        if Cpat[0] == 0:
+            raise ValueError("invalid compiled pattern")
+        Cmatched = ffi.new("int *")
+        Cinput = new_cstr(input)
+        Ctrace = new_cstr()
+        ok = lib.rosie_trace(self.engine, Cpat[0], start, style, Cinput, Cmatched, Ctrace)
+        if ok != 0:
+            raise RuntimeError("trace() failed (please report this as a bug)")
+        if Ctrace.ptr == ffi.NULL:
+            if Ctrace.len == 2:
+                return ValueError("invalid trace style")
+            elif Ctrace.len == 1:
+                raise ValueError("invalid compiled pattern (already freed?)")
+        matched = False if Cmatched[0]==0 else True
+        trace = read_cstr(Ctrace)
+        return matched, trace
 
     def setlibpath(self, libpath):
         ok = lib.rosie_setlibpath_engine(self.engine, libpath)

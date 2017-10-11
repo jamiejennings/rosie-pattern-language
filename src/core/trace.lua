@@ -499,16 +499,36 @@ function trace.internal(r, input, start)
    return expression(r.engine, a, input, start)
 end
 
+local function prep_for_export(t)
+   if t.ast then
+      t.exp = ast.tostring(t.ast)
+      t.ast = nil
+   end
+   if t.match == nil then
+      t.match = false
+   end
+   if t.subs then
+      list.map(prep_for_export, t.subs)
+   end
+end
+
 function trace.expression(r, input, start, style)
    assert(type(style)=="string")
    local tr = trace.internal(r, input, start)
-   if style == "full" then
-      return trace.tostring(tr)
+   assert(type(tr)=="table")
+   local matched = tr.match and true or false
+   local retval
+   if style == "json" then
+      prep_for_export(tr)
+      retval = tr
+   elseif style == "full" then
+      retval = trace.tostring(tr)
    elseif style == "condensed" then
-      return trace.path_tostring(trace.max_path(tr))
+      retval = trace.path_tostring(trace.max_path(tr))
    else
-      error("Invalid trace style: " .. tostring(style))
+      error("invalid trace style: " .. tostring(style))
    end
+   return matched, retval
 end
 
 return trace

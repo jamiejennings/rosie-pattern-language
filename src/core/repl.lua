@@ -215,7 +215,7 @@ function repl.repl(en)
 			   local m, left = rplx:match(input_text)
 			   if (debug and (not m)) or trace_command then
 			      local tracetype = (cname=="trace") and "condensed" or "full"
-			      local ok, tr = en:trace(str, input_text, 1, nil, tracetype)
+			      local ok, matched, tr = en:trace(str, input_text, 1, tracetype)
 			      if not ok then
 				 io.write("Internal error: expression did not compile\n")
 			      else

@@ -680,6 +680,84 @@ have_pattern:
   return SUCCESS;
 }
 
+/* N.B. Client must free trace */
+int rosie_trace(lua_State *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace) {
+  int t;
+  str *rs;
+  
+  collect_if_needed(L);
+
+  get_registry(engine_key);
+  t = lua_getfield(L, -1, "trace");
+  CHECK_TYPE("engine.trace()", t, LUA_TFUNCTION);
+  get_registry(engine_key);	/* first arg to trace */
+
+  if (!pat)
+    LOGf("rosie_trace() called with invalid compiled pattern reference: %d\n", pat);
+  else {
+    get_registry(rplx_table_key);
+    t = lua_rawgeti(L, -1, pat); /* arg 2 to trace*/
+    if (t == LUA_TTABLE) goto have_pattern;
+  }
+  (*trace).ptr = NULL;
+  (*trace).len = ERR_NO_PATTERN;
+  lua_settop(L, 0);
+  return SUCCESS;
+
+have_pattern:
+
+  lua_replace(L, -2); 		/* overwrite rplx table with rplx object */
+  if (!trace_style) {
+    LOG("rosie_trace() called with null trace_style arg\n");
+    (*trace).ptr = NULL;
+    (*trace).len = ERR_NO_TRACESTYLE;
+    lua_settop(L, 0);
+    return SUCCESS;
+  }
+
+  lua_pushlstring(L, (const char *)input->ptr, input->len); /* arg 3 */
+  lua_pushinteger(L, start);	                            /* arg 4 */
+  lua_pushstring(L, trace_style);                           /* arg 5 */
+
+  t = lua_pcall(L, 5, 3, 0); 
+  if (t != LUA_OK) {  
+    LOG("trace() failed\n");  
+    LOGstack(L); 
+    lua_settop(L, 0); 
+    return ERR_ENGINE_CALL_FAILED;  
+  }  
+
+  /* The first return value from trace indicates whether the pattern
+     compiled, and we are always sending in a compiled pattern, so the
+     first return value is always true. 
+  */
+  assert( lua_isboolean(L, -3) );
+  assert( lua_isboolean(L, -2) );
+  (*matched) = lua_toboolean(L, -2);
+
+  if (lua_istable(L, -1)) {
+    rs = to_json_string(L, -1);
+  }
+  else if (lua_isstring(L, -1)) {
+    byte_ptr temp_str;
+    size_t temp_len;
+    temp_str = (byte_ptr) lua_tolstring(L, -1, &(temp_len));
+    rs = rosie_new_string_ptr(temp_str, temp_len);
+  }
+  else {
+    LOG("trace() failed with unexpected return value from engine.trace()\n");
+    LOGstack(L);
+    lua_settop(L, 0);
+    return ERR_ENGINE_CALL_FAILED;
+  }
+
+  (*trace).ptr = rs->ptr;
+  (*trace).len = rs->len;
+
+  lua_settop(L, 0);
+  return SUCCESS;
+}
+
 /* N.B. Client must free 'errors' */
 int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
   int t;
