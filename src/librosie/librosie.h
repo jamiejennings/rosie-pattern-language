@@ -78,7 +78,7 @@ Match/trace:
 +  status:int = free_rplx(void *engine, int pat)
 +  status:int = match(void *engine, int pat, int start, str *encoder,
 		str *input, match *match);
-  status:int, tracestring:*buffer = trace(void *engine, int pat, buffer *input, int start, int encoder, int tracestyle)
++  status:int, tracestring:*buffer = trace(void *engine, int pat, buffer *input, int start, int encoder, int tracestyle)
 
   status:int, cin:int, cout:int, cerr:int, errors:strings =
     matchfile(void *engine, int pat, 
