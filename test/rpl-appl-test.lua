@@ -62,7 +62,8 @@ check(type(t)=="table")
 heading("Testing application of primitive macros")
 ----------------------------------------------------------------------------------------
 
-subheading("Example macro: first")
+heading("Example macros")
+subheading("First")
 
 p, msg = e:compile('first:a')
 check(p)
@@ -159,7 +160,7 @@ check(m and m.type=="*")
 check(leftover==0)
 
 
-subheading("Example macro: last")
+subheading("Last")
 
 p = e:compile('last:a')
 ok, m, leftover = e:match(p, "a")
@@ -205,19 +206,32 @@ ok, m, leftover = e:match(p, "b b")
 check(ok)
 check(not m)
 
+----------------------------------------------------------------------------------------
+heading("Find and findall")
 
-subheading("Example macro: find")
-
-p = e:compile('find1:a')
-ok, m, leftover = e:match(p, "xyzw 1 2 3 a")
+p = e:compile('find:a')
+ok, m, leftover = e:match(p, "xyzw 1 2 3 a x x a")
 check(ok)
 check(m)
-check(leftover==0)
+check(leftover==6)
 check(m.type=="*")
 check(m.s==1 and m.e==13)
 check(m.subs and m.subs[1] and m.subs[1].s==12 and m.subs[1].e==13)
 
-subheading("Macro: ci")
+p = e:compile('findall:a')
+ok, m, leftover = e:match(p, "xyzw 1 2 3 a x x a")
+check(ok)
+check(m)
+check(leftover==0)
+check(m.type=="*")
+check(m.s==1 and m.e==19)
+check(m.subs and m.subs[1] and m.subs[1].s==12 and m.subs[1].e==13)
+check(m.subs and m.subs[2] and m.subs[2].s==18 and m.subs[2].e==19)
+
+
+----------------------------------------------------------------------------------------
+heading("Case sensitivity")
+subheading("ci (shallow)")
 
 p, errs = e:compile('ci:"ibm"')
 check(p)

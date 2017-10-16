@@ -100,7 +100,7 @@ local function internal_macro_find1(capture_flag, ...)
    return ast.sequence.new{exps={ast.grammar.new{rules=rules, sourceref=sref}}, sourceref=sref}
 end
 
-local function macro_find1(...)
+local function macro_find(...)
    return internal_macro_find1(false, ...)		    -- do not capture the text before the match
 end
 
@@ -109,12 +109,12 @@ local function macro_keepto(...)
 end
 
 -- grep
-local function macro_find(...)
+local function macro_findall(...)
    local args = {...}
-   if #args~=1 then error("find takes one argument, " .. tostring(#args) .. " given"); end
+   if #args~=1 then error("findall takes one argument, " .. tostring(#args) .. " given"); end
    local exp = args[1]
    assert(exp.sourceref)
-   local find = macro_find1(exp)
+   local find = macro_find(exp)
    assert(find.sourceref)
    return ast.repetition.new{min=1, exp=find, cooked=false, sourceref=exp.sourceref}
 end
@@ -201,8 +201,8 @@ local ENV =
      ["message"] = pfunction.new{primop=builtins.message};
      ["error"] = pfunction.new{primop=builtins.error};
      ["keepto"] = macro.new{primop=macro_keepto};
-     ["find1"] = macro.new{primop=macro_find1};
      ["find"] = macro.new{primop=macro_find};
+     ["findall"] = macro.new{primop=macro_findall};
      ["ci"] = macro.new{primop=macro_case_insensitive};
 --     ["cs"] = macro.new{primop=macro_case_sensitive};
      ["last"] = macro.new{primop=example_last};
