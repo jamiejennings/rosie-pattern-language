@@ -210,23 +210,74 @@ check(not m)
 heading("Find and findall")
 
 p = e:compile('find:a')
-ok, m, leftover = e:match(p, "xyzw 1 2 3 a x x a")
+ok, m, leftover = e:match(p, "xyzw 1 2 3 aa x x a")
 check(ok)
 check(m)
-check(leftover==6)
+check(leftover==7)
 check(m.type=="*")
 check(m.s==1 and m.e==13)
 check(m.subs and m.subs[1] and m.subs[1].s==12 and m.subs[1].e==13)
 
-p = e:compile('findall:a')
-ok, m, leftover = e:match(p, "xyzw 1 2 3 a x x a")
-check(ok)
-check(m)
-check(leftover==0)
-check(m.type=="*")
-check(m.s==1 and m.e==19)
-check(m.subs and m.subs[1] and m.subs[1].s==12 and m.subs[1].e==13)
-check(m.subs and m.subs[2] and m.subs[2].s==18 and m.subs[2].e==19)
+function test_findall_setup(exp)
+   p = e:compile(exp)
+   ok, m, leftover = e:match(p, "xyzw 1 2 3 aa x x a")
+   check(ok, "call failed", 1)
+   check(m, "no match", 1)
+   check(leftover==0, "wrong leftover count", 1)
+   check(m.type=="*", "wrong match label", 1)
+end
+
+function test_findall_1(exp)
+   test_findall_setup(exp)
+   check(#m.subs==3, "wrong number of submatches", 1)
+   check(m.s==1 and m.e==20, "wrong top-level match span", 1)
+   check(m.subs and m.subs[1] and m.subs[1].s==12 and m.subs[1].e==13, "wrong sub 1", 1)
+   check(m.subs and m.subs[2] and m.subs[2].s==13 and m.subs[2].e==14, "wrong sub 2", 1)
+   check(m.subs and m.subs[3] and m.subs[3].s==19 and m.subs[3].e==20, "wrong sub 3", 1)
+end
+
+function test_findall_2(exp)
+   test_findall_setup(exp)
+   check(#m.subs==2, "wrong number of submatches", 1)
+   check(m.s==1 and m.e==20, "wrong top-level match span", 1)
+   check(m.subs and m.subs[1] and m.subs[1].s==11 and m.subs[1].e==13, "wrong sub 1", 1)
+   check(m.subs and m.subs[2] and m.subs[2].s==18 and m.subs[2].e==20, "wrong sub 2", 1)
+end
+
+function test_findall_3(exp)
+   test_findall_setup(exp)
+   check(m.s==1 and m.e==20, "wrong top-level match span", 1)
+   check(m.subs and m.subs[1] and m.subs[1].s==18 and m.subs[1].e==20, "wrong sub 1", 1)
+end
+
+function test_findall_4(exp)
+   test_findall_setup(exp)
+   check(#m.subs==2, "wrong number of submatches", 1)
+   check(m.s==1 and m.e==20, "wrong top-level match span", 1)
+   check(m.subs and m.subs[1] and m.subs[1].s==13 and m.subs[1].e==15, "wrong sub 1", 1)
+   check(m.subs and m.subs[2] and m.subs[2].s==19 and m.subs[2].e==20, "wrong sub 2", 1)
+end
+
+function test_findall_5(exp)
+   test_findall_setup('findall:(a)')
+   check(#m.subs==1, "wrong number of submatches", 1)
+   check(m.subs and m.subs[1] and m.subs[1].type=="find.*", "wrong top-level match span", 1)
+   check(m.subs and m.subs[1] and (m.subs[1].s==18) and (m.subs[1].e==20), "wrong sub 1", 1)
+end
+
+test_findall_1('findall:a')
+test_findall_1('findall:{a}')
+
+test_findall_5('findall:(a)')
+
+test_findall_2('findall:{~a}')
+test_findall_5('findall:(~a)')
+
+test_findall_3('findall:{~a~}')
+test_findall_5('findall:(~a~)')
+
+test_findall_4('findall:{a~}')
+test_findall_5('findall:(a~)')
 
 
 ----------------------------------------------------------------------------------------
