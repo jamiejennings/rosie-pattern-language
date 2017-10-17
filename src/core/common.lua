@@ -326,6 +326,7 @@ function common.match_node_wrap(peg, label)
 end
 
 local function insert_input_text(m, input)
+   if not m then return m; end			    -- abend can produce empty match
    local name, s, data, subs, e = common.decode_match(m)
    if data then return m; end			    -- const capture will have data already
    assert(type(e)=="number", "expected an end position, got: " .. tostring(data))
@@ -339,7 +340,7 @@ end
 
 function common.rmatch(peg, input, start, rmatch_encoder, fn_encoder, total_time, lpegvm_time)
    local m, leftover, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
-   if not m then return false, start, t1, t2; end
+   if not m then return false, start, abend, t1, t2; end
    return fn_encoder(m, input, start), leftover, abend, t1, t2
 end
 
