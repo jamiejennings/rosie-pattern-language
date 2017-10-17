@@ -8,6 +8,9 @@
 
 assert(TEST_HOME, "TEST_HOME is not set")
 
+list = import "list"
+violation = import "violation"
+
 check = test.check
 heading = test.heading
 subheading = test.subheading
@@ -281,8 +284,169 @@ test_findall_5('findall:(a~)')
 
 
 ----------------------------------------------------------------------------------------
+heading("Message and halt")
+subheading("Message")
+
+function test_message(exp, input)
+   p, errs = e:compile(exp)
+   check(p, "failed to compile", 1)
+   if not p then
+      print()
+      print(table.concat(list.map(violation.tostring, errs), '\n'))
+      m = nil
+   else
+      ok, m, leftover = e:match(p, input)
+      check(ok, "match failed to execute", 1)
+      check(m and m.type=="*", "either match failed or wrong match type (at top level)", 1)
+   end
+end
+
+test_message('message:#Hello', "")
+check(m.data=="")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==0)
+
+test_message('message:#Hello', "abc")
+check(m.data=="")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==3)
+
+test_message('{"ab" message:#Hello}', "abc")
+check(m.data=="ab")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==1)
+
+test_message('"abc" message:#Hello', "abc")
+check(m.data=="abc")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==0)
+
+test_message('"abc" message:#Hello', "abc def")
+check(m.data=="abc ")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==3)
+
+test_message('"abc" message:#Hello "def"', "abc def")
+check(m.data=="abc def")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==0)
+
+test_message('"abc" / message:#Hello', "abc")
+check(m.data=="abc")
+check(m.subs==nil)
+check(leftover==0)
+
+test_message('"abc" / message:#Hello', "ab")
+check(m.data=="")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==2)
+
+p, errs = e:compile('(message:#Hello)')
+check(p)
+p, errs = e:compile('message:(#Hello)')
+check(p)
+p, errs = e:compile('message:{#Hello}')
+check(p)
+
+p, errs = e:compile('(message:#Hello)+')
+check(not p)
+msg = table.concat(list.map(violation.tostring, errs), '\n')
+check(msg:find('can match the empty string'))
+p, errs = e:compile('{message:#Hello}?')
+check(not p)
+check(type(errs)=="table")
+msg = table.concat(list.map(violation.tostring, errs), '\n')
+check(msg)
+if msg then check(msg:find('can match the empty string')); end
+
+check(false, "NOT TESTING BRACKET EXPS")
+
+--[[
+subheading("Message inside brackets")
+
+p, errs = e:compile('[message:#Hello]')
+check(p)
+ok, m, leftover = e:match(p, "")
+check(ok)
+check(not m)
+
+test_message('[message:#Hello]', "a")
+check(m.data=="a")
+check(m.subs==nil)
+check(leftover==0)
+
+test_message('[message:#Hello]+', "a b")
+check(m.data=="a")
+check(m.subs==nil)
+check(leftover==2)
+
+test_message('[ {message:#Hello}+ ]', "ab")
+check(m.data=="a")
+check(m.subs==nil)
+check(leftover==1)
+
+print("*** "); table.print(m)
+--]]
+
+subheading("Halt")
+
+test_message('halt', "")
+check(m.data=="")
+check(#m.subs==1)
+check(m.subs[1].type=="halt" and m.subs[1].data=="Hello")
+check(leftover==0)
+
+test_message('message:#Hello', "abc")
+check(m.data=="")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==3)
+
+test_message('{"ab" message:#Hello}', "abc")
+check(m.data=="ab")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==1)
+
+test_message('"abc" message:#Hello', "abc")
+check(m.data=="abc")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==0)
+
+test_message('"abc" message:#Hello', "abc def")
+check(m.data=="abc ")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==3)
+
+test_message('"abc" message:#Hello "def"', "abc def")
+check(m.data=="abc def")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==0)
+
+test_message('"abc" / message:#Hello', "abc")
+check(m.data=="abc")
+check(m.subs==nil)
+check(leftover==0)
+
+test_message('"abc" / message:#Hello', "ab")
+check(m.data=="")
+check(#m.subs==1)
+check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
+check(leftover==2)
+
+----------------------------------------------------------------------------------------
 heading("Case sensitivity")
-subheading("ci (shallow)")
+subheading("ci (shallow test)")
 
 p, errs = e:compile('ci:"ibm"')
 check(p)
@@ -304,15 +468,15 @@ function test_foobar()
    p = e:compile('foobar')
    assert(p)
    m, leftover = p:match("foo")
-   check(m and (leftover==0), "failed on foo")
+   check(m and (leftover==0), "failed on foo", 1)
    m, leftover = p:match("Foo")
-   check(m and (leftover==0), "failed on Foo")
+   check(m and (leftover==0), "failed on Foo", 1)
    m, leftover = p:match("fOO")
-   check(m and (leftover==0), "failed on fOO")
+   check(m and (leftover==0), "failed on fOO", 1)
    m, leftover = p:match("BAR")
-   check(m and (leftover==0), "failed on BAR")
+   check(m and (leftover==0), "failed on BAR", 1)
    m, leftover = p:match("bar")
-   check(m and (leftover==0), "failed on bar")
+   check(m and (leftover==0), "failed on bar", 1)
 end
 
 ok = e:load('foobar = ci:("foo" / "bar")')
@@ -328,6 +492,14 @@ assert(ok)
 test_foobar()
 
 ok = e:load('grammar foobar = ci:{"foo" / "bar"} end')
+assert(ok)
+test_foobar()
+
+subheading("ci (deep test)")
+
+ok = e:load('foo = {"foo" / "bar"}')
+assert(ok)
+ok = e:load('foobar = ci:foo')
 assert(ok)
 test_foobar()
 
