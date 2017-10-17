@@ -397,12 +397,118 @@ print("*** "); table.print(m)
 
 subheading("Halt")
 
-test_message('halt', "")
-check(m.data=="")
-check(#m.subs==1)
-check(m.subs[1].type=="halt" and m.subs[1].data=="Hello")
+function test_halt(exp, input)
+   p, errs = e:compile(exp)
+   check(p, "failed to compile", 1)
+   if not p then
+      print()
+      print(table.concat(list.map(violation.tostring, errs), '\n'))
+      m = nil
+   else
+      ok, m, leftover, abend = e:match(p, input)
+      check(ok, "match failed to execute", 1)
+print("***", m, leftover, abend, "***")
+   end
+end
+
+test_halt('halt', "")
+check(m==nil)
+check(abend==true)
+
+test_halt('halt', "abc")
+check(m==nil)
+check(abend==true)
+check(leftover==3)
+
+test_halt('"abc" halt', "abc")
+check(m)
+if m then
+   check(m.type=="*")
+   check(not m.subs)
+   check(m.s==1)
+   check(m.e==4)
+   check(m.data=="abc")
+end
+check(abend==true)
 check(leftover==0)
 
+test_halt('"abc" "def" / halt', "abc")
+check(m)
+if m then
+   check(m.type=="*")
+   check(not m.subs)
+   check(m.s==1)
+   check(m.e==4)
+   check(m.data=="abc")
+end
+check(abend==true)
+check(leftover==0)
+
+test_halt('"abc" "def" / halt', "abc def")
+check(m)
+if m then
+   check(m.type=="*")
+   check(not m.subs)
+   check(m.s==1)
+   check(m.e==8)
+   check(m.data=="abc def")
+end
+check(abend==false)
+check(leftover==0)
+
+test_halt('"abc" ("def" / halt) "xyz"', "abc def xyz")
+check(m)
+if m then
+   check(m.type=="*")
+   check(not m.subs)
+   check(m.s==1)
+   check(m.e==12)
+   check(m.data=="abc def xyz")
+end
+check(abend==false)
+check(leftover==0)
+
+test_halt('"abc" ("def" / halt) "xyz"', "abc xyz")
+check(m)
+if m then
+   check(m.type=="*")
+   check(not m.subs)
+   check(m.s==1)
+   check(m.e==5)
+   check(m.data=="abc ")
+end
+check(abend==true)
+check(leftover==3)
+
+test_halt('"abc" ("def" / halt) "xyz"', "abc ZZZ")
+check(m)
+if m then
+   check(m.type=="*")
+   check(not m.subs)
+   check(m.s==1)
+   check(m.e==5)
+   check(m.data=="abc ")
+end
+check(abend==true)
+check(leftover==3)
+
+test_halt('"abc" ("defg" / halt) "xyz"', "abc def xyz")
+check(m)
+if m then
+   check(m.type=="*")
+   check(not m.subs)
+   check(m.s==1)
+   check(m.e==5)
+   check(m.data=="abc ")
+end
+check(abend==true)
+check(leftover==7)
+
+
+
+
+
+--[[
 test_message('message:#Hello', "abc")
 check(m.data=="")
 check(#m.subs==1)
@@ -443,6 +549,7 @@ check(m.data=="")
 check(#m.subs==1)
 check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
 check(leftover==2)
+--]]
 
 ----------------------------------------------------------------------------------------
 heading("Case sensitivity")
