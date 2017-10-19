@@ -858,6 +858,71 @@ int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors) {
   return SUCCESS;
 }
 
+/* FUTURE: Expose engine_process_file() */
+
+/* N.B. Client must free err */
+int rosie_matchfile(lua_State *L, int pat, char *encoder, int wholefileflag,
+		    char *infilename, char *outfilename, char *errfilename,
+		    int *cin, int *cout, int *cerr,
+		    str *err) {
+  int t;
+  
+  collect_if_needed(L);
+
+  get_registry(engine_key);
+  t = lua_getfield(L, -1, "matchfile");
+  CHECK_TYPE("engine.matchfile()", t, LUA_TFUNCTION);
+  get_registry(engine_key);	/* first arg */
+
+  if (!pat)
+    LOGf("rosie_matchfile() called with invalid compiled pattern reference: %d\n", pat);
+  else {
+    get_registry(rplx_table_key);
+    t = lua_rawgeti(L, -1, pat); /* arg 2 */
+    if (t == LUA_TTABLE) goto have_pattern;
+  }
+  (*cin) = -1;
+  (*cout) = ERR_NO_PATTERN;
+  lua_settop(L, 0);
+  return SUCCESS;
+
+have_pattern:
+
+  lua_replace(L, -2); 		/* overwrite rplx table with rplx object */
+  if (!encoder) {
+    LOG("rosie_matchfile() called with null encoder arg\n");
+    (*cin) = -1;
+    (*cout) = ERR_NO_TRACESTYLE;
+    lua_settop(L, 0);
+    return SUCCESS;
+  }
+
+  lua_pushstring(L, infilename);  /* arg 3 */
+  lua_pushstring(L, outfilename); /* arg 4 */
+  lua_pushstring(L, errfilename); /* arg 5 */
+  lua_pushstring(L, encoder);	  /* arg 6 */
+  lua_pushboolean(L, wholefileflag); /* arg 7 */
+
+  t = lua_pcall(L, 5, 3, 0); 
+  if (t != LUA_OK) {  
+    LOG("matchfile() failed\n");  
+    LOGstack(L); 
+    /* TODO: return the error! */
+    lua_settop(L, 0); 
+    return ERR_ENGINE_CALL_FAILED;  
+  }  
+
+  (*cin) = lua_tointeger(L, -3);  /* cerr */
+  (*cout) = lua_tointeger(L, -2); /* cout, or error code if error */
+  (*cerr) = lua_tointeger(L, -1); /* cin, or -1 if error */
+  (*err).ptr = NULL;
+  (*err).len = 0;
+  
+  lua_settop(L, 0);
+  return SUCCESS;
+}
+
+
 void rosie_finalize(void *L) {
   get_registry(prev_string_result_key); 
   if (lua_isuserdata(L, -1)) { 
