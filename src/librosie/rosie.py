@@ -158,10 +158,12 @@ class engine ():
         if ok != 0:
             raise RuntimeError("compile() failed (please report this as a bug)")
         if Cpat[0] == 0:
+            pat = None
             errs = read_cstr(Cerrs)
         else:
+            pat = Cpat
             errs = None
-        return Cpat, errs
+        return pat, errs
 
     def load(self, src):
         Cerrs = new_cstr()
@@ -172,6 +174,7 @@ class engine ():
         if ok != 0:
             raise RuntimeError("load() failed (please report this as a bug)")
         errs = read_cstr(Cerrs)
+        if errs == '{}': errs = None
         pkgname = read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
@@ -185,6 +188,7 @@ class engine ():
             raise RuntimeError("import() failed (please report this as a bug)")
         actual_pkgname = read_cstr(Cpkgname)
         errs = read_cstr(Cerrs)
+        if errs == '{}': errs = None
         return Csuccess[0], actual_pkgname, errs
 
     def match(self, Cpat, input, start, encoder):
