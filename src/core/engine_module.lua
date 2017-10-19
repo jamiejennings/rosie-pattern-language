@@ -264,16 +264,23 @@ engine_module.post_create_hook = function(e, ...) end
 local process_input_file = {}
 
 local function open3(e, infilename, outfilename, errfilename)
-   if type(infilename)~="string" then e:error("bad input file name"); end
-   if type(outfilename)~="string" then e:error("bad output file name"); end
-   if type(errfilename)~="string" then e:error("bad error file name"); end   
+   if type(infilename)~="string" then return nil, tostring(infilename)
+   elseif type(outfilename)~="string" then return nil, tostring(outfilename)
+   elseif type(errfilename)~="string" then return nil, tostring(errfilename)
+   end
    local infile, outfile, errfile, msg
    if #infilename==0 then infile = io.stdin;
-   else infile, msg = io.open(infilename, "r"); if not infile then e:error(msg); end; end
+   else
+      infile, msg = io.open(infilename, "r");
+      if not infile then return nil, infilename; end; end
    if #outfilename==0 then outfile = io.stdout
-   else outfile, msg = io.open(outfilename, "w"); if not outfile then e:error(msg); end; end
+   else
+      outfile, msg = io.open(outfilename, "w");
+      if not outfile then return nil, outfilename; end; end
    if #errfilename==0 then errfile = io.stderr;
-   else errfile, msg = io.open(errfilename, "w"); if not errfile then e:error(msg); end; end
+   else
+      errfile, msg = io.open(errfilename, "w");
+      if not errfile then return nil, errfilename; end; end
    return infile, outfile, errfile
 end
 
@@ -295,6 +302,7 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
 		   end                              -- FUTURE: inline this for performance
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
+   if not infile then return nil, "No such file " .. tostring(outfile), nil; end
    local inlines, outlines, errlines = 0, 0, 0;
    local nextline
    if wholefileflag then
