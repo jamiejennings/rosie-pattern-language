@@ -37,6 +37,7 @@ passed = test.print_grand_total()
 
 print("\nTESTING TODO LIST:")
 print("- macros")
+print("- extreme patterns (many choices, deep nesting, many different capture names)")
 print("- input data with nulls")
 print("- new api")
 print("- more repl tests")
