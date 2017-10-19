@@ -860,12 +860,15 @@ int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors) {
 
 /* FUTURE: Expose engine_process_file() */
 
+/* TODO: Return SUCCESS and a failure indicator even when, e.g. file cannot be opened */
 /* N.B. Client must free err */
 int rosie_matchfile(lua_State *L, int pat, char *encoder, int wholefileflag,
 		    char *infilename, char *outfilename, char *errfilename,
 		    int *cin, int *cout, int *cerr,
 		    str *err) {
   int t;
+  unsigned char *temp_str;
+  size_t temp_len;
   
   collect_if_needed(L);
 
@@ -903,7 +906,7 @@ have_pattern:
   lua_pushstring(L, encoder);	  /* arg 6 */
   lua_pushboolean(L, wholefileflag); /* arg 7 */
 
-  t = lua_pcall(L, 5, 3, 0); 
+  t = lua_pcall(L, 7, 3, 0); 
   if (t != LUA_OK) {  
     LOG("matchfile() failed\n");  
     LOGstack(L); 
@@ -911,6 +914,20 @@ have_pattern:
     lua_settop(L, 0); 
     return ERR_ENGINE_CALL_FAILED;  
   }  
+
+  if (lua_isnil(L, -1)) {
+
+       LOGstack(L);
+
+
+       /* i/o issue with one of the files */
+       (*cin) = -1;
+       (*cout) = 3;
+       temp_str =  (unsigned char *)lua_tolstring(L, -2, &temp_len);
+       (*err) = rosie_new_string(temp_str, temp_len);
+       lua_settop(L, 0);
+       return SUCCESS;
+  }
 
   (*cin) = lua_tointeger(L, -3);  /* cerr */
   (*cout) = lua_tointeger(L, -2); /* cout, or error code if error */

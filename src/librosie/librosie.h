@@ -21,7 +21,8 @@
 /* These codes are returned in the length field of an str whose ptr is NULL */
 #define ERR_NO_MATCH 0
 #define ERR_NO_PATTERN 1
-#define ERR_NO_TRACESTYLE 2
+#define ERR_NO_TRACESTYLE 2	/* same as no encoder */
+#define ERR_NO_FILE 3		/* no such file or directory */
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
@@ -50,6 +51,10 @@ int rosie_config(lua_State *L, str *retvals);
 int rosie_compile(lua_State *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(lua_State *L, int pat);
 int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, match *match);
+int rosie_matchfile(lua_State *L, int pat, char *encoder, int wholefileflag,
+		    char *infilename, char *outfilename, char *errfilename,
+		    int *cin, int *cout, int *cerr,
+		    str *err);
 int rosie_trace(lua_State *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors);

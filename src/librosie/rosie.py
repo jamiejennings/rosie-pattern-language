@@ -50,6 +50,10 @@ int rosie_config(void *L, str *retvals);
 int rosie_compile(void *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(void *L, int pat);
 int rosie_match(void *L, int pat, int start, char *encoder, str *input, match *match);
+int rosie_matchfile(void *L, int pat, char *encoder, int wholefileflag,
+		    char *infilename, char *outfilename, char *errfilename,
+		    int *cin, int *cout, int *cerr,
+		    str *err);
 int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
@@ -220,6 +224,35 @@ class engine ():
         matched = False if Cmatched[0]==0 else True
         trace = read_cstr(Ctrace)
         return matched, trace
+
+    def matchfile(self, Cpat, encoder,
+                  infile=None,  # stdin
+                  outfile=None, # stdout
+                  errfile=None, # stderr
+                  wholefile=False):
+        if Cpat[0] == 0:
+            raise ValueError("invalid compiled pattern")
+        Ccin = ffi.new("int *")
+        Ccout = ffi.new("int *")
+        Ccerr = ffi.new("int *")
+        wff = 1 if wholefile else 0
+        Cerrmsg = new_cstr()
+        ok = lib.rosie_matchfile(self.engine, Cpat[0], encoder, wff,
+                                 infile or "", outfile or "", errfile or "",
+                                 Ccin, Ccout, Ccerr, Cerrmsg)
+        if ok != 0:
+            raise RuntimeError("matchfile() failed: " + read_cstr(Cerrmsg))
+
+        if Ccin[0] == -1:       # Error occurred
+            if Ccout[0] == 1:
+                raise ValueError("invalid compiled pattern (already freed?)")
+            elif Ccout[0] == 2:
+                raise ValueError("invalid encoder")
+            elif Ccout[0] == 3:
+                raise ValueError(read_cstr(Cerrmsg)) # file i/o error
+            else:
+                raise ValueError("unknown error caused matchfile to fail")
+        return Ccin[0], Ccout[0], Ccerr[0]
 
     def setlibpath(self, libpath):
         ok = lib.rosie_setlibpath_engine(self.engine, libpath)
