@@ -7,6 +7,8 @@ import unittest
 import sys, os, json
 import rosie
 
+librosiedir = "."               # requires link rosie -> ../..
+
 class RosieInitTest(unittest.TestCase):
 
     def setUp(self):
@@ -16,7 +18,7 @@ class RosieInitTest(unittest.TestCase):
         pass
 
     def test(self):
-        engine = rosie.engine(".")
+        engine = rosie.engine(librosiedir)
         #print "Rosie library successfully loaded.  Rosie matching engine:", engine
         #print "Rosie is: ", rosie.lib
 
@@ -26,7 +28,7 @@ class RosieLoadTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        self.engine = rosie.engine(".")
+        self.engine = rosie.engine(librosiedir)
 
     def tearDown(self):
         pass
@@ -73,7 +75,7 @@ class RosieLoadTest(unittest.TestCase):
         assert(err['message'])
         assert(err['who'] == 'parser')
 
-        engine2 = rosie.engine(".")
+        engine2 = rosie.engine(librosiedir)
         assert(engine2)
         assert(engine2 != self.engine)
         engine2 = None          # triggers call to librosie to gc the engine
@@ -84,7 +86,7 @@ class RosieConfigTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        self.engine = rosie.engine(".")
+        self.engine = rosie.engine(librosiedir)
 
     def tearDown(self):
         pass
@@ -104,7 +106,7 @@ class RosieMatchTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        self.engine = rosie.engine(".")
+        self.engine = rosie.engine(librosiedir)
 
     def tearDown(self):
         pass
@@ -186,7 +188,7 @@ class RosieImportTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        self.engine = rosie.engine(".")
+        self.engine = rosie.engine(librosiedir)
         assert(self.engine)
 
     def tearDown(self):
@@ -227,7 +229,7 @@ class RosieTraceTest(unittest.TestCase):
     net_any = None
     
     def setUp(self):
-        self.engine = rosie.engine(".")
+        self.engine = rosie.engine(librosiedir)
         assert(self.engine)
         ok, pkgname, errs = self.engine.import_pkg('net')
         assert(ok)
@@ -258,7 +260,7 @@ class RosieMatchFileTest(unittest.TestCase):
     findall_net_any = None
     
     def setUp(self):
-        self.engine = rosie.engine(".")
+        self.engine = rosie.engine(librosiedir)
         assert(self.engine)
         ok, pkgname, errs = self.engine.import_pkg('net')
         assert(ok)
