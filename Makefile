@@ -220,7 +220,7 @@ core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
 other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
-librosie.so:
+librosie.so: $(luaobjects) lib/lpeg.so lib/cjson.so bin/lua # bin/lua is proxy for liblua
 	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC)
 	cp $(LIBROSIE_DIR)/librosie.so $(BUILD_ROOT)
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
