@@ -214,17 +214,21 @@ void rosie_free_string(str s) {
 
 static void set_libinfo() {
   Dl_info dl;
+  char *base, *dir;
   int ok = dladdr((void *)set_libinfo, &dl);
   if (!ok) {
     display("librosie: call to dladdr failed");
     exit(ERR_SYSCALL_FAILED);
   }
   LOGf("dli_fname is %s\n", dl.dli_fname);
-  if (!basename_r((char *)dl.dli_fname, libname) ||
-      !dirname_r((char *)dl.dli_fname, libdir)) {
+  base = basename((char *)dl.dli_fname);
+  dir = dirname((char *)dl.dli_fname);
+  if (!base || !dir) {
     display("librosie: call to basename/dirname failed");
     exit(ERR_SYSCALL_FAILED);
   }
+  strncpy(libname, base, MAXPATHLEN);
+  strncpy(libdir, dir, MAXPATHLEN);
   LOGf("libdir is %s, and libname is %s\n", libdir, libname);
 }
 
