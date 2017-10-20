@@ -355,7 +355,7 @@ sniff: $(ROSIEBIN)
 test:
 	@echo Running tests in test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D)
-	cd $(LIBROSIE_DIR) && python -m unittest test
+	cd $(LIBROSIE_DIR) && $(MAKE) test
 
 .PHONY: installtest
 installtest:
