@@ -106,12 +106,7 @@ def read_cstr(cstr_ptr):
 # - When creating a new engine, set the engine's libpath (needed functionality) and the rosie
 #   libpath (so that the config() method will show the right values).
 #
-# TO BE CONTINUED!
-
-# def setlibpath(libpath):
-#     ok = lib.rosie_setlibpath_default(lib, libpath)
-#     if ok != 0:
-#         raise RuntimeError("setpath() failed (please report this as a bug)")
+# TO BE CONTINUED.
 
 
 # -----------------------------------------------------------------------------

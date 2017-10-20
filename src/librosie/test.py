@@ -17,8 +17,8 @@ class RosieInitTest(unittest.TestCase):
 
     def test(self):
         engine = rosie.engine(".")
-        print "Rosie library successfully loaded.  Rosie matching engine:", engine
-        print "Rosie is: ", rosie.lib
+        #print "Rosie library successfully loaded.  Rosie matching engine:", engine
+        #print "Rosie is: ", rosie.lib
 
 
 class RosieLoadTest(unittest.TestCase):
@@ -65,7 +65,6 @@ class RosieLoadTest(unittest.TestCase):
         err = errlist[0]
         assert(err['message'])
         assert(err['who'] == 'compiler')
-        print "Results of load():", ok, pkgname, err
 
         ok, pkgname, errs = self.engine.load('foo = "')
         assert(not ok)
@@ -272,12 +271,15 @@ class RosieMatchFileTest(unittest.TestCase):
         pass
 
     def test(self):
-        cin, cout, cerr = self.engine.matchfile(self.findall_net_any, "json", "/etc/resolv.conf", "/tmp/resolv.out", "/tmp/resolv.err")
-        print "Matchfile concluded with: ", cin, cout, cerr
+        cin, cout, cerr = self.engine.matchfile(self.findall_net_any, "json", "../../test/resolv.conf", "/tmp/resolv.out", "/tmp/resolv.err")
+        assert(cin == 10)
+        assert(cout == 5)
+        assert(cerr == 5)
 
-        cin, cout, cerr = self.engine.matchfile(self.net_any, "color", infile="/etc/resolv.conf", errfile="/dev/null", wholefile=True)
-        print "Matchfile concluded with: ", cin, cout, cerr
-
+        cin, cout, cerr = self.engine.matchfile(self.net_any, "color", infile="../../test/resolv.conf", errfile="/dev/null", wholefile=True)
+        assert(cin == 1)
+        assert(cout == 0)
+        assert(cerr == 1)
 
 
 # set soft memory limit also
