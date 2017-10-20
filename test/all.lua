@@ -35,11 +35,9 @@ test.dofile(TEST_HOME .. "/utf8-test.lua")
 passed = test.print_grand_total()
 
 
-print("\nTESTING TODO LIST:")
-print("- macros")
+print("\nMORE AUTOMATED TESTS ARE NEEDED IN THESE CATEGORIES:")
 print("- extreme patterns (many choices, deep nesting, many different capture names)")
 print("- input data with nulls")
-print("- new api")
 print("- more repl tests")
 print("- more trace tests")
 print()
