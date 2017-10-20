@@ -17,12 +17,14 @@ endif
 
 PLATFORMS = linux macosx windows
 
+# Submodules
 ARGPARSE = argparse
 LUA = lua
 LPEG = rosie-lpeg
 JSON = lua-cjson
 READLINE = lua-readline
 LUAMOD = lua-modules
+
 
 BUILD_ROOT = $(shell pwd)
 
@@ -50,36 +52,41 @@ BUILD_ROOT = $(shell pwd)
 #   $(ROSIE_DOC)/rosie --> $(ROSIED)/doc
 
 ROSIED = $(DESTDIR)/lib/rosie
+LIBROSIED = $(DESTDIR)/lib
 #ROSIE_DOC = $(DESTDIR)/share/doc
 #ROSIE_ROOT = $(DESTDIR)/share/rosie
 
 .PHONY: default
 default: $(PLATFORM)
 
-SUBMOD = submodules
+SUBMOD_DIR = submodules
 ROSIEBIN = $(BUILD_ROOT)/bin/rosie
 INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
 
 BUILD_LUA_PACKAGE = $(BUILD_ROOT)/rosie.lua
 
-LUA_DIR = $(SUBMOD)/$(LUA)
-LPEG_DIR = $(SUBMOD)/$(LPEG)
-JSON_DIR = $(SUBMOD)/$(JSON)
-READLINE_DIR = $(SUBMOD)/$(READLINE)
-LUAMOD_DIR = $(SUBMOD)/$(LUAMOD)
+LUA_DIR = $(SUBMOD_DIR)/$(LUA)
+LPEG_DIR = $(SUBMOD_DIR)/$(LPEG)
+JSON_DIR = $(SUBMOD_DIR)/$(JSON)
+READLINE_DIR = $(SUBMOD_DIR)/$(READLINE)
+LUAMOD_DIR = $(SUBMOD_DIR)/$(LUAMOD)
+LIBROSIE_DIR = $(BUILD_ROOT)/src/librosie
 
+INSTALL_LIBROSIE = $(DESTDIR)/lib/librosie.so
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_RPL_DIR = $(ROSIED)/rpl
 INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
+INSTALL_LIBROSIE = $(LIBROSIED)/librosie.so
 
 .PHONY: clean
 clean:
-	rm -rf bin/* lib/* rosie.lua
+	rm -rf bin/* lib/* rosie.lua librosie.so
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
 	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
+	-cd $(LIBROSIE_DIR) && make clean
 	rm -f $(submodule_sentinel)
 	rm -f build.log
 
@@ -108,7 +115,7 @@ readlinetest:
 macosx: PLATFORM=macosx
 macosx: CC=cc
 macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
+macosx: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so librosie.so compile sniff
 
 .PHONY: linux
 linux: PLATFORM=linux
@@ -116,7 +123,7 @@ linux: CC=gcc
 linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
 linux: LINUX_CFLAGS=MYCFLAGS=-fPIC
-linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so compile sniff
+linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so librosie.so compile sniff
 
 .PHONY: windows
 windows:
@@ -213,6 +220,11 @@ core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
 other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
+librosie.so:
+	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC)
+	cp $(LIBROSIE_DIR)/librosie.so $(BUILD_ROOT)
+	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
+
 compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so lib/run-rosie
 
 # The PHONY declaration below will force the creation of bin/rosie every time.  This is needed
@@ -288,10 +300,15 @@ install_rpl:
 	mkdir -p "$(INSTALL_RPL_DIR)"/rosie
 	cp rpl/rosie/*.rpl "$(INSTALL_RPL_DIR)"/rosie/
 
+# Install librosie.so
+.PHONY: install_librosie
+install_librosie: librosie.so
+	cp librosie.so "$(INSTALL_LIBROSIE)"
+
 # Main install rule
 .PHONY: install
 install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
-	install_run_script install_luac_bin install_rpl
+	install_run_script install_luac_bin install_rpl install_librosie
 
 .PHONY: uninstall
 uninstall:
@@ -338,6 +355,7 @@ sniff: $(ROSIEBIN)
 test:
 	@echo Running tests in test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D)
+	cd $(LIBROSIE_DIR) && python -m unittest test
 
 .PHONY: installtest
 installtest:
