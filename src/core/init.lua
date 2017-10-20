@@ -111,8 +111,8 @@ end
 
 
 local function load_all()
-   cjson = import("cjson")			    -- TODO: cjson.safe
    lpeg = import("lpeg")
+   cjson = import("cjson.safe")
 
    -- These MUST have a partial order so that dependencies can be loaded first
    recordtype = import("recordtype")
