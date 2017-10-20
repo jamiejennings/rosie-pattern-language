@@ -8,9 +8,10 @@
 
 local io = require "io"
 local math = require "math"
-local lpeg = require "lpeg"
-local json = require "cjson"
 local string = require "string"
+
+local lpeg = import "lpeg"
+local json = import "cjson"
 
 local util = {}
 
