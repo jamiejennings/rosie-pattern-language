@@ -69,7 +69,7 @@ librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
 librosie.so: librosie.o lua_objs
-	$(CC) -shared -o $@ librosie.o liblua/*.o 
+	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
 
 # librosie.a: librosie.o lua_objs 
 # 	$(AR) $@ librosie.o liblua/*.o
@@ -99,7 +99,7 @@ linux:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-Wl,--export-dynamic -Wl,--no-undefined -Wl,-E -ldl"
 
 macosx:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS="-Wl,--no-undefined" CC=$(CC)
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" CC=$(CC)
 
 macosx: CFLAGS += -std=gnu99
 
