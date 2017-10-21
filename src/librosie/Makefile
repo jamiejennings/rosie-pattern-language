@@ -52,43 +52,31 @@ MYLIBS=
 MYOBJS=
 
 LUA_A=$(HOME)/submodules/lua/src/liblua.a
-LPEG_DIR=$(HOME)/submodules/rosie-lpeg/src
-LPEG_SO=$(LPEG_DIR)/lpeg.so
-CJSON_DIR=$(HOME)/submodules/lua-cjson
-CJSON_SO=$(CJSON_DIR)/cjson.so
 
-$(LUA_A) $(LPEG_SO) $(CJSON_SO):
+$(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
 	@false
 
 
-.PHONY: lua_objs, lpeg_objs, cjson_objs
+.PHONY: lua_objs
 lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-lpeg_objs: $(LPEG_SO)
-	mkdir -p liblpeg
-	cd liblpeg && cp $(LPEG_DIR)/*.o .
-
-cjson_objs: $(CJSON_SO)
-	mkdir -p libcjson
-	cd libcjson && cp $(CJSON_DIR)/*.o .
-
-ALL= librosie.so librosie.a
+ALL= librosie.so #librosie.a
 
 librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
-librosie.so: librosie.o lua_objs lpeg_objs cjson_objs
-	$(CC) -shared -o $@ librosie.o liblua/*.o liblpeg/*.o libcjson/*.o
+librosie.so: librosie.o lua_objs
+	$(CC) -shared -o $@ librosie.o liblua/*.o 
 
-librosie.a: librosie.o lua_objs lpeg_objs cjson_objs
-	$(AR) $@ librosie.o liblua/*.o liblpeg/*.o libcjson/*.o
-	$(RANLIB) $@
+# librosie.a: librosie.o lua_objs 
+# 	$(AR) $@ librosie.o liblua/*.o
+# 	$(RANLIB) $@
 
 clean:
-	$(RM) librosie.so librosie.o librosie.a rtest.o rtest librosie_gen.c librosie_gen.h liblua/* liblpeg/* libcjson/*
+	$(RM) librosie.so librosie.o librosie.a liblua/*
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
@@ -108,7 +96,7 @@ none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
 linux:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-Wl,-E -ldl -lreadline"
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-Wl,-E -ldl"
 
 macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS= CC=$(CC)

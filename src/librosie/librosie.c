@@ -30,8 +30,12 @@
 #include <dlfcn.h>
 #include <libgen.h>
 
-int luaopen_lpeg (lua_State *L);
-int luaopen_cjson (lua_State *L);
+/* int (*r_match_C)(lua_State *L);	/\* defined in lptree.c *\/ */
+/* rBuffer *(*r_newbuffer_wrap)(lua_State *L, char *data, size_t len); /\* defined in rbuf.c *\/ */
+typedef void *(*func_ptr_t)();
+int (*fp_r_match_C)();	/* defined in lptree.c */ 
+typedef rBuffer* (*foo_t)(lua_State *L, char *data, size_t len);
+foo_t fp_r_newbuffer_wrap;		/* defined in rbuf.c */ 
 
 /* ----------------------------------------------------------------------------------------
  * Paths relative to where librosie.so is found (for example):
@@ -251,7 +255,9 @@ static void set_bootscript() {
 }
 
 static int boot (lua_State *L, str *errors) {
+  char rpeg_path[MAXPATHLEN];
   char *msg = NULL;
+  void *lib;
   if (!*bootscript) set_bootscript();
   assert(bootscript);
   LOGf("Booting rosie from %s\n", bootscript);
@@ -288,6 +294,35 @@ static int boot (lua_State *L, str *errors) {
     return FALSE;
   }
   LOG("Boot function succeeded\n");
+
+/* TODO: find a better way to obtain the handle to rpeg.so */
+#define RPEG_LOCATION "/lib/lpeg.so"
+  char *next = stpncpy(rpeg_path, rosiehomedir, MAXPATHLEN); 
+  if ((MAXPATHLEN - (unsigned int)(next - rpeg_path + 1)) < strlen(RPEG_LOCATION)) {
+    *errors = string_from_const("rpeg_path exceeds MAXPATHLEN");
+    return FALSE;
+  }
+  strncpy(next, RPEG_LOCATION, (next - rpeg_path));
+  LOGf("rpeg path (calculated) is %s\n", rpeg_path);
+  
+  lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
+  if (lib == NULL) LOG("*** dlopen returned NULL\n");
+  
+  fp_r_match_C = dlsym(lib, "r_match_C");
+
+  if ((msg = dlerror()) != NULL) LOGf("*** err = %s]\n", msg);
+
+  fp_r_newbuffer_wrap = (foo_t) dlsym(lib, "r_newbuffer_wrap");
+
+  if ((msg = dlerror()) != NULL) LOGf("*** err = %s]\n", msg);
+
+  if ((fp_r_match_C == NULL) || (fp_r_newbuffer_wrap == NULL)) {
+    LOG("Failed to find rpeg functions\n");
+    LOGstack(L);
+    *errors = string_from_const("binding of rpeg functions failed");
+    return FALSE;
+  }
+
   return TRUE;
 }
 
@@ -449,7 +484,6 @@ int rosie_setlibpath_engine(lua_State *L, char *newpath) {
   }
 #if LOGGING
   do {
-    int t;
     get_registry(engine_key);
     t = lua_getfield(L, -1, "searchpath");
     LOGf("searchpath is now: %s\n", lua_tostring(L, -1));
@@ -603,7 +637,7 @@ have_pattern:
     lua_settop(L, 2);
     /* Don't make a copy of the input.  Wrap it in an rbuf, which will
        be gc'd later (but will not free the original source data. */
-    r_newbuffer_wrap(L, (char *)input->ptr, input->len); 
+    (*fp_r_newbuffer_wrap)(L, (char *)input->ptr, input->len); 
     lua_pushinteger(L, start);
     lua_pushstring(L, encoder_name);
     assert(lua_gettop(L) == 5);
@@ -614,7 +648,7 @@ have_pattern:
     CHECK_TYPE("rplx pattern slot", t, LUA_TTABLE);
     t = lua_getfield(L, -1, "peg");
     CHECK_TYPE("rplx pattern peg slot", t, LUA_TUSERDATA);
-    lua_pushcfunction(L, r_match_C);
+    lua_pushcfunction(L, *fp_r_match_C);
     lua_copy(L, -1, 1);
     lua_copy(L, -2, 2);
     lua_settop(L, 2);
