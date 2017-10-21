@@ -261,6 +261,20 @@ static int boot (lua_State *L, str *errors) {
   if (!*bootscript) set_bootscript();
   assert(bootscript);
   LOGf("Booting rosie from %s\n", bootscript);
+
+/* TODO: find a better way to obtain the handle to rpeg.so */
+#define RPEG_LOCATION "/lib/lpeg.so"
+  char *next = stpncpy(rpeg_path, rosiehomedir, MAXPATHLEN); 
+  if ((MAXPATHLEN - (unsigned int)(next - rpeg_path + 1)) < strlen(RPEG_LOCATION)) {
+    *errors = string_from_const("rpeg_path exceeds MAXPATHLEN");
+    return FALSE;
+  }
+  strncpy(next, RPEG_LOCATION, (next - rpeg_path));
+  LOGf("rpeg path (calculated) is %s\n", rpeg_path);
+  
+  lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
+  if (lib == NULL) LOG("*** dlopen returned NULL\n");
+  
   int status = luaL_loadfile(L, bootscript);
   if (status != LUA_OK) {
     LOG("Failed to read boot code (using loadfile)\n");
@@ -295,19 +309,6 @@ static int boot (lua_State *L, str *errors) {
   }
   LOG("Boot function succeeded\n");
 
-/* TODO: find a better way to obtain the handle to rpeg.so */
-#define RPEG_LOCATION "/lib/lpeg.so"
-  char *next = stpncpy(rpeg_path, rosiehomedir, MAXPATHLEN); 
-  if ((MAXPATHLEN - (unsigned int)(next - rpeg_path + 1)) < strlen(RPEG_LOCATION)) {
-    *errors = string_from_const("rpeg_path exceeds MAXPATHLEN");
-    return FALSE;
-  }
-  strncpy(next, RPEG_LOCATION, (next - rpeg_path));
-  LOGf("rpeg path (calculated) is %s\n", rpeg_path);
-  
-  lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
-  if (lib == NULL) LOG("*** dlopen returned NULL\n");
-  
   fp_r_match_C = dlsym(lib, "r_match_C");
 
   if ((msg = dlerror()) != NULL) LOGf("*** err = %s]\n", msg);
