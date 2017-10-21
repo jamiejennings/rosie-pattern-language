@@ -269,7 +269,7 @@ static int boot (lua_State *L, str *errors) {
     *errors = string_from_const("rpeg_path exceeds MAXPATHLEN");
     return FALSE;
   }
-  strncpy(next, RPEG_LOCATION, (next - rpeg_path));
+  strncpy(next, RPEG_LOCATION, (MAXPATHLEN - (next - rpeg_path + 1)));
   LOGf("rpeg path (calculated) is %s\n", rpeg_path);
   
   lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
