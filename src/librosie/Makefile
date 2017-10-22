@@ -83,6 +83,7 @@ depend:
 
 test:
 	python -m unittest test
+
 echo:
 	@echo "HOME= $(HOME)"
 	@echo "PLAT= $(PLAT)"
