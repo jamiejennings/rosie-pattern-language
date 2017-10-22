@@ -71,10 +71,6 @@ librosie.o: librosie.c librosie.h
 librosie.so: librosie.o lua_objs
 	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
 
-# librosie.a: librosie.o lua_objs 
-# 	$(AR) $@ librosie.o liblua/*.o
-# 	$(RANLIB) $@
-
 clean:
 	$(RM) librosie.so librosie.o librosie.a liblua/*
 
@@ -82,7 +78,10 @@ depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
 test:
-	python -m unittest test
+	python test.py local
+
+installtest:
+	python test.py system
 
 echo:
 	@echo "HOME= $(HOME)"

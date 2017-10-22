@@ -355,11 +355,14 @@ sniff: $(ROSIEBIN)
 test:
 	@echo Running tests in test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D)
+	@echo Running librosie tests
 	cd $(LIBROSIE_DIR) && $(MAKE) test
 
 .PHONY: installtest
 installtest:
 	@echo Running tests in $(BUILD_ROOT)/test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D)
+	@echo Running librosie tests
+	cd $(LIBROSIE_DIR) && $(MAKE) installtest
 
 

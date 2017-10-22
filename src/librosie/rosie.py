@@ -68,7 +68,6 @@ int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
 """)
 
 lib = None                # single instance of dynamic library
-home = None               # path to ROSIE_HOME directory
 libname = "librosie.so"
 
 # -----------------------------------------------------------------------------
@@ -127,7 +126,7 @@ class engine ():
     '''
 
     def __init__(self, custom_libpath=None):
-        global lib, libname, home
+        global lib, libname
         if not lib:
             if custom_libpath:
                 libpath = path.join(custom_libpath, libname)

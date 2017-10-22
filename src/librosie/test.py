@@ -1,7 +1,7 @@
 # coding: utf-8
 #  -*- Mode: Python; -*-                                              
 #
-# python -m unittest test
+# python test.py [local | system]
 #
 import unittest
 import sys, os, json
@@ -13,7 +13,6 @@ import rosie
 # (2) librosie will look for the rosie installation in the 'rosie' directory alongside
 #     it, so there must be a link 'rosie -> ../..' in the same directory as this
 #     test file.
-librosiedir = "."
 
 class RosieInitTest(unittest.TestCase):
 
@@ -25,8 +24,6 @@ class RosieInitTest(unittest.TestCase):
 
     def test(self):
         engine = rosie.engine(librosiedir)
-        #print "Rosie library successfully loaded.  Rosie matching engine:", engine
-        #print "Rosie is: ", rosie.lib
 
 
 class RosieLoadTest(unittest.TestCase):
@@ -101,6 +98,7 @@ class RosieConfigTest(unittest.TestCase):
         a = self.engine.config()
         assert(a)
         cfg = json.loads(a)
+        print "NOTE: Rosie loaded from", cfg['ROSIE_HOME']
         for k in cfg.keys():
             if type(cfg[k]) is dict:
                 assert(cfg[k]['name'])
@@ -306,4 +304,15 @@ class RosieMatchFileTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
+    if sys.argv[1]=='local':
+        librosiedir = "."
+    elif sys.argv[1]=='system':
+        librosiedir = None
+    else:
+        sys.exit("Error: invalid command-line parameter (must be 'local' or 'system')")
+    print "Running tests using", sys.argv[1], "rosie installation"
+    del sys.argv[1:]
     unittest.main()
+    
