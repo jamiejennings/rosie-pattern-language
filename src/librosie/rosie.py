@@ -7,11 +7,18 @@
 #  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 #  AUTHOR: Jamie A. Jennings
 
+# N.B. A Rosie installation requires librosie.so AND a set of files
+# under the directory name 'rosie'.  For example, when Rosie is
+# installed in /usr/local, we expect to find these files:
+#
+#   /usr/local/lib/librosie.so
+#   /usr/local/lib/rosie             (directory)
+
+
 # Development environment:
 #   Mac OS X Sierra (10.12.6)
 #   Python 2.7.10 (distributed with OS X)
 #   cffi-1.11.1 pycparser-2.18 (installed with: pip install cffi)
-
 
 from cffi import FFI
 from ctypes.util import find_library
@@ -130,7 +137,7 @@ class engine ():
                 libpath = find_library(libname)
                 if not libpath:
                     raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
-            lib = ffi.dlopen(libpath)
+            lib = ffi.dlopen(libpath, ffi.RTLD_GLOBAL)
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)
         if self.engine == ffi.NULL:

@@ -7,7 +7,13 @@ import unittest
 import sys, os, json
 import rosie
 
-librosiedir = "."               # requires link rosie -> ../..
+# For unit testing:
+# (1) We use the librosie.so that is in the same directory as this test file, i.e. ".";
+#     normally, no argument to rosie.engine() is needed.
+# (2) librosie will look for the rosie installation in the 'rosie' directory alongside
+#     it, so there must be a link 'rosie -> ../..' in the same directory as this
+#     test file.
+librosiedir = "."
 
 class RosieInitTest(unittest.TestCase):
 
