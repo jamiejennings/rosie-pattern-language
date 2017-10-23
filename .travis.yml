@@ -6,9 +6,9 @@ os:
 branches:
   only:
   - master
-  - preview
   
 before_install:
+  - pip install cffi
 
 language: C
 compiler: gcc
