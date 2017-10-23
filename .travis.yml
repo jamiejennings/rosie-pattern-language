@@ -15,9 +15,3 @@ compiler: gcc
 install: make
 script: make test
 
-language: python
-python:
-  - "2.7"
-
-install: pip install --user cffi
-
