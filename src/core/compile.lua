@@ -349,7 +349,7 @@ local function wrap_pattern(pat, name, optional_force_flag)
       -- In either case,  we simply wrap it with a capture called 'name'.  Here, we trap the case
       -- in which wrap_pattern is accidentally called on a grammar.
       if (not optional_force_flag) then
-	 assert(not ast.grammar.is(pat.ast), 'wrap_pattern inadvertently called on a grammar')
+--	 assert(not ast.grammar.is(pat.ast), 'wrap_pattern inadvertently called on a grammar')
       end
       pat.uncap = pat.peg
       pat.peg = common.match_node_wrap(pat.peg, name)

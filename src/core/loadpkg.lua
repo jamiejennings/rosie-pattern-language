@@ -55,38 +55,49 @@ local loadpkg = {}
 -- 'validate_block' enforces the structure of an rpl module:
 --     rpl_module = language_decl? package_decl? import_decl* statement* ignore
 --
--- We could parse a module using that pattern, but we can give better error messages this way.
+-- We could parse a module using that pattern, but we can give more detailed error messages this way.
 -- Returns: success, table of messages
--- Side effects: fills in block.pdecl, block.ideclist; removes decls from block.stmts
+-- Side effects: fills in block.block_pdecl, block.block_ideclists; removes ALL decls from block.stmts
 local function validate_block(a, messages)
    assert(ast.block.is(a))
    local stmts = a.stmts
    if not stmts[1] then
-      table.insert(messages, violation.warning.new{who='loader', message="Empty input", ast=a})
+      table.insert(messages, violation.warning.new{who='loader', message="Empty input (no statements)", ast=a})
       return true
    elseif ast.pdecl.is(stmts[1]) then
-      a.pdecl = table.remove(stmts, 1)
-      common.note("load: in package " .. a.pdecl.name)
+      a.block_pdecl = table.remove(stmts, 1)
+      common.note("load: in package " .. a.block_pdecl.name)
    end
    if not stmts[1] then
       table.insert(messages, violation.warning.new{who='loader',
 						   message="Empty module (nothing after package declaration)",
 						   ast=a})
       return true
-   elseif not ast.ideclist.is(stmts[1]) then
+   end
+   a.block_ideclists = {}
+   while stmts[1] and ast.ideclist.is(stmts[1]) do
+      table.insert(a.block_ideclists, table.remove(stmts, 1))
+   end
+   if not stmts[1] then
       table.insert(messages, violation.info.new{who='loader',
-						message="Module consists only of import declarations",
+						message="Module consists only of declarations (no bindings)",
 						ast=a})
       return true
    end
-   if ast.ideclist.is(stmts[1]) then
-      a.ideclist = table.remove(stmts, 1)
-   end
    for _, s in ipairs(stmts) do
       if not ast.binding.is(s) then
-	 print("*** FOUND", ast.tostring(s))
+	 local errmsg = "Declarations must appear before assignments"
+	 if ast.ldecl.is(s) then
+	    errmsg = "RPL language version declaration must be the first RPL statement"
+	 elseif ast.pdecl.is(s) then
+	    if a.block_pdecl then
+	       errmsg = "Duplicate package declaration"
+	    else
+	       errmsg = "Package decl must precede imports and bindings"
+	    end
+	 end
 	 table.insert(messages, violation.compile.new{who='loader',
-						      message="Declarations must appear before assignments",
+						      message=errmsg,
 						      ast=s})
 	 return false
       end
@@ -104,7 +115,7 @@ local function compile(compiler, a, env, source_record, messages)
    if not compiler.expand_block(a, env, messages) then return false; end
    -- One of the expansion steps is to fill in the pdecl and ideclist slots in the block AST, so
    -- we can now use those fields.
-   local pkgname = a.pdecl and a.pdecl.name
+   local pkgname = a.block_pdecl and a.block_pdecl.name
    local request = source_record.origin
    if request and request.importpath and (not pkgname) then
       local msg = request.importpath .. " is not a module (no package declaration found)"
@@ -128,7 +139,7 @@ local function parse_block(compiler, source_record, messages)
    local a = compiler.parse_block(source_record, messages)
    if not a then return false; end		    -- errors will be in messages table
    if not validate_block(a, messages) then return false; end
-   -- Via side effects, a.pdecl and a.ideclist are now filled in.
+   -- Via side effects, a.block_pdecl and a.block_ideclists are now filled in.
    return a
 end
 
@@ -156,25 +167,23 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    local a = parse_block(compiler, source_record, messages)
    if not a then return false; end		    -- errors will be in messages table
    local env
-   if a.pdecl then
-      assert(a.pdecl.name)
+   if a.block_pdecl then
+      assert(a.block_pdecl.name)
       env = environment.new()
       env.origin = origin
    else
       env = environment.extend(top_level_env)
    end
    if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, {}, messages) then
-      print("*** load_dependencies failed")
       return false
    end
    if not compile(compiler, a, env, source_record, messages) then
-      print("*** compile failed")
       return false
    end
-   if a.pdecl then
+   if a.block_pdecl then
       -- The code we compiled defined a module, which we have instantiated as a package (in env).
       -- But there is no importpath, so we cannot create an entry in the package table.
-      return true, a.pdecl.name, env
+      return true, a.block_pdecl.name, env
    else
       -- The caller must replace their top_level_env with the returned env in order to see the new
       -- bindings. 
@@ -187,12 +196,12 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
    local origin = source_record.origin
    local a = parse_block(compiler, source_record, messages)
    if not a then return false; end		    -- errors will be in messages table
-   if not a.pdecl then
+   if not a.block_pdecl then
       local msg = "imported code is not a module"
       table.insert(messages, violation.compile.new{who='loader', message=msg, ast=source_record})
       return false
    end
-   origin.packagename = a.pdecl.name
+   origin.packagename = a.block_pdecl.name
    local env = environment.new()
    env.origin = origin
    if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, loadinglist, messages) then
@@ -303,37 +312,40 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
    assert(ast.block.is(a))
    assert(environment.is(target_env))
    assert(type(messages)=="table")
-   assert(a.ideclist==nil or ast.ideclist.is(a.ideclist), "a.ideclist is: "..tostring(a.ideclist))   
-   local idecls = a.ideclist and a.ideclist.idecls or {}
-   if #idecls==0 then common.note("load: no imports to load"); end
-   for _, decl in ipairs(idecls) do
-      assert(decl.sourceref)
-      local sref = common.source.new{text=source_record.text,
-      				     origin=common.loadrequest.new{importpath=decl.importpath,
-      								   prefix=decl.prefix},
-      				     parent=common.source.new{text=decl.sourceref.text,
-      							      s=decl.sourceref.s,
-      							      e=decl.sourceref.e,
-      							      origin=source_record.origin,
-       				     			      parent=source_record}}
-      local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, loadinglist, messages)
-      if not ok then
-	 common.note("FAILED to import from path " .. tostring(decl.importpath))
-	 local err = violation.compile.new{who="loader",
-					   message="failed to load " .. tostring(decl.importpath),
-					   ast=source_record}
-	 table.insert(messages, err)
-	 return false
+   assert(a.block_ideclists==nil or (type(a.block_ideclists)=="table"),
+	  "a.block_ideclists is: "..tostring(a.block_ideclists))
+   for _, ideclist in ipairs(a.block_ideclists or {}) do
+      assert(ast.ideclist.is(ideclist))
+      local idecls = ideclist.idecls
+      for _, decl in ipairs(idecls) do
+	 assert(decl.sourceref)
+	 local sref = common.source.new{text=source_record.text,
+					origin=common.loadrequest.new{importpath=decl.importpath,
+								      prefix=decl.prefix},
+					parent=common.source.new{text=decl.sourceref.text,
+								 s=decl.sourceref.s,
+								 e=decl.sourceref.e,
+								 origin=source_record.origin,
+								 parent=source_record}}
+	 local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, loadinglist, messages)
+	 if not ok then
+	    common.note("FAILED to import from path " .. tostring(decl.importpath))
+	    local err = violation.compile.new{who="loader",
+					      message="failed to load " .. tostring(decl.importpath),
+					      ast=source_record}
+	    table.insert(messages, err)
+	    return false
+	 end
       end
-   end
-   -- With all imports loaded and registered in pkgtable, we can now create bindings in target_env
-   -- to make the exported bindings accessible.
-   for _, decl in ipairs(idecls) do
-      local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath, decl.prefix)
-      local prefix = decl.prefix or pkgname
-      assert(type(prefix)=="string")
-      create_package_bindings(prefix, pkgenv, target_env)
-   end
+      -- With all imports loaded and registered in pkgtable, we can now create bindings in target_env
+      -- to make the exported bindings accessible.
+      for _, decl in ipairs(idecls) do
+	 local pkgname, pkgenv = common.pkgtableref(pkgtable, decl.importpath, decl.prefix)
+	 local prefix = decl.prefix or pkgname
+	 assert(type(prefix)=="string")
+	 create_package_bindings(prefix, pkgenv, target_env)
+      end
+   end -- for each ideclist in a.block_ideclists
    return true
 end
 

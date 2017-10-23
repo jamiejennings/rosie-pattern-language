@@ -1,5 +1,5 @@
 package mod6
-package mod6  -- this should not be here!
+package mod6  -- duplicate
 
 local x = "hello"
 y = "world"

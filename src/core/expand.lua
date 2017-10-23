@@ -429,7 +429,7 @@ end
 local function statements(stmts, env, messages)
    for _, stmt in ipairs(stmts) do
       if not ast.binding.is(stmt) then
-	 local msg = "unexpected declaration (duplicate or not positioned before rpl statements)"
+	 local msg = "unexpected declaration (declarations must precede rpl statements)"
 	 raise(violation.compile.new{who='statement compiler',
 				     message=msg,
 				     ast=stmt})

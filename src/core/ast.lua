@@ -17,8 +17,8 @@ local ast = {}
 
 ast.block = recordtype.new("block",
 			   {stmts = {};
-			    pdecl = NIL;	    -- Filled in during expansion
-			    ideclist = NIL;	    -- Filled in during expansion
+			    block_pdecl = NIL;	    -- a pdecl (filled in during expansion)
+			    block_ideclists = NIL;  -- list of ideclists (filled in during expansion)
 			    pat = NIL;
 			    sourceref = NIL;})
 
@@ -266,7 +266,7 @@ function convert_bracket(pt, sref)
       exps = list.cdr(exps)
    end
    if exps[2] then
-      print("***"); table.print(exps); end
+      print("*** in convert_bracket, exps table is:"); table.print(exps); end
    assert(exps[1] and (not exps[2]))
    local cexp
    if exps[1].type=="exp.sequence" then
@@ -736,9 +736,9 @@ local predicate_name_table =
 
 function ast.tostring(a, already_grouped)
    if ast.block.is(a) then
-      return ( (a.pdecl and (ast.tostring(a.pdecl) .. "\n") or "") ..
-	       (a.ideclist and ast.tostring(a.ideclist) or "") ..
-	       table.concat(map(ast.tostring, a.stmts), "\n") )
+      return ( (a.block_pdecl and (ast.tostring(a.block_pdecl) .. "\n") or "") ..
+	       table.concat(map(ast.tostring, a.block_ideclists or {}), "\n") ..
+	       table.concat(map(ast.tostring, a.stmts or {}), "\n") )
    elseif ast.pdecl.is(a) then
       return "package " .. a.name .. "\n"
    elseif ast.idecl.is(a) then
@@ -844,6 +844,8 @@ function ast.tostring(a, already_grouped)
       return common.requote(a.value)
    elseif ast.int.is(a) then
       return tostring(a.value)
+   elseif ast.ldecl.is(a) then
+      return tostring(a.version_spec)
    elseif list.is(a) then
       return tostring(map(ast.tostring, a))
    else

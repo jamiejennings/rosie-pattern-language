@@ -163,7 +163,7 @@ check(not ok)
 check(not pkgname)
 check(type(msgs)=="table")
 msg = table.concat(map(violation.tostring, msgs), "\n")
-check(msg:find("unexpected declaration"))
+check(msg:find("Duplicate package declaration"))
 check(msg:find("package mod6"))
 
 ok, pkgname, msgs = e:load("import mod7")
@@ -171,7 +171,7 @@ check(not ok)
 check(not pkgname)
 check(type(msgs)=="table")
 msg = table.concat(map(violation.tostring, msgs), "\n")
-check(msg:find("unexpected declaration"))
+check(msg:find("must be the first"))
 check(msg:find("rpl"))
 
 ok, pkgname, msgs = e:load("package foo")
@@ -200,6 +200,9 @@ subheading("Multiple import statements")
 ok, pkgname, msgs = e:import("mod8")
 check(ok)
 check(pkgname=="mod8")
+msg = table.concat(map(violation.tostring, msgs), "\n")
+--check(msg:find("Info") and msg:find("consists only of declarations"))
+print("***", msg)
 
 
 -- return the test results in case this file is being called by another one which is collecting

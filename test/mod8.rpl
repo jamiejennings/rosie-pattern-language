@@ -1,11 +1,11 @@
 package mod8
 
-import net
-import date
-import time
-import word
+import mod2
+import mod1
 
-foo = word.any
+foo = mod2.y
+
+bar = mod1.S
 
 
 
