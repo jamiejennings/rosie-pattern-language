@@ -196,6 +196,10 @@ check(msg:find("circular"))
 check(msg:find("mod_circular_1"))
 check(msg:find("mod_circular_2"))
 
+subheading("Multiple import statements")
+ok, pkgname, msgs = e:import("mod8")
+check(ok)
+check(pkgname=="mod8")
 
 
 -- return the test results in case this file is being called by another one which is collecting

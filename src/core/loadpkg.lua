@@ -58,36 +58,40 @@ local loadpkg = {}
 -- We could parse a module using that pattern, but we can give better error messages this way.
 -- Returns: success, table of messages
 -- Side effects: fills in block.pdecl, block.ideclist; removes decls from block.stmts
-local function validate_block(a)
+local function validate_block(a, messages)
    assert(ast.block.is(a))
    local stmts = a.stmts
    if not stmts[1] then
-      return true, {violation.warning.new{who='loader', message="Empty input", ast=a}}
+      table.insert(messages, violation.warning.new{who='loader', message="Empty input", ast=a})
+      return true
    elseif ast.pdecl.is(stmts[1]) then
       a.pdecl = table.remove(stmts, 1)
       common.note("load: in package " .. a.pdecl.name)
    end
    if not stmts[1] then
-      return true,
-	 {violation.warning.new{who='loader',
-				message="Empty module (nothing after package declaration)",
-				ast=a}}
+      table.insert(messages, violation.warning.new{who='loader',
+						   message="Empty module (nothing after package declaration)",
+						   ast=a})
+      return true
    elseif not ast.ideclist.is(stmts[1]) then
-      return true, {violation.info.new{who='loader',
-				       message="Module consists only of import declarations",
-				       ast=a}}
+      table.insert(messages, violation.info.new{who='loader',
+						message="Module consists only of import declarations",
+						ast=a})
+      return true
    end
    if ast.ideclist.is(stmts[1]) then
       a.ideclist = table.remove(stmts, 1)
    end
    for _, s in ipairs(stmts) do
       if not ast.binding.is(s) then
-	 return false, {violation.compile.new{who='loader',
-					      message="Declarations must appear before assignments",
-					      ast=s}}
+	 print("*** FOUND", ast.tostring(s))
+	 table.insert(messages, violation.compile.new{who='loader',
+						      message="Declarations must appear before assignments",
+						      ast=s})
+	 return false
       end
    end -- for
-   return true, {}
+   return true
 end
 
 local function compile(compiler, a, env, source_record, messages)
@@ -123,7 +127,7 @@ local load_dependencies;
 local function parse_block(compiler, source_record, messages)
    local a = compiler.parse_block(source_record, messages)
    if not a then return false; end		    -- errors will be in messages table
-   if not validate_block(a) then return false; end
+   if not validate_block(a, messages) then return false; end
    -- Via side effects, a.pdecl and a.ideclist are now filled in.
    return a
 end
@@ -160,18 +164,16 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
       env = environment.extend(top_level_env)
    end
    if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, {}, messages) then
+      print("*** load_dependencies failed")
       return false
    end
    if not compile(compiler, a, env, source_record, messages) then
+      print("*** compile failed")
       return false
    end
    if a.pdecl then
       -- The code we compiled defined a module, which we have instantiated as a package (in env).
       -- But there is no importpath, so we cannot create an entry in the package table.
-   --    local fullpath = origin and origin.filename
---       local msg = "package " .. tostring(a.pdecl.name) .. 
---                   " loaded directly from " .. ((fullpath and tostring(fullpath)) or "top level")
---       table.insert(messages, violation.warning.new{who='loader', message=msg, ast=a})
       return true, a.pdecl.name, env
    else
       -- The caller must replace their top_level_env with the returned env in order to see the new
@@ -317,6 +319,10 @@ function load_dependencies(compiler, pkgtable, searchpath, source_record, a, tar
       local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, sref, loadinglist, messages)
       if not ok then
 	 common.note("FAILED to import from path " .. tostring(decl.importpath))
+	 local err = violation.compile.new{who="loader",
+					   message="failed to load " .. tostring(decl.importpath),
+					   ast=source_record}
+	 table.insert(messages, err)
 	 return false
       end
    end

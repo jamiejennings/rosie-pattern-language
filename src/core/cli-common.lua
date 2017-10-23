@@ -58,6 +58,7 @@ function p.setup_engine(en, args)
 	 end
 	 local success, pkgname, errs, actual_path = en.loadfile(en, filename)
 	 if not success then
+	    io.stdout:write("Error loading " .. tostring(filename) .. ":\n")
 	    io.stdout:write(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	    os.exit(-4)
 	 end

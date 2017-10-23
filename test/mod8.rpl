@@ -1,0 +1,17 @@
+package mod8
+
+import net
+import date
+import time
+import word
+
+foo = word.any
+
+
+
+
+
+
+
+
+
