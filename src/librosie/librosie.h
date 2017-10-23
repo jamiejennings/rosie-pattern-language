@@ -13,6 +13,8 @@
 #define TRUE 1
 #define FALSE 0
 
+#define MAX_ENCODER_NAME_LENGTH 64 /* arbitrary limit to avoid runaway strcmp */
+
 #define SUCCESS 0
 #define ERR_OUT_OF_MEMORY -2
 #define ERR_SYSCALL_FAILED -3

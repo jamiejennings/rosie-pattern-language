@@ -866,7 +866,7 @@ int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors) {
 
   t = lua_pcall(L, 3, 3, 0); 
   if (t != LUA_OK) { 
-    LOG("engine.import() failed"); 
+    LOG("engine.import() failed\n"); 
     LOGstack(L);
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED; 
