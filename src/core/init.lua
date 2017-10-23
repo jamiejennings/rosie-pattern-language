@@ -25,6 +25,7 @@
 --            normally fatal will instead return control to the Lua interpreter (after being
 --            signaled) when in development mode.  The value of ROSIE_DEV is set by the script
 --            that launches the rosie CLI.
+--            FUTURE: Rename this to ROSIE_CLI and reverse its sense?
 --
 -- ROSIE_LIBDIR is the variable that the rosie code uses to find the standard RPL library.  Its
 --           value is ROSIE_HOME/rpl.  Currently, there is no way to change it externally.  If
@@ -110,9 +111,8 @@ end
 
 
 local function load_all()
-   cjson = import("cjson")
    lpeg = import("lpeg")
-   readline = import("readline")
+   cjson = import("cjson.safe")
 
    -- These MUST have a partial order so that dependencies can be loaded first
    recordtype = import("recordtype")
@@ -150,9 +150,10 @@ end
 --
 
 local function announce(name, engine)
-   if ROSIE_DEV then
-      print(name .. " created, accepting ".. tostring(engine.compiler.version))
-   end
+-- FUTURE: Create a way to check if logging is enabled, and announce engine creation only then.
+   -- if ROSIE_DEV then
+   --    print(name .. " created, accepting ".. tostring(engine.compiler.version))
+   -- end
 end
 
 function create_core_engine()
@@ -276,39 +277,43 @@ ROSIE_ENGINE = create_rpl_1_1_engine(CORE_ENGINE)
 assert(ROSIE_ENGINE)
 populate_info()
 
-common.add_encoder("color", 0,
+common.add_encoder("color", 3,
 		   function(m, input, start)
 		      return color.match(common.byte_to_lua(m, input), color.colormap)
 		   end)
-common.add_encoder("nocolor", 0,
+common.add_encoder("nocolor", 3,
 		   function(m, input, start)
 		      return color.match(common.byte_to_lua(m, input), {})
 		   end)
-common.add_encoder("text", 0,
+common.add_encoder("text", 3,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      return m.data
 		   end)
-common.add_encoder("subs", 0,
+common.add_encoder("subs", 3,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
-		      return table.concat(list.map(function(sub)
-						      return sub.data
-						   end,
-						   m.subs),
-					  "\n")
+		      if m.subs then
+			 return table.concat(list.map(function(sub)
+							 return sub.data
+						      end,
+						      m.subs),
+					     "\n")
+		      else
+			 return m.data
+		      end
 		   end)
-
 
 rosie_package.set_configuration = set_configuration
 rosie_package.config = function(...) return ROSIE_INFO; end
-rosie_package.config_json = function(...)
-			       local array = {}
-			       for i, entry in ipairs(ROSIE_INFO) do
-				  array[i] = entry
-			       end
-			       return cjson.encode(array)
-			    end
+
+-- Set the default libpath for any engines created later
+rosie_package.set_libpath =
+   function(newlibpath, bywhom)
+      set_configuration("ROSIE_LIBPATH", tostring(newlibpath))
+      set_configuration("ROSIE_LIBPATH_SOURCE", tostring(bywhom or "unknown"))
+      engine_module.set_default_searchpath(newlibpath)
+   end
 
 rosie_package.encoders = common.encoder_table
 rosie_package.engine = engine

@@ -113,7 +113,7 @@ local function compile_expression(e, input)
    if not ast then return false, messages; end
    local pat = e.compiler.compile_expression(ast, e.env, messages)
    if not pat then return false, messages; end
-   return rplx.new(e, pat)   
+   return rplx.new(e, pat), messages
 end
 
 local function really_load(e, source, origin)
@@ -143,6 +143,8 @@ local function load(e, input, fullpath)
    return really_load(e, input, origin)
 end
 
+-- Force a reloading of the imported package, as opposed to e:load('import foo') which will not
+-- re-load a package that is already loaded.
 local function import(e, packagename, as_name)
    local messages = {}
    local ok, pkgname = loadpkg.import(e.compiler,
@@ -191,31 +193,30 @@ end
 local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
    encoder = encoder or "default"
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
-   local match, nextpos, t0, t1 = 
-      rmatch(rplx_exp.pattern.peg,
-	     input,
-	     start,
-	     rmatch_encoder,
-	     fn_encoder,
-	     total_time_accum,
-	     lpegvm_time_accum)
-   return match, #input-nextpos+1, t0, t1
+   return rmatch(rplx_exp.pattern.peg,
+		 input,
+		 start,
+		 rmatch_encoder,
+		 fn_encoder,
+		 total_time_accum,
+		 lpegvm_time_accum)
 end
 
-local function _trace(r, input, start, encoder, style)
+local function _trace(r, input, start, style)
    return trace.expression(r, input, start, style)
 end
    
--- FUTURE: Maybe cache expressions?
--- returns matches, leftover, total match time, total spent in lpeg vm
+-- Returns matches, leftover, total match time, total spent in lpeg vm
 local function engine_match_trace(e, match_trace_fn, expression, input, start, encoder, total_time_accum, lpegvm_time_accum)
-   if type(input)~="string" then engine_error(e, "Input not a string: " .. tostring(input)); end
+   local t = type(input)
+   if (t ~= "userdata") and (t ~= "string") then
+      engine_error(e, "Input not a buffer or string: " .. tostring(input))
+   end
    start = start or 1
    if type(start)~="number" then engine_error(e, "Start position not a number: " .. tostring(start)); end
    local compiled_exp, msgs
    if type(expression)=="string" then
       -- Expression has not been compiled.
-      -- If in future we cache the string expressions, then look up expression in the cache here.
       compiled_exp, msgs = e:compile(expression)
       if not compiled_exp then return false, msgs; end
    elseif rplx.is(expression) then
@@ -230,25 +231,11 @@ local function engine_match(e, expression, input, start, encoder, t0, t1)
    return engine_match_trace(e, _match, expression, input, start, encoder, t0, t1)
 end
 
-local function engine_trace(e, expression, input, start, encoder, style)
-   return engine_match_trace(e, _trace, expression, input, start, encoder, style)
+local function engine_trace(e, expression, input, start, style)
+   return engine_match_trace(e, _trace, expression, input, start, style)
 end
 
 ----------------------------------------------------------------------------------------
-
--- Built-in encoder options:
--- false = return lua table as usual
--- -1 = no output
---  0 = compact byte encoding with only start/end indices (no text)
---  1 = compact json encoding with only start/end indices (no text)
--- local function get_set_encoder_function(en, f)
---    if f==nil then return en.encode_function; end
---    if f==false or type(f)=="number" or type(f)=="function" then
---       en.encode_function = f;
---    else engine_error(en, "Invalid output encoder: " .. tostring(f)); end
--- end
-
----------------------------------------------------------------------------------------------------
 
 local default_compiler = false
 
@@ -277,20 +264,25 @@ engine_module.post_create_hook = function(e, ...) end
 local process_input_file = {}
 
 local function open3(e, infilename, outfilename, errfilename)
-   if type(infilename)~="string" then e:error("bad input file name"); end
-   if type(outfilename)~="string" then e:error("bad output file name"); end
-   if type(errfilename)~="string" then e:error("bad error file name"); end   
+   if type(infilename)~="string" then return nil, tostring(infilename)
+   elseif type(outfilename)~="string" then return nil, tostring(outfilename)
+   elseif type(errfilename)~="string" then return nil, tostring(errfilename)
+   end
    local infile, outfile, errfile, msg
    if #infilename==0 then infile = io.stdin;
-   else infile, msg = io.open(infilename, "r"); if not infile then e:error(msg); end; end
+   else
+      infile, msg = io.open(infilename, "r");
+      if not infile then return nil, infilename; end; end
    if #outfilename==0 then outfile = io.stdout
-   else outfile, msg = io.open(outfilename, "w"); if not outfile then e:error(msg); end; end
+   else
+      outfile, msg = io.open(outfilename, "w");
+      if not outfile then return nil, outfilename; end; end
    if #errfilename==0 then errfile = io.stderr;
-   else errfile, msg = io.open(errfilename, "w"); if not errfile then e:error(msg); end; end
+   else
+      errfile, msg = io.open(errfilename, "w");
+      if not errfile then return nil, errfilename; end; end
    return infile, outfile, errfile
 end
-
-local operation = {match=1, condensed=2, full=3}
 
 local function engine_process_file(e, expression, op, infilename, outfilename, errfilename, encoder, wholefileflag)
    local r, msgs
@@ -310,6 +302,7 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
 		   end                              -- FUTURE: inline this for performance
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
+   if not infile then return nil, "No such file " .. tostring(outfile), nil; end
    local inlines, outlines, errlines = 0, 0, 0;
    local nextline
    if wholefileflag then
@@ -336,14 +329,12 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    local ok, l = pcall(nextline);
    if not ok then e:error(l); end
    local _, m, leftover, trace_string
-   local trace_flag = (op ~= "match")
-   local trace_style = op
-   local m, nextpos
+   local trace_flag = (op == "trace")
+   local trace_style = encoder
+   local m, leftover
    while l do
-      if trace_flag then _, trace_string = e:trace(expression, l, 1, nil, trace_style); end
-      m, nextpos = matcher(l);		    -- This is nextpos, NOT leftover.
-      -- What to do with leftover?  User might want to see it.
-      -- local leftover = (#input - nextpos + 1);
+      if trace_flag then _, _, trace_string = e:trace(expression, l, 1, trace_style); end
+      m, leftover = matcher(l);		  -- What to do with leftover?  User might want to see it.
       if trace_string then o_write(outfile, trace_string, "\n"); end
       if m then
 	 o_write(outfile, m);
@@ -364,8 +355,8 @@ function process_input_file.match(e, expression, infilename, outfilename, errfil
    return engine_process_file(e, expression, "match", infilename, outfilename, errfilename, encoder, wholefileflag)
 end
 
-function process_input_file.trace(e, expression, infilename, outfilename, errfilename, encoder, wholefileflag, trace_style)
-   return engine_process_file(e, expression, trace_style, infilename, outfilename, errfilename, encoder, wholefileflag)
+function process_input_file.trace(e, expression, infilename, outfilename, errfilename, trace_style, wholefileflag )
+   return engine_process_file(e, expression, "trace", infilename, outfilename, errfilename, trace_style, wholefileflag)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -397,15 +388,10 @@ engine =
 
 		     id=recordtype.id,
 
---		     encode_function=false,	      -- false or nil ==> use default encoder
---		     output=get_set_encoder_function,
-
---		     lookup=environment_lookup,
---		     clear=environment_clear,
-
 		     load=load,
 		     loadfile=loadfile,
 		     import=import,
+		     set_libpath = function(self, newlibpath) self.searchpath = newlibpath; end,
 		     searchpath="",
 
 		     compile=compile_expression,
@@ -421,14 +407,15 @@ engine =
 
 ----------------------------------------------------------------------------------------
 
+-- TODO: Since rplx is already compiled, arrange for rplx.match to call a streamlined version of
+-- engine_match that does not need to check to see if the expression is a string and compile it.
 local create_rplx = function(en, pattern)			    
 		       return rplx.factory{ engine=en,
 					    pattern=pattern,
 					    match=function(self, input, start, encoder, t0, t1)
-						     local ok, m, left, t0, t1 =
+						     local ok, m, left, abend, t0, t1 =
 							engine_match(en, self, input, start, encoder, t0, t1)
-						     assert(ok, "precompiled pattern failed to compile?")
-						     return m, left, t0, t1
+						     return m, left, abend, t0, t1
 						  end,
 					 };
 		    end

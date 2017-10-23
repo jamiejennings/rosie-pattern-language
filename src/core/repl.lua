@@ -15,10 +15,11 @@ local repl = {}
 -- N.B. 'rosie' is a global defined by init and loaded by cli.lua, which calls the repl
 
 local rosie = require "rosie"
+local readline = rosie.import "readline"
+
 local common = require "common"
 local ui = require "ui"
 local environment = require "environment"
-local readline = require "readline"
 local lpeg = require "lpeg"
 local os = require "os"
 
@@ -214,7 +215,7 @@ function repl.repl(en)
 			   local m, left = rplx:match(input_text)
 			   if (debug and (not m)) or trace_command then
 			      local tracetype = (cname=="trace") and "condensed" or "full"
-			      local ok, tr = en:trace(str, input_text, 1, nil, tracetype)
+			      local ok, matched, tr = en:trace(str, input_text, 1, tracetype)
 			      if not ok then
 				 io.write("Internal error: expression did not compile\n")
 			      else

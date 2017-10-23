@@ -200,7 +200,7 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
       return false
    end
    common.pkgtableset(pkgtable, origin.importpath, origin.prefix, origin.packagename, env)
-   return true, a.pdecl.name, env
+   return true, origin.packagename, env
 end
 
 local function find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
@@ -247,14 +247,8 @@ local function create_package_bindings(prefix, pkgenv, target_env)
    end
 end
 
-local function import_one(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
+local function import_one_force(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    local origin = assert(source_record.origin)
-   -- First, look in the pkgtable to see if this pkg has been loaded already
-   local pkgname, pkgenv = common.pkgtableref(pkgtable, origin.importpath, origin.prefix)
-   if pkgname then
-      common.note("load: ", origin.importpath, " already loaded")
-      return true, pkgname, pkgenv
-   end
    common.note("load: looking for ", origin.importpath)
    -- FUTURE: Next, look for a compiled version of the file to load
    -- Finally, look for a source file to compile and load
@@ -264,10 +258,21 @@ local function import_one(compiler, pkgtable, searchpath, source_record, loading
    local sref = common.source.new{text=src,
 				  origin=common.loadrequest.new{importpath=origin.importpath,
 								prefix=origin.prefix,
-								packagename=pkgname,
+								packagename=nil,
 								filename=fullpath},
 			          parent=source_record}
    return import_from_source(compiler, pkgtable, searchpath, sref, loadinglist, messages)
+end
+
+local function import_one(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
+   local origin = assert(source_record.origin)
+   -- First, look in the pkgtable to see if this pkg has been loaded already
+   local pkgname, pkgenv = common.pkgtableref(pkgtable, origin.importpath, origin.prefix)
+   if pkgname then
+      common.note("load: ", origin.importpath, " already loaded")
+      return true, pkgname, pkgenv
+   end
+   return import_one_force(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
 end
 
 function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, env, messages)
@@ -280,10 +285,10 @@ function loadpkg.import(compiler, pkgtable, searchpath, packagename, as_name, en
    assert(type(messages)=="table")
    local origin = common.loadrequest.new{importpath=packagename, prefix=as_name}
    local source_record = common.source.new{origin=origin}
-   local ok, pkgname, pkgenv = import_one(compiler, pkgtable, searchpath, source_record, {}, messages)
+   local ok, pkgname, pkgenv = import_one_force(compiler, pkgtable, searchpath, source_record, {}, messages)
    if not ok then return false; end 		    -- message already in 'messages'
    create_package_bindings(origin.prefix or pkgname, pkgenv, env)
-   return true
+   return true, pkgname
 end
 
 -- load_dependencies recursively loads each import in ideclist.

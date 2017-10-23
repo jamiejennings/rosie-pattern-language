@@ -6,8 +6,7 @@
 ;; LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ;; AUTHOR: Jamie A. Jennings
 
-(defvar *rpl-mode-verbose* nil)
-;; (setq *rpl-mode-verbose* t)
+(defvar *rpl-mode-verbose* t)
 
 (defun rpl-maybe-message (msg)
   (if *rpl-mode-verbose*
@@ -20,6 +19,9 @@
     (define-key map "\C-j" 'newline-and-indent)
     map)
   "rpl major mode key map")
+
+(defvar rpl-declaration-keywords
+      (regexp-opt '("import" "package" "rpl") 'words))
 
 (defvar rpl-binding-keywords
       (regexp-opt '("local" "alias" "grammar" "end") 'words))
@@ -49,7 +51,6 @@
 		  "\\(\\<package\\>\\|\\<rpl\\>\\)"
 		  rpl-some-space
 		  "\\(\\S-+\\)"		; package name or rpl version spec
-		  rpl-optional-comment
 		  )
 	(1 font-lock-preprocessor-face)) ; (2 font-lock-negation-char-face))
        ;; below is an "anchored match": (anchor-pat (item-pat pre-form post-form face-spec))
@@ -71,13 +72,14 @@
       (append rpl-font-lock-keywords-basic
 	      rpl-font-lock-keywords-bindings
               rpl-font-lock-keywords-declarations
-	      rpl-font-lock-functions)
-      "Syntax highlighting for rpl mode")
+	      rpl-font-lock-functions))
+;      "Syntax highlighting for rpl mode")
 
-(defvar rpl-font-lock-keywords rpl-font-lock-keywords-ALL
-  "Default highlighting expressions for rpl mode")
+(defvar rpl-font-lock-keywords rpl-font-lock-keywords-ALL)
+;  "Default highlighting expressions for rpl mode")
 
 ;; ----------------------------------------------------------------------------------------
+
 
 (defun rpl-goto-previous-nonblank-line ()
   "Puts the point at the first previous line that is not blank.
@@ -120,7 +122,8 @@ Returns the point, or nil if it reached the end of the buffer"
 
 (defvar rpl-declaration-regexp
       (concat rpl-any-space
-	      rpl-declaration-keywords))
+	      rpl-declaration-keywords
+	      rpl-some-space))
 
 (defun rpl-find-previous-binding ()
   "Returns a buffer position on the line containing the previous binding, and
@@ -145,6 +148,7 @@ nil if the previous rpl statement was not a binding"
 ;;     (cond ((looking-at rpl-binding-regexp) nil) ; current line starts new binding
 ;; 	  (t
 ;; 	   (rpl-find-previous-binding)))))
+
 
 ;; (rpl-goto-previous-nonblank-line)
 ;; 	   (let ((has-binding (re-search-forward rpl-binding-regexp (line-end-position) t)))
@@ -260,6 +264,6 @@ nil if the previous rpl statement was not a binding"
 (provide 'rpl-mode)
 (rpl-maybe-message "major mode loaded")
 
-;;(message "Reminder: replace some defvar statements with defconst?")
+(message "Reminder: rpl-mode still needs setq statements replaced by defconst")
 
 	       

@@ -6,7 +6,6 @@ os:
 branches:
   only:
   - master
-  - preview
   
 before_install:
 
@@ -15,5 +14,4 @@ compiler: gcc
 
 install: make
 script: make test
-
 

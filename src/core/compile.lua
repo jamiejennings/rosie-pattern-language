@@ -43,16 +43,24 @@ end
 ---------------------------------------------------------------------------------------------------
 
 local name = {rpl_statements = "statement",
-	      rpl_expression = "expression"}
+	      rpl_expression = "expression",
+	      rpl_language_declaration = "rpl language declaration"}
 
 local function enqueue_syntax_error(pt, err, source_record, messages)
    local origin = source_record.origin and
       common.loadrequest.new{filename=source_record.origin.filename}
-   local msg = "syntax error while reading " .. (name[pt.type] or "???")
-   if err.subs and err.subs[1] then
-      if err.subs[1].type=="stmnt_prefix" then
-	 msg = "expected expression but found statement: " .. err.data
+   local msg
+   if type(err)=="table" then
+      msg = "syntax error while reading " .. (name[pt.type] or "???")
+      if err.subs and err.subs[1] then
+	 if err.subs[1].type=="stmnt_prefix" then
+	    msg = "expected expression but found statement: " .. err.data
+	 end
       end
+   elseif type(err)=="string" then
+      msg = err
+   else
+      msg = "unrecognized error type (cannot display)"
    end
    local sref = common.source.new{text=pt.data,
 				  s=err.s,
@@ -74,7 +82,13 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     assert(type(src)=="string", "src is " .. tostring(src))
 	     assert(origin==nil or common.loadrequest.is(origin), "origin is: " .. tostring(origin))
 	     local pt, syntax_errors, leftover = parse_something(src)
-	     assert(type(pt)=="table", "Internal error: parser failed on this input")
+	     if not pt then
+		for _, err in ipairs(syntax_errors) do
+		   enqueue_syntax_error({data=src, type="rpl_language_declaration"},
+				        err, source_record, messages)
+		end
+		return false
+	     end
 	     if #syntax_errors > 0 then
 		-- TODO: Use the parse tree, pt, to help pinpoint the error (or use 'trace')
 		for _, err in ipairs(syntax_errors) do
@@ -86,7 +100,7 @@ local function make_parser_from(parse_something, expected_pt_node)
 		end -- for each syntax error node found 
 		return false
 	     end -- if syntax errors were returned
-	     if expected_pt_node then
+	     if pt and expected_pt_node then
 		assert(pt.type==expected_pt_node,
 		       string.format("pt.type is %s but expected %q",
 				     tostring(pt.type), tostring(expected_pt_node)))

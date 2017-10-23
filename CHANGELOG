@@ -1,3 +1,29 @@
+2017-10-22  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-2
+
+	NEW: Python module (librosie.so, rosie.py)
+
+	NEW: Tests of some basic macros (halt, message, find, findall, and a
+	shallow version of the case-insensitive macro called ci
+
+	Note: The halt pattern is implemented, but the abend status of an
+	attempted match is not yet available to the user.  I.e. the halt pattern
+	is not very useful yet.
+
+	Note: Memory management in librosie has been carefully designed,
+	e.g. buffers are reused whenever possible.  BUT testing with a tool like
+	valgrind has not been done yet.
+
+	Modified: Backtracking limit for a single pattern is now 1000 (was 400)
+
+	CHANGED: the find macro now looks for a cooked exp and adds boundary
+	patterns automatically
+
+	FIXED: bug in REPL (when entering rpl language declaration, e.g. 'rpl 1.0')
+
+	FIXED: issue #63 (typo in README)
+
 2017-09-20  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-1

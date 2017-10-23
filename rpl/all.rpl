@@ -30,7 +30,7 @@ thing = ts.any /					    -- complete timestamps
 	punct /
 	unmatched
 
-things = find:thing
+things = findall:thing
 
 
 

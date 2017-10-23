@@ -350,7 +350,8 @@ local function cs_simple(e, a, input, start, expected, nextpos)
    local simple = a.pat
    assert(pattern.is(simple))
    local wrapped_peg = common.match_node_wrap(simple.peg, "*")
-   local m, nextstart = rmatch(wrapped_peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
+   local m, leftover = rmatch(wrapped_peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
+   local nextstart = #input - leftover + 1
    if expected ~= nil then
       if (m and (not complement)) or ((not m) and complement) then
 	 assert(expected, "simple character set match differs from expected: " ..
@@ -424,7 +425,7 @@ function expression(e, a, input, start)
    assert(pattern.is(pat),
 	  "no pattern stored in ast node " .. tostring(a) .. " (found " .. tostring(pat) .. ")")
    local peg = common.match_node_wrap(pat.peg, "*")
-   local ok, m, nextpos = pcall(rmatch, peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
+   local ok, m, leftover = pcall(rmatch, peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
    if not ok then
       print("\n\n\nTrace failed while working on: ", a)
       if a.exps then print("a.exps: " .. tostring(list.from(a.exps))); end
@@ -433,7 +434,8 @@ function expression(e, a, input, start)
       error("rmatch failed: " .. m)
    end
    assert(type(m)=="userdata" or m==false)
-   assert(type(nextpos)=="number")
+   assert(type(leftover)=="number")
+   local nextpos = #input-leftover+1
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
    elseif ast.bracket.is(a) then
@@ -479,16 +481,36 @@ function trace.internal(r, input, start)
    return expression(r.engine, a, input, start)
 end
 
+local function prep_for_export(t)
+   if t.ast then
+      t.exp = ast.tostring(t.ast)
+      t.ast = nil
+   end
+   if t.match == nil then
+      t.match = false
+   end
+   if t.subs then
+      list.map(prep_for_export, t.subs)
+   end
+end
+
 function trace.expression(r, input, start, style)
    assert(type(style)=="string")
    local tr = trace.internal(r, input, start)
-   if style == "full" then
-      return trace.tostring(tr)
+   assert(type(tr)=="table")
+   local matched = tr.match and true or false
+   local retval
+   if style == "json" then
+      prep_for_export(tr)
+      retval = tr
+   elseif style == "full" then
+      retval = trace.tostring(tr)
    elseif style == "condensed" then
-      return trace.path_tostring(trace.max_path(tr))
+      retval = trace.path_tostring(trace.max_path(tr))
    else
-      error("Invalid trace style: " .. tostring(style))
+      error("invalid trace style: " .. tostring(style))
    end
+   return matched, retval
 end
 
 return trace

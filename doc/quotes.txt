@@ -1,3 +1,7 @@
+"Looking at code you wrote more than two weeks ago is like looking at code you
+are seeing for the first time."
+attributed to Dan Hurvitz (http://www.softwarequotes.com/showquotes.aspx?id=738)
+
 "At a fundamental level, all software describes changes in the state of a system
 over time. Because the number states and state transitions in software can have
 combinatorial complexity, programmers necessarily rely on approximations of

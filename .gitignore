@@ -22,8 +22,7 @@ build
 
 # Places where object files are kept while building librosie
 src/librosie/liblua/*
-src/librosie/liblpeg/*
-src/librosie/libcjson/*
+src/librosie/*.pyc
 
 # The following are symlinks within the repo
 

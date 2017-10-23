@@ -26,11 +26,12 @@ else
     cd $dir
     echo "BUILD_ROOT: $(pwd)"
     if [ ! -d "$dir/.git" ]; then
-    	echo "ERROR: GIT_BRANCH no .git directory"
+    	echo "ERROR: GIT_REF no .git directory"
     	echo "ERROR: GIT_COMMIT no .git directory"
     else
-	echo "GIT_BRANCH: $(git symbolic-ref --short -q HEAD)"
-	echo "GIT_COMMIT: $(git rev-parse --verify $(git symbolic-ref HEAD))"
+	GIT_REF=$(git symbolic-ref -q --short HEAD || git describe --tags --exact-match)
+	echo "GIT_REF: $GIT_REF"
+	echo "GIT_COMMIT: $(git rev-parse --verify $GIT_REF)"
     fi
 fi
 

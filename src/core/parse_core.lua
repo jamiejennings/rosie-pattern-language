@@ -132,10 +132,10 @@ function parse_without_error_check(str, pos, tokens)
    local rmatch_encoder, fn_encoder = common.lookup_encoder("default")
    assert(type(rmatch_encoder)=="number")
    assert(type(fn_encoder)=="function")
-   local nt, nextpos = rmatch(any_token, str, pos, rmatch_encoder, fn_encoder)
-   if (not nt) then return tokens, #str-pos+1; end  -- return ASTlist and leftover
+   local nt, leftover = rmatch(any_token, str, pos, rmatch_encoder, fn_encoder)
+   if (not nt) then return tokens, leftover; end  -- return ASTlist and leftover
    table.insert(tokens, nt)
-   return parse_without_error_check(str, nextpos, tokens)
+   return parse_without_error_check(str, #str-leftover+1, tokens)
 end
 
 ----------------------------------------------------------------------------------------
