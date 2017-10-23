@@ -1,3 +1,18 @@
+2017-10-23  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-2
+
+	FIXED: Bug triggered by multiple import statements in a single rpl file,
+	where the error message did not print and some imports did not load.
+
+	ENHANCED: To accomodate patterns that contain many thousands of
+	alternatives, the maximum number of captures handled by the lpeg vm has
+	been increased to 1 million.  It can go higher, but should it?
+
+	NEW: "Dark launch" of a new operator called 'and', bound to the
+	ampersand, e.g.  A & B & C === >A >B C which means "the input matches A
+	and B and C, and the capture will be done using pattern C".
+
 2017-10-22  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-2
