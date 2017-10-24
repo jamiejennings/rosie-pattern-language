@@ -1,0 +1,13 @@
+FROM ubuntu
+
+RUN apt-get -y update
+RUN apt-get install -y make gcc
+RUN apt-get install -y readline-common libreadline-dev
+RUN apt-get install -y git
+
+RUN git clone https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
+
+RUN cd /opt/rosie && make && make install
+
+RUN cd /opt/rosie && TERM=dumb && make test PYTHON=1
+

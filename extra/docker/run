@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+
+dockerfile=$1
+if [ "$1" == "" ]; then
+    echo "Usage $0 <name-of-dockerfile> [fresh]"
+    exit -1
+fi
+name=`basename $dockerfile`
+cachearg=''
+if [ "$2" == "fresh" ]; then
+    echo 'Building a fresh image using --no-cache'
+    cachearg='--no-cache'
+fi
+docker build $cachearg -t rosie:$name -f $dockerfile . 
+

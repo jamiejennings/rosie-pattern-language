@@ -1,0 +1,12 @@
+FROM fedora
+
+RUN dnf -y update
+RUN dnf install -y make gcc readline-devel
+RUN dnf install -y git python
+RUN pip install cffi
+
+RUN git clone https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
+
+RUN cd /opt/rosie && make && make install
+
+RUN cd /opt/rosie && TERM=dumb && make test PYTHON=1
