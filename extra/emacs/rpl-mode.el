@@ -29,11 +29,33 @@
 (defvar rpl-some-space "[ \t]+")
 (defvar rpl-any-space "[ \t]*")
 
-(defvar rpl-optional-comment "\\s *\\(--.*\\)?$")
+(defvar rpl-bracket-exp "\\[.*?\\]")
+
+(defvar rpl-comment-exp "\\(--.*\\)$")
+(defvar rpl-optional-comment-exp "\\s *\\(--.*\\)?$")
+
+(defvar rpl-string-exp (concat "\\(\""
+			     "\\(" "\\(\\\\.\\)" "\\|" "." "\\)*?"
+			     "\"\\)"))
 
 (defvar rpl-font-lock-keywords-basic
   (list
    `(,rpl-binding-keywords (1 font-lock-keyword-face))
+   ))
+
+(defvar rpl-font-lock-brackets
+  (list
+   `(,rpl-bracket-exp (0 font-lock-type-face))
+   ))
+
+(defvar rpl-font-lock-comments
+  (list
+   `(,rpl-comment-exp (1 font-lock-comment-face t)) ; t --> override other fontification
+   ))
+
+(defvar rpl-font-lock-strings
+  (list
+   `(,rpl-string-exp (1 font-lock-string-face))
    ))
 
 (defvar rpl-font-lock-keywords-bindings
@@ -69,7 +91,10 @@
        (list rpl-function-regexp `(1 font-lock-function-name-face))))
 
 (defvar rpl-font-lock-keywords-ALL
-      (append rpl-font-lock-keywords-basic
+      (append rpl-font-lock-brackets
+	      rpl-font-lock-comments
+	      rpl-font-lock-strings
+	      rpl-font-lock-keywords-basic
 	      rpl-font-lock-keywords-bindings
               rpl-font-lock-keywords-declarations
 	      rpl-font-lock-functions))
@@ -90,7 +115,7 @@ Returns the point, or nil if it reached the beginning of the buffer"
       (if (bobp) (throw 'found nil))
       (forward-char -1)
       (beginning-of-line)
-      (if (not (looking-at rpl-optional-comment)) (throw 'found (point))))))
+      (if (not (looking-at rpl-optional-comment-exp)) (throw 'found (point))))))
 
 (defun rpl-goto-next-nonblank-line ()
   "Puts the point at the first next line that is not blank.
@@ -101,7 +126,7 @@ Returns the point, or nil if it reached the end of the buffer"
       (forward-line)
       (if (eobp) (throw 'found nil))
       (beginning-of-line)
-      (if (not (looking-at rpl-optional-comment)) (throw 'found (point))))))
+      (if (not (looking-at rpl-optional-comment-exp)) (throw 'found (point))))))
 
 (defvar rpl-binding-regexp
       (concat rpl-any-space
@@ -252,7 +277,10 @@ nil if the previous rpl statement was not a binding"
   (kill-all-local-variables)
   (set-syntax-table rpl-mode-syntax-table)
   ;(use-local-map rpl-mode-map)
-  (set (make-local-variable 'font-lock-defaults) '(rpl-font-lock-keywords))
+  ;; the t following rpl-font-lock-keywords disables highlighting
+  ;; based on emacs' built-in syntax system, which covers things like
+  ;; comments and strings
+  (set (make-local-variable 'font-lock-defaults) '(rpl-font-lock-keywords t))
   (set (make-local-variable 'indent-line-function) 'rpl-indent-line)  
   (set (make-local-variable 'comment-start) "--")
   (set (make-local-variable 'comment-start-skip) "--")
