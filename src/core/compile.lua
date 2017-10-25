@@ -46,6 +46,8 @@ local name = {rpl_statements = "statement",
 	      rpl_expression = "expression",
 	      rpl_language_declaration = "rpl language declaration"}
 
+local MAX_SYNTAX_ERRORS = 100
+
 local function enqueue_syntax_error(pt, err, source_record, messages)
    local origin = source_record.origin and
       common.loadrequest.new{filename=source_record.origin.filename}
@@ -71,6 +73,14 @@ local function enqueue_syntax_error(pt, err, source_record, messages)
 				  message=msg,
 				  sourceref=sref}
    table.insert(messages, v)
+   local ok = (#messages < MAX_SYNTAX_ERRORS)
+   if not ok then
+      v = violation.syntax.new{who='parser',
+			       message="too many syntax errors",
+			       sourceref=sref}
+      table.insert(messages, v)
+   end
+   return ok
 end
 
 local function make_parser_from(parse_something, expected_pt_node)
@@ -84,17 +94,20 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     local pt, syntax_errors, leftover = parse_something(src)
 	     if not pt then
 		for _, err in ipairs(syntax_errors) do
-		   enqueue_syntax_error({data=src, type="rpl_language_declaration"},
-				        err, source_record, messages)
+		   local ok = enqueue_syntax_error({data=src, type="rpl_language_declaration"},
+						err, source_record, messages)
+		   if not ok then return false; end
 		end
 		return false
 	     end
 	     if #syntax_errors > 0 then
 		-- TODO: Use the parse tree, pt, to help pinpoint the error (or use 'trace')
+		local ok
 		for _, err in ipairs(syntax_errors) do
 		   for _, sub in ipairs(err.subs or {}) do
 		      if common.type_is_syntax_error(sub.type) then
-			 enqueue_syntax_error(pt, sub, source_record, messages)
+			 ok = enqueue_syntax_error(pt, sub, source_record, messages)
+			 if not ok then return false; end
 		      end
 		   end -- for each sub
 		end -- for each syntax error node found 
