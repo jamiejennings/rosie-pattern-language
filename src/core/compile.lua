@@ -606,7 +606,13 @@ function initialize_bindings(stmts, pkgenv, prefix, messages)
    for _, b in ipairs(stmts) do
       assert(ast.binding.is(b))			    -- ensured by expand.block()
       local ref = b.ref
-      assert(not ref.packagename)
+      if ref.packagename then
+	 table.insert(messages,
+		      violation.compile.new{who='compiler',
+					    message=("cannot bind qualified name (i.e. imported name): " .. ast.tostring(ref)),
+					 ast=b})
+	 return false
+      end
       local val = pkgenv:lookup(ref.localname)
       if val then
 	 if novalue.is(val) then
@@ -668,7 +674,7 @@ function c2.compile_block(a, pkgenv, request, messages)
    end
    -- Step 1: For each lhs, bind the identifier to 'novalue'.
    if not initialize_bindings(a.stmts, pkgenv, prefix, messages) then
-      return false
+      return false				    -- info is in messages
    end
    -- Step 2: Compile the rhs (expression) for each binding, repeating until either all statements
    -- have compiled, or there's a compilation error, or we cannot make progress because there are
