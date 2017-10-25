@@ -264,14 +264,14 @@ local function choice(e, a, input, start, expected, nextpos)
    if n < #a.exps then
       append_unattempted(a.exps, n+1, matches, input, matches[n].nextpos)
    end
-   if matches[n].match then
-      assert(expected, "choice match differs from expected")
-      assert(matches[n].nextpos==nextpos, "choice nextpos differs from expected")
-      return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
-   else
-      assert(not expected, "choice non-match differs from expected")
-      return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
+   if expected~=nil then
+      if matches[n].match then
+	 assert(expected, "choice match differs from expected")
+      else
+	 assert(not expected, "choice non-match differs from expected")
+      end
    end
+   return {match=expected, nextpos=nextpos, ast=a, subs=matches, input=input, start=start}
 end
 
 -- FUTURE: A qualified reference to a separately compiled module may not have an AST available
@@ -340,8 +340,8 @@ end
 
 local function bracket_explanation(a, input, start, m, complement)
    return (" " .. ast.tostring(a) ..
-	   " Looking at input pos " .. tostring(start) .. ": " ..
-           input:sub(start) .. " And match is: " .. tostring(m) .. 
+	   " Looking at input pos " .. tostring(start) .. ": " .. input:sub(start) .. 
+           " And there " .. (m and "was" or "was NOT") .. " a match." ..
            " And complement is: " .. tostring(complement))
 end
 
@@ -353,13 +353,10 @@ local function cs_simple(e, a, input, start, expected, nextpos)
    local m, leftover = rmatch(wrapped_peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
    local nextstart = #input - leftover + 1
    if expected ~= nil then
-      if (m and (not complement)) or ((not m) and complement) then
+      if (m and (not complement)) then
 	 assert(expected, "simple character set match differs from expected: " ..
 		bracket_explanation(a, input, start, m, complement))
-	 if m then
-	    assert(nextstart==nextpos, "simple character set nextpos differs from expected")
-	 end
-      else
+      elseif (not m) and complement then
 	 assert(not expected, "simple character set non-match differs from expected: " ..
 		bracket_explanation(a, input, start, m, complement))
       end
@@ -368,30 +365,38 @@ local function cs_simple(e, a, input, start, expected, nextpos)
 end
 
 local function bracket(e, a, input, start, expected, nextpos)
-   if ast.simple_charset_p(a.cexp) then
-      return cs_simple(e, a.cexp, input, start, expected, nextpos)
-   elseif ast.choice.is(a.cexp) then
-      return choice(e, a.cexp, input, start, expected, nextpos)
-   elseif ast.bracket.is(a.cexp) then
-      local result = bracket(e, a.exp, input, start, nil, nextpos)
-      if expected ~= nil then
-	 if (result.match and (not a.complement)) or ((not result.match) and a.complement) then
-	    assert(expected, "bracket match differs from expected")
-	    if result.match then
-	       assert(result.nextpos==nextpos, "bracket nextpos differs from expected")
-	    end
-	 else
-	    assert(not expected, "bracket non-match differs from expected")
-	 end
-      end -- if there is an expectation that we can check against
-      return {match=result.match, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
-   elseif ast.cs_intersection.is(a.cexp) then
-      throw("character set intersection is not implemented", a)
-   elseif ast.cs_difference.is(a.cexp) then
-      throw("character set difference is not implemented", a)
-   else
-      assert(false, "trace: unknown cexp inside bracket: " .. tostring(a.cexp))
+   local subresult_expected
+   if expected~=nil then
+      subresult_expected = (not a.complement) and expected or (not expected)
    end
+   local result = expression(e, a.cexp, input, start, subresult_expected, nextpos)
+   -- if ast.simple_charset_p(a.cexp) then
+   --    result = cs_simple(e, a.cexp, input, start, subresult_expected, nextpos)
+   -- elseif ast.choice.is(a.cexp) then
+   --    result = choice(e, a.cexp, input, start, subresult_expected, nextpos)
+   -- elseif ast.bracket.is(a.cexp) then
+   --    result = bracket(e, a.cexp, input, start, subresult_expected, nextpos)
+   -- elseif ast.cs_intersection.is(a.cexp) then
+   --    throw("character set intersection is not implemented", a)
+   -- elseif ast.cs_difference.is(a.cexp) then
+   --    throw("character set difference is not implemented", a)
+   -- else
+   --    assert(false, "trace: unknown cexp inside bracket: " .. tostring(a.cexp))
+   -- end
+--   print("*** bracket intermediate result:"); for k,v in pairs(result) do print(k,v) end
+   if a.complement then
+      result.match = not result.match
+   end
+   if expected ~= nil then
+      if result.match and (not a.complement) then
+	 assert(expected, "bracket match differs from expected" ..
+		bracket_explanation(a, input, start, result.match, a.complement))
+      elseif (not result.match) and (not a.complement) then
+	 assert(not expected, "bracket non-match differs from expected" ..
+		bracket_explanation(a, input, start, result.match, a.complement))
+      end
+   end -- if there is an expectation that we can check against
+   return {match=result.match, nextpos=nextpos, ast=a, subs={result}, input=input, start=start}
 end
       
 local function predicate(e, a, input, start, expected, nextpos)

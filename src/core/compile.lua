@@ -311,27 +311,32 @@ function bracket(a, env, prefix, messages)
 	 local new = ast.bracket{complement=(not a.cexp.complement), cexp=a.cexp.cexp, s=a.s, e=e.s}
 	 return bracket(new, env, prefix, messages)
       end
-   elseif ast.choice.is(a.cexp) then
-      assert(#a.cexp.exps > 0, "empty character set union?")
-      local alternatives = expression(a.cexp.exps[1], env, prefix, messages).peg
-      for i = 2, #a.cexp.exps do
-	 alternatives = alternatives + expression(a.cexp.exps[i], env, prefix, messages).peg
-      end
-      a.pat = pattern.new{name="bracket",
-			 peg=((a.complement and (1-alternatives)) or alternatives),
-			 ast=a}
-      return a.pat
-   elseif ast.cs_intersection.is(a.cexp) then
-      raise_error("character set intersection is not implemented", a)
-   elseif ast.cs_difference.is(a.cexp) then
-      raise_error("character set difference is not implemented", a)
-   elseif ast.simple_charset_p(a.cexp) then
+   else
       local p = expression(a.cexp, env, prefix, messages)
       a.pat = pattern.new{name="bracket", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
       return a.pat
-   else
-      table.print(a.cexp)
-      assert(false, "compile: unknown cexp inside bracket: " .. tostring(a.cexp))
+      
+   -- elseif ast.choice.is(a.cexp) then
+   --    assert(#a.cexp.exps > 0, "empty character set union?")
+   --    local alternatives = expression(a.cexp.exps[1], env, prefix, messages).peg
+   --    for i = 2, #a.cexp.exps do
+   -- 	 alternatives = alternatives + expression(a.cexp.exps[i], env, prefix, messages).peg
+   --    end
+   --    a.pat = pattern.new{name="bracket",
+   -- 			 peg=((a.complement and (1-alternatives)) or alternatives),
+   -- 			 ast=a}
+   --    return a.pat
+   -- elseif ast.cs_intersection.is(a.cexp) then
+   --    raise_error("character set intersection is not implemented", a)
+   -- elseif ast.cs_difference.is(a.cexp) then
+   --    raise_error("character set difference is not implemented", a)
+   -- elseif ast.simple_charset_p(a.cexp) then
+   --    local p = expression(a.cexp, env, prefix, messages)
+   --    a.pat = pattern.new{name="bracket", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
+   --    return a.pat
+   -- else
+   --    table.print(a.cexp)
+   --    assert(false, "compile: unknown cexp inside bracket: " .. tostring(a.cexp))
    end
 end
 

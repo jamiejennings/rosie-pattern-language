@@ -30,7 +30,9 @@ function check_trace(exp, input, expectation, expected_nextpos, expected_content
    local t = trace.internal(rplx, input)
    lasttrace = t				    -- GLOBAL
    check(( (expectation and t.match) or ((not expectation) and (not t.match)) ),
-         "t.match was not as expected",
+      (expectation and
+       "t.match was false but expected a match" or
+       "t.match was true but expected no match"),
          1)
    if expectation then
       check(t.nextpos==expected_nextpos,
@@ -353,6 +355,73 @@ check_trace('S', "aabb", true, 5)
 -- 			       'B = CAPTURE as B: {("b" S) / ("a" B B)}',
 -- 			       'end',
 -- 			       'Matched "aabb" (against input "aabb")'} )
+
+----------------------------------------------------------------------------------------
+heading("Eval char sets")
+
+subheading("Simple charsets")
+
+ok, msg = e:load("not_a = [^a]")
+check(ok)
+check_trace('not_a', "abc", false, 000)		    --nextpos does not matter for false
+check_trace('not_a', "a", false, 000)		    --nextpos does not matter for false
+check_trace('not_a', "x", true, 2)		    --nextpos is 2 after matching "x"
+
+ok, msg = e:load("not_a = [^[a]]")
+check(ok)
+
+check_trace('not_a', "abc", false, 000)		    --nextpos does not matter for false
+check_trace('not_a', "a", false, 000)		    --nextpos does not matter for false
+check_trace('not_a', "x", true, 2)		    --nextpos is 2 after matching "x"
+
+ok, msg = e:load("foo = [^[a][b][c]]")
+check(ok)
+
+check_trace('foo', "x", true, 2)
+check_trace('foo', "a", false)
+check_trace('foo', "b", false)
+check_trace('foo', "c", false)
+
+ok, msg = e:load("foo = [^[a][b][^c]]")
+check(ok)
+
+check_trace('foo', "x", false)
+check_trace('foo', "a", false)
+check_trace('foo', "b", false)
+check_trace('foo', "c", true, 2)
+
+ok, msg = e:load("foo = [^[^a][b][^c]]")
+check(ok)
+
+check_trace('foo', "x", false)
+check_trace('foo', "a", false, 2)
+check_trace('foo', "b", false)
+check_trace('foo', "c", false, 2)
+
+ok, msg = e:load("foo = [^[^a][b-z]]")
+check(ok)
+
+check_trace('foo', "x", false)
+check_trace('foo', "a", true, 2)
+check_trace('foo', "b", false)
+check_trace('foo', "c", false, 2)
+
+ok, msg = e:load("foo = [[^a][a-b]]")
+check(ok)
+
+check_trace('foo', "x", true, 2)
+check_trace('foo', "a", true, 2)
+check_trace('foo', "b", true, 2)
+check_trace('foo', "c", true, 2)
+
+ok, msg = e:load("foo = [[^b-c]&[a-d]]")
+check(ok)
+
+check_trace('foo', "x", false)
+check_trace('foo', "a", true, 2)
+check_trace('foo', "b", false)
+check_trace('foo', "c", false)
+check_trace('foo', "d", true, 2)
 
 
 return test.finish()
