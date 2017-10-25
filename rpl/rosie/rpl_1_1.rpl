@@ -17,7 +17,7 @@
 
 package rpl_1_1
 
-alias ws = [[ \t]]+
+alias ws = [[ \t\r]]+
 newline = "\n"
 comment = { "--" {!newline .}* newline / $ }
 alias atmos = { ws? (comment / newline) }* ws?		    -- "atmosphere"
