@@ -1,11 +1,12 @@
 ![./CHANGELOG](https://img.shields.io/badge/version-1.0.0--alpha-ff79b4.svg)
 [![Build Status](https://travis-ci.org/jamiejennings/rosie-pattern-language.svg?branch=master)](https://travis-ci.org/jamiejennings/rosie-pattern-language)
 
-# Rosie Pattern Language
+# Rosie Pattern Language (RPL)
 
-Rosie is an alternative to modern Regular Expressions (regex) that is designed
-to scale to big data, many developers, and large collections of patterns.  Rosie
-Pattern Language:
+RPL is a variant of modern Regular Expressions (regex) that is designed
+to scale to big data, many developers, and large collections of patterns.  If
+you use regex, you already know a lot of RPL.  Additional features over regex
+found in RPL:
 
 * Looks like a programming language, and plays well with development tools
 * Comes with a library of dozens of useful patterns (timestamps, network addresses, and more)
