@@ -1,6 +1,35 @@
+2017-10-26  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-4
+
+	FIXED: Prior change log entry (in this file) was labeled alpha-2 when it
+	should have been alpha-3.
+
+	FIXED: Issue #65 where RPL files containing carriage returns (DOS-style
+	line endings) were rejected.
+
+	ENHANCED: A maximum of 99 syntax errors are reported when loading RPL
+	code.  Otherwise, it can take a long time for all the error reports to
+	be generated when loading a random (non-RPL) file.
+
+	FIXED: Added necessary reporting of an error when RPL code tries to bind
+	an imported identifier (e.g. 'word.any' as opposed to 'any').
+
+	NEW: "Dark launch" of enhanced character set expressions, in which
+	identifiers and other RPL expressions can appear.  E.g.
+	'[ "Hi" [:alpha:] num.int ]' will match the two-character string "Hi", a
+	single alpha character, or an integer (from the num package).
+	Restriction: there must be at least one bracket subexpression, which in
+	the example is '[:alpha:]'.  This feature should be considered
+	EXPERIMENTAL.
+
+	NEW: Sample docker files.  (We use these for testing, and thought we
+	would share them.)
+
+
 2017-10-23  Jamie Jennings  <jjennings@us.ibm.com>
 
-	* 1.0.0-alpha-2
+	* 1.0.0-alpha-3
 
 	FIXED: Bug triggered by multiple import statements in a single rpl file,
 	where the error message did not print and some imports did not load.
