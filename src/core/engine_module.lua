@@ -293,6 +293,9 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
       if not r then e:error(table.concat(msgs, '\n')); end
       assert(engine_module.rplx.is(r))
    end
+   local trace_flag = (op == "trace")
+   local trace_style = encoder
+   if trace_flag then encoder = "none"; end
    -- This set of simple optimizations almost doubles performance of the loop through the file
    -- (below) in cases where there are many lines to process.
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
@@ -329,8 +332,6 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    local ok, l = pcall(nextline);
    if not ok then e:error(l); end
    local _, m, leftover, trace_string
-   local trace_flag = (op == "trace")
-   local trace_style = encoder
    local m, leftover
    while l do
       if trace_flag then _, _, trace_string = e:trace(expression, l, 1, trace_style); end
