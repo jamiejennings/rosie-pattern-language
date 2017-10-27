@@ -310,10 +310,10 @@ check(code ~= 0, "return code should not be zero")
 -- check(results_table[3]:find("in user input :1:1"))
 msg = results[1]
 check(msg:find("error"))
-check(msg:find("compiler"))
-check(msg:find("unbound identifier"))
-check(msg:find("foonet.any"))
-check(msg:find("in user input :1:1"))
+check(msg:find("loader"))
+check(msg:find("cannot open file"))
+check(msg:find("foonet.rpl"))
+--check(msg:find("in user input :1:1"))
 
 cmd = rosie_cmd .. " -f test/mod4.rpl grep foonet.any /etc/resolv.conf "
 print(); print(cmd)
