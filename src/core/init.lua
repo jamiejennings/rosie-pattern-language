@@ -300,7 +300,7 @@ common.add_encoder("subs", 3,
 						      m.subs),
 					     "\n")
 		      else
-			 return m.data
+			 return nil
 		      end
 		   end)
 
@@ -322,6 +322,8 @@ rosie_package.import = import
 -- rosie_package.setmode = setmode
 -- rosie_package.mode = mode
 
+-- The magic number for setpause was determined experimentally.  The key property is that it is
+-- just less than 200, which is the default value, making the collector more aggressive.
 collectgarbage("setpause", 194)
 
 return rosie_package
