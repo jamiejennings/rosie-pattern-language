@@ -179,6 +179,11 @@ class engine ():
         pkgname = read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
+    def loadfile(self, fn):
+        f = open(fn, 'r')
+        rplsource = f.read()
+        return self.load(rplsource)
+
     def import_pkg(self, pkgname, as_name=None):
         Cerrs = new_cstr()
         Cas_name = new_cstr(as_name) if as_name else ffi.NULL
