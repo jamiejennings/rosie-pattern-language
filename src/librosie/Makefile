@@ -63,7 +63,8 @@ lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-ALL= librosie.so ctest #librosie.a
+ALL= librosie.so
+CLIENTS= python C
 
 librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
@@ -71,21 +72,15 @@ librosie.o: librosie.c librosie.h
 librosie.so: librosie.o lua_objs
 	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
 
-ctest.o: ctest.c librosie.h
-	$(CC) -o $@ -c ctest.c $(CFLAGS)
-
-ctest: ctest.o librosie.so
-	$(CC) -o $@ ctest.o 
-
 clean:
 	$(RM) librosie.so librosie.o librosie.a liblua/*
-	$(RM) ctest.o ctest
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
 test:
-	python test.py local
+	here="$(shell pwd)"; \
+	for client in $(CLIENTS); do cd $${here}/$$client && $(MAKE) test; done
 
 installtest:
 	python test.py system

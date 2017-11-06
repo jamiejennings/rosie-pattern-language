@@ -86,11 +86,14 @@ clean:
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
-# test:
-# 	python test.py local
+test: static dynamic
+	./static
+	./dynamic
+	@echo
+	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
 
-# installtest:
-# 	python test.py system
+#installtest:
+#	python test.py system
 
 echo:
 	@echo "HOME= $(HOME)"
@@ -116,7 +119,7 @@ windows:
 	@echo Windows installation not yet supported.
 
 ## Targets that do not create files
-.PHONY: default o a clean echo none
+.PHONY: default o a clean echo none test
 
 static.o: static.c static.h 
 dynamic.o: dynamic.c dynamic.h 
