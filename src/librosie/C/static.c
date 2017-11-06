@@ -7,7 +7,10 @@
 /*  AUTHOR: Jamie A. Jennings                                                */
 
 #include <string.h>
-#include "librosie.h"
+#include "../librosie.h"
+
+//   gcc -I../../submodules/lua/include -DDEBUG=1 -o dtest.o -c dtest.c
+//   gcc -o dtest dtest.o librosie.o liblua/*.o
 
 /* Compile with DEBUG=1 to enable logging */
 #ifdef DEBUG
@@ -28,6 +31,8 @@
 	  fflush(NULL);						     \
      } while (0)
 
+#define STR(literal) rosie_new_string((byte_ptr)(literal), strlen((literal)));
+
 
 
 int main() {
@@ -47,9 +52,9 @@ int main() {
 
   int err;
   int ok;
-  str pkgname, as;
-  pkgname = rosie_new_string("all", 3);
-  errors = rosie_new_string("", 0);
+  str pkgname;
+  pkgname = STR("all");
+  errors = STR("");
   err = rosie_import(engine, &ok, &pkgname, NULL, &errors);
   if (err) {
     LOG("rosie call failed: import library \"all\"\n");
@@ -59,8 +64,6 @@ int main() {
     printf("failed to import the \"all\" library with error code %d\n", ok);
     goto quit;
   }
-
-#define STR(literal) rosie_new_string((literal), strlen((literal)));
 
   int pat;
   str expression = STR("all.things");

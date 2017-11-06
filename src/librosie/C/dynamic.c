@@ -1,6 +1,6 @@
 /*  -*- Mode: C; -*-                                                         */
 /*                                                                           */
-/*  test.c                                                                   */
+/*  dynamic.c   Example client of librosie.so                                */
 /*                                                                           */
 /*  © Copyright IBM Corporation 2017.                                        */
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
@@ -9,9 +9,9 @@
 #include <dlfcn.h>
 #include <string.h>
 
-#include "ctest.h"
+#include "dynamic.h"
 
-#define LIBROSIE "librosie.so"
+#define LIBROSIE "../librosie.so"
 void *librosie;
 
 

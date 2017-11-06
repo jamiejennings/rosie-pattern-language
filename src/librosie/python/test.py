@@ -8,8 +8,8 @@ import sys, os, json
 import rosie
 
 # For unit testing:
-# (1) We use the librosie.so that is in the same directory as this test file, i.e. ".";
-#     normally, no argument to rosie.engine() is needed.
+# (1) We use the librosie.so that is in the directory above this one, i.e. "..".
+#     Normally, no argument to rosie.engine() is needed.
 # (2) librosie will look for the rosie installation in the 'rosie' directory alongside
 #     it, so there must be a link 'rosie -> ../..' in the same directory as this
 #     test file.
@@ -277,12 +277,12 @@ class RosieMatchFileTest(unittest.TestCase):
         pass
 
     def test(self):
-        cin, cout, cerr = self.engine.matchfile(self.findall_net_any, "json", "../../test/resolv.conf", "/tmp/resolv.out", "/tmp/resolv.err")
+        cin, cout, cerr = self.engine.matchfile(self.findall_net_any, "json", "../../../test/resolv.conf", "/tmp/resolv.out", "/tmp/resolv.err")
         assert(cin == 10)
         assert(cout == 5)
         assert(cerr == 5)
 
-        cin, cout, cerr = self.engine.matchfile(self.net_any, "color", infile="../../test/resolv.conf", errfile="/dev/null", wholefile=True)
+        cin, cout, cerr = self.engine.matchfile(self.net_any, "color", infile="../../../test/resolv.conf", errfile="/dev/null", wholefile=True)
         assert(cin == 1)
         assert(cout == 0)
         assert(cerr == 1)
@@ -307,7 +307,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
-        librosiedir = "."
+        librosiedir = ".."
     elif sys.argv[1]=='system':
         librosiedir = None
     else:

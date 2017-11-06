@@ -1,6 +1,6 @@
 /*  -*- Mode: C/l; -*-                                                       */
 /*                                                                           */
-/*  ctest.h                                                                  */
+/*  dynamic.h                                                                */
 /*                                                                           */
 /*  © Copyright IBM Corporation 2017.                                        */
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
-#include "../../submodules/rosie-lpeg/src/rpeg.h"
+#include "../../../submodules/rosie-lpeg/src/rpeg.h"
 
 typedef struct rosie_string str;
 
