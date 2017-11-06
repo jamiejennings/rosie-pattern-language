@@ -47,19 +47,19 @@ void rosie_free_string_ptr(str *s);
 
 void *rosie_new(str *errors);
 void rosie_finalize(void *L);
-int rosie_setlibpath(lua_State *L, char *newpath);
-int rosie_set_alloc_limit(lua_State *L, int newlimit);
-int rosie_config(lua_State *L, str *retvals);
-int rosie_compile(lua_State *L, str *expression, int *pat, str *errors);
-int rosie_free_rplx(lua_State *L, int pat);
-int rosie_match(lua_State *L, int pat, int start, char *encoder, str *input, match *match);
-int rosie_matchfile(lua_State *L, int pat, char *encoder, int wholefileflag,
+int rosie_setlibpath(void *L, char *newpath);
+int rosie_set_alloc_limit(void *L, int newlimit);
+int rosie_config(void *L, str *retvals);
+int rosie_compile(void *L, str *expression, int *pat, str *errors);
+int rosie_free_rplx(void *L, int pat);
+int rosie_match(void *L, int pat, int start, char *encoder, str *input, match *match);
+int rosie_matchfile(void *L, int pat, char *encoder, int wholefileflag,
 		    char *infilename, char *outfilename, char *errfilename,
 		    int *cin, int *cout, int *cerr,
 		    str *err);
-int rosie_trace(lua_State *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
-int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors);
-int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors);
+int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
+int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
+int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
 
 /*
 

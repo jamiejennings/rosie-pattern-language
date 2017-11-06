@@ -63,7 +63,7 @@ lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-ALL= librosie.so #librosie.a
+ALL= librosie.so ctest #librosie.a
 
 librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
@@ -71,8 +71,15 @@ librosie.o: librosie.c librosie.h
 librosie.so: librosie.o lua_objs
 	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
 
+ctest.o: ctest.c librosie.h
+	$(CC) -o $@ -c ctest.c $(CFLAGS)
+
+ctest: ctest.o librosie.so
+	$(CC) -o $@ ctest.o #$(SYSLIBS) $(LDFLAGS)
+
 clean:
 	$(RM) librosie.so librosie.o librosie.a liblua/*
+	$(RM) ctest.o ctest
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
