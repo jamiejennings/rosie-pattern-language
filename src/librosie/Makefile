@@ -75,7 +75,7 @@ ctest.o: ctest.c librosie.h
 	$(CC) -o $@ -c ctest.c $(CFLAGS)
 
 ctest: ctest.o librosie.so
-	$(CC) -o $@ ctest.o #$(SYSLIBS) $(LDFLAGS)
+	$(CC) -o $@ ctest.o 
 
 clean:
 	$(RM) librosie.so librosie.o librosie.a liblua/*
