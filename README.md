@@ -159,7 +159,7 @@ We are happy to add more patterns to the initial library we've started in the
 ### Calling Rosie from Go, Python, node.js, Ruby, Java, or ...?  <a name="api-help"></a> 
 
 Rosie is available as a [C library](ffi) that is callable from these
-languages.  There are [sample programs](ffi/samples) that demonstrate it, and
+languages.  There are [sample programs](src/librosie) that demonstrate it, and
 these could be improved by turning them into proper libraries, one for each
 target language.
 
