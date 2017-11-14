@@ -1,3 +1,12 @@
+2017-11-14  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-5
+
+	MERGED PR #67 (from IBMer vmorris) containing a fix to a link in the
+	docs.
+
+	FIXED: Issue #69 (bug in how find/findall handle tokenized sequences)
+
 2017-10-26  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-4
