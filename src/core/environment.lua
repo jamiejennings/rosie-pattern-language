@@ -50,7 +50,7 @@ local function internal_macro_find1(capture_flag, ...)
    assert(sref)
    local exp
    if ast.cooked.is(original_exp) then
-      exp = ast.raw.new{exp = ast.sequence.new{exps={boundary_ref, original_exp.exp, boundary_ref},
+      exp = ast.cooked.new{exp = ast.sequence.new{exps={boundary_ref, original_exp.exp, boundary_ref},
 					       sourceref=sref},
 			sourceref=sref}
    else

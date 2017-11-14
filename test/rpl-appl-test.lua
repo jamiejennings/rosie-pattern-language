@@ -282,6 +282,22 @@ test_findall_5('findall:(~a~)')
 test_findall_4('findall:{a~}')
 test_findall_5('findall:(a~)')
 
+p = e:compile('find:("quick" ("brown" / "blue") "fox")')
+check(p)
+lines = io.lines("test/quick.txt")
+answers = {false, true, true, true, true, false, false}
+i = 1
+for line in lines do
+   ok, m, leftover = e:match(p, line)
+   check(ok, "call failed", 1)
+   if answers[i] then
+      check(m, "failed to match where it should")
+   else
+      check(not m, "matched where it should have failed to match")
+   end
+   i = i + 1
+end
+
 
 ----------------------------------------------------------------------------------------
 heading("Message and halt")
@@ -407,7 +423,7 @@ function test_halt(exp, input)
    else
       ok, m, leftover, abend = e:match(p, input)
       check(ok, "match failed to execute", 1)
-print("***", m, leftover, abend, "***")
+--print("***", m, leftover, abend, "***")
    end
 end
 

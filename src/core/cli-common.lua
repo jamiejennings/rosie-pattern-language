@@ -38,10 +38,14 @@ end
 local function import_dependencies(en, a, msgs)
    local deps = en.compiler.dependencies_of(a)
    for _, packagename in ipairs(deps) do
-      local ok, err = en:import(packagename, nil)
+      local ok, actual_pkgname, errs = en:import(packagename, nil)
       if not ok then
-	 table.insert(msgs, err)
-	 break;
+	 if errs then
+	    for _, err in ipairs(errs) do table.insert(msgs, err); end
+	 else
+	    io.stderr:write("Unspecified error importing ", tostring(packagename), '\n')
+	 end
+	 return false
       end
    end -- for each dependency
    return true

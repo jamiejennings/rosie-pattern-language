@@ -22,16 +22,14 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "lauxlib.h"
-#include "lualib.h"
+/* #include "lauxlib.h" */
+/* #include "lualib.h" */
 
 #include "librosie.h"
 
 #include <dlfcn.h>
 #include <libgen.h>
 
-/* int (*r_match_C)(lua_State *L);	/\* defined in lptree.c *\/ */
-/* rBuffer *(*r_newbuffer_wrap)(lua_State *L, char *data, size_t len); /\* defined in rbuf.c *\/ */
 typedef void *(*func_ptr_t)();
 int (*fp_r_match_C)();	/* defined in lptree.c */ 
 typedef rBuffer* (*foo_t)(lua_State *L, char *data, size_t len);
@@ -365,7 +363,7 @@ str *to_json_string(lua_State *L, int pos) {
  * ----------------------------------------------------------------------------------------
  */
 
-int rosie_set_alloc_limit(lua_State *L, int newlimit) {
+int rosie_set_alloc_limit(void *L, int newlimit) {
   int memusg, actual_limit;
   if ((newlimit != 0) && (newlimit < MIN_ALLOC_LIMIT_MB)) return ERR_ENGINE_CALL_FAILED;
   else {
@@ -446,7 +444,7 @@ void *rosie_new(str *errors) {
 }
 
 /* N.B. Client must free retval */
-int rosie_config(lua_State *L, str *retval) {
+int rosie_config(void *L, str *retval) {
   int t;
   str *r;
   get_registry(rosie_key);
@@ -470,7 +468,7 @@ int rosie_config(lua_State *L, str *retval) {
   return SUCCESS;
 }
 
-int rosie_setlibpath_engine(lua_State *L, char *newpath) {
+int rosie_setlibpath_engine(void *L, char *newpath) {
   int t;
   get_registry(engine_key);
   t = lua_getfield(L, -1, "set_libpath");
@@ -494,7 +492,7 @@ int rosie_setlibpath_engine(lua_State *L, char *newpath) {
   return SUCCESS;
 }
 
-int rosie_free_rplx(lua_State *L, int pat) {
+int rosie_free_rplx(void *L, int pat) {
   LOGf("freeing rplx object with index %d\n", pat);
   get_registry(rplx_table_key);
   luaL_unref(L, -1, pat);
@@ -503,7 +501,7 @@ int rosie_free_rplx(lua_State *L, int pat) {
 }
 
 /* N.B. Client must free errors */
-int rosie_compile(lua_State *L, str *expression, int *pat, str *errors) {
+int rosie_compile(void *L, str *expression, int *pat, str *errors) {
   int t;
   str *temp_rs;
 
@@ -600,7 +598,7 @@ static inline void collect_if_needed(lua_State *L) {
   } while (0);
 
 
-int rosie_match(lua_State *L, int pat, int start, char *encoder_name, str *input, match *match) {
+int rosie_match(void *L, int pat, int start, char *encoder_name, str *input, match *match) {
   int t, encoder;
   size_t temp_len;
   unsigned char *temp_str;
@@ -720,7 +718,7 @@ have_pattern:
 }
 
 /* N.B. Client must free trace */
-int rosie_trace(lua_State *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace) {
+int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace) {
   int t;
   str *rs;
   
@@ -798,7 +796,7 @@ have_pattern:
 }
 
 /* N.B. Client must free 'errors' */
-int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
+int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors) {
   int t;
   size_t temp_len;
   unsigned char *temp_str;
@@ -846,7 +844,7 @@ int rosie_load(lua_State *L, int *ok, str *src, str *pkgname, str *errors) {
 }
 
 /* N.B. Client must free 'errors' */
-int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors) {
+int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors) {
   int t;
   size_t temp_len;
   unsigned char *temp_str;
@@ -901,7 +899,7 @@ int rosie_import(lua_State *L, int *ok, str *pkgname, str *as, str *errors) {
 
 /* TODO: Return SUCCESS and a failure indicator even when, e.g. file cannot be opened */
 /* N.B. Client must free err */
-int rosie_matchfile(lua_State *L, int pat, char *encoder, int wholefileflag,
+int rosie_matchfile(void *L, int pat, char *encoder, int wholefileflag,
 		    char *infilename, char *outfilename, char *errfilename,
 		    int *cin, int *cout, int *cerr,
 		    str *err) {

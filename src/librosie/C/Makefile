@@ -8,7 +8,7 @@
 
 ## Use "DEBUG=1" on the command line to enable logging to stderr
 
-HOME = $(shell cd ../..; pwd)
+HOME = $(shell cd ../../..; pwd)
 ROSIE = "$(HOME)/bin/rosie"
 
 ifdef DEBUG
@@ -57,40 +57,44 @@ $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
 	@false
 
-
 .PHONY: lua_objs
 lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-ALL= librosie.so
-ALLCLIENTS=python c
+ALL= dynamic static
 
-ifeq ($(CLIENTS),all)
-  clients=$(ALLCLIENTS)
-else
-  clients=$(CLIENTS)
-endif
+dynamic.o: dynamic.c dynamic.h
+	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
-librosie.o: librosie.c librosie.h
-	$(CC) -o $@ -c librosie.c $(CFLAGS)
+dynamic: dynamic.o
+	$(CC) -o $@ dynamic.o 
 
-librosie.so: librosie.o lua_objs
-	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
+static.o: static.c static.h
+	$(CC) -o $@ -c static.c $(CFLAGS)
+
+static: static.o librosie.o lua_objs
+	$(CC) -o $@ static.o librosie.o liblua/*.o
+
+librosie.o: ../librosie.o
+	cp ../librosie.o .
 
 clean:
-	$(RM) librosie.so librosie.o librosie.a liblua/*
+	$(RM) dynamic.o dynamic
+	$(RM) static.o librosie.o liblua/*
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
-test:
-	here="$(shell pwd)"; \
-	for client in $(clients); do cd $${here}/$$client && $(MAKE) test; done
+test: static dynamic
+	@echo Running C client tests on librosie
+	./static
+	./dynamic
+	@echo
+	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
 
 installtest:
-	here="$(shell pwd)"; \
-	for client in $(clients); do cd $${here}/$$client && $(MAKE) installtest; done
+	@echo No tests of C client configured to use system installation of librosie
 
 echo:
 	@echo "HOME= $(HOME)"
@@ -116,6 +120,7 @@ windows:
 	@echo Windows installation not yet supported.
 
 ## Targets that do not create files
-.PHONY: default o a clean echo none
+.PHONY: default o a clean echo none test installtest
 
-librosie.o: librosie.c librosie.h 
+static.o: static.c static.h 
+dynamic.o: dynamic.c dynamic.h 

@@ -355,22 +355,24 @@ sniff: $(ROSIEBIN)
 test:
 	@echo Running tests in test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D)
-	@if [ -n "$(PYTHON)" ]; then \
-		echo "Running Python librosie tests"; \
+	@if [ -n "$(CLIENTS)" ]; then \
+		echo "** Running librosie client tests **"; \
 		cd $(LIBROSIE_DIR) && $(MAKE) test; \
 	else \
-		echo "Skipping Python librosie tests (set PYTHON=1 to enable)"; \
+		echo "Skipping librosie client tests."; \
+		echo "To enable, set CLIENTS=all or CLIENTS=\"c python\" or such (space separated list in quotes)."; \
 	fi
 
 .PHONY: installtest
 installtest:
 	@echo Running tests in $(BUILD_ROOT)/test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D)
-	@if [ -n "$(PYTHON)" ]; then \
-		echo "Running Python librosie tests"; \
-		cd $(LIBROSIE_DIR) && $(MAKE) installtest; \
+	@if [ -n "$(CLIENTS)" ]; then \
+		echo "** Running librosie client tests **"; \
+		cd $(LIBROSIE_DIR) && $(MAKE) test; \
 	else \
-		echo "Skipping Python librosie tests (set PYTHON=1 to enable)"; \
+		echo "Skipping librosie client tests."; \
+		echo "To enable, set CLIENTS=all or CLIENTS=\"c python\" or such (space separated list in quotes)."; \
 	fi
 
 
