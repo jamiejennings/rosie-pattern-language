@@ -11,5 +11,5 @@ RUN pip install cffi
 RUN git clone https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
 RUN cd /opt/rosie && make && make install
 
-RUN cd /opt/rosie && TERM=dumb && make test PYTHON=1
+RUN cd /opt/rosie && TERM=dumb && make test CLIENTS=all
 

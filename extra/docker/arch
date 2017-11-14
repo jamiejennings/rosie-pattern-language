@@ -15,7 +15,7 @@ RUN git clone --recursive https://github.com/jamiejennings/rosie-pattern-languag
 
 RUN cd /opt/rosie && make && make install
 
-RUN cd /opt/rosie && TERM=dumb && make test PYTHON=1
+RUN cd /opt/rosie && TERM=dumb && make test CLIENTS=all
 
 
 
