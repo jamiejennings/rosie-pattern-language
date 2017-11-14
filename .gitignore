@@ -17,12 +17,12 @@ build.log
 librosie.a
 librosie.so
 
-# The CMake tool creates a build dir
-build
-
-# Places where object files are kept while building librosie
+# Places where object files and executables are kept while building librosie
+src/librosie/C/dynamic
+src/librosie/C/static
+src/librosie/C/liblua/*
 src/librosie/liblua/*
-src/librosie/*.pyc
+src/librosie/python/*.pyc
 
 # The following are symlinks within the repo
 
