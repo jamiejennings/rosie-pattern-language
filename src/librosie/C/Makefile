@@ -87,13 +87,14 @@ depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
 test: static dynamic
+	@echo Running C client tests on librosie
 	./static
 	./dynamic
 	@echo
 	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
 
-#installtest:
-#	python test.py system
+installtest:
+	@echo No tests of C client configured to use system installation of librosie
 
 echo:
 	@echo "HOME= $(HOME)"
@@ -119,7 +120,7 @@ windows:
 	@echo Windows installation not yet supported.
 
 ## Targets that do not create files
-.PHONY: default o a clean echo none test
+.PHONY: default o a clean echo none test installtest
 
 static.o: static.c static.h 
 dynamic.o: dynamic.c dynamic.h 

@@ -64,7 +64,13 @@ lua_objs: $(LUA_A)
 	cd liblua && ar x $(LUA_A)
 
 ALL= librosie.so
-CLIENTS= python C
+ALLCLIENTS=python c
+
+ifeq ($(CLIENTS),all)
+  clients=$(ALLCLIENTS)
+else
+  clients=$(CLIENTS)
+endif
 
 librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
@@ -80,11 +86,11 @@ depend:
 
 test:
 	here="$(shell pwd)"; \
-	for client in $(CLIENTS); do cd $${here}/$$client && $(MAKE) test; done
+	for client in $(clients); do cd $${here}/$$client && $(MAKE) test; done
 
 installtest:
 	here="$(shell pwd)"; \
-	for client in $(CLIENTS); do cd $${here}/$$client && $(MAKE) installtest; done
+	for client in $(clients); do cd $${here}/$$client && $(MAKE) installtest; done
 
 echo:
 	@echo "HOME= $(HOME)"
