@@ -83,7 +83,8 @@ test:
 	for client in $(CLIENTS); do cd $${here}/$$client && $(MAKE) test; done
 
 installtest:
-	python test.py system
+	here="$(shell pwd)"; \
+	for client in $(CLIENTS); do cd $${here}/$$client && $(MAKE) installtest; done
 
 echo:
 	@echo "HOME= $(HOME)"
