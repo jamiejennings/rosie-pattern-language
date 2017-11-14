@@ -7,6 +7,17 @@
 
 	FIXED: Issue #69 (bug in how find/findall handle tokenized sequences)
 
+	MISC:
+	Output encoder "subs" now omits items that have no subs
+	CLI failed to print compile errors occasionally
+
+	NEW: librosie client programs now in their own directories within src/librosie
+	NEW: 'make test' now takes optional CLIENTS arg, e.g. CLIENTS="c python"
+	NEW: Enhancements (incl 'loadfile') to rosie.py
+	NEW: Two sample C clients written (work in progress), one for static
+	linking with librosie.o, and one for dynamic linking with librosie.so
+
+
 2017-10-26  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-4
