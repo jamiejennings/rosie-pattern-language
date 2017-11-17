@@ -29,9 +29,11 @@ package main
 import "C"
 
 import "fmt"
-//import "encoding/json"
+import "encoding/json"
 import "os"
-//import "strconv"
+import "sort"
+import "strconv"
+//import "reflect"
 
 func structString_to_GoString(cstr C.struct_rosie_string) string {
 	return C.GoStringN(C.to_char_ptr(cstr.ptr), C.int(cstr.len))
@@ -40,6 +42,11 @@ func structString_to_GoString(cstr C.struct_rosie_string) string {
 func gostring_to_structStringptr(s string) *C.struct_rosie_string {
 	var cstr_ptr = C.rosie_new_string_ptr(C.to_uint8_ptr(C.CString(s)), C.size_t(len(s)))
 	return cstr_ptr
+}
+
+func gostring_to_structString(s string) C.struct_rosie_string {
+	var cstr = C.rosie_new_string(C.to_uint8_ptr(C.CString(s)), C.size_t(len(s)))
+	return cstr
 }
 
 func main() {
@@ -62,26 +69,58 @@ func main() {
 		os.Exit(-1)
 	}
 
-	// var a C.struct_rosie_stringArray
-	// cfg := gostring_to_structStringptr("{\"expression\":\"[:digit:]+\", \"encode\":\"json\"}")
-	// a, err = C.rosieL_configure_engine(engine, cfg)
-	// retval := structString_to_GoString(*C.string_array_ref(a,0))
-	// fmt.Printf("Return code from configure_engine: %s\n", retval)
+	var cfg string
+	var ok C.int
+	ok, err = C.rosie_config(engine, &messages)
+	if ok == 0 {
+		cfg = structString_to_GoString(messages)
+		var obj map[string]interface{}
+		err = json.Unmarshal([]byte(cfg), &obj)
+		if err != nil {
+			fmt.Println("JSON parse error:", err)
+		}
+//		fmt.Printf("Engine configuration (raw JSON string): \n%s\n", cfg)
+		keys := make([]int, 0, len(obj))
+		for key := range obj {
+			i, err := strconv.Atoi(key)
+			if err==nil {
+				keys = append(keys, i)
+			}
+		}
+		sort.Ints(keys)
+		for _,k := range keys {
+			val := obj[strconv.Itoa(k)] // this is getting silly
+//			fmt.Printf("val is %v, type is %T\n", val, val)
+			val_ := val.(map[string]interface {})
+			fmt.Printf("%s = %s (%s)\n", val_["name"], val_["value"], val_["desc"])
+		}
+	} else {
+		fmt.Printf("Return value from config was not ok!\n")
+		os.Exit(-1)
+	}
 
-	// a, err = C.rosieL_inspect_engine(engine)
-	// retval = structString_to_GoString(*C.string_array_ref(a,0))
-	// fmt.Printf("Return code from inspect_engine: %s\n", retval)
-	// fmt.Printf("Config from inspect_engine: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
-	// C.rosieL_free_stringArray(a)
+	exp := gostring_to_structString("[:digit:]+")
+	var pat C.int
+	ok, err = C.rosie_compile(engine, &exp, &pat, &messages)
+	if ok != 0 {
+		fmt.Printf("Return value from compile was not ok!\n")
+		os.Exit(-1)
+	} else {
+		fmt.Printf("Successfully compiled pattern!\n")
+	}
+	
+	var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"
+	foo_string := gostring_to_structString(foo)
 
-	// var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"
-	// foo_string := C.rosie_new_string_ptr(C.int(len(foo)), C.CString(foo))
-
-	// a, err = C.rosie_match(engine, foo_string, nil)
-	// retval = structString_to_GoString(*C.string_array_ref(a,0))
+	var match C.struct_rosie_matchresult
+	json_encoder := C.CString("json")
+	a, err := C.rosie_match(engine, pat, 1, json_encoder, &foo_string, &match)
+	fmt.Println(a, err, match)
+	fmt.Println(match.leftover, structString_to_GoString(match.data))
+	// retval = structString_to_GoString(raw_match)
 	// fmt.Printf("Return code from match: %s\n", retval)
-	// fmt.Printf("Data|false from match: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
-	// fmt.Printf("Leftover chars from match: %s\n", structString_to_GoString(*C.string_array_ref(a,2)))
+//	fmt.Printf("Data|false from match: %s\n", structString_to_GoString(*C.string_array_ref(a,1)))
+//	fmt.Printf("Leftover chars from match: %s\n", structString_to_GoString(*C.string_array_ref(a,2)))
 
 	// var r C.struct_rosie_stringArray
 	// var code, js_str string
@@ -117,9 +156,9 @@ func main() {
 	// }
 	// C.rosieL_free_stringArray(r)
 
-	fmt.Printf(" done.\n");
+	fmt.Printf("Exiting...\n");
 
-	// C.rosie_finalize(engine);
+	C.rosie_finalize(engine);
 
 
 }
