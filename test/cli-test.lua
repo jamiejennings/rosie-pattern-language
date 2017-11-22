@@ -348,5 +348,27 @@ check(msg:find("not a module"))
 check(msg:find("in test/nested-test2.rpl", 1, true))
 check(msg:find("in test/nested-test3.rpl:5:2", 1, true))
 
+cmd = rosie_cmd .. " --rpl 'import net' list net.*"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command failed")
+check(code == 0, "return code should be zero")
+msg = results[1]
+nextline = util.string_nextline(msg)
+line = nextline()
+while line do
+   if line:sub(1,4)=="path" then
+      check(line:find("green"))
+      done1 = true
+   elseif line:sub(1,4)=="port" then
+      check(line:find("red"))
+      done2 = true
+   elseif line:sub(1,5)=="ipv6 " then		    -- distinguish from ipv6_mixed
+      check(line:find("red;underline"))
+      done3 = true
+   end
+   line = nextline()
+end -- while
+check(done1 and done2 and done3)
+
 
 return test.finish()
