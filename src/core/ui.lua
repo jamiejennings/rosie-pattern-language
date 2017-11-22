@@ -96,7 +96,7 @@ function ui.to_property_table(env, filter)
       if props.type=="package" then
 	 local tbl = environment.exported_bindings(pkgenv)
 	 for k,v in pairs(tbl) do
-	    tbl[k] = ui.properties(k, v)
+	    tbl[k] = ui.properties(common.compose_id{pkgname, k}, v)
 	 end
 	 return apply_filter(tbl, localname)
       else
@@ -106,7 +106,7 @@ function ui.to_property_table(env, filter)
       if pkgname=="*" then
 	 return nil, "Wildcard for package name not supported"
       end
-      return nil, "Package '" .. pkgname .. "' not found"
+      return nil, "Package '" .. pkgname .. "' not loaded"
    end
 end
 
