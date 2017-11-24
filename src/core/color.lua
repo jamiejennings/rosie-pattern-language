@@ -129,7 +129,7 @@ function co.query(pattern_type, db)
    if c then return c, "exact"; end
    local match_pkg, match_name = common.split_id(pattern_type)
    if match_pkg then
-      c = query(db, pattern_type, "default")
+      c = query(db, match_pkg, "default")
       if c then return c, "default"; end
    end
    return query(db, nil, "global_default"), "default"

@@ -46,7 +46,7 @@ SYSCFLAGS=
 SYSLDFLAGS=
 SYSLIBS=
 
-MYCFLAGS=  -I$(HOME)/submodules/lua/include
+MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src 
 MYLDFLAGS= 
 MYLIBS= 
 MYOBJS=
@@ -63,8 +63,8 @@ lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-ALL= librosie.so
-ALLCLIENTS=python c
+ALL= librosie.so librosie.o librosie.a
+ALLCLIENTS= python c
 
 ifeq ($(CLIENTS),all)
   clients=$(ALLCLIENTS)
@@ -77,6 +77,10 @@ librosie.o: librosie.c librosie.h
 
 librosie.so: librosie.o lua_objs
 	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
+
+librosie.a: librosie.o lua_objs
+	$(AR) $@ librosie.o liblua/*.o
+	$(RANLIB) $@
 
 clean:
 	$(RM) librosie.so librosie.o librosie.a liblua/*
