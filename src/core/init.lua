@@ -279,13 +279,9 @@ populate_info()
 
 common.add_encoder("color", 3,
 		   function(m, input, start)
-		      return color.match(common.byte_to_lua(m, input), color.colormap)
+		      return color.match(common.byte_to_lua(m, input), input, color.colormap)
 		   end)
-common.add_encoder("nocolor", 3,
-		   function(m, input, start)
-		      return color.match(common.byte_to_lua(m, input), {})
-		   end)
-common.add_encoder("text", 3,
+common.add_encoder("matches", 3,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      return m.data
