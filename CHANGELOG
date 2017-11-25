@@ -1,3 +1,27 @@
+2017-11-25  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-6
+
+	FIXED: Unreported bug where the "rosie list" command did not show the
+	correct colors in the table of patterns.
+
+	CHANGED: The names of the platform-specific MAC patterns in net.rpl.
+	THIS COULD BREAK EXISTING RPL CODE, which is why it's happening now, in
+	an alpha release.
+
+	CHANGED: With implementation of Issue #68, the "text" output encoder was
+	renamed "matches" (to be analogous to "subs"), and the "nocolor" option
+	was removed because it's now redundant.
+
+	NEW: Makefile now builds librosie.a in addition to librosie.so.
+
+	NEW: Issue #68 implemented.  Color output now prints the entire input
+	line, with match segments in color.  When no color is defined for a
+	match, the default is a bold version of the default shell color.
+
+	NEW: Started working on a Go client for librosie, but it's not done.
+
+
 2017-11-14  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-5
