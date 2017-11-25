@@ -243,11 +243,11 @@ http_version = {"HTTP" "/" [:digit:]+ "." [:digit:]+}     -- e.g. "HTTP1.1"
 ---------------------------------------------------------------------------------------------------
 -- MAC addresses
 ---------------------------------------------------------------------------------------------------
-cisco = { {[:xdigit:]{4} "."}{2} [:xdigit:]{4} }
-windows = { {[:xdigit:]{2} "-"}{5} [:xdigit:]{2} }
-common = { {[:xdigit:]{2} ":"}{5} [:xdigit:]{2} }
+MAC_cisco = { {[:xdigit:]{4} "."}{2} [:xdigit:]{4} }
+MAC_windows = { {[:xdigit:]{2} "-"}{5} [:xdigit:]{2} }
+MAC_common = { {[:xdigit:]{2} ":"}{5} [:xdigit:]{2} }
 
-MAC = cisco / windows / common
+MAC = MAC_cisco / MAC_windows / MAC_common
 
 -- TODO: MAC needs tests
 
