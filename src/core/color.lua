@@ -93,7 +93,7 @@ local map = list.map; apply = list.apply; append = list.append;
 -- Build and query the color database
 ---------------------------------------------------------------------------------------------------
 
-co.colormap = {["*"] = "black";			    -- global default
+co.colormap = {["*"] = "default;bold";		    -- global default
 	       ["net.*"] = "red";
 	       ["net.host"] = "red";		    -- show host, not its constituent parts
 	       ["net.fqdn"] = "red";		    -- show fqdn, not its constituent parts
@@ -129,7 +129,7 @@ function co.query(pattern_type, db)
    if c then return c, "exact"; end
    local match_pkg, match_name = common.split_id(pattern_type)
    if match_pkg then
-      c = query(db, pattern_type, "default")
+      c = query(db, match_pkg, "default")
       if c then return c, "default"; end
    end
    return query(db, nil, "global_default"), "default"
@@ -208,11 +208,11 @@ local function color(match, db, pkgname, pkgcolor, global_default)
    local mtype = (match.type~="*") and match.type
    local c = query(db, mtype, "exact")
    -- Exact match in color database: print in color c
-   if c then return list.new{c, match.data}; end
+   if c then return list.new{c, match.s, match.e}; end
    local match_pkg, match_name = common.split_id(mtype or "")
    if not match_pkg then
       if not match.subs then
-	 return list.new{global_default, match.data}
+	 return list.new{global_default, match.s, match.e}
       else -- Defer to the subs.
 	 return apply(append,
 		      map(function(sub)
@@ -227,7 +227,7 @@ local function color(match, db, pkgname, pkgcolor, global_default)
       end
       if match_pkg==pkgname then
 	 if not match.subs then
-	    return list.new{pkgcolor, match.data}
+	    return list.new{pkgcolor, match.s, match.e}
 	 else
 	    -- Defer to the subs.
 	    return apply(append,
@@ -238,7 +238,7 @@ local function color(match, db, pkgname, pkgcolor, global_default)
 	 end
       else 
 	 if not match.subs then
-	    return list.new{global_default, match.data}
+	    return list.new{global_default, match.s, match.e}
 	 else
 	    -- Defer to the subs.
 	    return apply(append,
@@ -259,15 +259,36 @@ local function map_apply(fn, list_of_arglists)
 	      list_of_arglists)
 end
 
-function co.match(match, db)
+function co.match(match, input, db)
    if not db then db = co.colormap; end
    local global_default = query(db, nil, "global_default")
    if not global_default then
       common.note("no global default color value in color db")
    end
-   return table.concat(map_apply(co.color_string,
-				 color(match, db, nil, nil, global_default)),
-		       " ")
+   if #input==0 then return ""; end
+   local last = 0
+   local function color_span(color_spec, s, e)
+      local retval, msg, colorized
+      if s > last+1 then
+	 retval = input:sub(last+1, s-1)
+      else
+	 retval = ""
+      end
+      last = e-1
+      colorized, msg = co.color_string(color_spec, input:sub(s, last))
+      if not colorized then
+	 common.note(msg)
+	 return retval .. input:sub(s, last)
+      else
+	 return retval .. colorized
+      end
+   end
+   local tbl = map_apply(color_span,
+			 color(match, db, nil, nil, global_default))
+   if last < #input then
+      table.insert(tbl, input:sub(last+1))
+   end
+   return table.concat(tbl)
 end
 
 return co

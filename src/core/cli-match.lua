@@ -45,7 +45,7 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    if args.all then errfilename = ""; end	            -- stderr
    
    local default_encoder = (args.command=="grep") and "line" or "color"
-   local encoder = args.encoder or default_encoder
+   local encoder = ((args.encoder ~= "default") and args.encoder) or default_encoder
    
    local ok, msg = readable_file(infilename)
    local printable_infilename = (infilename ~= "") and infilename or "stdin"

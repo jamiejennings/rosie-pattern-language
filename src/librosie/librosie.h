@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
-#include "../../submodules/rosie-lpeg/src/rpeg.h"
+#include "rpeg.h"	        /* "../../submodules/rosie-lpeg/src/rpeg.h" */
 
 typedef struct rosie_string str;
 

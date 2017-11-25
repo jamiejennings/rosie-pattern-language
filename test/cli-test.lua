@@ -87,24 +87,24 @@ test.heading("Match and grep commands")
 --     "\27[31mjjennings@us.ibm.com\27[0m "}
 
 results_all_things = 
-   {
-"[30m#[0m",
-"[30m#[0m [33mThis[0m [33mis[0m [33man[0m [33mexample[0m [33mfile[0m [30m,[0m [36mhand-generated[0m [33mfor[0m [33mtesting[0m [33mrosie[0m [30m.[0m",
-"[30m#[0m [33mLast[0m [33mupdate[0m [30m:[0m [34mWed[0m [34mJun[0m [34m28[0m [1;34m16[0m [1;34m58[0m [1;34m22[0m [1;34mEDT[0m [34m2017[0m",
-"[30m#[0m",
-"[33mdomain[0m [31mabc.aus.example.com[0m",
-"[33msearch[0m [31mibm.com[0m [31mmylocaldomain.myisp.net[0m [31mexample.com[0m",
-"[33mnameserver[0m [31m192.9.201.1[0m",
-"[33mnameserver[0m [31m192.9.201.2[0m",
-"[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m",
-}
+   {"[39;1m#[0m",
+    "[39;1m#[0m [33mThis[0m [33mis[0m [33man[0m [33mexample[0m [33mfile[0m[39;1m,[0m [36mhand-generated[0m [33mfor[0m [33mtesting[0m [33mrosie[0m[39;1m.[0m",
+    "[39;1m#[0m [33mLast[0m [33mupdate[0m[39;1m:[0m [34mWed[0m [34mJun[0m [34m28[0m [1;34m16[0m:[1;34m58[0m:[1;34m22[0m [1;34mEDT[0m [34m2017[0m",
+    "[39;1m#[0m ",
+    "[33mdomain[0m [31mabc.aus.example.com[0m",
+    "[33msearch[0m [31mibm.com[0m [31mmylocaldomain.myisp.net[0m [31mexample.com[0m",
+    "[33mnameserver[0m [31m192.9.201.1[0m",
+    "[33mnameserver[0m [31m192.9.201.2[0m",
+    "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m"
+ }
 
 results_common_word =
-   {"[33mdomain[0m",
-    "[33msearch[0m",
-    "[33mnameserver[0m",
-    "[33mnameserver[0m",
-    "[33mnameserver[0m"}
+   {"[33mdomain[0m abc.aus.example.com",
+    "[33msearch[0m ibm.com mylocaldomain.myisp.net example.com",
+    "[33mnameserver[0m 192.9.201.1",
+    "[33mnameserver[0m 192.9.201.2",
+    "[33mnameserver[0m fde9:4789:96dd:03bd::1"
+ }
 
 results_common_word_grep = 
    {"# This is an example file, hand-generated for testing rosie.",
@@ -151,12 +151,12 @@ results_common_word_grep_matches_only =
     }
 
 results_word_network = 
-   { "[33mdomain[0m [31mabc.aus.example.com[0m",
-     "[33msearch[0m [31mibm.com[0m",
-     "[33mnameserver[0m [31m192.9.201.1[0m",
-     "[33mnameserver[0m [31m192.9.201.2[0m",
-     "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m",
-  }
+   {"[33mdomain[0m [31mabc.aus.example.com[0m",
+    "[33msearch[0m [31mibm.com[0m mylocaldomain.myisp.net example.com",
+    "[33mnameserver[0m [31m192.9.201.1[0m",
+    "[33mnameserver[0m [31m192.9.201.2[0m",
+    "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m"
+ }
 
 results_number_grep =
    {" 28 ",
@@ -347,6 +347,28 @@ check(msg:find("loader"))
 check(msg:find("not a module"))
 check(msg:find("in test/nested-test2.rpl", 1, true))
 check(msg:find("in test/nested-test3.rpl:5:2", 1, true))
+
+cmd = rosie_cmd .. " --rpl 'import net' list net.*"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command failed")
+check(code == 0, "return code should be zero")
+msg = results[1]
+nextline = util.string_nextline(msg)
+line = nextline()
+while line do
+   if line:sub(1,4)=="path" then
+      check(line:find("green"))
+      done1 = true
+   elseif line:sub(1,4)=="port" then
+      check(line:find("red"))
+      done2 = true
+   elseif line:sub(1,5)=="ipv6 " then		    -- distinguish from ipv6_mixed
+      check(line:find("red;underline"))
+      done3 = true
+   end
+   line = nextline()
+end -- while
+check(done1 and done2 and done3)
 
 
 return test.finish()

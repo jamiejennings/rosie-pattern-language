@@ -11,6 +11,7 @@ local math = require "math"
 local string = require "string"
 
 local lpeg = import "lpeg"
+P = assert(lpeg.P)
 local json = import "cjson"
 
 local util = {}
