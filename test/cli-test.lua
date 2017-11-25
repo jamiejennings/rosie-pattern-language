@@ -87,15 +87,15 @@ test.heading("Match and grep commands")
 --     "\27[31mjjennings@us.ibm.com\27[0m "}
 
 results_all_things = 
-   {"[30m#[0m",
-    "[30m#[0m [33mThis[0m [33mis[0m [33man[0m [33mexample[0m [33mfile[0m[30m,[0m [36mhand-generated[0m [33mfor[0m [33mtesting[0m [33mrosie[0m[30m.[0m",
-    "[30m#[0m [33mLast[0m [33mupdate[0m[30m:[0m [34mWed[0m [34mJun[0m [34m28[0m [1;34m16[0m:[1;34m58[0m:[1;34m22[0m [1;34mEDT[0m [34m2017[0m",
-    "[30m#[0m ",
+   {"[39;1m#[0m",
+    "[39;1m#[0m [33mThis[0m [33mis[0m [33man[0m [33mexample[0m [33mfile[0m[39;1m,[0m [36mhand-generated[0m [33mfor[0m [33mtesting[0m [33mrosie[0m[39;1m.[0m",
+    "[39;1m#[0m [33mLast[0m [33mupdate[0m[39;1m:[0m [34mWed[0m [34mJun[0m [34m28[0m [1;34m16[0m:[1;34m58[0m:[1;34m22[0m [1;34mEDT[0m [34m2017[0m",
+    "[39;1m#[0m ",
     "[33mdomain[0m [31mabc.aus.example.com[0m",
     "[33msearch[0m [31mibm.com[0m [31mmylocaldomain.myisp.net[0m [31mexample.com[0m",
     "[33mnameserver[0m [31m192.9.201.1[0m",
     "[33mnameserver[0m [31m192.9.201.2[0m",
-    "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m",
+    "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m"
  }
 
 results_common_word =

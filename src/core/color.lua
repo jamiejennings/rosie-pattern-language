@@ -93,7 +93,7 @@ local map = list.map; apply = list.apply; append = list.append;
 -- Build and query the color database
 ---------------------------------------------------------------------------------------------------
 
-co.colormap = {["*"] = "black";			    -- global default
+co.colormap = {["*"] = "default;bold";		    -- global default
 	       ["net.*"] = "red";
 	       ["net.host"] = "red";		    -- show host, not its constituent parts
 	       ["net.fqdn"] = "red";		    -- show fqdn, not its constituent parts
