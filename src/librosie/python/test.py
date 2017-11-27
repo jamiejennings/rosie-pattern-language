@@ -98,12 +98,11 @@ class RosieConfigTest(unittest.TestCase):
         a = self.engine.config()
         assert(a)
         cfg = json.loads(a)
-        print "NOTE: Rosie loaded from", cfg['ROSIE_HOME']
-        for k in cfg.keys():
-            if type(cfg[k]) is dict:
-                assert(cfg[k]['name'])
-                assert(cfg[k]['desc'])
-                if not cfg[k]['value']: print "NOTE: no value for config key", cfg[k]['name']
+        for entry in cfg:
+            assert(type(entry) is dict)
+            assert(entry['name'])
+            assert(entry['desc'])
+            if not entry['value']: print "NOTE: no value for config key", entry['name']
                 
 class RosieMatchTest(unittest.TestCase):
 
