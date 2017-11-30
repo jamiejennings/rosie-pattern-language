@@ -505,6 +505,8 @@ int rosie_compile(void *L, str *expression, int *pat, str *errors) {
   int t;
   str *temp_rs;
 
+  LOGf("compile(): L = %p\n", L);
+
   if (!pat) {
     LOG("null pointer passed to compile for pattern argument");
     lua_settop(L, 0);
@@ -529,14 +531,25 @@ int rosie_compile(void *L, str *expression, int *pat, str *errors) {
   lua_replace(L, -2); /* overwrite engine table with compile function */
   get_registry(engine_key);
 
+//  LOGf("compile(): About to push expression: %s (len=%d)\n", (char *)expression->ptr, expression->len);
+
   lua_pushlstring(L, (const char *)expression->ptr, expression->len);
+
+  LOG("compile(): about to pcall\n");
+  LOGstack(L);
+
   t = lua_pcall(L, 2, 2, 0);
+
+  LOGf("compile(): pcall return value is %d\n", t);
+
   if (t != LUA_OK) {
     LOG("compile() failed");
     LOGstack(L);
     lua_settop(L, 0);
     return ERR_ENGINE_CALL_FAILED;
   }
+
+//  LOG("compile(): compile succeeded with LUA_OK status\n");
 
   if ( lua_isboolean(L, -2) ) {
     *pat = 0;

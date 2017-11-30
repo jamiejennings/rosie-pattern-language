@@ -13,11 +13,11 @@
 //   gcc -o dtest dtest.o librosie.o liblua/*.o
 
 /* Compile with DEBUG=1 to enable logging */
-#ifdef DEBUG
+//#ifdef DEBUG
 #define LOGGING 1
-#else
-#define LOGGING 0
-#endif
+//#else
+//#define LOGGING 0
+//#endif
 
 #define LOG(msg) \
      do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): %s", __FILE__, \
@@ -43,7 +43,12 @@ int main() {
 ");
 
   str errors;
+
+  printf("ABOUT TO CALL rosie_new\n"); fflush(NULL);
+
   void *engine = rosie_new(&errors);
+  printf("AFTER CALL to rosie_new\n"); fflush(NULL);
+
   if (engine == NULL) {
     LOG("rosie_new failed\n");
     return FALSE;
@@ -56,6 +61,8 @@ int main() {
   pkgname = STR("all");
   errors = STR("");
   err = rosie_import(engine, &ok, &pkgname, NULL, &errors);
+  printf("AFTER CALL to rosie_import\n"); fflush(NULL);
+
   if (err) {
     LOG("rosie call failed: import library \"all\"\n");
     goto quit;

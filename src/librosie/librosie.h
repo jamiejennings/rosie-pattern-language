@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
-#include "rpeg.h"	        /* "../../submodules/rosie-lpeg/src/rpeg.h" */
+#include "rpeg.h"	/* "../../submodules/rosie-lpeg/src/rpeg.h" */
 
 typedef struct rosie_string str;
 
@@ -40,6 +40,10 @@ typedef struct rosie_matchresult {
      int tmatch;
 } match;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 str rosie_new_string(byte_ptr msg, size_t len);
 str *rosie_new_string_ptr(byte_ptr msg, size_t len);
 void rosie_free_string(str s);
@@ -47,7 +51,7 @@ void rosie_free_string_ptr(str *s);
 
 void *rosie_new(str *errors);
 void rosie_finalize(void *L);
-int rosie_setlibpath(void *L, char *newpath);
+int rosie_setlibpath_engine(void *L, char *newpath);
 int rosie_set_alloc_limit(void *L, int newlimit);
 int rosie_config(void *L, str *retvals);
 int rosie_compile(void *L, str *expression, int *pat, str *errors);
@@ -61,6 +65,10 @@ int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int 
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
 
+#ifdef __cplusplus
+}
+#endif
+     
 /*
 
 Administrative:

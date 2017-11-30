@@ -28,13 +28,16 @@ PLATFORMS = linux macosx windows
 
 default: $(PLATFORM)
 
-ifeq ($(PLATFORM), macosx)
-CC= clang
-else
-CC= gcc
-endif
+# ifeq ($(PLATFORM), macosx)
+# CC= clang
+# else
+# CC= gcc
+# endif
 
-CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
+#CC= g++
+CC= gcc
+
+CFLAGS= -fpermissive -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
@@ -74,7 +77,8 @@ static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
 static: static.o librosie.o lua_objs
-	$(CC) -o $@ static.o librosie.o liblua/*.o
+#	$(CC) -o $@ static.o librosie.o liblua/*.o
+	g++ -o $@ static.o librosie.o liblua/*.o
 
 librosie.o: ../librosie.o
 	cp ../librosie.o .

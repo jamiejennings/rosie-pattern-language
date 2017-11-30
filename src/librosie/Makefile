@@ -28,13 +28,14 @@ PLATFORMS = linux macosx windows
 
 default: $(PLATFORM)
 
-ifeq ($(PLATFORM), macosx)
-CC= clang
-else
-CC= gcc
-endif
+# ifeq ($(PLATFORM), macosx)
+# CC= clang
+# else
+# CC= gcc
+# endif
+CC= g++
 
-CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
+CFLAGS= -fpermissive -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
@@ -63,7 +64,7 @@ lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-ALL= librosie.so librosie.o librosie.a
+ALL= librosie.so librosie.a
 ALLCLIENTS= python c
 
 ifeq ($(CLIENTS),all)
@@ -122,4 +123,3 @@ windows:
 ## Targets that do not create files
 .PHONY: default o a clean echo none
 
-librosie.o: librosie.c librosie.h 
