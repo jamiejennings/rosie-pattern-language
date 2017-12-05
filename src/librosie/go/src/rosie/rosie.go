@@ -19,6 +19,7 @@ package rosie
 // #include <dlfcn.h>
 // #include <libgen.h>
 // #include "librosie.h"
+//
 // char *to_char_ptr(uint8_t *buf) {
 //   return (char *) buf;
 // }
@@ -30,12 +31,12 @@ package rosie
 // #cgo CFLAGS: -fpermissive -I./include
 import "C"
 
-import "unsafe"
+//import "unsafe"
 import "errors"
 import "fmt"
 import "runtime"
 import "encoding/json"
-import "os"
+//import "os"
 //import "sort"
 //import "strconv"
 
@@ -58,22 +59,16 @@ func rosieStringPtr(s string) *C.struct_rosie_string {
 }
 
 
-type Engine struct {
-	ptr unsafe.Pointer
-}
+// type Engine struct {
+// 	ptr unsafe.Pointer
+// }
+type Engine *C.struct_rosie_engine
 
 // New constructs a fresh rosie pattern engine
-func New(name string) (en *Engine, err error) {
+func New(name string) (en Engine, err error) {
 	var messages C.struct_rosie_string
-	
-	en = &Engine{}
-	en_ptr, err := C.rosie_new(&messages)
-	if en_ptr == nil {
-		fmt.Println("ROSIE FN error: ", goString(messages))
-		os.Exit(-1)
-	}
-	en.ptr = en_ptr
-	if en.ptr == nil {
+	en, err = C.rosie_new(&messages)
+	if en == nil {
 		var printable_message string
 		fmt.Printf("Return value from initialize was NULL!\n")
 		fmt.Printf("Err field returned by initialize was: %v\n", err)
@@ -89,21 +84,21 @@ func New(name string) (en *Engine, err error) {
 }
 
 
-func finalizeEngine(en *Engine) {
+func finalizeEngine(en Engine) {
 	fmt.Println("Finalizing engine ", en)
-	C.rosie_finalize(en.ptr)
+	C.rosie_finalize(en)
 }
 		
 
 type Configuration [] map[string] string
 
 
-func (en *Engine) Config(cfg *Configuration) error {
-	if en.ptr == nil {
+func Config(en Engine, cfg *Configuration) error {
+	if en == nil {
 		return errors.New("defunct engine")
 	}
 	var data C.struct_rosie_string
- 	ok, err := C.rosie_config(en.ptr, &data)
+ 	ok, err := C.rosie_config(en, &data)
  	if ok == 0 {
  		cfgString := goString(data)
  		err = json.Unmarshal([]byte(cfgString), &cfg)
@@ -118,7 +113,7 @@ func (en *Engine) Config(cfg *Configuration) error {
 
 //type Pattern C.int
 
-func (en *Engine) Compile(exp string) (pat int, err error) {
+func Compile(en Engine, exp string) (pat int, err error) {
 
 	var foo = "foo"
  	var CexpPtr = rosieStringPtr(exp)
@@ -127,10 +122,10 @@ func (en *Engine) Compile(exp string) (pat int, err error) {
 //	var CpatPtr = &Cpat
 	var CpatPtr = C.new_int()
 
-//	fmt.Println(en.ptr, goString(Cexp), Cpat, goString(Cdata))
-	fmt.Println("Before ", en.ptr, CexpPtr, CpatPtr, CdataPtr)
- 	ok := C.rosie_compile(en.ptr, CexpPtr, CpatPtr, CdataPtr)
-	fmt.Println("After  ", en.ptr, CexpPtr, CpatPtr, CdataPtr)
+//	fmt.Println(en, goString(Cexp), Cpat, goString(Cdata))
+	fmt.Println("Before ", en, CexpPtr, CpatPtr, CdataPtr)
+ 	ok := C.rosie_compile(en, CexpPtr, CpatPtr, CdataPtr)
+	fmt.Println("After  ", en, CexpPtr, CpatPtr, CdataPtr)
 	runtime.KeepAlive(en)
 	runtime.KeepAlive(CexpPtr)
 	runtime.KeepAlive(CpatPtr)
