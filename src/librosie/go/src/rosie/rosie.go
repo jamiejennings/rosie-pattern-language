@@ -18,7 +18,7 @@ package rosie
 // #include <stdarg.h>
 // #include <dlfcn.h>
 // #include <libgen.h>
-// #include "librosiewrapper.h"
+// #include "librosie.h"
 // char *to_char_ptr(uint8_t *buf) {
 //   return (char *) buf;
 // }
@@ -35,7 +35,7 @@ import "errors"
 import "fmt"
 import "runtime"
 import "encoding/json"
-//import "os"
+import "os"
 //import "sort"
 //import "strconv"
 
@@ -67,13 +67,12 @@ func New(name string) (en *Engine, err error) {
 	var messages C.struct_rosie_string
 	
 	en = &Engine{}
-	retval := C.wrap_rosie_new(&messages)
-	if retval.strErr != nil {
-//		defer C.free(unsafe.Pointer(retval.strErr))
-		fmt.Println("WRAPPED ROSIE FN error: ", C.GoString(retval.strErr))
-		fmt.Println("retval.handle is: ", retval.handle)
-	} 
-	en.ptr = retval.handle
+	en_ptr, err := C.rosie_new(&messages)
+	if en_ptr == nil {
+		fmt.Println("ROSIE FN error: ", goString(messages))
+		os.Exit(-1)
+	}
+	en.ptr = en_ptr
 	if en.ptr == nil {
 		var printable_message string
 		fmt.Printf("Return value from initialize was NULL!\n")

@@ -12,12 +12,8 @@ package main
 import "rosie"
 
 import "fmt"
-// import "encoding/json"
 import "os"
 import "runtime"
-import "time"
-//import "sort"
-//import "strconv"
 
 func main() {
 	fmt.Printf("Initializing Rosie... ")
@@ -28,32 +24,28 @@ func main() {
 		os.Exit(-1)
 	}
 	fmt.Printf("Engine is %v\n", engine)
-	// engine, err = rosie.New("bye")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	os.Exit(-1)
-	// }
-	// fmt.Printf("And another engine: %v\n", engine)
-//	runtime.GC()
-	time.Sleep(1 * time.Second)
+	engine, err = rosie.New("bye")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+	fmt.Printf("And another engine: %v\n", engine)
 	runtime.GC()
-//	time.Sleep(1 * time.Second)
+	runtime.GC()
 	fmt.Printf("Engine is %v\n", engine)
 
-	// var cfg rosie.Configuration
- 	// err = engine.Config(&cfg)
-	// if err == nil {
-	// 	for _, entry := range cfg {
-	// 		fmt.Printf("%s = %s (%s)\n", entry["name"], entry["value"], entry["desc"])
-	// 	}
- 	// } else {
- 	// 	fmt.Printf("Return value from config was: %v\n", err)
- 	// 	os.Exit(-1)
- 	// }
+	var cfg rosie.Configuration
+ 	err = engine.Config(&cfg)
+	if err == nil {
+		for _, entry := range cfg {
+			fmt.Printf("%s = %s (%s)\n", entry["name"], entry["value"], entry["desc"])
+		}
+ 	} else {
+ 		fmt.Printf("Return value from config was: %v\n", err)
+ 		os.Exit(-1)
+ 	}
 
-//	time.Sleep(1 * time.Second)
 	runtime.GC()
-	time.Sleep(1 * time.Second)
 	
  	exp := "[:digit:]+"
  	pat, err := engine.Compile(exp)
