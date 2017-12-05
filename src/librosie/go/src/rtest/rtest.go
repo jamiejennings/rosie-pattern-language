@@ -16,6 +16,8 @@ import "os"
 import "runtime"
 
 func main() {
+	runtime.LockOSThread()
+	
 	fmt.Printf("Initializing Rosie... ")
 	
 	engine, err := rosie.New("hi")
