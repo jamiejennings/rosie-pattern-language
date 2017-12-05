@@ -180,6 +180,9 @@ local function loadfile(e, filename)
       return false, nil, {err}, actual_path;
    end
    local ok, pkgname, messages = load(e, source, actual_path)
+   for _,msg in ipairs(messages) do
+      if msg.ast then msg.ast=nil; end
+   end
    return ok, pkgname, messages, actual_path
 end
 
