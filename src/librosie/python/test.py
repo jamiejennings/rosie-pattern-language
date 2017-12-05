@@ -226,6 +226,24 @@ class RosieImportTest(unittest.TestCase):
         assert(errs != None)
 
 
+class RosieLoadfileTest(unittest.TestCase):
+
+    engine = None
+    
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+        assert(self.engine)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        ok, pkgname, errs = self.engine.loadfile('test.rpl')
+        assert(ok)
+        assert(pkgname == 'test')
+        assert(errs == None)
+        
+
 class RosieTraceTest(unittest.TestCase):
 
     engine = None
