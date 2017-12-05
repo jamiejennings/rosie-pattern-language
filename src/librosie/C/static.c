@@ -104,6 +104,51 @@ int main() {
     printf("match data is: %.*s\n", m.data.len, m.data.ptr);
   }
 
+#define SYSLOG_RPL "/Users/jjennings/Dev/private/rosie_perf_test/syslog.rpl"
+  printf("Loading %s... ", SYSLOG_RPL);
+  str fn = STR(SYSLOG_RPL);
+  err = rosie_loadfile(engine, &ok, &fn, &pkgname, &errors);
+  if (err) {
+       LOG("rosie call failed: loadfile");
+       goto quit;
+  }
+  if (!ok) {
+       printf("\nLoadfile failed\n");
+  } else {
+       printf("done.\n");
+  }
+  printf("Message returned: %s\n", errors.ptr);
+	    
+
+  expression = STR("syslog");
+  err = rosie_compile(engine, &expression, &pat, &errors);
+  if (err) {
+    LOG("rosie call failed: compile expression\n");
+    goto quit;
+  }
+  if (!pat) {
+    printf("failed to compile expression; error returned was:\n");
+    if (errors.ptr != NULL) {
+      printf("%s\n", errors.ptr);
+    }
+    else {
+      printf("no error message given\n");
+    }
+    goto quit;
+  }
+
+#define DATAFILE "/Users/jjennings/Data/syslog2M.log"
+//  str datafn = STR(DATAFILE);
+//  str empty = STR("");
+  int cin, cout, cerr;
+  err = rosie_matchfile(engine, pat, "json", 0, DATAFILE, "", "", &cin, &cout, &cerr, &errors);
+  if (err) {
+    LOG("rosie call failed: matchfile");
+    goto quit;
+  }
+
+
+
  quit:
   rosie_finalize(engine);
   
