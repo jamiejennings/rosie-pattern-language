@@ -28,14 +28,13 @@ PLATFORMS = linux macosx windows
 
 default: $(PLATFORM)
 
-# ifeq ($(PLATFORM), macosx)
-# CC= clang
-# else
-# CC= gcc
-# endif
-CC= g++
+ifeq ($(PLATFORM), macosx)
+CC= clang
+else
+CC= gcc
+endif
 
-CFLAGS= -fpermissive -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
+CFLAGS= -fpermissive -O2 -Wall -Wextra -pthread -DMULTIPLE_THREADS -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 

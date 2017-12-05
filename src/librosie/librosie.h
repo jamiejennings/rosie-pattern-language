@@ -30,6 +30,32 @@
 #include <sys/param.h>		/* MAXPATHLEN */
 #include "rpeg.h"	/* "../../submodules/rosie-lpeg/src/rpeg.h" */
 
+#include <pthread.h>
+
+
+
+#define ACQUIRE_ENGINE_LOCK(e) do {				    \
+    int r = pthread_mutex_lock(&((e)->lock));			    \
+    if (r) {                                                        \
+        fprintf(stderr, "pthread_mutex_lock failed with %d\n", r);  \
+        abort();                                                    \
+    }                                                               \
+} while (0)
+
+#define RELEASE_ENGINE_LOCK(e) do {				    \
+    int r = pthread_mutex_unlock(&((e)->lock));			    \
+    if (r) {                                                        \
+        fprintf(stderr, "pthread_mutex_unlock failed with %d\n", r);\
+        abort();                                                    \
+    }                                                               \
+} while (0)
+
+
+typedef struct rosie_engine {
+     lua_State *L;
+     pthread_mutex_t lock;
+} Engine;
+
 typedef struct rosie_string str;
 
 typedef struct rosie_matchresult {
@@ -40,6 +66,7 @@ typedef struct rosie_matchresult {
      int tmatch;
 } match;
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -49,21 +76,21 @@ str *rosie_new_string_ptr(byte_ptr msg, size_t len);
 void rosie_free_string(str s);
 void rosie_free_string_ptr(str *s);
 
-void *rosie_new(str *errors);
-void rosie_finalize(void *L);
-int rosie_setlibpath_engine(void *L, char *newpath);
-int rosie_set_alloc_limit(void *L, int newlimit);
-int rosie_config(void *L, str *retvals);
-int rosie_compile(void *L, str *expression, int *pat, str *errors);
-int rosie_free_rplx(void *L, int pat);
-int rosie_match(void *L, int pat, int start, char *encoder, str *input, match *match);
-int rosie_matchfile(void *L, int pat, char *encoder, int wholefileflag,
+Engine *rosie_new(str *errors);
+void rosie_finalize(Engine *e);
+int rosie_setlibpath_engine(Engine *e, char *newpath);
+int rosie_set_alloc_limit(Engine *e, int newlimit);
+int rosie_config(Engine *e, str *retvals);
+int rosie_compile(Engine *e, str *expression, int *pat, str *errors);
+int rosie_free_rplx(Engine *e, int pat);
+int rosie_match(Engine *e, int pat, int start, char *encoder, str *input, match *match);
+int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 		    char *infilename, char *outfilename, char *errfilename,
 		    int *cin, int *cout, int *cerr,
 		    str *err);
-int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
-int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
-int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
+int rosie_trace(Engine *e, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
+int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *errors);
+int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *errors);
 
 #ifdef __cplusplus
 }
