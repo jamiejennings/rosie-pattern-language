@@ -27,8 +27,8 @@
 #define ERR_NO_FILE 3		/* no such file or directory */
 
 #include <stdint.h>
-#include <sys/param.h>		/* MAXPATHLEN */
-#include "rpeg.h"	        /* "../../submodules/rosie-lpeg/src/rpeg.h" */
+#include <sys/param.h>		/* for MAXPATHLEN */
+#include "rpeg.h"
 
 typedef struct rosie_string str;
 

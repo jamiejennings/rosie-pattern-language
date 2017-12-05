@@ -46,7 +46,7 @@ SYSCFLAGS=
 SYSLDFLAGS=
 SYSLIBS=
 
-MYCFLAGS=  -I$(HOME)/submodules/lua/include
+MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src
 MYLDFLAGS= 
 MYLIBS= 
 MYOBJS=
