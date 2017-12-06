@@ -166,7 +166,6 @@ local function get_file_contents(e, filename, nosearch)
   end
 end
 
--- FUTURE: re-work the return values?
 local function loadfile(e, filename)
    if type(filename)~="string" then
       e.engine_error(e, "file name argument not a string: " .. tostring(filename))
@@ -177,13 +176,13 @@ local function loadfile(e, filename)
 					message=errmsg,
 					ast=common.source.new{origin=
 							      common.loadrequest.new{filename=actual_path}}}
-      return false, nil, {err}, actual_path;
+      return false, nil, {err}
    end
    local ok, pkgname, messages = load(e, source, actual_path)
    for _,msg in ipairs(messages) do
       if msg.ast then msg.ast=nil; end
    end
-   return ok, pkgname, messages, actual_path
+   return ok, pkgname, messages
 end
 
 ----------------------------------------------------------------------------------------

@@ -63,7 +63,7 @@ int rosie_matchfile(void *L, int pat, char *encoder, int wholefileflag,
 		    str *err);
 int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
-int rosie_loadfile(void *L, int *ok, str *fn, str *pkgname, str *errors);
+int rosie_loadfile(void *e, int *ok, str *fn, str *pkgname, str *errors);
 int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
 
 """)
@@ -179,11 +179,6 @@ class engine ():
         if errs == '{}': errs = None
         pkgname = read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
-
-    # def loadfile(self, fn):
-    #     f = open(fn, 'r')
-    #     rplsource = f.read()
-    #     return self.load(rplsource)
 
     def loadfile(self, fn):
         Cerrs = new_cstr()

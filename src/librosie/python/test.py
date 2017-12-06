@@ -239,6 +239,7 @@ class RosieLoadfileTest(unittest.TestCase):
 
     def test(self):
         ok, pkgname, errs = self.engine.loadfile('test.rpl')
+        print ok, pkgname, errs
         assert(ok)
         assert(pkgname == 'test')
         assert(errs == None)

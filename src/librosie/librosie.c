@@ -902,6 +902,59 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *errors) {
 }
 
 /* N.B. Client must free 'errors' */
+int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *errors) {
+  int t;
+  size_t temp_len;
+  unsigned char *temp_str;
+  str *temp_rs;
+  lua_State *L = e->L;
+  ACQUIRE_ENGINE_LOCK(e);
+  get_registry(engine_key);
+  t = lua_getfield(L, -1, "loadfile");
+  CHECK_TYPE("engine.loadfile()", t, LUA_TFUNCTION);
+  lua_pushvalue(L, -2);		/* push engine object again */
+  lua_pushlstring(L, (const char *)fn->ptr, fn->len);
+
+  LOGf("engine.loadfile(): about to load %s\n", fn->ptr);
+  t = lua_pcall(L, 2, 3, 0); 
+  if (t != LUA_OK) { 
+    display("engine.loadfile() failed"); 
+    /* Details will likely not be helpful to the user */
+    LOGstack(L);
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return ERR_ENGINE_CALL_FAILED; 
+  } 
+
+  if (lua_isboolean(L, -3)) {
+    *ok = lua_toboolean(L, -3);
+    LOGf("engine.loadfile() %s\n", ok ? "succeeded" : "failed");
+  }
+  
+  if (lua_isstring(L, -2)) {
+    temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
+    *pkgname = rosie_new_string(temp_str, temp_len);
+  }
+  else {
+    pkgname = NULL;
+  }
+  
+  temp_rs = to_json_string(L, -1);
+    if (temp_rs == NULL) {
+      LOG("in load(), could not convert error information to json\n");
+      lua_settop(L, 0);
+      RELEASE_ENGINE_LOCK(e);
+      return ERR_ENGINE_CALL_FAILED;
+    }
+  errors->len = temp_rs->len;
+  errors->ptr = temp_rs->ptr;
+
+  lua_settop(L, 0);
+  RELEASE_ENGINE_LOCK(e);
+  return SUCCESS;
+}
+
+/* N.B. Client must free 'errors' */
 int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *errors) {
   int t;
   size_t temp_len;

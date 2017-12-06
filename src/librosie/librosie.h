@@ -90,6 +90,7 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 		    str *err);
 int rosie_trace(Engine *e, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *errors);
+int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *errors);
 int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *errors);
 
 #ifdef __cplusplus
