@@ -37,7 +37,7 @@ func main() {
 	fmt.Printf("Engine is %v\n", engine)
 
 	var cfg rosie.Configuration
- 	err = rosie.Config(engine, &cfg)
+ 	err = engine.Config(&cfg)
 	if err == nil {
 		for _, entry := range cfg {
 			fmt.Printf("%s = %s (%s)\n", entry["name"], entry["value"], entry["desc"])
@@ -50,7 +50,7 @@ func main() {
 	runtime.GC()
 	
  	exp := "[:digit:]+"
- 	pat, err := rosie.Compile(engine, exp)
+ 	pat, err := engine.Compile(exp)
 
  	if err != nil {
  		fmt.Println(pat, err)

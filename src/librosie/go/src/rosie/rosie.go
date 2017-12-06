@@ -59,16 +59,16 @@ func rosieStringPtr(s string) *C.struct_rosie_string {
 }
 
 
-// type Engine struct {
-// 	ptr unsafe.Pointer
-// }
-type Engine *C.struct_rosie_engine
+type Engine struct {
+ 	ptr *C.struct_rosie_engine
+}
 
 // New constructs a fresh rosie pattern engine
-func New(name string) (en Engine, err error) {
+func New(name string) (en *Engine, err error) {
 	var messages C.struct_rosie_string
-	en, err = C.rosie_new(&messages)
-	if en == nil {
+	var en_ptr *C.struct_rosie_engine
+	en_ptr, err = C.rosie_new(&messages)
+	if en_ptr == nil {
 		var printable_message string
 		fmt.Printf("Return value from initialize was NULL!\n")
 		fmt.Printf("Err field returned by initialize was: %v\n", err)
@@ -79,26 +79,24 @@ func New(name string) (en Engine, err error) {
 		}
 		return nil, errors.New("rosie: " + printable_message)
 	}
-//	runtime.SetFinalizer(en, finalizeEngine)
-	return en, nil
+	engine := Engine{en_ptr}
+	runtime.SetFinalizer(&engine, finalizeEngine)
+	return &engine, nil
 }
 
 
-func finalizeEngine(en Engine) {
+func finalizeEngine(en *Engine) {
 	fmt.Println("Finalizing engine ", en)
-	C.rosie_finalize(en)
+	C.rosie_finalize(en.ptr)
 }
 		
 
 type Configuration [] map[string] string
 
 
-func Config(en Engine, cfg *Configuration) error {
-	if en == nil {
-		return errors.New("defunct engine")
-	}
+func (en *Engine) Config(cfg *Configuration) error {
 	var data C.struct_rosie_string
- 	ok, err := C.rosie_config(en, &data)
+ 	ok, err := C.rosie_config(en.ptr, &data)
  	if ok == 0 {
  		cfgString := goString(data)
  		err = json.Unmarshal([]byte(cfgString), &cfg)
@@ -113,8 +111,7 @@ func Config(en Engine, cfg *Configuration) error {
 
 //type Pattern C.int
 
-func Compile(en Engine, exp string) (pat int, err error) {
-
+func (en *Engine) Compile(exp string) (pat int, err error) {
 	var foo = "foo"
  	var CexpPtr = rosieStringPtr(exp)
 	var CdataPtr = rosieStringPtr(foo)
@@ -123,14 +120,7 @@ func Compile(en Engine, exp string) (pat int, err error) {
 	var CpatPtr = C.new_int()
 
 //	fmt.Println(en, goString(Cexp), Cpat, goString(Cdata))
-	fmt.Println("Before ", en, CexpPtr, CpatPtr, CdataPtr)
- 	ok := C.rosie_compile(en, CexpPtr, CpatPtr, CdataPtr)
-	fmt.Println("After  ", en, CexpPtr, CpatPtr, CdataPtr)
-	runtime.KeepAlive(en)
-	runtime.KeepAlive(CexpPtr)
-	runtime.KeepAlive(CpatPtr)
-	runtime.KeepAlive(CdataPtr)
-	runtime.KeepAlive(foo)
+ 	ok := C.rosie_compile(en.ptr, CexpPtr, CpatPtr, CdataPtr)
  	if ok != 0 {
 		// TODO: return data as well, which contains warnings and errors
 		return pat, err //errors.New("compile failed")
