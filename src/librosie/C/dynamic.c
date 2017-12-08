@@ -98,42 +98,47 @@ static int bind(void *lib){
 
 
 int main() {
+  int exitStatus = 0;
+
   init(LIBROSIE);
 
-  bind(librosie);
+  if (!bind(librosie)) return -1;
 
   str errors;
   void *engine = (*fp_rosie_new)(&errors);
   if (engine == NULL) {
     LOG("rosie_new failed\n");
-    return FALSE;
+    return -2;
   }
   LOG("obtained rosie matching engine\n");
 
   int err;
   int ok;
   str pkgname, as;
-  pkgname = (*fp_rosie_new_string)("all", 3);
-  errors = (*fp_rosie_new_string)("", 0);
+  pkgname = (*fp_rosie_new_string)((byte_ptr)"all", 3);
+  errors = (*fp_rosie_new_string)((byte_ptr)"", 0);
   printf("pkgname = %s; as = %s; errors = %s\n", pkgname.ptr, as.ptr, errors.ptr);
   LOG("allocated strs\n");
   err = (*fp_rosie_import)(engine, &ok, &pkgname, NULL, &errors);
   if (err) {
     LOG("rosie call failed: import library \"all\"\n");
+    exitStatus = -3;
     goto quit;
   }
   if (!ok) {
     printf("failed to import the \"all\" library with error code %d\n", ok);
+    exitStatus = -4;
     goto quit;
   }
 
-#define STR(literal) (*fp_rosie_new_string)((literal), strlen((literal)));
+#define STR(literal) (*fp_rosie_new_string)((byte_ptr)(literal), strlen((literal)));
 
   int pat;
   str expression = STR("all.things");
   err = (*fp_rosie_compile)(engine, &expression, &pat, &errors);
   if (err) {
     LOG("rosie call failed: compile expression\n");
+    exitStatus = -5;
     goto quit;
   }
   if (!pat) {
@@ -144,6 +149,7 @@ int main() {
     else {
       printf("no error message given\n");
     }
+    exitStatus = -6;
     goto quit;
   }
 
@@ -152,17 +158,19 @@ int main() {
   err = (*fp_rosie_match)(engine, pat, 1, "json", &input, &m);
   if (err) {
     LOG("rosie call failed: match");
+    exitStatus = -7;
     goto quit;
   }
   if (!m.data.ptr) {
     printf("match failed\n");
+    exitStatus = -8;
+    goto quit;
   }
   else {
     printf("match data is: %.*s\n", m.data.len, m.data.ptr);
   }
-    
 
  quit:
   (*fp_rosie_finalize)(engine);
-  
+  return exitStatus;
 }
