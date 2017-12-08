@@ -56,6 +56,7 @@ local repl_patterns = [==[
 
 local repl_engine = rosie.engine.new("repl")
 repl.repl_engine = repl_engine
+repl_engine:set_libpath(ROSIE_LIBPATH)
 assert(repl_engine:load("import rosie/rpl_1_1 as rpl, word"))
 assert(repl_engine:load(repl_patterns))
 input_rplx = repl_engine:compile("input")
