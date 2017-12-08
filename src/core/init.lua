@@ -112,7 +112,11 @@ end
 
 local function load_all()
    lpeg = import("lpeg")
-   cjson = import("cjson.safe")
+
+   -- Each Lua state gets its own cjson instance
+   cjson_lib = import("cjson.safe")
+   cjson = cjson_lib.new()
+   package.loaded.cjson = cjson
 
    -- These MUST have a partial order so that dependencies can be loaded first
    recordtype = import("recordtype")
