@@ -164,7 +164,7 @@ static void display (const char *msg) {
 }
 
 static int encoder_name_to_code(const char *name) {
-  r_encoder_t *entry = r_encoders;
+  const r_encoder_t *entry = r_encoders;
   while (entry->name) {
     if (!strncmp(name, entry->name, MAX_ENCODER_NAME_LENGTH)) return entry->code;
     entry++;
@@ -355,6 +355,31 @@ str *to_json_string(lua_State *L, int pos) {
      return rosie_new_string_ptr(str, len);
 }
 
+static int strip_violation_messages(lua_State *L) {
+  int t;
+  
+  lua_getglobal(L, "rosie");
+  t = lua_getfield(L, -1, "env");
+  CHECK_TYPE("rosie.env", t, LUA_TTABLE);
+  t = lua_getfield(L, -1, "violation");
+  CHECK_TYPE("rosie.env.violation", t, LUA_TTABLE);
+  t = lua_getfield(L, -1, "strip_each");
+  CHECK_TYPE("rosie.env.violation.strip_each", t, LUA_TFUNCTION);
+  //  set_registry(json_encoder_key);
+
+  LOGstack(L);
+  /* strip_each(), violation[], env[], rosie[], errors[], pkgname, ok, engine */
+  lua_pushvalue(L, -5);		/* push copy of errors table */
+  t = lua_pcall(L, 1, 1, 0);	/* violation.strip_each() */
+  if (t != LUA_OK) { 
+    LOG("violation.strip_each() failed"); 
+    LOGstack(L);
+    return ERR_ENGINE_CALL_FAILED; 
+  } 
+  return LUA_OK;
+}
+
+
 static Engine *newengine(str *errors) {
   int t;
   Engine *e = malloc(sizeof(Engine));
@@ -418,7 +443,7 @@ static Engine *newengine(str *errors) {
   rosie_set_alloc_limit(e, INITIAL_ALLOC_LIMIT_MB);
 
   lua_settop(L, 0);
-  LOG("Engine created\n");
+  LOGf("Engine %p created\n", e);
   return e;
 }
      
@@ -525,10 +550,11 @@ int rosie_free_rplx (Engine *e, int pat) {
 }
 
 /* N.B. Client must free errors */
-int rosie_compile(Engine *e, str *expression, int *pat, str *errors) {
+int rosie_compile(Engine *e, str *expression, int *pat, str *err) {
   int t;
   str *temp_rs;
   lua_State *L = e->L;
+  
   LOGf("compile(): L = %p\n", L);
   ACQUIRE_ENGINE_LOCK(e);
   if (!pat) {
@@ -537,6 +563,7 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *errors) {
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
+  *pat = 0;
   if (!expression) {
     LOG("null pointer passed to compile for expression argument");
     lua_settop(L, 0);
@@ -549,7 +576,6 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *errors) {
 #endif  
 
   get_registry(rplx_table_key);
-
   get_registry(engine_key);
   t = lua_getfield(L, -1, "compile");
   CHECK_TYPE("compile", t, LUA_TFUNCTION);
@@ -557,16 +583,9 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *errors) {
   lua_replace(L, -2); /* overwrite engine table with compile function */
   get_registry(engine_key);
 
-//  LOGf("compile(): About to push expression: %s (len=%d)\n", (char *)expression->ptr, expression->len);
-
   lua_pushlstring(L, (const char *)expression->ptr, expression->len);
 
-  LOG("compile(): about to pcall\n");
-  LOGstack(L);
-
   t = lua_pcall(L, 2, 2, 0);
-
-  LOGf("compile(): pcall return value is %d\n", t);
 
   if (t != LUA_OK) {
     LOG("compile() failed");
@@ -588,8 +607,8 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *errors) {
       RELEASE_ENGINE_LOCK(e);
       return ERR_ENGINE_CALL_FAILED;
     }
-    errors->len = temp_rs->len;
-    errors->ptr = temp_rs->ptr;
+    err->len = temp_rs->len;
+    err->ptr = temp_rs->ptr;
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return SUCCESS;
@@ -604,15 +623,17 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *errors) {
   LOGf("storing rplx object at index %d\n", *pat);
 
   temp_rs = to_json_string(L, -1);
-    if (temp_rs == NULL) {
-      LOG("in compile(), could not convert warning information to json\n");
-      lua_settop(L, 0);
-      RELEASE_ENGINE_LOCK(e);
-      return ERR_ENGINE_CALL_FAILED;
-    }
-  errors->len = temp_rs->len;
-  errors->ptr = temp_rs->ptr;
-
+  if (temp_rs == NULL) {
+    LOG("in compile(), could not convert warning information to json\n");
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return ERR_ENGINE_CALL_FAILED;
+  }
+  err = malloc(sizeof(str));
+  if (!err) { LOG("Could not allocate str for err ptr\n"); return ERR_ENGINE_CALL_FAILED; }
+  err->len = temp_rs->len;
+  err->ptr = temp_rs->ptr;
+  
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
@@ -873,10 +894,8 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *errors) {
     return ERR_ENGINE_CALL_FAILED; 
   } 
 
-  if (lua_isboolean(L, -3)) {
-    *ok = lua_toboolean(L, -3);
-    LOGf("engine.load() %s\n", ok ? "succeeded" : "failed");
-  }
+  *ok = lua_toboolean(L, -3);
+  LOGf("engine.load() %s\n", *ok ? "succeeded" : "failed");
   
   if (lua_isstring(L, -2)) {
     temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
@@ -901,6 +920,13 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *errors) {
   return SUCCESS;
 }
 
+/* TODO:
+ * - Function/macro for stripping violation messages and assigning errors parameter.
+ *
+ *
+ */
+
+
 /* N.B. Client must free 'errors' */
 int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *errors) {
   int t;
@@ -918,7 +944,7 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *errors) {
   LOGf("engine.loadfile(): about to load %s\n", fn->ptr);
   t = lua_pcall(L, 2, 3, 0); 
   if (t != LUA_OK) { 
-    display("engine.loadfile() failed"); 
+    display("Internal error: call to engine.loadfile() failed"); 
     /* Details will likely not be helpful to the user */
     LOGstack(L);
     lua_settop(L, 0);
@@ -926,19 +952,29 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *errors) {
     return ERR_ENGINE_CALL_FAILED; 
   } 
 
-  if (lua_isboolean(L, -3)) {
-    *ok = lua_toboolean(L, -3);
-    LOGf("engine.loadfile() %s\n", ok ? "succeeded" : "failed");
-  }
+  *ok = lua_toboolean(L, -3);
+  LOGf("engine.loadfile() %s\n", *ok ? "succeeded" : "failed");
+  LOGstack(L);
   
   if (lua_isstring(L, -2)) {
     temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
-    *pkgname = rosie_new_string(temp_str, temp_len);
+    str loaded_pkgname = rosie_new_string(temp_str, temp_len);
+    pkgname->ptr = loaded_pkgname.ptr;
+    pkgname->len = loaded_pkgname.len;
   }
   else {
-    pkgname = NULL;
+    pkgname->ptr = NULL;
+    pkgname->len = 0;
   }
   
+  t = strip_violation_messages(L);
+  if (t != LUA_OK) { 
+    LOG("violation.strip_each() failed"); 
+    LOGstack(L);
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return ERR_ENGINE_CALL_FAILED; 
+  } 
   temp_rs = to_json_string(L, -1);
     if (temp_rs == NULL) {
       LOG("in load(), could not convert error information to json\n");
@@ -985,7 +1021,7 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *errors) {
   } 
 
   *ok = lua_toboolean(L, -3);
-  LOGf("engine.import() %s\n", ok ? "succeeded" : "failed");
+  LOGf("engine.import() %s\n", *ok ? "succeeded" : "failed");
   
   if (lua_isstring(L, -2)) {
     temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
@@ -996,6 +1032,15 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *errors) {
     pkgname = NULL;
   }
   
+  t = strip_violation_messages(L);
+  if (t != LUA_OK) { 
+    LOG("violation.strip_each() failed"); 
+    LOGstack(L);
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return ERR_ENGINE_CALL_FAILED; 
+  } 
+
   temp_rs = to_json_string(L, -1);
     if (temp_rs == NULL) {
       LOG("in import(), could not convert error information to json\n");
@@ -1013,8 +1058,7 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *errors) {
 
 /* FUTURE: Expose engine_process_file() */
 
-/* TODO: Return SUCCESS and a failure indicator even when, e.g. file cannot be opened */
-/* N.B. Client must free err */
+/* N.B. Client must free errors */
 int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 		    char *infilename, char *outfilename, char *errfilename,
 		    int *cin, int *cout, int *cerr,
@@ -1023,6 +1067,11 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
   unsigned char *temp_str;
   size_t temp_len;
   lua_State *L = e->L;
+  err = malloc(sizeof(str));
+  if (!err) { LOG("Could not allocate str for errors\n"); return ERR_ENGINE_CALL_FAILED; }
+  err->ptr = NULL;
+  err->len = 0;
+
   ACQUIRE_ENGINE_LOCK(e);
   collect_if_needed(L);
   get_registry(engine_key);
@@ -1030,24 +1079,20 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
   CHECK_TYPE("engine.matchfile()", t, LUA_TFUNCTION);
   get_registry(engine_key);	/* first arg */
 
-  if (!pat)
+  get_registry(rplx_table_key);
+  t = lua_rawgeti(L, -1, pat); /* arg 2 */
+  if (t != LUA_TTABLE) {
     LOGf("rosie_matchfile() called with invalid compiled pattern reference: %d\n", pat);
-  else {
-    get_registry(rplx_table_key);
-    t = lua_rawgeti(L, -1, pat); /* arg 2 */
-    if (t == LUA_TTABLE) goto have_pattern;
+    (*cin) = -1;
+    (*cout) = ERR_NO_PATTERN;
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return SUCCESS;
   }
-  (*cin) = -1;
-  (*cout) = ERR_NO_PATTERN;
-  lua_settop(L, 0);
-  RELEASE_ENGINE_LOCK(e);
-  return SUCCESS;
-
-have_pattern:
 
   lua_replace(L, -2); 		/* overwrite rplx table with rplx object */
   if (!encoder) {
-    LOG("rosie_matchfile() called with null encoder arg\n");
+    LOG("rosie_matchfile() called with null encoder name\n");
     (*cin) = -1;
     (*cout) = ERR_NO_TRACESTYLE;
     lua_settop(L, 0);
@@ -1079,7 +1124,9 @@ have_pattern:
        (*cin) = -1;
        (*cout) = 3;
        temp_str =  (unsigned char *)lua_tolstring(L, -2, &temp_len);
-       (*err) = rosie_new_string(temp_str, temp_len);
+       str msg = rosie_new_string(temp_str, temp_len);
+       err->ptr = msg.ptr;
+       err->len = msg.len;
        lua_settop(L, 0);
        RELEASE_ENGINE_LOCK(e);
        return SUCCESS;
@@ -1088,8 +1135,6 @@ have_pattern:
   (*cin) = lua_tointeger(L, -3);  /* cerr */
   (*cout) = lua_tointeger(L, -2); /* cout, or error code if error */
   (*cerr) = lua_tointeger(L, -1); /* cin, or -1 if error */
-  (*err).ptr = NULL;
-  (*err).len = 0;
   
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);

@@ -137,6 +137,9 @@ class engine ():
                 libpath = find_library(libname)
                 if not libpath:
                     raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
+
+            print "***", libpath
+
             lib = ffi.dlopen(libpath, ffi.RTLD_GLOBAL)
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)

@@ -28,16 +28,14 @@ PLATFORMS = linux macosx windows
 
 default: $(PLATFORM)
 
-ifeq ($(PLATFORM), macosx)
-CC= clang
-else
+# ifeq ($(PLATFORM), macosx)
+# CC= clang
+# else
 CC= gcc
-endif
+# endif
 
-#CC= gcc
-
-CFLAGS= -fpermissive -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
-LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
+CFLAGS= -pthread -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
+LDFLAGS= -lpthread $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
 AR= ar rcu
@@ -64,7 +62,7 @@ lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-ALL= dynamic static
+ALL= dynamic static mt
 
 dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
@@ -75,15 +73,21 @@ dynamic: dynamic.o
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
-static: static.o librosie.o lua_objs
-	$(CC) -o $@ static.o librosie.o liblua/*.o
+static: static.o librosie.a lua_objs
+	$(CC) -o $@ static.o librosie.a #o liblua/*.o
 
-librosie.o: ../librosie.o
-	cp ../librosie.o .
+mt.o: mt.c #mt.h
+	$(CC) -o $@ -c mt.c $(CFLAGS)
+
+mt: mt.o librosie.a lua_objs
+	$(CC) -o $@ mt.o librosie.a #liblua/*.o
+
+librosie.a: ../librosie.a
+	cp ../librosie.a .
 
 clean:
 	$(RM) dynamic.o dynamic
-	$(RM) static.o librosie.o liblua/*
+	$(RM) static.o librosie.o librosie.a liblua/*
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c

@@ -28,15 +28,15 @@ PLATFORMS = linux macosx windows
 
 default: $(PLATFORM)
 
-ifeq ($(PLATFORM), macosx)
-CC= clang
-else
+# ifeq ($(PLATFORM), macosx)
+# CC= clang
+# else
 CC= gcc
-endif
+# endif
 
-CFLAGS= -fpermissive -O2 -Wall -Wextra -pthread -DMULTIPLE_THREADS -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
+CFLAGS= -pthread -O2 -Wall -Wextra -pthread -DMULTIPLE_THREADS -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
-LIBS= $(SYSLIBS) $(MYLIBS)
+LIBS= -lpthread $(SYSLIBS) $(MYLIBS)
 
 AR= ar rcu
 RANLIB= ranlib
@@ -52,6 +52,11 @@ MYLIBS=
 MYOBJS=
 
 LUA_A=$(HOME)/submodules/lua/src/liblua.a
+LUA_DYLIB_NAME=lua.5.3
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
+
+$(LUA_DYLIB): $(lua_objs)
+	gcc -dynamiclib -install_name $@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
 
 $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
@@ -75,8 +80,9 @@ endif
 librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
-librosie.so: librosie.o lua_objs
-	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
+librosie.so: librosie.o $(LUA_DYLIB)
+#	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
+	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS) -L. -l$(LUA_DYLIB_NAME)
 
 librosie.a: librosie.o lua_objs
 	$(AR) $@ librosie.o liblua/*.o

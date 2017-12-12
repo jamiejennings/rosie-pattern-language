@@ -110,6 +110,23 @@ int main() {
     printf("match data is: %.*s\n", m.data.len, m.data.ptr);
   }
 
+  str rplfile = STR("test.rpl");
+  err = rosie_loadfile(engine, &ok, &rplfile, &pkgname, &errors);
+  if (err) {
+    LOG("rosie call failed: loadfile");
+    exitStatus = -8;
+    goto quit;
+  }
+  if (!ok) {
+    printf("loadfile failed\n");
+    exitStatus = -9;
+    goto quit;
+  }
+  else {
+       char *msg = ((pkgname.ptr != NULL) ? (char *) pkgname.ptr : "<no package>");
+       printf("rpl file loaded successfully, package name is: %s\n", msg);
+  }
+  
 
 
  quit:

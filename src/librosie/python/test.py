@@ -323,8 +323,10 @@ if __name__ == '__main__':
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
         librosiedir = ".."
+        print "Loading librosie from ../librosie.so"
     elif sys.argv[1]=='system':
         librosiedir = None
+        print "Loading librosie from system library path"
     else:
         sys.exit("Error: invalid command-line parameter (must be 'local' or 'system')")
     print "Running tests using", sys.argv[1], "rosie installation"

@@ -1,10 +1,14 @@
 /*  -*- Mode: C; -*-                                                         */
 /*                                                                           */
-/*  dynamic.c   Example client of librosie.so                                */
+/*  dynamic.c   Example client of librosie.dylib                             */
 /*                                                                           */
 /*  © Copyright IBM Corporation 2017.                                        */
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
 /*  AUTHOR: Jamie A. Jennings                                                */
+
+/* To run:
+   DYLD_LIBRARY_PATH=.. ./dynamic 
+*/
 
 #include <dlfcn.h>
 #include <string.h>
@@ -34,11 +38,17 @@ void *librosie;
 	  fflush(NULL);						     \
      } while (0)
 
+#define displayf(fmt, ...) \
+     do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+			       __LINE__, __func__, __VA_ARGS__);     \
+	  fflush(NULL);						     \
+     } while (0)
+
 
 static int init(const char *librosie_path){
   librosie = dlopen(librosie_path, RTLD_NOW);
   if (librosie == NULL) {
-    LOGf("failed to dlopen %s\n", librosie_path);
+    displayf("failed to dlopen %s\n", librosie_path);
     return FALSE;
   }
   LOG("opened librosie\n");
