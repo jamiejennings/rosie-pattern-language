@@ -46,10 +46,12 @@ SYSCFLAGS=
 SYSLDFLAGS=
 SYSLIBS=
 
-MYCFLAGS=  -I$(HOME)/submodules/lua/include
+MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src
 MYLDFLAGS= 
 MYLIBS= 
 MYOBJS=
+
+ROSIE_A=$(HOME)/src/librosie/librosie.a
 
 LUA_A=$(HOME)/submodules/lua/src/liblua.a
 
@@ -58,9 +60,9 @@ $(LUA_A):
 	@false
 
 .PHONY: lua_objs
-lua_objs: $(LUA_A)
-	mkdir -p liblua
-	cd liblua && ar x $(LUA_A)
+# lua_objs: $(LUA_A)
+# 	mkdir -p liblua
+# 	cd liblua && ar x $(LUA_A)
 
 ALL= dynamic static mt
 
@@ -73,21 +75,19 @@ dynamic: dynamic.o
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
-static: static.o librosie.a lua_objs
-	$(CC) -o $@ static.o librosie.a #o liblua/*.o
+static: static.o $(ROSIE_A) $(LUA_A)
+	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_A)
 
 mt.o: mt.c #mt.h
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
-mt: mt.o librosie.a lua_objs
-	$(CC) -o $@ mt.o librosie.a #liblua/*.o
-
-librosie.a: ../librosie.a
-	cp ../librosie.a .
+mt: mt.o $(ROSIE_A) $(LUA_A)
+	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_A)
 
 clean:
 	$(RM) dynamic.o dynamic
-	$(RM) static.o librosie.o librosie.a liblua/*
+	$(RM) static.o static
+	$(RM) mt.o mt
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
@@ -95,7 +95,7 @@ depend:
 test: static dynamic
 	@echo Running C client tests on librosie
 	./static
-	./dynamic
+	DYLD_LIBRARY_PATH=.. ; ./dynamic
 	@echo
 	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
 

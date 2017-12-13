@@ -21,7 +21,7 @@
 #   cffi-1.11.1 pycparser-2.18 (installed with: pip install cffi)
 
 from cffi import FFI
-from ctypes.util import find_library
+#from ctypes.util import find_library
 import os
 import json
 
@@ -134,13 +134,17 @@ class engine ():
             libname = "librosie.so"
         if not lib:
             if custom_libpath:
-                libpath = os.path.join(custom_libpath, libname)
-                if not os.path.isfile(libpath):
-                    raise RuntimeError("Cannot find librosie at " + libpath)
+#                libpath = os.path.join(os.path.abspath(custom_libpath), libname)
+               libpath = os.path.join(custom_libpath, libname)
+               if not os.path.isfile(libpath):
+                   raise RuntimeError("Cannot find librosie at " + libpath)
             else:
-                libpath = find_library(libname)
-                if not libpath:
-                    raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
+                libpath = libname #find_library(libname)
+#                if not libpath:
+#                    raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
+
+            print "*** libpath =", libpath
+
             lib = ffi.dlopen(libpath, ffi.RTLD_GLOBAL)
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)

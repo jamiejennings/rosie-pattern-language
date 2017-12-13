@@ -34,7 +34,7 @@ clean:
 	$(RM) rosie.pyc 
 
 test:
-	DYLD_LIBRARY_PATH=. python test.py local
+	python test.py local
 
 installtest:
 	python test.py system

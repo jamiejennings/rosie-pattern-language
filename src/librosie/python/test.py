@@ -323,7 +323,7 @@ if __name__ == '__main__':
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
         librosiedir = ".."
-        print "Loading librosie from ../librosie.so"
+        print "Loading librosie from", librosiedir
     elif sys.argv[1]=='system':
         librosiedir = None
         print "Loading librosie from system library path"

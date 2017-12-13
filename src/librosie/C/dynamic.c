@@ -15,7 +15,7 @@
 
 #include "dynamic.h"
 
-#define LIBROSIE "../librosie.so"
+#define LIBROSIE "librosie.so"
 void *librosie;
 
 

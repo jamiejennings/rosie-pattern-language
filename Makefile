@@ -53,8 +53,9 @@ BUILD_ROOT = $(shell pwd)
 
 ROSIED = $(DESTDIR)/lib/rosie
 LIBROSIED = $(DESTDIR)/lib
-#ROSIE_DOC = $(DESTDIR)/share/doc
-#ROSIE_ROOT = $(DESTDIR)/share/rosie
+# Future:
+# ROSIE_DOC = $(DESTDIR)/share/doc
+# ROSIE_ROOT = $(DESTDIR)/share/rosie
 
 .PHONY: default
 default: $(PLATFORM)
@@ -72,16 +73,15 @@ READLINE_DIR = $(SUBMOD_DIR)/$(READLINE)
 LUAMOD_DIR = $(SUBMOD_DIR)/$(LUAMOD)
 LIBROSIE_DIR = $(BUILD_ROOT)/src/librosie
 
-INSTALL_LIBROSIE = $(DESTDIR)/lib/librosie.so
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_RPL_DIR = $(ROSIED)/rpl
 INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
-INSTALL_LIBROSIE = $(LIBROSIED)/librosie.so
+INSTALL_LIBROSIE = $(LIBROSIED)/$(LIBROSIE)
 
 .PHONY: clean
 clean:
-	rm -rf bin/* lib/* rosie.lua librosie.so
+	rm -rf bin/* lib/* rosie.lua librosie.so librosie.dylib
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
@@ -111,19 +111,26 @@ readlinetest:
 	   echo 'READLINE TEST: libreadline and readline.h appear to be installed' || \
 	   (echo 'READLINE TEST: Missing readline library or readline.h' && /usr/bin/false)
 
-.PHONY: macosx
-macosx: PLATFORM=macosx
-macosx: CC=cc
-macosx: CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
-macosx: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so librosie.so compile sniff
+ifeq ($(PLATFORM),macosx)
+PLATFORM=macosx
+CC=cc
+CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
+LIBROSIE=librosie.dylib
+endif
 
+.PHONY: macosx
+macosx: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so $(LIBROSIE) librosie.a compile sniff
+
+ifeq ($(PLATFORM),linux)
+PLATFORM=linux
+CC=gcc
+CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
+CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
+LINUX_CFLAGS=MYCFLAGS=-fPIC
+LIBROSIE=librosie.so
+endif
 .PHONY: linux
-linux: PLATFORM=linux
-linux: CC=gcc
-linux: CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
-linux: CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
-linux: LINUX_CFLAGS=MYCFLAGS=-fPIC
-linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so librosie.so compile sniff
+linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so $(LIBROSIE) librosie.a compile sniff
 
 .PHONY: windows
 windows:
@@ -220,9 +227,10 @@ core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
 other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
-librosie.so: $(luaobjects) lib/lpeg.so lib/cjson.so bin/lua # bin/lua is proxy for liblua
+librosie.dylib:
+librosie.so:
+librosie.a: $(luaobjects) lib/lpeg.so lib/cjson.so
 	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC)
-	cp $(LIBROSIE_DIR)/librosie.so $(BUILD_ROOT)
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so lib/run-rosie
@@ -300,10 +308,10 @@ install_rpl:
 	mkdir -p "$(INSTALL_RPL_DIR)"/rosie
 	cp rpl/rosie/*.rpl "$(INSTALL_RPL_DIR)"/rosie/
 
-# Install librosie.so
+# Install librosie
 .PHONY: install_librosie
-install_librosie: librosie.so
-	cp librosie.so "$(INSTALL_LIBROSIE)"
+install_librosie: $(LIBROSIE)
+	cp "$(LIBROSIE_DIR)/$(LIBROSIE)" "$(INSTALL_LIBROSIE)"
 
 # Main install rule
 .PHONY: install

@@ -55,8 +55,14 @@ LUA_A=$(HOME)/submodules/lua/src/liblua.a
 LUA_DYLIB_NAME=lua.5.3
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 
+ifeq ($(PLATFORM), macosx)
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
+else
+LUA_DYLIB=
+endif
+
 $(LUA_DYLIB): lua_objs
-	$(CC) -dynamiclib -install_name $@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
+	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
 
 $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
@@ -68,7 +74,6 @@ lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-ALL= librosie.so librosie.a
 ALLCLIENTS= python c
 
 ifeq ($(CLIENTS),all)
@@ -82,14 +87,16 @@ librosie.o: librosie.c librosie.h
 
 librosie.so: librosie.o $(LUA_DYLIB)
 	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
-#	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS) -L. -l$(LUA_DYLIB_NAME)
+
+librosie.dylib: librosie.o $(LUA_DYLIB)
+	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
 
 librosie.a: librosie.o lua_objs
 	$(AR) $@ librosie.o
 	$(RANLIB) $@
 
 clean:
-	$(RM) librosie.so librosie.o librosie.a liblua.5.3.dylib liblua/*
+	$(RM) librosie.dylib librosie.so librosie.o librosie.a liblua.5.3.dylib liblua/*
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
@@ -115,10 +122,10 @@ none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
 linux:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E"
+	$(MAKE) librosie.so librosie.a SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E"
 
 macosx:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)" CC=$(CC)
+	$(MAKE) librosie.dylib librosie.a SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)" CC=$(CC)
 
 macosx: CFLAGS += -std=gnu99
 
