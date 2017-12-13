@@ -53,16 +53,18 @@ MYOBJS=
 
 LUA_A=$(HOME)/submodules/lua/src/liblua.a
 LUA_DYLIB_NAME=lua.5.3
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 
 ifeq ($(PLATFORM), macosx)
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 else
-LUA_DYLIB=
+LUA_DYLIB=lib$(LUA_DYLIB).so
 endif
 
-$(LUA_DYLIB): lua_objs
+lib$(LUA_DYLIB_NAME).dylib: lua_objs
 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
+
+lib$(LUA_DYLIB_NAME).so: lua_objs
+	$(CC) -o $@ liblua/*.o -shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
 
 $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
@@ -85,8 +87,8 @@ endif
 librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
-librosie.so: librosie.o $(LUA_A)
-	$(CC) -o $@ librosie.o $(LUA_A) $(SYSLIBS) $(LDFLAGS)
+librosie.so: librosie.o $(LUA_DYLIB)
+	$(CC) -o $@ librosie.o $(LUA_DYLIB) $(SYSLIBS) $(LDFLAGS)
 
 librosie.dylib: librosie.o $(LUA_DYLIB)
 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)

@@ -53,16 +53,13 @@ MYOBJS=
 
 ROSIE_A=$(HOME)/src/librosie/librosie.a
 
-LUA_A=$(HOME)/submodules/lua/src/liblua.a
+LUA_DYLIB_NAME=lua.5.3
+ifeq ($(PLATFORM), macosx)
+LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
+else
+LUA_DYLIB=../lib$(LUA_DYLIB).so
+endif
 
-$(LUA_A):
-	@echo "Missing Rosie object files.  Need to build rosie first."
-	@false
-
-.PHONY: lua_objs
-# lua_objs: $(LUA_A)
-# 	mkdir -p liblua
-# 	cd liblua && ar x $(LUA_A)
 
 ALL= dynamic static mt
 
@@ -70,19 +67,19 @@ dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
 dynamic: dynamic.o
-	$(CC) -o $@ dynamic.o $(SYSLIBS) $(LDFLAGS)
+	$(CC) -o $@ dynamic.o $(SYSLIBS)
 
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
-static: static.o $(ROSIE_A) $(LUA_A)
-	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_A) $(SYSLIBS) $(LDFLAGS)
+static: static.o $(ROSIE_A) $(LUA_DYLIB)
+	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
 
 mt.o: mt.c #mt.h
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
-mt: mt.o $(ROSIE_A) $(LUA_A)
-	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_A) $(SYSLIBS) $(LDFLAGS)
+mt: mt.o $(ROSIE_A) $(LUA_DYLIB)
+	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
 
 clean:
 	$(RM) dynamic.o dynamic
@@ -95,7 +92,7 @@ depend:
 test: static dynamic
 	@echo Running C client tests on librosie
 	./static
-	DYLD_LIBRARY_PATH=.. ; ./dynamic
+	DYLD_LIBRARY_PATH=.. ./dynamic
 	@echo
 	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
 
@@ -118,7 +115,7 @@ linux:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-ldl -lm -lpthread" CC=$(CC)
 
 macosx:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" CC=$(CC)
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" SYSLIBS="-lpthread" CC=$(CC)
 
 macosx: CFLAGS += -std=gnu99
 
