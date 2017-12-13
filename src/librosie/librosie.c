@@ -268,7 +268,11 @@ static int boot (lua_State *L, str *errors) {
   LOGf("rpeg path (calculated) is %s\n", rpeg_path);
   
   lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
-  if (lib == NULL) LOG("*** dlopen returned NULL\n");
+  if (lib == NULL) {
+       LOG("dlopen(rpeg) returned NULL\n");
+       *errors = string_from_const("unable to dlopen rpeg library");
+       return FALSE;
+  }
   
   int status = luaL_loadfile(L, bootscript);
   if (status != LUA_OK) {

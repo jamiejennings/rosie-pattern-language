@@ -74,7 +74,7 @@ lua_objs: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
-ALLCLIENTS= python c
+ALLCLIENTS= python C
 
 ifeq ($(CLIENTS),all)
   clients=$(ALLCLIENTS)
@@ -85,8 +85,8 @@ endif
 librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
-librosie.so: librosie.o $(LUA_DYLIB)
-	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
+librosie.so: librosie.o $(LUA_A)
+	$(CC) -o $@ librosie.o $(LUA_A) $(SYSLIBS) $(LDFLAGS)
 
 librosie.dylib: librosie.o $(LUA_DYLIB)
 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)

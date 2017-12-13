@@ -118,6 +118,7 @@ int main() {
   void *engine = (*fp_rosie_new)(&errors);
   if (engine == NULL) {
     LOG("rosie_new failed\n");
+    if (errors) LOGf("rosie_new returned: %s\n", errors.ptr);
     return -2;
   }
   LOG("obtained rosie matching engine\n");

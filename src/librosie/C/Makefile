@@ -70,19 +70,19 @@ dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
 dynamic: dynamic.o
-	$(CC) -o $@ dynamic.o 
+	$(CC) -o $@ dynamic.o $(SYSLIBS) $(LDFLAGS)
 
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
 static: static.o $(ROSIE_A) $(LUA_A)
-	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_A)
+	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_A) $(SYSLIBS) $(LDFLAGS)
 
 mt.o: mt.c #mt.h
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
 mt: mt.o $(ROSIE_A) $(LUA_A)
-	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_A)
+	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_A) $(SYSLIBS) $(LDFLAGS)
 
 clean:
 	$(RM) dynamic.o dynamic
@@ -115,7 +115,7 @@ none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
 linux:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E"
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-ldl -lm -lpthread" CC=$(CC)
 
 macosx:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" CC=$(CC)
