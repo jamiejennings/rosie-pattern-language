@@ -549,6 +549,18 @@ int rosie_free_rplx (Engine *e, int pat) {
   return SUCCESS;
 }
 
+/* TODO!!!!
+
+   change set_alloc_limit to alloc_limit()
+   with arg, sets it
+   without arg, gets it
+
+
+ */
+
+
+
+
 /* N.B. Client must free errors */
 int rosie_compile(Engine *e, str *expression, int *pat, str *err) {
   int t;

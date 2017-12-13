@@ -22,7 +22,7 @@
 
 from cffi import FFI
 from ctypes.util import find_library
-from os import path
+import os
 import json
 
 ffi = FFI()
@@ -69,7 +69,6 @@ int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
 """)
 
 lib = None                # single instance of dynamic library
-libname = "librosie.so"
 
 # -----------------------------------------------------------------------------
 # ffi utilities
@@ -127,19 +126,21 @@ class engine ():
     '''
 
     def __init__(self, custom_libpath=None):
-        global lib, libname
+        global lib
+        ostype = os.uname()[0]
+        if ostype=="Darwin":
+            libname = "librosie.dylib"
+        else:
+            libname = "librosie.so"
         if not lib:
             if custom_libpath:
-                libpath = path.join(custom_libpath, libname)
-                if not path.isfile(libpath):
+                libpath = os.path.join(custom_libpath, libname)
+                if not os.path.isfile(libpath):
                     raise RuntimeError("Cannot find librosie at " + libpath)
             else:
                 libpath = find_library(libname)
                 if not libpath:
                     raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
-
-            print "***", libpath
-
             lib = ffi.dlopen(libpath, ffi.RTLD_GLOBAL)
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)

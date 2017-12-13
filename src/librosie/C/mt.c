@@ -192,8 +192,6 @@ int main(int argc, char **argv) {
     }
   }
     
-
-
   printf("Finalizing engines\n");
   for (int i=0; i<n; i++) rosie_finalize(engine[i]);
   printf("Freeing thread-related data\n");

@@ -55,8 +55,8 @@ LUA_A=$(HOME)/submodules/lua/src/liblua.a
 LUA_DYLIB_NAME=lua.5.3
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 
-$(LUA_DYLIB): $(lua_objs)
-	gcc -dynamiclib -install_name $@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
+$(LUA_DYLIB): lua_objs
+	$(CC) -dynamiclib -install_name $@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
 
 $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
@@ -81,15 +81,15 @@ librosie.o: librosie.c librosie.h
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
 librosie.so: librosie.o $(LUA_DYLIB)
-#	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
-	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS) -L. -l$(LUA_DYLIB_NAME)
+	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
+#	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS) -L. -l$(LUA_DYLIB_NAME)
 
 librosie.a: librosie.o lua_objs
-	$(AR) $@ librosie.o liblua/*.o
+	$(AR) $@ librosie.o
 	$(RANLIB) $@
 
 clean:
-	$(RM) librosie.so librosie.o librosie.a liblua/*
+	$(RM) librosie.so librosie.o librosie.a liblua.5.3.dylib liblua/*
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
@@ -118,7 +118,7 @@ linux:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E"
 
 macosx:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" CC=$(CC)
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)" CC=$(CC)
 
 macosx: CFLAGS += -std=gnu99
 
