@@ -41,7 +41,6 @@ void *make_engine() {
   str errors;
   str pkgname = STR("all");
   void *engine = rosie_new(&errors);
-  rosie_free_string(pkgname);
   if (!engine) {
     printf("Call to rosie_new failed.\n");
     if (errors.ptr) printf("%s", errors.ptr);
@@ -72,6 +71,7 @@ under the name 'rosie'.\n\
   if (errors.ptr) {
     rosie_free_string(errors);
   }
+  rosie_free_string(pkgname);
 
   LOGf("Engine %p created\n", engine);
   return engine;
