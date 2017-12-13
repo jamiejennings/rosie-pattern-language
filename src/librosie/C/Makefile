@@ -58,9 +58,11 @@ ROSIE_DYLIB_NAME=rosie
 ifeq ($(PLATFORM), macosx)
 LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
+DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. ./dynamic librosie.dylib
 else
 LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
+DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic librosie.so
 endif
 
 
@@ -96,7 +98,7 @@ depend:
 test: static dynamic
 	@echo Running C client tests on librosie
 	./static
-	./dynamic $(ROSIE_DYLIB)
+	$(DYNAMIC_TEST_COMMAND)
 	@echo
 	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
 
