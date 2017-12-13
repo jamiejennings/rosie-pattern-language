@@ -54,10 +54,13 @@ MYOBJS=
 ROSIE_A=$(HOME)/src/librosie/librosie.a
 
 LUA_DYLIB_NAME=lua.5.3
+ROSIE_DYLIB_NAME=rosie
 ifeq ($(PLATFORM), macosx)
 LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
+ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
 else
 LUA_DYLIB=../lib$(LUA_DYLIB).so
+ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 endif
 
 
@@ -66,8 +69,9 @@ ALL= dynamic static mt
 dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
-dynamic: dynamic.o
-	$(CC) -o $@ dynamic.o $(SYSLIBS)
+# TODO: Should not have liblua.so dependency here!
+dynamic: dynamic.o $(LUA_DYLIB)
+	$(CC) -o $@ dynamic.o $(LUA_DYLIB) $(SYSLIBS)
 
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
@@ -92,7 +96,7 @@ depend:
 test: static dynamic
 	@echo Running C client tests on librosie
 	./static
-	DYLD_LIBRARY_PATH=.. ./dynamic
+	./dynamic $(ROSIE_DYLIB)
 	@echo
 	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
 

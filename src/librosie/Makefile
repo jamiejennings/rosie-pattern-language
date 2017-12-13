@@ -57,7 +57,7 @@ LUA_DYLIB_NAME=lua.5.3
 ifeq ($(PLATFORM), macosx)
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 else
-LUA_DYLIB=lib$(LUA_DYLIB).so
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
 endif
 
 lib$(LUA_DYLIB_NAME).dylib: lua_objs

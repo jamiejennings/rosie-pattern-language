@@ -34,7 +34,7 @@ clean:
 	$(RM) rosie.pyc 
 
 test:
-	python test.py local
+	LD_LIBRARY_PATH=.. python test.py local
 
 installtest:
 	python test.py system

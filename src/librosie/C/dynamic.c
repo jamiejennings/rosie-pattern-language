@@ -12,10 +12,9 @@
 
 #include <dlfcn.h>
 #include <string.h>
-
+#include <stdlib.h>
 #include "dynamic.h"
 
-#define LIBROSIE "librosie.so"
 void *librosie;
 
 
@@ -105,12 +104,19 @@ static int bind(void *lib){
   return FALSE;
 }
 
+/* Main */
 
+int main(int argc, char **argv) {
 
-int main() {
+  if (argc != 2) {
+    printf("Usage: %s <full_path_for_librosie>\n", argv[0]);
+    exit(-1);
+  }
+  char *librosie_path = argv[1];
+
   int exitStatus = 0;
 
-  init(LIBROSIE);
+  init(librosie_path);
 
   if (!bind(librosie)) return -1;
 
