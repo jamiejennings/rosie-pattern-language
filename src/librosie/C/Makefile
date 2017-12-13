@@ -59,7 +59,7 @@ ifeq ($(PLATFORM), macosx)
 LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
 else
-LUA_DYLIB=../lib$(LUA_DYLIB).so
+LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 endif
 
