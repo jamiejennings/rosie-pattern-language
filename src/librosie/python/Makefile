@@ -24,16 +24,19 @@ PLATFORMS = linux macosx windows
 
 default: $(PLATFORM)
 
+ROSIE_DYLIB_NAME=rosie
 ifeq ($(PLATFORM), macosx)
 CC= clang
+ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
 else
 CC= gcc
+ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 endif
 
 clean:
 	$(RM) rosie.pyc 
 
-test:
+test: $(ROSIE_DYLIB)
 	LD_LIBRARY_PATH=.. python test.py local
 
 installtest:

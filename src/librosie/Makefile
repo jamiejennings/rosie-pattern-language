@@ -24,9 +24,26 @@ else
 PLATFORM=none
 endif
 
-PLATFORMS = linux macosx windows
+LUA_A=$(HOME)/submodules/lua/src/liblua.a
+LUA_DYLIB_NAME=lua.5.3
+ROSIE_DYLIB_NAME=rosie
+ROSIE_A=lib$(ROSIE_DYLIB_NAME).a
 
-default: $(PLATFORM)
+ifeq ($(PLATFORM),macosx)
+SYSCFLAGS=-DLUA_USE_MACOSX
+SYSLDFLAGS=-undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)
+CFLAGS += -std=gnu99
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
+ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
+else 
+SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
+SYSLIBS=-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
+ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
+endif
+
+
+
 
 # ifeq ($(PLATFORM), macosx)
 # CC= clang
@@ -42,23 +59,16 @@ AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
 
-SYSCFLAGS=
-SYSLDFLAGS=
-SYSLIBS=
+# SYSCFLAGS=
+# SYSLDFLAGS=
+# SYSLIBS=
 
 MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src 
 MYLDFLAGS= 
 MYLIBS= 
 MYOBJS=
 
-LUA_A=$(HOME)/submodules/lua/src/liblua.a
-LUA_DYLIB_NAME=lua.5.3
-
-ifeq ($(PLATFORM), macosx)
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
-else
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
-endif
+default: $(ROSIE_DYLIB) $(ROSIE_A)
 
 lib$(LUA_DYLIB_NAME).dylib: lua_objs
 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
@@ -93,17 +103,19 @@ librosie.so: librosie.o $(LUA_DYLIB)
 librosie.dylib: librosie.o $(LUA_DYLIB)
 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
 
-librosie.a: librosie.o lua_objs
+librosie.a: librosie.o
 	$(AR) $@ librosie.o
 	$(RANLIB) $@
 
 clean:
 	$(RM) librosie.dylib librosie.so librosie.o librosie.a liblua.5.3.dylib liblua/*
+	here="$(shell pwd)"; \
+	for client in $(ALLCLIENTS); do cd $${here}/$$client && $(MAKE) clean; done
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
-test:
+test: $(ROSIE_DYLIB) $(ROSIE_A)
 	here="$(shell pwd)"; \
 	for client in $(clients); do cd $${here}/$$client && $(MAKE) test; done
 
@@ -123,14 +135,7 @@ echo:
 none:
 	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
-linux:
-	$(MAKE) librosie.so librosie.a SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E"
-
-macosx:
-	$(MAKE) librosie.dylib librosie.a SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)" CC=$(CC)
-
-macosx: CFLAGS += -std=gnu99
-
+.PHONY: windows
 windows:
 	@echo Windows installation not yet supported.
 

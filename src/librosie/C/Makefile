@@ -95,12 +95,14 @@ clean:
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
-test: static dynamic
+test: static dynamic $(ROSIE_DYLIB)
 	@echo Running C client tests on librosie
-	./static
-	$(DYNAMIC_TEST_COMMAND)
 	@echo
-	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
+	@echo Statically linked test program:
+	./static
+	@echo
+	@echo Dynamically linked test program:
+	$(DYNAMIC_TEST_COMMAND)
 
 installtest:
 	@echo No tests of C client configured to use system installation of librosie
