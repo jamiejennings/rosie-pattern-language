@@ -9,26 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "../librosie.h"
-
-/* Compile with DEBUG=1 to enable logging */
-#ifdef DEBUG
-#define LOGGING 1
-#else
-#define LOGGING 0
-#endif
-
-#define LOG(msg) \
-     do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): %s", __FILE__, \
-			       __LINE__, __func__, msg);	   \
-	  fflush(NULL);						   \
-     } while (0)
-
-#define LOGf(fmt, ...) \
-     do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-			       __LINE__, __func__, __VA_ARGS__);     \
-	  fflush(NULL);						     \
-     } while (0)
+#include "librosie.h"
 
 #define STR(literal) rosie_new_string((byte_ptr)(literal), strlen((literal)));
 
@@ -73,11 +54,9 @@ under the name 'rosie'.\n\
   }
   rosie_free_string(pkgname);
 
-  LOGf("Engine %p created\n", engine);
+  printf("Engine %p created\n", engine);
   return engine;
 }  
-
-#define INFILE "../../../test/system.log"
 
 int compile(void *engine, str expression) {
   int pat;
@@ -105,7 +84,9 @@ int compile(void *engine, str expression) {
 }
 
 
-int r=0;			/* TEMPORARILY global */
+/* Globals because we can. */
+int r=0;
+char *infile;
 
 void *do_work(void *engine) {
   printf("Thread running with engine %p\n", engine); fflush(NULL);
@@ -120,12 +101,12 @@ void *do_work(void *engine) {
   sprintf(&outfile[0], "%p.out", engine);
   str *errors = NULL;
   for (int i=0; i<r; i++) {
-    printf("Engine %p iteration %d\n", engine, i);
+    printf("Engine %p iteration %d writing file %s\n", engine, i, outfile);
     int err = rosie_matchfile(engine,
 			      pat,
 			      "json",
 			      0,	/* not whole file at once */
-			      INFILE, outfile, "",
+			      infile, outfile, "",
 			      &cin, &cout, &cerr,
 			      errors);
     if (err) printf("*** Error calling matchfile\n");
@@ -142,8 +123,8 @@ void *do_work(void *engine) {
 
 int main(int argc, char **argv) {
 
-  if (argc != 3) {
-    printf("Usage: %s <number of threads> <number of repetitions>\n", argv[0]);
+  if (argc != 4) {
+    printf("Usage: %s <number of threads> <number of repetitions> <text file to process>\n", argv[0]);
     exit(E_BAD_ARG);
   }
 
@@ -158,6 +139,14 @@ int main(int argc, char **argv) {
     printf("Argument (number of repetitions) is < 1 or not a number: %s\n", argv[2]);
     exit(E_BAD_ARG);
   }
+
+  infile = (char *)argv[3];
+  if (infile == NULL) {
+    printf("Argument (text file to process) is empty\n");
+    exit(E_BAD_ARG);
+  }
+
+  printf("Input file is %s\n", infile);
 
   void **engine = calloc(n, sizeof(void *));
   pthread_t *thread = calloc(n, sizeof(pthread_t));
