@@ -46,7 +46,7 @@ SYSCFLAGS=
 SYSLDFLAGS=
 SYSLIBS=
 
-MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src
+MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src -I..
 MYLDFLAGS= 
 MYLIBS= 
 MYOBJS=
@@ -81,7 +81,7 @@ static.o: static.c static.h
 static: static.o $(ROSIE_A) $(LUA_DYLIB)
 	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
 
-mt.o: mt.c #mt.h
+mt.o: mt.c
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
 mt: mt.o $(ROSIE_A) $(LUA_DYLIB)
@@ -95,7 +95,7 @@ clean:
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
-test: static dynamic $(ROSIE_DYLIB)
+test: static dynamic mt $(ROSIE_DYLIB)
 	@echo Running C client tests on librosie
 	@echo
 	@echo Statically linked test program:
@@ -103,6 +103,9 @@ test: static dynamic $(ROSIE_DYLIB)
 	@echo
 	@echo Dynamically linked test program:
 	$(DYNAMIC_TEST_COMMAND)
+	@echo
+	@echo Multi-threaded, statically linked test program:
+	./mt 4 100 $(HOME)/test/logfile 
 
 installtest:
 	@echo No tests of C client configured to use system installation of librosie
