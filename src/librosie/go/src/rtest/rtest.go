@@ -16,7 +16,7 @@ import "os"
 import "runtime"
 
 func main() {
-	runtime.LockOSThread()
+//	runtime.LockOSThread()
 	
 	fmt.Printf("Initializing Rosie... ")
 	
@@ -47,28 +47,30 @@ func main() {
  		os.Exit(-1)
  	}
 
-	runtime.GC()
+	for i:=1; i<20; i++ {
+		runtime.GC()
 	
- 	exp := "[:digit:]+"
- 	pat, err := engine.Compile(exp)
+		exp := "[:digit:]+"
+		pat, err := engine.Compile(exp)
+		
+		if err != nil {
+			fmt.Println(pat, err)
+			os.Exit(-1)
+		} else {
+			fmt.Println("Successfully compiled pattern", pat)
+		}
+	}
 
- 	if err != nil {
- 		fmt.Println(pat, err)
- 		os.Exit(-1)
- 	} else {
- 		fmt.Println("Successfully compiled pattern", pat)
- 	}
-
-	runtime.KeepAlive(engine) // Needed?
+//	runtime.KeepAlive(engine) // Needed?
 	
-// 	var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"
-// 	foo_string := gostring_to_structString(foo)
+ 	// var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"
+ 	// foo_string := rosieString(foo)
 
-// 	var match C.struct_rosie_matchresult
-// 	json_encoder := C.CString("json")
-// 	a, err := C.rosie_match(engine, pat, 1, json_encoder, &foo_string, &match)
-// 	fmt.Println(a, err, match)
-// 	fmt.Println(match.leftover, structString_to_GoString(match.data))
+ 	// var match C.struct_rosie_matchresult
+ 	// json_encoder := C.CString("json")
+ 	// a, err := C.rosie_match(engine, pat, 1, json_encoder, &foo_string, &match)
+ 	// fmt.Println(a, err, match)
+ 	// fmt.Println(match.leftover, structString_to_GoString(match.data))
 
 
 

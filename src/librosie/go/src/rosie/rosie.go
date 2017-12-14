@@ -9,10 +9,7 @@
 // Package rosie contains functions for using Rosie Pattern Language
 package rosie
 
-// #cgo LDFLAGS: ${SRCDIR}/librosie.a -lm -ldl
-// #include <assert.h>
-// #include <signal.h>
-// #include <stdio.h>
+// #cgo LDFLAGS: ${SRCDIR}/librosie.o ${SRCDIR}/liblua.5.3.dylib -lm -ldl
 // #include <stdlib.h>
 // #include <string.h>
 // #include <stdarg.h>
@@ -28,7 +25,7 @@ package rosie
 // }
 // int *new_int() { return (int *)malloc(sizeof(int)); }
 //
-// #cgo CFLAGS: -fpermissive -I./include
+// #cgo CFLAGS: -I./include
 import "C"
 
 //import "unsafe"
