@@ -42,10 +42,9 @@ int main() {
 
   str errors;
 
-  printf("ABOUT TO CALL rosie_new\n"); fflush(NULL);
+  printf("Calling rosie_new\n"); fflush(NULL);
 
   void *engine = rosie_new(&errors);
-  printf("AFTER CALL to rosie_new\n"); fflush(NULL);
 
   if (engine == NULL) {
     LOG("rosie_new failed\n");
@@ -59,8 +58,8 @@ int main() {
   str pkgname;
   pkgname = STR("all");
   errors = STR("");
+  printf("Calling rosie_import\n"); fflush(NULL);
   err = rosie_import(engine, &ok, &pkgname, NULL, &errors);
-  printf("AFTER CALL to rosie_import\n"); fflush(NULL);
 
   if (err) {
     LOG("rosie call failed: import library \"all\"\n");

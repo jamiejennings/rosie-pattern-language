@@ -20,19 +20,20 @@
 #define ERR_SYSCALL_FAILED -3
 #define ERR_ENGINE_CALL_FAILED -4
 
-/* These codes are returned in the length field of an str whose ptr is NULL */
+/* These codes are returned in the length field of an str whose ptr is
+ * NULL as a cheap way to give the caller an explanation when an error
+ * occurred.
+ */
 #define ERR_NO_MATCH 0
 #define ERR_NO_PATTERN 1
-#define ERR_NO_TRACESTYLE 2	/* same as no encoder */
+#define ERR_NO_ENCODER 2	/* also used for "no trace style" */
 #define ERR_NO_FILE 3		/* no such file or directory */
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
-#include "rpeg.h"	/* "../../submodules/rosie-lpeg/src/rpeg.h" */
-
 #include <pthread.h>
 
-
+#include "rpeg.h"
 
 #define ACQUIRE_ENGINE_LOCK(e) do {				    \
     int r = pthread_mutex_lock(&((e)->lock));			    \
@@ -67,12 +68,8 @@ typedef struct rosie_matchresult {
 } match;
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 str rosie_new_string(byte_ptr msg, size_t len);
-str *rosie_new_string_ptr(byte_ptr msg, size_t len);
+str *rosie_string_ptr_from(byte_ptr msg, size_t len);
 void rosie_free_string(str s);
 void rosie_free_string_ptr(str *s);
 
@@ -93,10 +90,6 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *errors);
 int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *errors);
 int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *errors);
 
-#ifdef __cplusplus
-}
-#endif
-     
 /*
 
 Administrative:

@@ -80,7 +80,7 @@ static int bind(void *lib){
 
   bind_function(fp_rosie_new_string, "rosie_new_string");
   bind_function(fp_rosie_free_string, "rosie_free_string");
-  bind_function(fp_rosie_new_string_ptr, "rosie_new_string_ptr");
+  bind_function(fp_rosie_string_ptr_from, "rosie_string_ptr_from");
   bind_function(fp_rosie_free_string_ptr, "rosie_free_string_ptr");
 
   bind_function(fp_rosie_setlibpath_engine, "rosie_setlibpath_engine");

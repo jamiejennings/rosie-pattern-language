@@ -59,7 +59,7 @@ class RosieLoadTest(unittest.TestCase):
         self.assertTrue(err['message'])
         self.assertTrue(err['who'] == 'compiler')
 
-        b = None              # triggers call to librosie to gc the compiled pattern
+        b = None                       # trigger call to librosie to gc the compiled pattern
         b, errs = self.engine.compile("[:digit:]+")
         self.assertTrue(b[0] != bb[0]) # distinct values for distinct patterns
         self.assertTrue(errs == None)

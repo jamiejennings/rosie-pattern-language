@@ -35,9 +35,14 @@ under the name 'rosie'.\n\
     }
   }
   int err = rosie_import(engine, &ok, &pkgname, NULL, &errors);
+  rosie_free_string(pkgname);
+
   if (err) {
     printf("Call to rosie_import failed.\n");
-    if (errors.ptr) printf("%s", errors.ptr);
+    if (errors.ptr) {
+	 printf("%s", errors.ptr);
+	 rosie_free_string(errors);
+    }
     exit(E_ENGINE_IMPORT);
   }
   if (!ok) {
@@ -52,15 +57,13 @@ under the name 'rosie'.\n\
   if (errors.ptr) {
     rosie_free_string(errors);
   }
-  rosie_free_string(pkgname);
-
   printf("Engine %p created\n", engine);
   return engine;
 }  
 
 int compile(void *engine, str expression) {
   int pat;
-  str errors = STR("");		/* WTF??? */
+  str errors;
   int err = rosie_compile(engine, &expression, &pat, &errors);
   if (err) {
     printf("rosie call failed: compile expression\n");

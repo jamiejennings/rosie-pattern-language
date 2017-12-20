@@ -14,14 +14,12 @@
 #   /usr/local/lib/librosie.so
 #   /usr/local/lib/rosie             (directory)
 
-
 # Development environment:
 #   Mac OS X Sierra (10.12.6)
 #   Python 2.7.10 (distributed with OS X)
 #   cffi-1.11.1 pycparser-2.18 (installed with: pip install cffi)
 
 from cffi import FFI
-#from ctypes.util import find_library
 import os
 import json
 
@@ -45,7 +43,7 @@ typedef struct rosie_matchresult {
      int tmatch;
 } match;
 
-str *rosie_new_string_ptr(byte_ptr msg, size_t len);
+str *rosie_string_ptr_from(byte_ptr msg, size_t len);
 void rosie_free_string_ptr(str *s);
 void rosie_free_string(str s);
 
@@ -84,7 +82,7 @@ def new_cstr(py_string=None):
     def free_cstr_ptr(local_cstr_obj):
         lib.rosie_free_string(local_cstr_obj[0])
     if py_string:
-        obj = lib.rosie_new_string_ptr(py_string, len(py_string))
+        obj = lib.rosie_string_ptr_from(py_string, len(py_string))
         return ffi.gc(obj, lib.rosie_free_string_ptr)
     else:
         obj = ffi.new("struct rosie_string *")
@@ -134,17 +132,11 @@ class engine ():
             libname = "librosie.so"
         if not lib:
             if custom_libpath:
-#                libpath = os.path.join(os.path.abspath(custom_libpath), libname)
                libpath = os.path.join(custom_libpath, libname)
                if not os.path.isfile(libpath):
                    raise RuntimeError("Cannot find librosie at " + libpath)
             else:
-                libpath = libname #find_library(libname)
-#                if not libpath:
-#                    raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
-
-            print "*** libpath =", libpath
-
+                libpath = libname
             lib = ffi.dlopen(libpath, ffi.RTLD_GLOBAL)
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)

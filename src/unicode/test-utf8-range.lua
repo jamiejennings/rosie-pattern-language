@@ -12,8 +12,8 @@
 --run()
 
 
-package.path = '/Users/jjennings/Dev/public/lua-modules/?.lua;' .. package.path
-termcolor = require "termcolor"
+package.path = '/Users/jennings/Projects/lua-modules/?.lua;' .. package.path
+--termcolor = require "termcolor"
 test = require "test"
 
 check = test.check
