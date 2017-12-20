@@ -37,19 +37,16 @@ LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
-SYSLIBS=-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
+SYSLIBS=-lpthread -shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
-
-
-
-# ifeq ($(PLATFORM), macosx)
-# CC= clang
-# else
+ifeq ($(PLATFORM), macosx)
+CC= gcc #clang
+else
 CC= gcc
-# endif
+ endif
 
 CFLAGS= -O2 -Wall -Wextra -pthread -DMULTIPLE_THREADS -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
@@ -58,10 +55,6 @@ LIBS= $(SYSLIBS) $(MYLIBS)
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
-
-# SYSCFLAGS=
-# SYSLDFLAGS=
-# SYSLIBS=
 
 MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src 
 MYLDFLAGS= 
