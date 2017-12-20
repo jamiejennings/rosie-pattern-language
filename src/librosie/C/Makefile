@@ -35,14 +35,15 @@ CC= gcc
 endif
 
 ifeq ($(PLATFORM),macosx)
+CFLAGS += -std=gnu99
 SYSCFLAGS=-DLUA_USE_MACOSX
 SYSLDFLAGS=-undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)
-CFLAGS += -std=gnu99
+SYSLIBS=-lpthread
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
-SYSLIBS=-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
+SYSLIBS=-lpthread -ldl -lm -Wl,--no-undefined
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
@@ -54,10 +55,6 @@ LIBS= $(SYSLIBS) $(MYLIBS)
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
-
-SYSCFLAGS=
-SYSLDFLAGS=
-SYSLIBS=
 
 MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src -I..
 MYLDFLAGS= 
