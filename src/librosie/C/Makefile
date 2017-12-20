@@ -26,16 +26,29 @@ endif
 
 PLATFORMS = linux macosx windows
 
-default: $(PLATFORM)
+default: dynamic static mt
 
-# ifeq ($(PLATFORM), macosx)
-# CC= clang
-# else
+ifeq ($(PLATFORM), macosx)
+CC= gcc #clang
+else
 CC= gcc
-# endif
+endif
+
+ifeq ($(PLATFORM),macosx)
+SYSCFLAGS=-DLUA_USE_MACOSX
+SYSLDFLAGS=-undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)
+CFLAGS += -std=gnu99
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
+ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
+else 
+SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
+SYSLIBS=-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
+ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
+endif
 
 CFLAGS= -pthread -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
-LDFLAGS= -lpthread $(SYSLDFLAGS) $(MYLDFLAGS)
+LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
 AR= ar rcu
@@ -65,8 +78,6 @@ ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic librosie.so
 endif
 
-
-ALL= dynamic static mt
 
 dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
@@ -120,21 +131,20 @@ echo:
 	@echo "RM= $(RM)"
 
 none:
-	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
+	@echo "Your platform was not recognized.  Please do 'make PLATFORM=x', where x is one of these: $(PLATFORMS)"
 
-linux:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-ldl -lm -lpthread" CC=$(CC)
+# linux:
+# 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-ldl -lm -lpthread" CC=$(CC)
 
-macosx:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" SYSLIBS="-lpthread" CC=$(CC)
+# macosx:
+# 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" SYSLIBS="-lpthread" CC=$(CC)
 
-macosx: CFLAGS += -std=gnu99
+# macosx: CFLAGS += -std=gnu99
 
+.PHONY: windows
 windows:
 	@echo Windows installation not yet supported.
 
-## Targets that do not create files
-.PHONY: default o a clean echo none test installtest
-
 static.o: static.c static.h 
 dynamic.o: dynamic.c dynamic.h 
+mt.o: mt.c

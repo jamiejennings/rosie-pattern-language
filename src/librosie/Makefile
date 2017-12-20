@@ -51,9 +51,9 @@ endif
 CC= gcc
 # endif
 
-CFLAGS= -pthread -O2 -Wall -Wextra -pthread -DMULTIPLE_THREADS -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
+CFLAGS= -O2 -Wall -Wextra -pthread -DMULTIPLE_THREADS -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
-LIBS= -lpthread $(SYSLIBS) $(MYLIBS)
+LIBS= $(SYSLIBS) $(MYLIBS)
 
 AR= ar rcu
 RANLIB= ranlib
