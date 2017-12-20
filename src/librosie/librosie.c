@@ -1026,7 +1026,7 @@ void rosie_finalize(Engine *e) {
   get_registry(prev_string_result_key); 
   if (lua_isuserdata(L, -1)) { 
     str *rs = lua_touserdata(L, -1); 
-    rosie_free_string_ptr(rs); 
+    if (rs->ptr) rosie_free_string_ptr(rs); 
     lua_pop(L, 1); 
   } 
   LOGf("Finalizing engine %p\n", L);

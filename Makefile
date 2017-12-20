@@ -368,7 +368,7 @@ test:
 		cd $(LIBROSIE_DIR) && $(MAKE) test; \
 	else \
 		echo "Skipping librosie client tests."; \
-		echo "To enable, set CLIENTS=all or CLIENTS=\"c python\" or such (space separated list in quotes)."; \
+		echo "To enable, set CLIENTS=all or CLIENTS=\"C python\" or such (space separated list in quotes)."; \
 	fi
 
 .PHONY: installtest
@@ -380,7 +380,7 @@ installtest:
 		cd $(LIBROSIE_DIR) && $(MAKE) test; \
 	else \
 		echo "Skipping librosie client tests."; \
-		echo "To enable, set CLIENTS=all or CLIENTS=\"c python\" or such (space separated list in quotes)."; \
+		echo "To enable, set CLIENTS=all or CLIENTS=\"C python\" or such (space separated list in quotes)."; \
 	fi
 
 

@@ -29,6 +29,7 @@
      } while (0)
 
 #define STR(literal) rosie_new_string((byte_ptr)(literal), strlen((literal)));
+#define FREE(str) do { if ((str).ptr) rosie_free_string((str)); } while (0)
 
 
 
@@ -57,10 +58,11 @@ int main() {
   int ok;
   str pkgname;
   pkgname = STR("all");
-  errors = STR("");
+
   printf("Calling rosie_import\n"); fflush(NULL);
   err = rosie_import(engine, &ok, &pkgname, NULL, &errors);
-
+  FREE(pkgname);
+  
   if (err) {
     LOG("rosie call failed: import library \"all\"\n");
     exitStatus = -2;
@@ -71,10 +73,12 @@ int main() {
     exitStatus = -3;
     goto quit;
   }
-
+  FREE(errors);
+  
   int pat;
   str expression = STR("all.things");
   err = rosie_compile(engine, &expression, &pat, &errors);
+  FREE(expression);
   if (err) {
     LOG("rosie call failed: compile expression\n");
     exitStatus = -4;
@@ -91,10 +95,11 @@ int main() {
     exitStatus = -5;
     goto quit;
   }
-
+  FREE(errors);
   str input = STR("1234");
   match m;
   err = rosie_match(engine, pat, 1, "json", &input, &m);
+  FREE(input);
   if (err) {
     LOG("rosie call failed: match");
     exitStatus = -6;
@@ -108,9 +113,10 @@ int main() {
   else {
     printf("match data is: %.*s\n", m.data.len, m.data.ptr);
   }
-
+  
   str rplfile = STR("test.rpl");
   err = rosie_loadfile(engine, &ok, &rplfile, &pkgname, &errors);
+  FREE(rplfile);
   if (err) {
     LOG("rosie call failed: loadfile");
     exitStatus = -8;
@@ -125,8 +131,8 @@ int main() {
        char *msg = ((pkgname.ptr != NULL) ? (char *) pkgname.ptr : "<no package>");
        printf("rpl file loaded successfully, package name is: %s\n", msg);
   }
-  
-
+  FREE(pkgname);
+  FREE(errors);
 
  quit:
   rosie_finalize(engine);
