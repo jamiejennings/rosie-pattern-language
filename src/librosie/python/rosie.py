@@ -62,7 +62,7 @@ int rosie_matchfile(void *L, int pat, char *encoder, int wholefileflag,
 int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_loadfile(void *e, int *ok, str *fn, str *pkgname, str *errors);
-int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
+int rosie_import(void *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages);
 
 """)
 
@@ -197,11 +197,12 @@ class engine ():
         Cerrs = new_cstr()
         Cas_name = new_cstr(as_name) if as_name else ffi.NULL
         Cpkgname = new_cstr(pkgname)
+        Cactual_pkgname = new_cstr()
         Csuccess = ffi.new("int *")
-        ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cerrs)
+        ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cactual_pkgname, Cerrs)
         if ok != 0:
             raise RuntimeError("import() failed (please report this as a bug)")
-        actual_pkgname = read_cstr(Cpkgname)
+        actual_pkgname = read_cstr(Cactual_pkgname) if Cactual_pkgname.ptr != ffi.NULL else None
         errs = read_cstr(Cerrs)
         if errs == '{}': errs = None
         return Csuccess[0], actual_pkgname, errs

@@ -56,12 +56,14 @@ int main() {
 
   int err;
   int ok;
-  str pkgname;
+  str pkgname, actual_pkgname;
   pkgname = STR("all");
 
   printf("Calling rosie_import\n"); fflush(NULL);
-  err = rosie_import(engine, &ok, &pkgname, NULL, &errors);
+  err = rosie_import(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
   FREE(pkgname);
+  printf("Imported library named %s\n", actual_pkgname.ptr);
+  FREE(actual_pkgname);
   
   if (err) {
     LOG("rosie call failed: import library \"all\"\n");
@@ -96,6 +98,7 @@ int main() {
     goto quit;
   }
   FREE(errors);
+
   str input = STR("1234");
   match m;
   err = rosie_match(engine, pat, 1, "json", &input, &m);
@@ -115,7 +118,7 @@ int main() {
   }
   
   str rplfile = STR("test.rpl");
-  err = rosie_loadfile(engine, &ok, &rplfile, &pkgname, &errors);
+  err = rosie_loadfile(engine, &ok, &rplfile, &actual_pkgname, &errors);
   FREE(rplfile);
   if (err) {
     LOG("rosie call failed: loadfile");
@@ -128,10 +131,10 @@ int main() {
     goto quit;
   }
   else {
-       char *msg = ((pkgname.ptr != NULL) ? (char *) pkgname.ptr : "<no package>");
+       char *msg = ((actual_pkgname.ptr != NULL) ? (char *) actual_pkgname.ptr : "<no package>");
        printf("rpl file loaded successfully, package name is: %s\n", msg);
   }
-  FREE(pkgname);
+  FREE(actual_pkgname);
   FREE(errors);
 
  quit:

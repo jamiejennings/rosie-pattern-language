@@ -73,12 +73,12 @@ str *rosie_string_ptr_from(byte_ptr msg, size_t len);
 void rosie_free_string(str s);
 void rosie_free_string_ptr(str *s);
 
-Engine *rosie_new(str *errors);
+Engine *rosie_new(str *messages);
 void rosie_finalize(Engine *e);
 int rosie_setlibpath_engine(Engine *e, char *newpath);
 int rosie_set_alloc_limit(Engine *e, int newlimit);
 int rosie_config(Engine *e, str *retvals);
-int rosie_compile(Engine *e, str *expression, int *pat, str *errors);
+int rosie_compile(Engine *e, str *expression, int *pat, str *messages);
 int rosie_free_rplx(Engine *e, int pat);
 int rosie_match(Engine *e, int pat, int start, char *encoder, str *input, match *match);
 int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
@@ -86,9 +86,9 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 		    int *cin, int *cout, int *cerr,
 		    str *err);
 int rosie_trace(Engine *e, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
-int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *errors);
-int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *errors);
-int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *errors);
+int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages);
+int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages);
+int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages);
 
 /*
 

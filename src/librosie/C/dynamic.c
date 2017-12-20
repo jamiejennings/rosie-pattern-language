@@ -131,13 +131,13 @@ int main(int argc, char **argv) {
 
   int err;
   int ok;
-  str pkgname, as;
+  str pkgname, as, actual_pkgname;
   pkgname = (*fp_rosie_new_string)((byte_ptr)"all", 3);
   errors = (*fp_rosie_new_string)((byte_ptr)"", 0);
   as = (*fp_rosie_new_string)((byte_ptr)"", 0);
   printf("pkgname = %s; as = %s; errors = %s\n", pkgname.ptr, as.ptr, errors.ptr);
   LOG("allocated strs\n");
-  err = (*fp_rosie_import)(engine, &ok, &pkgname, NULL, &errors);
+  err = (*fp_rosie_import)(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
   if (err) {
     LOG("rosie call failed: import library \"all\"\n");
     exitStatus = -3;

@@ -21,6 +21,7 @@ void *make_engine() {
   int ok;
   str errors;
   str pkgname = STR("all");
+  str actual_pkgname;
   void *engine = rosie_new(&errors);
   if (!engine) {
     printf("Call to rosie_new failed.\n");
@@ -34,8 +35,9 @@ under the name 'rosie'.\n\
     exit(E_ENGINE_CREATE);
     }
   }
-  int err = rosie_import(engine, &ok, &pkgname, NULL, &errors);
+  int err = rosie_import(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
   rosie_free_string(pkgname);
+  if (actual_pkgname.ptr != NULL) rosie_free_string(actual_pkgname);
 
   if (err) {
     printf("Call to rosie_import failed.\n");

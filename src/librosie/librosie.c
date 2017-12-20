@@ -839,12 +839,12 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
   if (lua_isstring(L, -2)) {
     temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
     str loaded_pkgname = rosie_new_string(temp_str, temp_len);
-    pkgname->ptr = loaded_pkgname.ptr;
-    pkgname->len = loaded_pkgname.len;
+    (*pkgname).ptr = loaded_pkgname.ptr;
+    (*pkgname).len = loaded_pkgname.len;
   }
   else {
-    pkgname->ptr = NULL;
-    pkgname->len = 0;
+    (*pkgname).ptr = NULL;
+    (*pkgname).len = 0;
   }
   
   t = strip_violation_messages(L);
@@ -871,7 +871,7 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
 }
 
 /* N.B. Client must free 'messages' */
-int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *messages) {
+int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages) {
   int t;
   size_t temp_len;
   unsigned char *temp_str;
@@ -905,11 +905,12 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *messages) {
   
   if (lua_isstring(L, -2)) {
     temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
-    *pkgname = rosie_new_string(temp_str, temp_len);
+    *actual_pkgname = rosie_new_string(temp_str, temp_len);
     LOGf("engine.import reports that package %s was loaded\n", temp_str);
   }
   else {
-    pkgname = NULL;
+    (*actual_pkgname).ptr = NULL;
+    (*actual_pkgname).len = 0;
   }
   
   t = strip_violation_messages(L);
