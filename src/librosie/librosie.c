@@ -63,6 +63,9 @@ static char libdir[MAXPATHLEN];
 static char rosiehomedir[MAXPATHLEN];
 static char bootscript[MAXPATHLEN];
 
+char rpeg_path[MAXPATHLEN];
+void *rpeg_lib;
+
 #include "logging.c"
 #include "registry.c"
 #include "rosiestring.c"
@@ -119,35 +122,49 @@ static void set_bootscript() {
   LOGf("Bootscript filename set to %s\n", bootscript);
 }
 
+static void prepare_for_boot() {
+  /* boot incoming */
+  set_bootscript();
+
+  char *next = stpncpy(rpeg_path, rosiehomedir, MAXPATHLEN); 
+  if ((MAXPATHLEN - (unsigned int)(next - rpeg_path + 1)) < strlen(RPEG_LOCATION)) {
+    LOG("rpeg_path exceeds MAXPATHLEN\n");
+    return;
+  }
+  strncpy(next, RPEG_LOCATION, (MAXPATHLEN - (next - rpeg_path + 1)));
+  LOGf("rpeg path (calculated) is %s\n", rpeg_path);
+  
+  rpeg_lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
+  if (rpeg_lib == NULL) {
+    LOG("dlopen(rpeg) returned NULL: unable to reopen rpeg library\n");
+    return;
+  }
+
+  char *msg = NULL;
+
+  fp_r_match_C = dlsym(rpeg_lib, "r_match_C");
+  if ((msg = dlerror()) != NULL) LOGf("r_match_C dlerror = %s\n", msg);
+
+  fp_r_newbuffer_wrap = (foo_t) dlsym(rpeg_lib, "r_newbuffer_wrap");
+  if ((msg = dlerror()) != NULL) LOGf("r_newbuffer_wrap dlerror = %s\n", msg);
+
+  if ((fp_r_match_C == NULL) || (fp_r_newbuffer_wrap == NULL)) {
+    LOG("Failed to find rpeg functions\n");
+    return;
+  }
+}  
+
 static pthread_once_t ready_to_boot = PTHREAD_ONCE_INIT;
 
 static int boot (lua_State *L, str *messages) {
-  char rpeg_path[MAXPATHLEN];
   char *msg = NULL;
-  void *lib;
-  pthread_once(&ready_to_boot, set_bootscript);
+  pthread_once(&ready_to_boot, prepare_for_boot);
   if (!*bootscript) {
     *messages = rosie_string_from_const("failed to set bootscript or libinfo");
     return FALSE;
   }
   LOGf("Booting rosie from %s\n", bootscript);
 
-/* TODO: find a better way to obtain the handle to rpeg.so? */
-  char *next = stpncpy(rpeg_path, rosiehomedir, MAXPATHLEN); 
-  if ((MAXPATHLEN - (unsigned int)(next - rpeg_path + 1)) < strlen(RPEG_LOCATION)) {
-    *messages = rosie_string_from_const("rpeg_path exceeds MAXPATHLEN");
-    return FALSE;
-  }
-  strncpy(next, RPEG_LOCATION, (MAXPATHLEN - (next - rpeg_path + 1)));
-  LOGf("rpeg path (calculated) is %s\n", rpeg_path);
-  
-  lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
-  if (lib == NULL) {
-       LOG("dlopen(rpeg) returned NULL\n");
-       *messages = rosie_string_from_const("unable to dlopen rpeg library");
-       return FALSE;
-  }
-  
   int status = luaL_loadfile(L, bootscript);
   if (status != LUA_OK) {
     LOG("Failed to read boot code (using loadfile)\n");
@@ -181,21 +198,6 @@ static int boot (lua_State *L, str *messages) {
     return FALSE;
   }
   LOG("Boot function succeeded\n");
-
-  fp_r_match_C = dlsym(lib, "r_match_C");
-
-  if ((msg = dlerror()) != NULL) LOGf("*** err = %s\n", msg);
-
-  fp_r_newbuffer_wrap = (foo_t) dlsym(lib, "r_newbuffer_wrap");
-
-  if ((msg = dlerror()) != NULL) LOGf("*** err = %s\n", msg);
-
-  if ((fp_r_match_C == NULL) || (fp_r_newbuffer_wrap == NULL)) {
-    LOG("Failed to find rpeg functions\n");
-    LOGstack(L);
-    *messages = rosie_string_from_const("binding of rpeg functions failed");
-    return FALSE;
-  }
 
   return TRUE;
 }
