@@ -46,7 +46,7 @@ ifeq ($(PLATFORM), macosx)
 CC= gcc #clang
 else
 CC= gcc
- endif
+endif
 
 CFLAGS= -O2 -Wall -Wextra -pthread -DMULTIPLE_THREADS -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
