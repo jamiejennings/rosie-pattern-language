@@ -200,7 +200,7 @@ static int boot (lua_State *L, str *messages) {
   return TRUE;
 }
 
-str *to_json_string(lua_State *L, int pos) {
+str to_json_string(lua_State *L, int pos) {
      size_t len;
      byte_ptr str;
      int t;
@@ -211,7 +211,7 @@ str *to_json_string(lua_State *L, int pos) {
      if (t != LUA_OK) {
        LOG("call to json encoder failed\n"); /* more detail may not be useful to the user */
        LOGstack(L);
-       return NULL;
+       return rosie_string_from(NULL, 0);
      }
      if ((lua_gettop(L) - top) > 1) {
        /* Top of stack is error msg */
@@ -220,17 +220,17 @@ str *to_json_string(lua_State *L, int pos) {
 	 /* FUTURE: return the error from the json encoder to the client */
 	 LOGf("error message from json encoder: %s\n", lua_tolstring(L, -1, NULL));
 	 LOGstack(L);
-	 return NULL;
+	 return rosie_string_from(NULL, 0);
        }
        else {
 	 /* Something really strange happened!  Is there any useful info to return? */
 	 LOG("call to json encoder returned unexpected values\n");
 	 LOGstack(L);
-	 return NULL;
+	 return rosie_string_from(NULL, 0);
        }
      }
      str = (byte_ptr) lua_tolstring(L, -1, &len);
-     return rosie_string_ptr_from(str, len);
+     return rosie_new_string(str, len);
 }
 
 static int strip_violation_messages(lua_State *L) {
@@ -351,7 +351,7 @@ int rosie_set_alloc_limit (Engine *e, int newlimit) {
 /* N.B. Client must free retval */
 int rosie_config(Engine *e, str *retval) {
   int t;
-  str *r;
+  str r;
   lua_State *L = e->L;
   ACQUIRE_ENGINE_LOCK(e);
   get_registry(rosie_key);
@@ -366,15 +366,15 @@ int rosie_config(Engine *e, str *retval) {
     return ERR_ENGINE_CALL_FAILED;
   }
   r = to_json_string(e->L, -1);
-  if (r == NULL) {
+  if (r.ptr == NULL) {
     LOG("in config(), could not convert config information to json\n");
     *retval = rosie_string_from_const("in config(), could not convert config information to json");
     lua_settop(e->L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
-  retval->len = r->len;
-  retval->ptr = r->ptr;
+  retval->len = r.len;
+  retval->ptr = r.ptr;
   lua_settop(e->L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
@@ -434,7 +434,7 @@ int rosie_free_rplx (Engine *e, int pat) {
 /* N.B. Client must free messages */
 int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   int t;
-  str *temp_rs;
+  str temp_rs;
   lua_State *L = e->L;
   
   LOGf("compile(): L = %p\n", L);
@@ -481,14 +481,15 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
     *pat = 0;
     CHECK_TYPE("compile messages", lua_type(L, -1), LUA_TTABLE);
     temp_rs = to_json_string(L, -1);
-    if (temp_rs == NULL) {
+    if (temp_rs.ptr == NULL) {
       LOG("in compile() could not convert compile messages to json\n");
       lua_settop(L, 0);
       RELEASE_ENGINE_LOCK(e);
       *messages = rosie_string_from_const("could not convert compile messages to json");
       return ERR_ENGINE_CALL_FAILED;
     }
-    *messages = rosie_new_string((byte_ptr) temp_rs->ptr, temp_rs->len);
+    (*messages).ptr = temp_rs.ptr;
+    (*messages).len = temp_rs.len;
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return SUCCESS;
@@ -503,7 +504,7 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   LOGf("storing rplx object at index %d\n", *pat);
 
   temp_rs = to_json_string(L, -1);
-  if (temp_rs == NULL) {
+  if (temp_rs.ptr == NULL) {
     LOG("in compile(), could not convert warning information to json\n");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
@@ -514,7 +515,8 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
 /*   err->len = temp_rs->len; */
 /*   err->ptr = temp_rs->ptr; */
   
-  *messages = rosie_new_string((byte_ptr) temp_rs->ptr, temp_rs->len);
+  (*messages).ptr = temp_rs.ptr;
+  (*messages).len = temp_rs.len;
 
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
@@ -584,7 +586,7 @@ have_pattern:
     lua_replace(L, 1);
     lua_settop(L, 2);
     /* Don't make a copy of the input.  Wrap it in an rbuf, which will
-       be gc'd later (but will not free the original source data. */
+       be gc'd later (but will not free the original source data). */
     (*fp_r_newbuffer_wrap)(L, (char *)input->ptr, input->len); 
     lua_pushinteger(L, start);
     lua_pushstring(L, encoder_name);
@@ -673,7 +675,7 @@ have_pattern:
 /* N.B. Client must free trace */
 int rosie_trace(Engine *e, int pat, int start, char *trace_style, str *input, int *matched, str *trace) {
   int t;
-  str *rs;
+  str rs;
   lua_State *L = e->L;
   ACQUIRE_ENGINE_LOCK(e);
   collect_if_needed(L);
@@ -734,7 +736,7 @@ have_pattern:
     byte_ptr temp_str;
     size_t temp_len;
     temp_str = (byte_ptr) lua_tolstring(L, -1, &(temp_len));
-    rs = rosie_string_ptr_from(temp_str, temp_len);
+    rs = rosie_new_string(temp_str, temp_len);
   }
   else {
     LOG("trace() failed with unexpected return value from engine.trace()\n");
@@ -744,8 +746,8 @@ have_pattern:
     return ERR_ENGINE_CALL_FAILED;
   }
 
-  (*trace).ptr = rs->ptr;
-  (*trace).len = rs->len;
+  (*trace).ptr = rs.ptr;
+  (*trace).len = rs.len;
 
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
@@ -757,7 +759,7 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
   int t;
   size_t temp_len;
   unsigned char *temp_str;
-  str *temp_rs;
+  str temp_rs;
   lua_State *L = e->L;
   ACQUIRE_ENGINE_LOCK(e);
   get_registry(engine_key);
@@ -790,15 +792,15 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
   }
   
   temp_rs = to_json_string(L, -1);
-  if (temp_rs == NULL) {
+  if (temp_rs.ptr == NULL) {
     LOG("in load(), could not convert error information to json\n");
     *messages = rosie_string_from_const("in load(), could not convert error information to json");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
     }
-  messages->len = temp_rs->len;
-  messages->ptr = temp_rs->ptr;
+  (*messages).ptr = temp_rs.ptr;
+  (*messages).len = temp_rs.len;
 
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
@@ -810,7 +812,7 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
   int t;
   size_t temp_len;
   unsigned char *temp_str;
-  str *temp_rs;
+  str temp_rs;
   lua_State *L = e->L;
   ACQUIRE_ENGINE_LOCK(e);
   get_registry(engine_key);
@@ -854,14 +856,14 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
     return ERR_ENGINE_CALL_FAILED; 
   } 
   temp_rs = to_json_string(L, -1);
-    if (temp_rs == NULL) {
-      LOG("in load(), could not convert error information to json\n");
-      lua_settop(L, 0);
-      RELEASE_ENGINE_LOCK(e);
-      return ERR_ENGINE_CALL_FAILED;
-    }
-  messages->len = temp_rs->len;
-  messages->ptr = temp_rs->ptr;
+  if (temp_rs.ptr == NULL) {
+    LOG("in load(), could not convert error information to json\n");
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return ERR_ENGINE_CALL_FAILED;
+  }
+  (*messages).ptr = temp_rs.ptr;
+  (*messages).len = temp_rs.len;
 
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
@@ -873,7 +875,7 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *messages) {
   int t;
   size_t temp_len;
   unsigned char *temp_str;
-  str *temp_rs;
+  str temp_rs;
   lua_State *L = e->L;
   
   ACQUIRE_ENGINE_LOCK(e);
@@ -920,14 +922,14 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *messages) {
   } 
 
   temp_rs = to_json_string(L, -1);
-    if (temp_rs == NULL) {
-      LOG("in import(), could not convert error information to json\n");
-      lua_settop(L, 0);
-      RELEASE_ENGINE_LOCK(e);
-      return ERR_ENGINE_CALL_FAILED;
-    }
-  messages->len = temp_rs->len;
-  messages->ptr = temp_rs->ptr;
+  if (temp_rs.ptr == NULL) {
+    LOG("in import(), could not convert error information to json\n");
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return ERR_ENGINE_CALL_FAILED;
+  }
+  (*messages).ptr = temp_rs.ptr;
+  (*messages).len = temp_rs.len;
 
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
@@ -1031,6 +1033,7 @@ void rosie_finalize(Engine *e) {
   } 
   LOGf("Finalizing engine %p\n", L);
   lua_close(L);
-  RELEASE_ENGINE_LOCK(e);
+  //  RELEASE_ENGINE_LOCK(e);
+  free(e);
 }
 
