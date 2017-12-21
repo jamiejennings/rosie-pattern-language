@@ -100,9 +100,7 @@ static void set_libinfo() {
     exit(ERR_SYSCALL_FAILED);
   }
   strncpy(libname, base, MAXPATHLEN);
-  free(base);
   strncpy(libdir, dir, MAXPATHLEN);
-  free(dir);
   LOGf("libdir is %s, and libname is %s\n", libdir, libname);
 }
 
@@ -162,7 +160,7 @@ static int boot (lua_State *L, str *messages) {
   char *msg = NULL;
   pthread_once(&ready_to_boot, prepare_for_boot);
   if (!*bootscript) {
-    *messages = rosie_string_from_const("failed to set bootscript or libinfo");
+    *messages = rosie_new_string_from_const("failed to set bootscript or libinfo");
     return FALSE;
   }
   LOGf("Booting rosie from %s\n", bootscript);
@@ -174,7 +172,7 @@ static int boot (lua_State *L, str *messages) {
       *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
     }
     else {
-      *messages = rosie_string_from_const("cannot find rosie boot code");
+      *messages = rosie_new_string_from_const("cannot find rosie boot code");
     }
     return FALSE;
   }
@@ -183,10 +181,10 @@ static int boot (lua_State *L, str *messages) {
   if (status != LUA_OK) {
     LOG("Loading of boot code failed\n");
     if (asprintf(&msg, "loading failed for %s", bootscript)) {
-      *messages = rosie_string_from_const(msg);
+      *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
     }
     else {
-      *messages = rosie_string_from_const("loading of boot code failed");
+      *messages = rosie_new_string_from_const("loading of boot code failed");
     }
     return FALSE;
   }
@@ -196,7 +194,7 @@ static int boot (lua_State *L, str *messages) {
   if (status!=LUA_OK) {
     LOG("Boot function failed.  Lua stack is: \n");
     LOGstack(L);
-    *messages = rosie_string_from_const("execution of boot loader failed");
+    *messages = rosie_new_string_from_const("execution of boot loader failed");
     return FALSE;
   }
   LOG("Boot function succeeded\n");
@@ -268,7 +266,7 @@ Engine *rosie_new(str *messages) {
   e->lock = lock;
   lua_State *L = luaL_newstate();
   if (L == NULL) {
-    *messages = rosie_string_from_const("not enough memory to initialize");
+    *messages = rosie_new_string_from_const("not enough memory to initialize");
     return NULL;
   }
   e->L = L;
@@ -280,7 +278,7 @@ Engine *rosie_new(str *messages) {
   }
   if (!lua_checkstack(L, 6)) {
     LOG("Cannot initialize: not enough memory for stack\n");
-    *messages = rosie_string_from_const("not enough memory for stack");
+    *messages = rosie_new_string_from_const("not enough memory for stack");
     return NULL;
   }
   t = lua_getglobal(L, "rosie");
@@ -294,7 +292,7 @@ Engine *rosie_new(str *messages) {
   t = lua_pcall(L, 0, 1, 0);
   if (t != LUA_OK) {
     LOG("rosie.engine.new() failed\n");
-    *messages = rosie_string_from_const("rosie.engine.new() failed");
+    *messages = rosie_new_string_from_const("rosie.engine.new() failed");
     return NULL;
   }
 
@@ -364,7 +362,7 @@ int rosie_config(Engine *e, str *retval) {
   t = lua_pcall(e->L, 0, 1, 0);
   if (t != LUA_OK) {
     LOG("rosie.config() failed\n");
-    *retval = rosie_string_from_const("rosie.config() failed");
+    *retval = rosie_new_string_from_const("rosie.config() failed");
     lua_settop(e->L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
@@ -372,7 +370,7 @@ int rosie_config(Engine *e, str *retval) {
   r = to_json_string(e->L, -1);
   if (r.ptr == NULL) {
     LOG("in config(), could not convert config information to json\n");
-    *retval = rosie_string_from_const("in config(), could not convert config information to json");
+    *retval = rosie_new_string_from_const("in config(), could not convert config information to json");
     lua_settop(e->L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
@@ -489,7 +487,7 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
       LOG("in compile() could not convert compile messages to json\n");
       lua_settop(L, 0);
       RELEASE_ENGINE_LOCK(e);
-      *messages = rosie_string_from_const("could not convert compile messages to json");
+      *messages = rosie_new_string_from_const("could not convert compile messages to json");
       return ERR_ENGINE_CALL_FAILED;
     }
     (*messages).ptr = temp_rs.ptr;
@@ -656,7 +654,7 @@ have_pattern:
     }
     lua_pop(L, 1);
     temp_str = (unsigned char *)lua_tolstring(L, -1, &temp_len);
-    str *rs = rosie_string_ptr_from(temp_str, temp_len);
+    str *rs = rosie_new_string_ptr(temp_str, temp_len);
     lua_pushlightuserdata(L, (void *) rs);
     set_registry(prev_string_result_key);
     (*match).data.ptr = rs->ptr;
@@ -776,7 +774,7 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
   if (t != LUA_OK) { 
     /* Details will likely not be helpful to the user */
     LOG("engine.load() failed\n"); 
-    *messages = rosie_string_from_const("engine.load() failed"); 
+    *messages = rosie_new_string_from_const("engine.load() failed"); 
     LOGstack(L);
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
@@ -798,7 +796,7 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
   temp_rs = to_json_string(L, -1);
   if (temp_rs.ptr == NULL) {
     LOG("in load(), could not convert error information to json\n");
-    *messages = rosie_string_from_const("in load(), could not convert error information to json");
+    *messages = rosie_new_string_from_const("in load(), could not convert error information to json");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;

@@ -87,7 +87,7 @@ else
   clients=$(CLIENTS)
 endif
 
-librosie.o: librosie.c librosie.h
+librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
 librosie.so: librosie.o $(LUA_DYLIB)

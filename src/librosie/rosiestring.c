@@ -8,9 +8,13 @@
 
 
 /* Constant strings are statically allocated in C, so there is no need
- * to copy one in order to return a pointer to it.
+ * to copy one in order to return a pointer to it.  However, our API
+ * policy is that the client must call rosie_free_string(messages)
+ * when librosie returns a non-NULL messages.ptr.  It is an error to
+ * free a statically allocated string, so we are forced to (malloc) a
+ * copy to return to the client.
  */
-static str rosie_string_from_const(const char *msg) {
+static str rosie_new_string_from_const(const char *msg) {
   size_t len = strlen(msg);
   return rosie_new_string((byte_ptr) msg, len);
 }
@@ -36,8 +40,7 @@ str rosie_new_string(byte_ptr msg, size_t len) {
   return rosie_string_from(new, len);
 }
 
-/* msg must be allocated on the heap */
-str *rosie_string_ptr_from(byte_ptr msg, size_t len) {
+str *rosie_new_string_ptr(byte_ptr msg, size_t len) {
   str temp = rosie_new_string(msg, len);
   str *retval = malloc(sizeof(str));
   if (!retval) {

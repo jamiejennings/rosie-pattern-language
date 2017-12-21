@@ -48,7 +48,7 @@ typedef struct rosie_matchresult {
 } match;
 
 str (*fp_rosie_new_string)(byte_ptr msg, size_t len);
-str *(*fp_rosie_string_ptr_from)(byte_ptr msg, size_t len);
+str *(*fp_rosie_new_string_ptr)(byte_ptr msg, size_t len);
 void (*fp_rosie_free_string)(str s);
 void (*fp_rosie_free_string_ptr)(str *s);
 

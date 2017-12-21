@@ -62,7 +62,7 @@ int main() {
   printf("Calling rosie_import\n"); fflush(NULL);
   err = rosie_import(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
   FREE(pkgname);
-  printf("Imported library named %s\n", actual_pkgname.ptr);
+  printf("Imported library named %.*s\n", actual_pkgname.len, actual_pkgname.ptr);
   FREE(actual_pkgname);
   
   if (err) {
@@ -89,7 +89,7 @@ int main() {
   if (!pat) {
     printf("failed to compile expression; error returned was:\n");
     if (errors.ptr != NULL) {
-      printf("%s\n", errors.ptr);
+      printf("%.*s\n", errors.len, errors.ptr);
     }
     else {
       printf("no error message given\n");
@@ -131,8 +131,12 @@ int main() {
     goto quit;
   }
   else {
-       char *msg = ((actual_pkgname.ptr != NULL) ? (char *) actual_pkgname.ptr : "<no package>");
-       printf("rpl file loaded successfully, package name is: %s\n", msg);
+    printf("rpl file loaded successfully, package name is: ");
+    if (actual_pkgname.ptr != NULL) {
+      printf("%.*s\n", actual_pkgname.len, actual_pkgname.ptr);
+    } else {
+      printf("<no package>\n");
+    }
   }
   FREE(actual_pkgname);
   FREE(errors);
