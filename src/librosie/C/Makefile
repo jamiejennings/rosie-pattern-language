@@ -113,7 +113,7 @@ test: static dynamic mt $(ROSIE_DYLIB)
 	$(DYNAMIC_TEST_COMMAND)
 	@echo
 	@echo Multi-threaded, statically linked test program:
-	./mt 4 100 $(HOME)/test/logfile 
+	./mt 4 25 $(HOME)/test/logfile 
 
 installtest:
 	@echo No tests of C client configured to use system installation of librosie

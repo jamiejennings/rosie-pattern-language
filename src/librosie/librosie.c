@@ -25,6 +25,15 @@
  *
 */
 
+/* FUTURE: 
+ * 
+ * - Add a function that unloads all the dynamic libs, erases the
+ *   global information about the libs, and reinitializes the
+ *   ready_to_boot lock.
+ * 
+ * - Probably need a list of engines so we can destroy those before
+ *   unloading and resetting?  This will be tricky to get right.
+ */
 
 #include <assert.h>
 #include <signal.h>
@@ -1036,7 +1045,24 @@ void rosie_finalize(Engine *e) {
   } 
   LOGf("Finalizing engine %p\n", L);
   lua_close(L);
-  //  RELEASE_ENGINE_LOCK(e);
+  /*
+   * We do not RELEASE_ENGINE_LOCK(e) here because a waiting thread
+   * would then have access to an engine which we have closed, and
+   * whose memory we are about to free.
+   *
+   * The caller should take care to have each engine be created, used,
+   * destroyed, and then never used again.  
+   *
+   * One way to achieve this is to have each thread responsible for
+   * creating and destroying its own engines.  In that scenario, a
+   * thread's engine should be private to that thread.
+   * 
+   * Alternatively, an engine pool could be created (in the client
+   * code).  The pool manager would be responsible for calling
+   * rosie_finalize() when there is no danger of any thread attempting
+   * to use the engine being destroyed.
+   *
+   */
   free(e);
 }
 

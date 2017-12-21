@@ -11,6 +11,15 @@
 #include <pthread.h>
 #include "librosie.h"
 
+/* 
+ * Stack size in bytes, established as a pthread attribute:
+ *
+ * 784kb works in this sample program (on OS X 10.13.2,
+ * clang-900.0.39.2).  The right value to use will depend on what else
+ * the thread will be doing.
+ */
+#define ROSIE_STACK_SIZE ((size_t) 1024*1024*1)
+
 #define STR(literal) rosie_new_string((byte_ptr)(literal), strlen((literal)));
 
 #define E_BAD_ARG -1
@@ -163,7 +172,7 @@ int main(int argc, char **argv) {
   for (int i=0; i<n; i++) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, (size_t) 1024*1024*10); /* !@# WHAT VALUE TO USE? */
+    pthread_attr_setstacksize(&attr, ROSIE_STACK_SIZE);
     int err = pthread_create(&thread[i], &attr, do_work, engine[i]);
     printf("thread[%d] = %p\n", i, &thread[i]); fflush(NULL);
     if (err) {
