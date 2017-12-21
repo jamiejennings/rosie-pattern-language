@@ -100,7 +100,9 @@ static void set_libinfo() {
     exit(ERR_SYSCALL_FAILED);
   }
   strncpy(libname, base, MAXPATHLEN);
+  free(base);
   strncpy(libdir, dir, MAXPATHLEN);
+  free(dir);
   LOGf("libdir is %s, and libname is %s\n", libdir, libname);
 }
 
@@ -113,7 +115,7 @@ static void set_bootscript() {
   last = stpncpy(rosiehomedir, libdir, (MAXPATHLEN - len - 1));
   last = stpncpy(last, ROSIEHOME, len);
   *last = '\0';
-  /* set bootscript (absolute path to boot script) */
+  /* set absolute path to boot script */
   len = strnlen(BOOTSCRIPT, MAXPATHLEN);
   last = stpncpy(bootscript, rosiehomedir, (MAXPATHLEN - len - 1));
   last = stpncpy(last, BOOTSCRIPT, len);
