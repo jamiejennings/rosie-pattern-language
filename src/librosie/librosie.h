@@ -70,6 +70,8 @@ typedef struct rosie_matchresult {
 
 str rosie_new_string(byte_ptr msg, size_t len);
 str *rosie_new_string_ptr(byte_ptr msg, size_t len);
+str *rosie_string_ptr_from(byte_ptr msg, size_t len);
+str rosie_string_from(byte_ptr msg, size_t len);
 void rosie_free_string(str s);
 void rosie_free_string_ptr(str *s);
 

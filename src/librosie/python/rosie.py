@@ -64,6 +64,8 @@ int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_loadfile(void *e, int *ok, str *fn, str *pkgname, str *errors);
 int rosie_import(void *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages);
 
+void free(void *obj);
+
 """)
 
 lib = None                # single instance of dynamic library
@@ -83,7 +85,7 @@ def new_cstr(py_string=None):
         lib.rosie_free_string(local_cstr_obj[0])
     if py_string:
         obj = lib.rosie_string_ptr_from(py_string, len(py_string))
-        return ffi.gc(obj, lib.rosie_free_string_ptr)
+        return ffi.gc(obj, lib.free)
     else:
         obj = ffi.new("struct rosie_string *")
         return ffi.gc(obj, free_cstr_ptr)

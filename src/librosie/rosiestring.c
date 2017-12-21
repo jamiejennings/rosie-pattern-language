@@ -29,6 +29,21 @@ str rosie_string_from(byte_ptr msg, size_t len) {
   return retval;
 }
 
+/* Caller must ensure liveness of msg.  Typically, msg must be
+ * allocated on the heap.  Caller must free the str memory (though
+ * not necessarily the msg memory).
+ */
+str *rosie_string_ptr_from(byte_ptr msg, size_t len) {
+  str *retval = malloc(sizeof(str));
+  if (!retval) {
+    display("Out of memory (new2)");
+    return NULL;
+  }
+  retval->ptr = msg;
+  retval->len = len;
+  return retval;
+}     
+
 /* Copies msg into heap-allocated storage */
 str rosie_new_string(byte_ptr msg, size_t len) {
   byte_ptr new = malloc(len);
@@ -42,15 +57,8 @@ str rosie_new_string(byte_ptr msg, size_t len) {
 
 str *rosie_new_string_ptr(byte_ptr msg, size_t len) {
   str temp = rosie_new_string(msg, len);
-  str *retval = malloc(sizeof(str));
-  if (!retval) {
-    display("Out of memory (new2)");
-    return NULL;
-  }
-  retval->len = temp.len;
-  retval->ptr = temp.ptr;
-  return retval;
-}     
+  return rosie_string_ptr_from(temp.ptr, temp.len);
+}
 
 void rosie_free_string_ptr(str *ref) {
      free(ref->ptr);
