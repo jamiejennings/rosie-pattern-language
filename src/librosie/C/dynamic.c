@@ -44,8 +44,9 @@ void *librosie;
      } while (0)
 
 
+/* RTLD_GLOBAL needed on Ubuntu, but not Fedora/Centos/Arch family.  Why? */
 static int init(const char *librosie_path){
-  librosie = dlopen(librosie_path, RTLD_NOW);
+  librosie = dlopen(librosie_path, RTLD_NOW | RTLD_GLOBAL);
   if (librosie == NULL) {
     displayf("failed to dlopen %s\n", librosie_path);
     return FALSE;
