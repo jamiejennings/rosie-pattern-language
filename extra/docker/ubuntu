@@ -17,6 +17,6 @@ RUN git clone --recursive --branch $branch https://github.com/jamiejennings/rosi
 
 WORKDIR /opt/rosie
 RUN make && make install
-#RUN make test CLIENTS=all
+RUN make test CLIENTS=all
 
 
