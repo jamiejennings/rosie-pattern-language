@@ -521,10 +521,6 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
-/*   err = malloc(sizeof(str)); */
-/*   if (!err) { LOG("Could not allocate str for err ptr\n"); return ERR_ENGINE_CALL_FAILED; } */
-/*   err->len = temp_rs->len; */
-/*   err->ptr = temp_rs->ptr; */
   
   (*messages).ptr = temp_rs.ptr;
   (*messages).len = temp_rs.len;
@@ -959,10 +955,8 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
   unsigned char *temp_str;
   size_t temp_len;
   lua_State *L = e->L;
-  err = malloc(sizeof(str));
-  if (!err) { LOG("Could not allocate str for messages\n"); return ERR_ENGINE_CALL_FAILED; }
-  err->ptr = NULL;
-  err->len = 0;
+  (*err).ptr = NULL;
+  (*err).len = 0;
 
   ACQUIRE_ENGINE_LOCK(e);
   collect_if_needed(L);
@@ -1002,7 +996,7 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
   if (t != LUA_OK) {  
     LOG("matchfile() failed\n");  
     LOGstack(L); 
-    /* TODO: return the error! */
+    /* FUTURE: return the error, if there's a situation where it may help */
     lua_settop(L, 0); 
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;  
@@ -1017,8 +1011,8 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
        (*cout) = 3;
        temp_str =  (unsigned char *)lua_tolstring(L, -2, &temp_len);
        str msg = rosie_new_string(temp_str, temp_len);
-       err->ptr = msg.ptr;
-       err->len = msg.len;
+       (*err).ptr = msg.ptr;
+       (*err).len = msg.len;
        lua_settop(L, 0);
        RELEASE_ENGINE_LOCK(e);
        return SUCCESS;

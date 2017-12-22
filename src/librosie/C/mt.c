@@ -107,13 +107,13 @@ void *do_work(void *engine) {
   int cin, cout, cerr;
   int pat;
   str exp = STR("all.things");
+  str errors;
 
   pat = compile(engine, exp);
   rosie_free_string(exp);
 
   char outfile[20];
   sprintf(&outfile[0], "%p.out", engine);
-  str *errors = NULL;
   for (int i=0; i<r; i++) {
     printf("Engine %p iteration %d writing file %s\n", engine, i, outfile);
     int err = rosie_matchfile(engine,
@@ -122,11 +122,11 @@ void *do_work(void *engine) {
 			      0,	/* not whole file at once */
 			      infile, outfile, "",
 			      &cin, &cout, &cerr,
-			      errors);
+			      &errors);
     if (err) printf("*** Error calling matchfile\n");
-    if (errors && errors->ptr) {
-      printf("matchfile() returned: %s\n", errors->ptr);
-      rosie_free_string_ptr(errors);
+    if (errors.ptr) {
+      printf("matchfile() returned: %.*s\n", errors.len, errors.ptr);
+      rosie_free_string(errors);
     }
     printf("Engine %p matchfile() returned: %d, %d, %d\n", engine, cin, cout, cerr);
   }
