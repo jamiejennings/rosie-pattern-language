@@ -135,7 +135,7 @@ end
 
 function load()
    print("Loading data from UnicodeData.txt into global variable 'db'")
-   nl = io.lines("/Users/jjennings/Work/Dev/private/rosie-plus/unicode/UCD/UnicodeData.txt")
+   nl = io.lines("/Users/jennings/Projects/rosie-pattern-language/src/unicode/UCD/UnicodeData.txt")
    line = nl(); i = 1;
    while(line) do
       if not(store(ucd_peg:match(line))) then 

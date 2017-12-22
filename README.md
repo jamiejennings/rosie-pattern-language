@@ -114,20 +114,23 @@ high-level notes [in this section](#api-help) below.
 
 ## Project roadmap
 
-### Releases
+### Releases forthcoming
 - [x] Change to semantic versioning
 - [x] v1.0.0-alpha release
 - [ ] v1.0.0-beta release
 - [ ] v1.0.0 release
 
 ### Installation
+- [x] Clone/download repository; run `make`; `bin/rosie` to invoke rosie
 - [ ] Brew installer for OS X
 - [ ] RPM and debian packages
 
 ### API and language support
-- [ ] API (C)
-- [ ] Python module
-- [ ] C, Go modules
+- [x] API (`librosie`)
+- [x] Python module (`rosie.py`)
+- [x] C client of `librosie.so` (dynamic library)
+- [x] C client of `librosie.o` (static linking)
+- [ ] Go module
 - [ ] Ruby, node.js modules
 
 ### Packages
@@ -136,7 +139,7 @@ it easy to upload/download those dependencies.
 - [ ] Source code parsing patterns (based on work done at NCSU, Raleigh, NC USA)
 - [ ] Log file parsing patterns (based on published examples and new contributions)
 
-### Features
+### Features forthcoming
 - [ ] Unicode character classes
 - [ ] Support JSON output for trace, config, list, and other commands
 - [ ] Customize color assignments

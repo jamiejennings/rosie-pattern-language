@@ -1,0 +1,16 @@
+FROM python:2.7.12
+
+RUN apt-get update -y
+
+RUN apt-get install -y make gcc
+RUN apt-get install -y readline-common libreadline-dev
+RUN apt-get install -y git
+
+RUN git clone https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
+
+RUN pip install --upgrade pip
+RUN pip install cffi
+
+WORKDIR /opt/rosie
+RUN make && make install
+RUN TERM=dumb && make test CLIENTS=python
