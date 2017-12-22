@@ -43,7 +43,7 @@ ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
 ifeq ($(PLATFORM), macosx)
-CC= gcc #clang
+CC= cc
 else
 CC= gcc
 endif
