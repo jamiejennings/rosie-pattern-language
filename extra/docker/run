@@ -2,15 +2,22 @@
 #
 
 dockerfile=$1
-if [ "$1" == "" ]; then
-    echo "Usage $0 <name-of-dockerfile> [fresh]"
+if [ "$dockerfile" == "" ]; then
+    echo "Usage $0 <name-of-dockerfile> [branch] [fresh]"
     exit -1
 fi
+
+branch=$2
+if [ "$branch" == "" ]; then
+    echo "No branch argument (will checkout master)"
+    branch="master"
+fi
+
 name=`basename $dockerfile`
 cachearg=''
-if [ "$2" == "fresh" ]; then
+if [ "$3" == "fresh" ]; then
     echo 'Building a fresh image using --no-cache'
     cachearg='--no-cache'
 fi
-docker build $cachearg -t rosie:$name -f $dockerfile . 
+docker build $cachearg --build-arg branch=$branch -t rosie:$name -f $dockerfile . 
 

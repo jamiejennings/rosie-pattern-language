@@ -28,7 +28,14 @@
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "../../../submodules/rosie-lpeg/src/rpeg.h"
+#ifdef __cplusplus
+}
+#endif
 
 typedef struct rosie_string str;
 
@@ -40,42 +47,24 @@ typedef struct rosie_matchresult {
      int tmatch;
 } match;
 
-void *(*fp_rosie_new)();
-str   (*fp_rosie_new_string)();
-void  (*fp_rosie_free_string)();
-str   (*fp_rosie_new_string_ptr)();
-void  (*fp_rosie_free_string_ptr)();
-void  (*fp_rosie_finalize)();
-int   (*fp_rosie_setlibpath)();
-int   (*fp_rosie_set_alloc_limit)();
-int   (*fp_rosie_config)();
-int   (*fp_rosie_compile)();
-int   (*fp_rosie_free_rplx)();
-int   (*fp_rosie_match)();
-int   (*fp_rosie_matchfile)();
-int   (*fp_rosie_trace)();
-int   (*fp_rosie_load)();
-int   (*fp_rosie_import)();
+str (*fp_rosie_new_string)(byte_ptr msg, size_t len);
+str *(*fp_rosie_new_string_ptr)(byte_ptr msg, size_t len);
+void (*fp_rosie_free_string)(str s);
+void (*fp_rosie_free_string_ptr)(str *s);
 
-/* REFERENCE:
-str rosie_new_string(byte_ptr msg, size_t len);
-str *rosie_new_string_ptr(byte_ptr msg, size_t len);
-void rosie_free_string(str s);
-void rosie_free_string_ptr(str *s);
-
-void *rosie_new(str *errors);
-void rosie_finalize(void *L);
-int rosie_setlibpath(void *L, char *newpath);
-int rosie_set_alloc_limit(void *L, int newlimit);
-int rosie_config(void *L, str *retvals);
-int rosie_compile(void *L, str *expression, int *pat, str *errors);
-int rosie_free_rplx(void *L, int pat);
-int rosie_match(void *L, int pat, int start, char *encoder, str *input, match *match);
-int rosie_matchfile(void *L, int pat, char *encoder, int wholefileflag,
+void *(*fp_rosie_new)(str *errors);
+void (*fp_rosie_finalize)(void *L);
+int (*fp_rosie_setlibpath_engine)(void *L, char *newpath);
+int (*fp_rosie_set_alloc_limit)(void *L, int newlimit);
+int (*fp_rosie_config)(void *L, str *retvals);
+int (*fp_rosie_compile)(void *L, str *expression, int *pat, str *errors);
+int (*fp_rosie_free_rplx)(void *L, int pat);
+int (*fp_rosie_match)(void *L, int pat, int start, char *encoder, str *input, match *match);
+int (*fp_rosie_matchfile)(void *L, int pat, char *encoder, int wholefileflag,
 		    char *infilename, char *outfilename, char *errfilename,
 		    int *cin, int *cout, int *cerr,
 		    str *err);
-int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
-int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
-int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
-*/
+int (*fp_rosie_trace)(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
+int (*fp_rosie_load)(void *L, int *ok, str *src, str *pkgname, str *errors);
+int (*fp_rosie_import)(void *L, int *ok, str *pkgname, str *as, str *actual_pkgname, str *errors);
+

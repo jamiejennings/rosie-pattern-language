@@ -26,15 +26,29 @@ endif
 
 PLATFORMS = linux macosx windows
 
-default: $(PLATFORM)
+default: dynamic static mt
 
 ifeq ($(PLATFORM), macosx)
-CC= clang
+CC= gcc #clang
 else
 CC= gcc
 endif
 
-CFLAGS= -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
+ifeq ($(PLATFORM),macosx)
+CFLAGS += -std=gnu99
+SYSCFLAGS=-DLUA_USE_MACOSX
+SYSLDFLAGS=-undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)
+SYSLIBS=-lpthread
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
+ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
+else 
+SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
+SYSLIBS=-lpthread -ldl -lm -Wl,--no-undefined
+LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
+ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
+endif
+
+CFLAGS= -pthread -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
@@ -42,56 +56,64 @@ AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
 
-SYSCFLAGS=
-SYSLDFLAGS=
-SYSLIBS=
-
-MYCFLAGS=  -I$(HOME)/submodules/lua/include
+MYCFLAGS=  -I$(HOME)/submodules/lua/include -I$(HOME)/submodules/rosie-lpeg/src -I..
 MYLDFLAGS= 
 MYLIBS= 
 MYOBJS=
 
-LUA_A=$(HOME)/submodules/lua/src/liblua.a
+ROSIE_A=$(HOME)/src/librosie/librosie.a
 
-$(LUA_A):
-	@echo "Missing Rosie object files.  Need to build rosie first."
-	@false
+LUA_DYLIB_NAME=lua.5.3
+ROSIE_DYLIB_NAME=rosie
+ifeq ($(PLATFORM), macosx)
+LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
+ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
+DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. ./dynamic librosie.dylib
+else
+LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
+ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
+DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic librosie.so
+endif
 
-.PHONY: lua_objs
-lua_objs: $(LUA_A)
-	mkdir -p liblua
-	cd liblua && ar x $(LUA_A)
-
-ALL= dynamic static
 
 dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
-dynamic: dynamic.o
-	$(CC) -o $@ dynamic.o 
+# TODO: Should not have liblua.so dependency here!
+dynamic: dynamic.o $(LUA_DYLIB)
+	$(CC) -o $@ dynamic.o $(LUA_DYLIB) $(SYSLIBS)
 
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
-static: static.o librosie.o lua_objs
-	$(CC) -o $@ static.o librosie.o liblua/*.o
+static: static.o $(ROSIE_A) $(LUA_DYLIB)
+	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
 
-librosie.o: ../librosie.o
-	cp ../librosie.o .
+mt.o: mt.c
+	$(CC) -o $@ -c mt.c $(CFLAGS)
+
+mt: mt.o $(ROSIE_A) $(LUA_DYLIB)
+	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
 
 clean:
 	$(RM) dynamic.o dynamic
-	$(RM) static.o librosie.o liblua/*
+	$(RM) static.o static
+	$(RM) mt.o mt
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
-test: static dynamic
+test: static dynamic mt $(ROSIE_DYLIB)
 	@echo Running C client tests on librosie
-	./static
-	./dynamic
 	@echo
-	@echo TODO: CHECK EXIT CODE FROM TEST PROGRAMS
+	@echo Statically linked test program:
+	./static
+	@echo
+	@echo Dynamically linked test program:
+	$(DYNAMIC_TEST_COMMAND)
+	@echo
+	@echo Multi-threaded, statically linked test program:
+	./mt 4 25 $(HOME)/test/logfile 
 
 installtest:
 	@echo No tests of C client configured to use system installation of librosie
@@ -106,21 +128,20 @@ echo:
 	@echo "RM= $(RM)"
 
 none:
-	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
+	@echo "Your platform was not recognized.  Please do 'make PLATFORM=x', where x is one of these: $(PLATFORMS)"
 
-linux:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E"
+# linux:
+# 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-ldl -lm -lpthread" CC=$(CC)
 
-macosx:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" CC=$(CC)
+# macosx:
+# 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" SYSLIBS="-lpthread" CC=$(CC)
 
-macosx: CFLAGS += -std=gnu99
+# macosx: CFLAGS += -std=gnu99
 
+.PHONY: windows
 windows:
 	@echo Windows installation not yet supported.
 
-## Targets that do not create files
-.PHONY: default o a clean echo none test installtest
-
 static.o: static.c static.h 
 dynamic.o: dynamic.c dynamic.h 
+mt.o: mt.c

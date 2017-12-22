@@ -1,0 +1,1 @@
+/Users/jjennings/Dev/public/rosie-pattern-language/src/librosie/librosie.h

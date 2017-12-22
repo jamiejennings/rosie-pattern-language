@@ -24,7 +24,7 @@ class RosieInitTest(unittest.TestCase):
 
     def test(self):
         engine = rosie.engine(librosiedir)
-
+        assert(engine)
 
 class RosieLoadTest(unittest.TestCase):
 
@@ -38,51 +38,50 @@ class RosieLoadTest(unittest.TestCase):
 
     def test(self):
         ok, pkgname, errs = self.engine.load('package x; foo = "foo"')
-        assert(ok)
-        assert(pkgname == "x")
-        assert(errs == None)
+        self.assertTrue(ok)
+        self.assertTrue(pkgname == "x")
+        self.assertTrue(errs == None)
 
         b, errs = self.engine.compile("x.foo")
-        assert(b[0] > 0)
-        assert(errs == None)
+        self.assertTrue(b[0] > 0)
+        self.assertTrue(errs == None)
 
         bb, errs = self.engine.compile("[:digit:]+")
-        assert(bb[0] > 0)
-        assert(errs == None)
-        assert(b[0] != bb[0])
+        self.assertTrue(bb[0] > 0)
+        self.assertTrue(errs == None)
+        self.assertTrue(b[0] != bb[0])
 
         b2, errs = self.engine.compile("[:foobar:]+")
-        assert(not b2)
+        self.assertTrue(not b2)
         errlist = json.loads(errs)
-        assert(len(errlist) > 0)
+        self.assertTrue(len(errlist) > 0)
         err = errlist[0]
-        assert(err['message'])
-        assert(err['who'] == 'compiler')
+        self.assertTrue(err['message'])
+        self.assertTrue(err['who'] == 'compiler')
 
-        b = None              # triggers call to librosie to gc the compiled pattern
+        b = None                       # trigger call to librosie to gc the compiled pattern
         b, errs = self.engine.compile("[:digit:]+")
-        assert(b[0] != bb[0]) # distinct values for distinct patterns
-        assert(errs == None)
+        self.assertTrue(b[0] != bb[0]) # distinct values for distinct patterns
+        self.assertTrue(errs == None)
 
         num_int, errs = self.engine.compile("num.int")
-        assert(not num_int)
+        self.assertTrue(not num_int)
         errlist = json.loads(errs)
         err = errlist[0]
-        assert(err['message'])
-        assert(err['who'] == 'compiler')
+        self.assertTrue(err['message'])
+        self.assertTrue(err['who'] == 'compiler')
 
         ok, pkgname, errs = self.engine.load('foo = "')
-        assert(not ok)
+        self.assertTrue(not ok)
         errlist = json.loads(errs)
         err = errlist[0]
-        assert(err['message'])
-        assert(err['who'] == 'parser')
+        self.assertTrue(err['message'])
+        self.assertTrue(err['who'] == 'parser')
 
         engine2 = rosie.engine(librosiedir)
-        assert(engine2)
-        assert(engine2 != self.engine)
+        self.assertTrue(engine2)
+        self.assertTrue(engine2 != self.engine)
         engine2 = None          # triggers call to librosie to gc the engine
-
 
 class RosieConfigTest(unittest.TestCase):
 
@@ -96,14 +95,13 @@ class RosieConfigTest(unittest.TestCase):
 
     def test(self):
         a = self.engine.config()
-        assert(a)
+        self.assertTrue(a)
         cfg = json.loads(a)
-        print "NOTE: Rosie loaded from", cfg['ROSIE_HOME']
-        for k in cfg.keys():
-            if type(cfg[k]) is dict:
-                assert(cfg[k]['name'])
-                assert(cfg[k]['desc'])
-                if not cfg[k]['value']: print "NOTE: no value for config key", cfg[k]['name']
+        for entry in cfg:
+            self.assertTrue(type(entry) is dict)
+            self.assertTrue(entry['name'])
+            self.assertTrue(entry['desc'])
+            if not entry['value']: print "NOTE: no value for config key", entry['name']
                 
 class RosieMatchTest(unittest.TestCase):
 
@@ -118,74 +116,73 @@ class RosieMatchTest(unittest.TestCase):
     def test(self):
 
         b, errs = self.engine.compile("[:digit:]+")
-        assert(b[0] > 0)
-        assert(errs == None)
+        self.assertTrue(b[0] > 0)
+        self.assertTrue(errs == None)
 
         m, left, abend, tt, tm = self.engine.match(b, "321", 2, "json")
-        assert(m)
+        self.assertTrue(m)
         m = json.loads(m[:])
-        assert(m['type'] == "*")
-        assert(m['s'] == 2)     # match started at char 2
-        assert(m['e'] == 4)
-        assert(m['data'] == "21")
-        assert(left == 0)
-        assert(abend == False)
-        assert(tt >= 0)
-        assert(tm >= 0)
+        self.assertTrue(m['type'] == "*")
+        self.assertTrue(m['s'] == 2)     # match started at char 2
+        self.assertTrue(m['e'] == 4)
+        self.assertTrue(m['data'] == "21")
+        self.assertTrue(left == 0)
+        self.assertTrue(abend == False)
+        self.assertTrue(tt >= 0)
+        self.assertTrue(tm >= 0)
 
         m, left, abend, tt, tm = self.engine.match(b, "xyz", 1, "json")
-        assert(m == None)
-        assert(left == 3)
-        assert(abend == False)
-        assert(tt >= 0)
-        assert(tm >= 0)
+        self.assertTrue(m == None)
+        self.assertTrue(left == 3)
+        self.assertTrue(abend == False)
+        self.assertTrue(tt >= 0)
+        self.assertTrue(tm >= 0)
 
         inp = "889900112233445566778899100101102103104105106107108109110xyz"
         linp = len(inp)
 
         m, left, abend, tt, tm = self.engine.match(b, inp, 1, "json")
-        assert(m)
+        self.assertTrue(m)
         m = json.loads(m[:])
-        assert(m['type'] == "*")
-        assert(m['s'] == 1)
-        assert(m['e'] == linp-3+1) # due to the "xyz" at the end
-        assert(m['data'] == inp[0:-3])
-        assert(left == 3)
-        assert(abend == False)
-        assert(tt >= 0)
-        assert(tm >= 0)
+        self.assertTrue(m['type'] == "*")
+        self.assertTrue(m['s'] == 1)
+        self.assertTrue(m['e'] == linp-3+1) # due to the "xyz" at the end
+        self.assertTrue(m['data'] == inp[0:-3])
+        self.assertTrue(left == 3)
+        self.assertTrue(abend == False)
+        self.assertTrue(tt >= 0)
+        self.assertTrue(tm >= 0)
 
         m, left, abend, tt, tm = self.engine.match(b, inp, 10, "json")
-        assert(m)
+        self.assertTrue(m)
         m = json.loads(m[:])
-        assert(m['type'] == "*")
-        assert(m['s'] == 10)
-        assert(m['e'] == linp-3+1) # due to the "xyz" at the end
-        assert(m['data'] == inp[9:-3])
-        assert(left == 3)
-        assert(abend == False)
-        assert(tt >= 0)
-        assert(tm >= 0)
+        self.assertTrue(m['type'] == "*")
+        self.assertTrue(m['s'] == 10)
+        self.assertTrue(m['e'] == linp-3+1) # due to the "xyz" at the end
+        self.assertTrue(m['data'] == inp[9:-3])
+        self.assertTrue(left == 3)
+        self.assertTrue(abend == False)
+        self.assertTrue(tt >= 0)
+        self.assertTrue(tm >= 0)
 
         m, left, abend, tt, tm = self.engine.match(b, inp, 1, "line")
-        assert(m)
-        assert(m[:] == inp)
-        assert(left == 3)
-        assert(abend == False)
-        assert(tt >= 0)
-        assert(tm >= 0)
+        self.assertTrue(m)
+        self.assertTrue(m[:] == inp)
+        self.assertTrue(left == 3)
+        self.assertTrue(abend == False)
+        self.assertTrue(tt >= 0)
+        self.assertTrue(tm >= 0)
 
         m, left, abend, tt, tm = self.engine.match(b, inp, 1, "color")
-        assert(m)
+        self.assertTrue(m)
         # only checking the first two chars, looking for the start of
         # ANSI color sequence
-        assert(m[0] == '\x1B')
-        assert(m[1] == '[')
-        assert(left == 3)
-        assert(abend == False)
-        assert(tt >= 0)
-        assert(tm >= 0)
-
+        self.assertTrue(m[0] == '\x1B')
+        self.assertTrue(m[1] == '[')
+        self.assertTrue(left == 3)
+        self.assertTrue(abend == False)
+        self.assertTrue(tt >= 0)
+        self.assertTrue(tm >= 0)
 
 class RosieImportTest(unittest.TestCase):
 
@@ -193,39 +190,57 @@ class RosieImportTest(unittest.TestCase):
     
     def setUp(self):
         self.engine = rosie.engine(librosiedir)
-        assert(self.engine)
+        self.assertTrue(self.engine)
 
     def tearDown(self):
         pass
 
     def test(self):
         ok, pkgname, errs = self.engine.import_pkg('net')
-        assert(ok)
-        assert(pkgname == 'net')
-        assert(errs == None)
+        self.assertTrue(ok)
+        self.assertTrue(pkgname == 'net')
+        self.assertTrue(errs == None)
 
         ok, pkgname, errs = self.engine.import_pkg('net', 'foobar')
-        assert(ok)
-        assert(pkgname == 'net') # actual name inside the package
-        assert(errs == None)
+        self.assertTrue(ok)
+        self.assertTrue(pkgname == 'net') # actual name inside the package
+        self.assertTrue(errs == None)
 
         net_any, errs = self.engine.compile("net.any")
-        assert(net_any)
-        assert(errs == None)
+        self.assertTrue(net_any)
+        self.assertTrue(errs == None)
 
         foobar_any, errs = self.engine.compile("foobar.any")
-        assert(foobar_any)
-        assert(errs == None)
+        self.assertTrue(foobar_any)
+        self.assertTrue(errs == None)
         
         m, left, abend, tt, tm = self.engine.match(net_any, "1.2.3.4", 1, "color")
-        assert(m)
+        self.assertTrue(m)
         m, left, abend, tt, tm = self.engine.match(net_any, "Hello, world!", 1, "color")
-        assert(not m)
+        self.assertTrue(not m)
 
         ok, pkgname, errs = self.engine.import_pkg('THISPACKAGEDOESNOTEXIST')
-        assert(not ok)
-        assert(errs != None)
+        self.assertTrue(not ok)
+        self.assertTrue(errs != None)
 
+
+class RosieLoadfileTest(unittest.TestCase):
+
+    engine = None
+    
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+        self.assertTrue(self.engine)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        ok, pkgname, errs = self.engine.loadfile('test.rpl')
+        self.assertTrue(ok)
+        self.assertTrue(pkgname == 'test')
+        self.assertTrue(errs == None)
+        
 
 class RosieTraceTest(unittest.TestCase):
 
@@ -234,27 +249,27 @@ class RosieTraceTest(unittest.TestCase):
     
     def setUp(self):
         self.engine = rosie.engine(librosiedir)
-        assert(self.engine)
+        self.assertTrue(self.engine)
         ok, pkgname, errs = self.engine.import_pkg('net')
-        assert(ok)
+        self.assertTrue(ok)
         self.net_any, errs = self.engine.compile("net.any")
-        assert(self.net_any)
+        self.assertTrue(self.net_any)
 
     def tearDown(self):
         pass
 
     def test(self):
         matched, trace = self.engine.trace(self.net_any, "1.2", 1, "condensed")
-        assert(matched == True)
-        assert(trace)
-        assert(len(trace) > 0)
+        self.assertTrue(matched == True)
+        self.assertTrue(trace)
+        self.assertTrue(len(trace) > 0)
 
         net_ip, errs = self.engine.compile("net.ip")
-        assert(net_ip)
+        self.assertTrue(net_ip)
         matched, trace = self.engine.trace(net_ip, "1.2", 1, "condensed")
-        assert(matched == False)
-        assert(trace)
-        assert(len(trace) > 0)
+        self.assertTrue(matched == False)
+        self.assertTrue(trace)
+        self.assertTrue(len(trace) > 0)
 
 
 class RosieMatchFileTest(unittest.TestCase):
@@ -265,27 +280,27 @@ class RosieMatchFileTest(unittest.TestCase):
     
     def setUp(self):
         self.engine = rosie.engine(librosiedir)
-        assert(self.engine)
+        self.assertTrue(self.engine)
         ok, pkgname, errs = self.engine.import_pkg('net')
-        assert(ok)
+        self.assertTrue(ok)
         self.net_any, errs = self.engine.compile("net.any")
-        assert(self.net_any)
+        self.assertTrue(self.net_any)
         self.findall_net_any, errs = self.engine.compile("findall:net.any")
-        assert(self.findall_net_any)
+        self.assertTrue(self.findall_net_any)
 
     def tearDown(self):
         pass
 
     def test(self):
         cin, cout, cerr = self.engine.matchfile(self.findall_net_any, "json", "../../../test/resolv.conf", "/tmp/resolv.out", "/tmp/resolv.err")
-        assert(cin == 10)
-        assert(cout == 5)
-        assert(cerr == 5)
+        self.assertTrue(cin == 10)
+        self.assertTrue(cout == 5)
+        self.assertTrue(cerr == 5)
 
         cin, cout, cerr = self.engine.matchfile(self.net_any, "color", infile="../../../test/resolv.conf", errfile="/dev/null", wholefile=True)
-        assert(cin == 1)
-        assert(cout == 0)
-        assert(cerr == 1)
+        self.assertTrue(cin == 1)
+        self.assertTrue(cout == 0)
+        self.assertTrue(cerr == 1)
 
 
 # set soft memory limit also
@@ -308,8 +323,10 @@ if __name__ == '__main__':
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
         librosiedir = ".."
+        print "Loading librosie from", librosiedir
     elif sys.argv[1]=='system':
         librosiedir = None
+        print "Loading librosie from system library path"
     else:
         sys.exit("Error: invalid command-line parameter (must be 'local' or 'system')")
     print "Running tests using", sys.argv[1], "rosie installation"

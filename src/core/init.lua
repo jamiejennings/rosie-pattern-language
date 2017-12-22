@@ -112,7 +112,11 @@ end
 
 local function load_all()
    lpeg = import("lpeg")
-   cjson = import("cjson.safe")
+
+   -- Each Lua state gets its own cjson instance
+   cjson_lib = import("cjson.safe")
+   cjson = cjson_lib.new()
+   package.loaded.cjson = cjson
 
    -- These MUST have a partial order so that dependencies can be loaded first
    recordtype = import("recordtype")
@@ -230,7 +234,11 @@ end
 
 ROSIE_INFO = {}
 
--- FUTURE: re-do this data structure
+-- FUTURE: Re-do this data structure?
+
+-- ROSIE_INFO is a list ordered for presentation clarity.  Access to a value using its name is a
+-- linear time operation, although the table size is small.
+
 local function populate_info()
    local rpl_version = engine_module.get_default_compiler().version
    ROSIE_INFO = {
@@ -245,17 +253,20 @@ local function populate_info()
       {name="OSTYPE",        value=os.getenv("OSTYPE") or "",           desc="type of OS on which rosie is running"},
       {name="ROSIE_COMMAND", value=ROSIE_COMMAND or "",                 desc="invocation command, if rosie invoked through the CLI"}
    }
-   for _,entry in ipairs(ROSIE_INFO) do ROSIE_INFO[entry.name] = entry.value; end
+   local function search_by_name(self, name)
+      if type(name) ~= "string" then return nil; end
+      for _, entry in ipairs(self) do
+	 if rawget(entry, "name") == name then return rawget(entry, "value"); end
+      end
+      error("Internal error: configuration key not found: " .. tostring(name))
+   end
+   setmetatable(ROSIE_INFO, {__index = search_by_name})
 end
 
 local function set_configuration(key, value)
    for _,entry in ipairs(ROSIE_INFO) do
       if entry.name == key then
 	 entry.value = value
-	 -- Reindex
-	 for _,entry in ipairs(ROSIE_INFO) do
-	    ROSIE_INFO[entry.name] = entry.value
-	 end
 	 return 
       end
    end -- for

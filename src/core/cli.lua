@@ -104,8 +104,7 @@ local function print_rosie_config()
    print_if_source("cli")
    print()
    print("Internal configuration:")
-   for _,info in ipairs(config) do printf(fmt, info.name, info.value); end
-
+   for _, info in ipairs(config) do printf(fmt, info.name, info.value); end
    print()
    io.write("Build log: ")
    local buildlogfile = ROSIE_HOME .. "/build.log"

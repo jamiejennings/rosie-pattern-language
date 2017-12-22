@@ -14,15 +14,13 @@
 #   /usr/local/lib/librosie.so
 #   /usr/local/lib/rosie             (directory)
 
-
 # Development environment:
 #   Mac OS X Sierra (10.12.6)
 #   Python 2.7.10 (distributed with OS X)
 #   cffi-1.11.1 pycparser-2.18 (installed with: pip install cffi)
 
 from cffi import FFI
-from ctypes.util import find_library
-from os import path
+import os
 import json
 
 ffi = FFI()
@@ -45,7 +43,7 @@ typedef struct rosie_matchresult {
      int tmatch;
 } match;
 
-str *rosie_new_string_ptr(byte_ptr msg, size_t len);
+str *rosie_string_ptr_from(byte_ptr msg, size_t len);
 void rosie_free_string_ptr(str *s);
 void rosie_free_string(str s);
 
@@ -63,12 +61,14 @@ int rosie_matchfile(void *L, int pat, char *encoder, int wholefileflag,
 		    str *err);
 int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
-int rosie_import(void *L, int *ok, str *pkgname, str *as, str *errors);
+int rosie_loadfile(void *e, int *ok, str *fn, str *pkgname, str *errors);
+int rosie_import(void *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages);
+
+void free(void *obj);
 
 """)
 
 lib = None                # single instance of dynamic library
-libname = "librosie.so"
 
 # -----------------------------------------------------------------------------
 # ffi utilities
@@ -84,8 +84,8 @@ def new_cstr(py_string=None):
     def free_cstr_ptr(local_cstr_obj):
         lib.rosie_free_string(local_cstr_obj[0])
     if py_string:
-        obj = lib.rosie_new_string_ptr(py_string, len(py_string))
-        return ffi.gc(obj, lib.rosie_free_string_ptr)
+        obj = lib.rosie_string_ptr_from(py_string, len(py_string))
+        return ffi.gc(obj, lib.free)
     else:
         obj = ffi.new("struct rosie_string *")
         return ffi.gc(obj, free_cstr_ptr)
@@ -126,16 +126,19 @@ class engine ():
     '''
 
     def __init__(self, custom_libpath=None):
-        global lib, libname
+        global lib
+        ostype = os.uname()[0]
+        if ostype=="Darwin":
+            libname = "librosie.dylib"
+        else:
+            libname = "librosie.so"
         if not lib:
             if custom_libpath:
-                libpath = path.join(custom_libpath, libname)
-                if not path.isfile(libpath):
-                    raise RuntimeError("Cannot find librosie at " + libpath)
+               libpath = os.path.join(custom_libpath, libname)
+               if not os.path.isfile(libpath):
+                   raise RuntimeError("Cannot find librosie at " + libpath)
             else:
-                libpath = find_library(libname)
-                if not libpath:
-                    raise RuntimeError("Cannot find librosie using ctypes.util.find_library()")
+                libpath = libname
             lib = ffi.dlopen(libpath, ffi.RTLD_GLOBAL)
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)
@@ -180,19 +183,28 @@ class engine ():
         return Csuccess[0], pkgname, errs
 
     def loadfile(self, fn):
-        f = open(fn, 'r')
-        rplsource = f.read()
-        return self.load(rplsource)
+        Cerrs = new_cstr()
+        Cfn = new_cstr(fn)
+        Csuccess = ffi.new("int *")
+        Cpkgname = new_cstr()
+        ok = lib.rosie_loadfile(self.engine, Csuccess, Cfn, Cpkgname, Cerrs)
+        if ok != 0:
+            raise RuntimeError("loadfile() failed (please report this as a bug)")
+        errs = read_cstr(Cerrs)
+        if errs == '{}': errs = None
+        pkgname = read_cstr(Cpkgname)
+        return Csuccess[0], pkgname, errs
 
     def import_pkg(self, pkgname, as_name=None):
         Cerrs = new_cstr()
         Cas_name = new_cstr(as_name) if as_name else ffi.NULL
         Cpkgname = new_cstr(pkgname)
+        Cactual_pkgname = new_cstr()
         Csuccess = ffi.new("int *")
-        ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cerrs)
+        ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cactual_pkgname, Cerrs)
         if ok != 0:
             raise RuntimeError("import() failed (please report this as a bug)")
-        actual_pkgname = read_cstr(Cpkgname)
+        actual_pkgname = read_cstr(Cactual_pkgname) if Cactual_pkgname.ptr != ffi.NULL else None
         errs = read_cstr(Cerrs)
         if errs == '{}': errs = None
         return Csuccess[0], actual_pkgname, errs

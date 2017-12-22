@@ -121,6 +121,19 @@ function violation.tostring(err)
    end -- if syntax error or other kind
 end
 
+function violation.strip(v)
+   if rawget(v, "ast") then v.ast=nil; end
+   return v
+end
+
+function violation.strip_each(vs)
+   for _, v in ipairs(vs) do
+      violation.strip(v)
+   end
+   return vs
+end
+
+   
 ---------------------------------------------------------------------------------------------------
 -- Catch / throw
 ---------------------------------------------------------------------------------------------------
