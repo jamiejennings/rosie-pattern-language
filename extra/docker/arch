@@ -1,4 +1,5 @@
 FROM binhex/arch-base
+ARG branch
 
 RUN pacman -S --noconfirm make
 RUN pacman -S --noconfirm gcc
@@ -6,16 +7,16 @@ RUN pacman -S --noconfirm readline
 RUN pacman -S --noconfirm git
 RUN pacman -S --noconfirm python2
 RUN pacman -S --noconfirm python2-pip
-#RUN rm -f /usr/sbin/python
 RUN ln -s /usr/sbin/python2.7 /usr/sbin/python
 RUN ln -s /usr/sbin/pip2.7 /usr/sbin/pip
+RUN pip install --upgrade pip
 RUN pip install cffi
 
-RUN git clone --recursive https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
+RUN git clone --recursive --branch $branch https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
 
-RUN cd /opt/rosie && make && make install
-
-RUN cd /opt/rosie && TERM=dumb && make test PYTHON=1
+WORKDIR /opt/rosie
+RUN make && make install
+RUN make test CLIENTS=all
 
 
 

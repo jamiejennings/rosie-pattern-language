@@ -1,13 +1,22 @@
 FROM ubuntu
+ARG branch
 
-RUN apt-get -y update
-RUN apt-get install -y make gcc
-RUN apt-get install -y readline-common libreadline-dev
-RUN apt-get install -y git
+RUN apt-get -y update && apt-get install -y \
+  gcc \
+  git \
+  libreadline-dev \
+  make \
+  python \
+  python-pip \
+  readline-common
 
-RUN git clone https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
+RUN pip install --upgrade pip
+RUN pip install cffi
 
-RUN cd /opt/rosie && make && make install
+RUN git clone --recursive --branch $branch https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
 
-RUN cd /opt/rosie && TERM=dumb && make test PYTHON=1
+WORKDIR /opt/rosie
+RUN make && make install
+#RUN make test CLIENTS=all
+
 

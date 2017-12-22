@@ -1,15 +1,22 @@
 FROM centos
+ARG branch
 
-RUN yum -y update
-RUN yum install -y make gcc
-RUN yum install -y readline readline-devel
-RUN yum install -y git python
-RUN yum install -y epel-release
-RUN yum install -y python-pip
+RUN yum -y update && yum install -y epel-release
+RUN yum install -y \
+  gcc \
+  git \
+  make \
+  python \
+  python-pip \
+  readline \
+  readline-devel 
+
+RUN pip install --upgrade pip
 RUN pip install cffi
 
-RUN git clone https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
-RUN cd /opt/rosie && make && make install
+RUN git clone --recursive --branch $branch https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
 
-RUN cd /opt/rosie && TERM=dumb && make test PYTHON=1
+WORKDIR /opt/rosie
+RUN make && make install
+RUN make test CLIENTS=all
 
