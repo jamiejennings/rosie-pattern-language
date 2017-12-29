@@ -29,7 +29,7 @@ PLATFORMS = linux macosx windows
 default: dynamic static mt
 
 ifeq ($(PLATFORM), macosx)
-CC= gcc #clang
+CC= cc
 else
 CC= gcc
 endif
