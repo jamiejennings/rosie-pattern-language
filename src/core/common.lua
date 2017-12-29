@@ -101,7 +101,8 @@ common.utf8_char_peg = b1_lead +
 	       (b3_lead * c_byte * c_byte) +
 	       (b4_lead * c_byte * c_byte * c_byte) +
 	       (b5_lead * c_byte * c_byte * c_byte * c_byte) +
-	       (b6_lead * c_byte * c_byte * c_byte * c_byte * c_byte)
+	       (b6_lead * c_byte * c_byte * c_byte * c_byte * c_byte) +
+	       lpeg.P(1)			    -- fallback to any single byte
 
 -- Examples:
 -- > utf8_char_peg:match("A")
