@@ -2,11 +2,11 @@
 --
 -- ucd.lua    Process the Unicode Character Database
 --
--- © Copyright IBM Corporation 2016.
+-- © Copyright IBM Corporation 2016, 2017.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
--- Reserved, Unassigned, Private Use, and Non Characters
+-- NOTE regarding Reserved, Unassigned, Private Use, and Non-Characters:
 --
 -- Reserved characters and Unassigned characters are the same.  They are valid codepoints which
 -- happen to be unassigned.  They are NOT listed in UnicodeData.txt.  They are NOT a member of any
@@ -18,8 +18,8 @@
 -- They are a small fixed list, and are NOT listed in UnicodeData.txt.  Because the list is fixed,
 -- we define it manually in this code.
 
-lpeg = require "lpeg"
---dofile("utf8-range.lua")
+--local ucd = {}
+lpeg = require("lpeg")
 
 function run()
    init()
@@ -28,7 +28,7 @@ function run()
    compute_all_ranges()
    print("Compiling all of the ranges in 'general_category_ranges' to lpeg patterns, storing in global 'general_category_patterns'")
    general_category_patterns = compile_all_ranges(general_category_ranges)
-   test_all_codepoints_against_all_categories()
+--   test_all_codepoints_against_all_categories()
 end
 
 
@@ -48,22 +48,6 @@ end
 
 -- [UCD database version 9.0.0](http://www.unicode.org/versions/Unicode9.0.0/)
 -- [UCD database files](http://www.unicode.org/Public/UCD/latest/ucd/)
--- [UnicodeData.txt](http://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt)
--- [Explanation of fields of UnicodeData.txt](http://www.unicode.org/reports/tr44/tr44-18.html#UnicodeData.txt)
---
--- Fields:
--- (0) Codepoint in hex
--- (1) Name
--- (2) General Category
--- (3) Canonical Combining Class
--- (4) Bidi Class
--- (5) Decomposition Type and Mapping
--- (6,7,8) Numeric Type and Value
--- (9) Bidi Mirrored
--- (10,11) Obsolete
--- (12) Simple Uppercase Mapping
--- (13) Simple Lowercase Mapping
--- (14) Simple Titlecase Mapping
 
 
 
@@ -93,6 +77,23 @@ end
     -- ...
 -- Whereas other entries in UnicodeData.txt represent a single codepoint and have names that
 -- do not have the format "<name, First>" or "<name, Last>".
+
+-- [UnicodeData.txt](http://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt)
+-- [Explanation of fields of UnicodeData.txt](http://www.unicode.org/reports/tr44/tr44-18.html#UnicodeData.txt)
+--
+-- Fields:
+-- (0) Codepoint in hex
+-- (1) Name
+-- (2) General Category
+-- (3) Canonical Combining Class
+-- (4) Bidi Class
+-- (5) Decomposition Type and Mapping
+-- (6,7,8) Numeric Type and Value
+-- (9) Bidi Mirrored
+-- (10,11) Obsolete
+-- (12) Simple Uppercase Mapping
+-- (13) Simple Lowercase Mapping
+-- (14) Simple Titlecase Mapping
 
 function store(code, ...)
    if not code then return false; end
@@ -127,15 +128,12 @@ function store(code, ...)
    return true
 end
       
--- TO DO:
--- Script names?  E.g. 'Greek', 'Latin'
--- Combine script names with general categories, e.g. 'Greek' script and 'Lu' (upper case)
--- Create unicode_name package? (Or unicode.name) in which character names are bound to patterns that recognize them?
 
+assert(ROSIE_HOME)
 
 function load()
    print("Loading data from UnicodeData.txt into global variable 'db'")
-   nl = io.lines("/Users/jennings/Projects/rosie-pattern-language/src/unicode/UCD/UnicodeData.txt")
+   nl = io.lines(ROSIE_HOME .. "/src/unicode/UCD-10.0.0/UnicodeData.txt")
    line = nl(); i = 1;
    while(line) do
       if not(store(ucd_peg:match(line))) then 
@@ -295,8 +293,47 @@ function find_unassigned_codepoints()
    return result
 end
 
--- N.B. the ranges will NOT necessarily be in sorted order, because the "defined ranges" are
--- appended at the bottom of the ranges we derived.
+function filter_ranges(defined_ranges, cat)
+   local results = {}
+   for _,range in ipairs(defined_ranges) do
+      local start, finish, category = range[1], range[2], range[3]
+      if category==cat then table.insert(results, {start, finish}); end
+   end
+   return results
+end
+
+function merge_ranges(R1, R2, value_name)
+   local result = {}
+   local idx, r1, r2 = 1, 1, 1
+   local more_to_compare = R1[r1] and R2[r2]
+   while more_to_compare do
+      local next_range
+      if R1[r1][1] < R2[r2][1] then
+	 next_range = R1[r1]
+	 r1 = r1 + 1
+      elseif R2[r2][1] < R1[r1][1] then
+	 next_range = R2[r2]
+	 r2 = r2 + 1
+      else
+	 error("overlapping ranges!")
+      end
+      result[idx] = next_range
+      if idx > 1 then
+	 assert(result[idx-1][2] < result[idx][1])
+      end
+      idx = idx + 1
+      more_to_compare = R1[r1] and R2[r2]
+   end
+   if R1[r1] then
+      table.move(R1, r1, #R1, idx, result)
+   elseif R2[r2] then
+      table.move(R2, r2, #R2, idx, result)
+   end
+--   print("***", value_name, "merged", #R1, #R2, "to produce", #result)
+   return result
+end
+   
+-- N.B. the ranges are returned in sorted order.
 -- Supply an argument of nil to calculate all the unassigned character ranges.
 function compute_ranges(cat)
    if cat==nil then
@@ -305,18 +342,13 @@ function compute_ranges(cat)
    assert(cat, "Category not a string: " .. tostring(cat))
    assert(cats[cat], "Category not listed in categories table: " .. tostring(cat))
    -- First derive ranges from all the single codepoint entries in UnicodeData.txt
-   local results = derive_ranges(cat)
-   -- Next, add in the "defined ranges" of UnicodeData.txt
-   for _,range in ipairs(db.defined_ranges) do
-      local start, finish, category = range[1], range[2], range[3]
-      if category==cat then table.insert(results, {start, finish}); end
-   end
-   -- Next, add in the manually defined ranges
-   for _,range in ipairs(manually_defined_ranges) do
-      local start, finish, category = range[1], range[2], range[3]
-      if category==cat then table.insert(results, {start, finish}); end
-   end
-   return results
+   local ranges = derive_ranges(cat)
+   -- Next, gather the "defined ranges" of UnicodeData.txt
+   local defined_ranges = filter_ranges(db.defined_ranges, cat)
+   -- Next, gather any manually defined ranges for this category
+   local manual_ranges = filter_ranges(manually_defined_ranges, cat)
+   -- Merge the three
+   return merge_ranges(ranges, merge_ranges(defined_ranges, manual_ranges, cat), cat)
 end
 
 -- Create range entries for each defined General Category, as well as UNASSIGNED
@@ -403,3 +435,5 @@ function display_utf8_string(s, optional_base)
    end
    io.write("\n")
 end
+
+--return ucd

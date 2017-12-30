@@ -7,27 +7,28 @@
 -- AUTHOR: Jamie A. Jennings
 
 
-
 ---------------------------------------------------------------------------------------------------
 -- Compute an lpeg pattern that captures exactly the unicode codepoints from N to M, where they
 -- are both utf8 encoded strings.
 ---------------------------------------------------------------------------------------------------
 
-range_start_for_n_byte_encoding =
+utf8 = require("utf8")
+
+local range_start_for_n_byte_encoding =
    { string.char(0x00),
      string.char(0xC2, 0x80),
      string.char(0xE0, 0xA0, 0x80),		    -- E1 80 80, ...
      string.char(0xF0, 0x90, 0x80, 0x80),	    -- F1 80 80 80, ...
   }
 
-range_end_for_n_byte_encoding =
+local range_end_for_n_byte_encoding =
    { string.char(0x7F),
      string.char(0xDF, 0xBF),
      string.char(0xEF, 0xBF, 0xBF),		    -- ..., EE 80 80
      string.char(0xF4, 0x8F, 0xBF, 0xBF),	    -- ..., F3 80 80 80
   }
 
-function trailer(start_flag, len, index)
+local function trailer(start_flag, len, index)
    assert(type(start_flag)=="boolean")
    return string.rep((start_flag and string.char(0x80)) or string.char(0xBF), len-index+1)
 end
@@ -40,7 +41,7 @@ end
 -- range_start and range_end data for a sequence of length 'len', and the first byte of the output
 -- pattern is the one at 'index'.
 
-function Rsame(s, e, ix)
+local function Rsame(s, e, ix)
    -- s, e are utf8 encodings of N, M, which are unicode codepoints
    -- N < M  (integer comparison)
    -- #s==#e (encodings have SAME byte sequence length)
@@ -101,7 +102,7 @@ function Rsame(s, e, ix)
    end -- s1 < e1
 end
 
-function R(s, e)
+local function R(s, e)
    -- s, e are utf8 encodings of N, M, which are unicode codepoints
    -- N < M  (integer comparison)
    -- s and e are ASSUMED TO BE VALID ENCODINGS
@@ -141,7 +142,7 @@ function R(s, e)
    return result
 end
 
-function expand_full_ranges(range)
+local function expand_full_ranges(range)
    if type(range)=="number" then return range; end
    assert(type(range)=="table", "range not a number or table: " .. tostring(range))   
    local op = range[1]
@@ -193,6 +194,7 @@ function expand_full_ranges(range)
       return r
    end
 end
+
    -- elseif op=="full ranges" then
    --    local len = range.len
    --    local index = range.index
