@@ -128,7 +128,7 @@ function repl.repl(en)
 		     path = HOMEDIR .. path:sub(2)
 		  end
 		  local ok, pkgname, messages, full_path
-		  ok, pkgname, messages, full_path = en:loadfile(path, true)
+		  ok, pkgname, messages = en:loadfile(path, true)
 		  if messages then
 		     for _,msg in ipairs(messages) do
 			print(violation.tostring(msg))
@@ -136,9 +136,9 @@ function repl.repl(en)
 		  end
 		  if ok then
 		     if pkgname then
-			io.write("Loaded package ", pkgname, " from ", full_path, "\n")
+			io.write("Loaded package ", pkgname, " from ", path, "\n")
 		     else
-			io.write("Loaded ", full_path, "\n")
+			io.write("Loaded ", path, "\n")
 		     end
 		  end -- if ok
 	       end -- if csubs[1]
