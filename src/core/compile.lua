@@ -189,11 +189,14 @@ local function check_pattern(thing, a)
    end
 end
 
+local function time(since)
+   return (math.floor((os.clock() - since)*100000 + 0.5))/100 -- ms, rounded to nearest 1/100
+end
+
 local function sequence(a, env, prefix, messages)
    assert(#a.exps > 0, "empty sequence?")
    local e = expression(a.exps[1], env, prefix, messages)
-   -- The meaning of a sequence of 2 or more items is defined only when all the elements are
-   -- patterns. 
+   -- The meaning of a sequence of 1 item is the meaning of the item itself.
    if #a.exps == 1 then
       if pattern.is(e) then
 	 a.pat = pattern.new{name="sequence", peg=e.peg, ast=a}
@@ -490,9 +493,6 @@ local function ref(a, env, prefix, messages)
    local name = common.compose_id{a.packagename, a.localname}
    if (not pat) then raise_error("unbound identifier: " .. name, a); end
    check_pattern(pat, a)
-   -- if not(pattern.is(pat)) then
-   --    raise_error("type mismatch: expected a pattern, but '" .. name .. "' is bound to " .. tostring(pat), a)
-   -- end
    a.pat = pattern.new{name=a.localname, peg=pat.peg, alias=pat.alias, ast=pat.ast, uncap=pat.uncap}
    return a.pat
 end
@@ -568,13 +568,49 @@ function expression(a, env, prefix, messages)
    return a.pat
 end
 
+-- Here is the bare beginnings of some compiler profiling:
+local PROFILE = false
+local PROFILE_PREFIX = "*prof* "
+local profile_print =
+   function(...)
+      io.stderr:write(PROFILE_PREFIX)
+      for _,item in ipairs({...}) do
+	 io.stderr:write(tostring(item))
+      end
+      io.stderr:flush()
+   end
+local profile_println =
+   function(...)
+      profile_print(...)
+      io.stderr:write('\n')
+      io.stderr:flush()
+   end
+
 local function compile_expression(exp, env, prefix, messages)
+
+   local t0
+   if PROFILE then
+      profile_println("compiling ", ast.tostring(exp))
+      t0 = os.clock()
+   end
+
    local ok, value = catch(expression, exp, env, prefix, messages)
+
+   if PROFILE then
+      profile_println("time = ", time(t0), "ms")
+      collectgarbage('collect')
+      profile_println("heapsize = ", math.floor(collectgarbage('count')+0.5), "Kb")
+      if pattern.is(value) then
+	 local treesize = math.floor(((lpeg.usize(value.peg)+512)*10)/1024)/10
+	 --local inst = lpeg.codegen(value.peg)
+	 --profile_println("#inst = ", inst)
+	 profile_println("treesize = ", treesize, "Kb")
+	 profile_println()
+      end
+   end
+
    if not ok then
       local full_message = "Internal error in compile_expression:" .. tostring(value) .. "\n"
-      -- for _,v in ipairs(messages) do
-      -- 	 full_message = full_message .. tostring(v) .. "\n"
-      -- end
       assert(false, full_message)
    elseif is_exception(value) then
       local err = value[1]
