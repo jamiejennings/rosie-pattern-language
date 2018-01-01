@@ -1,18 +1,20 @@
 -- -*- Mode: Lua; -*-                                                                             
 --
--- utf8-range.lua    Create and compile patterns that match ranges of unicode characters encoded in utf8
+-- compile-utf8.lua    Compile ranges of unicode characters encoded in utf8
 --
--- © Copyright IBM Corporation 2016.
+-- © Copyright IBM Corporation 2016, 2017, 2018.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
-
 
 ---------------------------------------------------------------------------------------------------
 -- Compute an lpeg pattern that captures exactly the unicode codepoints from N to M, where they
 -- are both utf8 encoded strings.
 ---------------------------------------------------------------------------------------------------
 
-utf8 = require("utf8")
+compile_utf8 = {}
+local rosie = require("rosie")
+local utf8 = require("utf8")
+local lpeg = rosie.import("lpeg")
 
 local range_start_for_n_byte_encoding =
    { string.char(0x00),
@@ -195,121 +197,30 @@ local function expand_full_ranges(range)
    end
 end
 
-   -- elseif op=="full ranges" then
-   --    local len = range.len
-   --    local index = range.index
-   --    local s1 = range_start_for_n_byte_encoding[len]:byte(index)
-   --    local e1 = range_end_for_n_byte_encoding[len]:byte(index)
-   --    local start, finish = range[2], range[3]
-   --    local lowest_value = string.char(0x80)
-   --    local highest_value = string.char(0xBF)
-   --    local first_byte_peg = lpeg.R(string.char(range[2], range[3]))
-   --    local rest_of_peg
-   --    for i = index+1, len do
-   -- 	 local low = (range[2]==s1) and range_start_for_n_byte_encoding[len]:sub(i, i) or lowest_value
-   -- 	 local high = (range[3]==e1) and range_end_for_n_byte_encoding[len]:sub(i, i) or highest_value
-   -- 	 if not rest_of_peg then
-   -- 	    rest_of_peg = lpeg.R(low..high)
-   -- 	 else
-   -- 	    rest_of_peg = rest_of_peg * lpeg.R(low..high)
-   -- 	 end
-   --    end
-   --    return (rest_of_peg and (first_byte_peg * rest_of_peg)) or first_byte_peg
-   -- end
-
-
-
 -- n, m are integers in the range 0 to 0x10FFFF inclusive
 -- this range includes all valid (and some invalid) unicode codepoints
 -- n < m
-function codepoint_range(n, m)
+function compile_utf8.codepoint_range(n, m)
    assert(n <= m, "codepoints out of order: "..n..", "..m)
    return expand_full_ranges(R(utf8.char(n), utf8.char(m)));
 end
 
-function compile_codepoint_range(range)
+function compile_utf8.compile_codepoint_range(range)
    assert(type(range)=="table", "range not a table: " .. tostring(range))
    local op = range[1]
    if op=="R" then
       return lpeg.R(string.char(range[2], range[3]))
    elseif op=="*" then
-      return compile_codepoint_range(range[2]) * compile_codepoint_range(range[3])
+      return compile_utf8.compile_codepoint_range(range[2]) * compile_utf8.compile_codepoint_range(range[3])
    elseif op=="+" then
       -- "+" takes from 1..k args
       assert(range[2], 'no args supplied to "+"')
-      local result = compile_codepoint_range(range[2])
-      for i=3,#range do result = result + compile_codepoint_range(range[i]); end
+      local result = compile_utf8.compile_codepoint_range(range[2])
+      for i=3,#range do result = result + compile_utf8.compile_codepoint_range(range[i]); end
       return result
    end
    error("unknown unicode range opcode: " .. tostring(range[1]))
 end
 
 
-
-----------------------------------------------------------------------------------------
--- THIS IS WHEN the store() function saved only the general category
-----------------------------------------------------------------------------------------
--- > db = {}; print(memtest(load))
--- 1312.755859375	Kb
--- > categories()
--- > table.print(cats)
--- {Pf: true, 
---  Sc: true, 
---  Lm: true, 
---  Pd: true, 
---  Zs: true, 
---  Nd: true, 
---  Pc: true, 
---  Sk: true, 
---  Sm: true, 
---  No: true, 
---  Po: true, 
---  So: true, 
---  Cc: true, 
---  Ps: true, 
---  Lt: true, 
---  Lu: true, 
---  Mn: true, 
---  Cf: true, 
---  Pi: true, 
---  Ll: true, 
---  Lo: true, 
---  Pe: true}
--- > 
-
-----------------------------------------------------------------------------------------
--- THIS IS WHEN the store() function SAVED ALL THE FIELDS IN A TABLE:
-----------------------------------------------------------------------------------------
--- function store(code, ...)
---    if code then
---       db[tonumber(code, 16)] = {...};
---       return true
---    end
---    return false
--- end
---
--- > db = {}; print(memtest(load))
--- 11755.602539062	Kb
--- > db[0x002603]
--- table: 0x7ffc9004a500
--- > table.print(db[0x002603])
--- {1: "SNOWMAN", 
---  2: "So", 
---  3: "0", 
---  4: "ON", 
---  5: "", 
---  6: "", 
---  7: "", 
---  8: "", 
---  9: "N", 
---  10: "", 
---  11: "", 
---  12: "", 
---  13: "", 
---  14: ""}
--- >
-
-
-
-   
-   
+return compile_utf8
