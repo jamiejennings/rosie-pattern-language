@@ -6,38 +6,30 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
-
-
---[[
-
--- NOTE regarding Reserved, Unassigned, Private Use, and Non-Characters:
---
--- Reserved characters and Unassigned characters are the same.  They are valid codepoints which
--- happen to be unassigned.  They are NOT listed in UnicodeData.txt.  They are NOT a member of any
--- defined General Category
---
--- Private Use character ranges are listed in UnicodeData.txt, so we get those ranges directly.
---
--- Non-Characters are permanently reserved for internal use, i.e. they will never be assigned.
--- They are a small fixed list, and are NOT listed in UnicodeData.txt.  Because the list is fixed,
--- we define it manually in this code.
-
--- What I am calling "defined ranges" appear in UnicodeData.txt like this:
-    -- bash-3.2$ grep '\(First\)\|\(Last\)' UnicodeData.txt
-    -- 3400;<CJK Ideograph Extension A, First>;Lo;0;L;;;;;N;;;;;
-    -- 4DB5;<CJK Ideograph Extension A, Last>;Lo;0;L;;;;;N;;;;;
-    -- 4E00;<CJK Ideograph, First>;Lo;0;L;;;;;N;;;;;
-    -- 9FD5;<CJK Ideograph, Last>;Lo;0;L;;;;;N;;;;;
-    -- AC00;<Hangul Syllable, First>;Lo;0;L;;;;;N;;;;;
-    -- D7A3;<Hangul Syllable, Last>;Lo;0;L;;;;;N;;;;;
-    -- ...
--- Whereas other entries in UnicodeData.txt represent a single codepoint and have names that
--- do not have the format "<name, First>" or "<name, Last>".
-
+-- The main "index" of Unicode characters is the file UnicodeData.txt.  Most of the file consists
+-- of individual entries for each defined codepoint.  Such entries have a character name in the
+-- second field that names the character, like these:
+-- 
+--     0041;LATIN CAPITAL LETTER A;Lu;0;L;;;;;N;;;;0061;
+--     0042;LATIN CAPITAL LETTER B;Lu;0;L;;;;;N;;;;0062;
+--     0043;LATIN CAPITAL LETTER C;Lu;0;L;;;;;N;;;;0063;
+-- Note that a character name cannot have "<" or ">" in it.
+-- 
+-- Other entries in UnicodeData.txt declare the start or end of a range of codepoints.  They look
+-- like this:
+-- 
+--     3400;<CJK Ideograph Extension A, First>;Lo;0;L;;;;;N;;;;;
+--     4DB5;<CJK Ideograph Extension A, Last>;Lo;0;L;;;;;N;;;;;
+-- 
+-- We will call these "defined ranges", to distinguish them from codepoint ranges that we
+-- compute ourselves.
+-- 
+-- References:
+-- 
 -- [UnicodeData.txt](http://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt)
 -- [Explanation of fields of UnicodeData.txt](http://www.unicode.org/reports/tr44/tr44-18.html#UnicodeData.txt)
 --
--- Fields:
+-- Fields of UnicodeData.txt:
 -- (0) Codepoint in hex
 -- (1) Name
 -- (2) General Category
@@ -52,39 +44,11 @@
 -- (14) Simple Titlecase Mapping
 
 
-      
-
--- [General Categories](http://www.unicode.org/reports/tr44/tr44-18.html#General_Category_Values)
--- In that table are these derived categories:
--- LC	Cased_Letter	Lu | Ll | Lt
--- L	Letter	Lu | Ll | Lt | Lm | Lo
--- M	Mark	Mn | Mc | Me
--- N	Number	Nd | Nl | No
--- P	Punctuation	Pc | Pd | Ps | Pe | Pi | Pf | Po
--- S	Symbol	Sm | Sc | Sk | So
--- Z	Separator	Zs | Zl | Zp
--- C	Other	Cc | Cf | Cs | Co | Cn  (Note: Cn means "unassigned" and won't appear in db)
-
-
--- There are two sources of ranges: the list of single codepoints in db[code], and the list of
--- already-defined ranges in db.defined_ranges[].  
-
-
---return ucd
-
---]]
-
 local ucd = {}
-local rosie = require("rosie")
-local compile_utf8 = dofile("compile-utf8.lua")
 local util = dofile("util.lua")
 
-local codepoint_range = compile_utf8.codepoint_range
-local compile_codepoint_range = compile_utf8.compile_codepoint_range
-
-local engine = rosie.engine.new(); engine:loadfile("ucd.rpl")
-
 local manually_defined_ranges = {
+-- Obsolete, though may be needed for a future version of Unicode.
 --    { 0xFDD0,   0xFDEF, {gc="Cn"} },
 --    { 0xFFFE,   0xFFFF, {gc="Cn"} },
 --    { 0x1FFFE,  0x1FFFF, {gc="Cn"} },
@@ -145,13 +109,14 @@ local function storeUnicodeData(data, character_data, defined_ranges)
    end
 end
 
-local function loadUnicodeData(filename)
+local function loadUnicodeData(engine, filename)
    print("Reading UnicodeData.txt")
    local character_data = {n = 0; max_codepoint = 0}
    local defined_ranges = {n = 0}
    local parser = engine:compile("UnicodeData_line")
    local nl = util.make_nextline_function(filename)
-   local line = nl(); i = 1;
+   local i = 1
+   local line = nl()
    while(line) do
       local data = parser:match(line)
       if not data then
@@ -318,26 +283,6 @@ local function extract_categories(character_data, defined_ranges, manually_defin
 end
 
 -- -----------------------------------------------------------------------------
--- Compile the ranges
--- -----------------------------------------------------------------------------
-
-local function compile_all_ranges(range_table)
-   local patterns = {}
-   for cat, ranges in pairs(range_table) do
-      local utf8_range = {"+"}
-      for _,range in ipairs(ranges) do
-	 table.insert(utf8_range, codepoint_range(range[1], range[2]))
-      end
-      if #ranges > 0 then
-	 patterns[cat] = compile_codepoint_range(utf8_range)
-      else
-	 print("ERROR", cat, "has no ranges")
-      end
-   end
-   return patterns
-end
-
--- -----------------------------------------------------------------------------
 -- Testing the patterns produced from UnicodeData
 -- -----------------------------------------------------------------------------
 
@@ -379,8 +324,8 @@ end
 -- Top level
 -- -----------------------------------------------------------------------------
 
-function ucd.processUnicodeData(filename)
-   local character_db, defined_ranges = loadUnicodeData(filename)
+function ucd.processUnicodeData(engine, filename)
+   local character_db, defined_ranges = loadUnicodeData(engine, filename)
    local cats = extract_categories(character_db, defined_ranges, manually_defined_ranges)
    local ranges = {}
    local i = 0
@@ -397,7 +342,7 @@ function ucd.processUnicodeData(filename)
    print("Category", "Cn", "has", #ranges["Cn"], "ranges")
    i = i + 1
    print("Compiling ranges for each general category")
-   patterns = compile_all_ranges(ranges)
+   patterns = util.compile_all_ranges(ranges)
    print(i, "general categories compiled")
    test_defined_codepoints_against_all_patterns(character_db, patterns)
    return character_db, patterns

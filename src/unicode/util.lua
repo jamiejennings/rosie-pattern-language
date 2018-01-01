@@ -8,6 +8,10 @@
 
 local util = {}
 
+local compile_utf8 = dofile("compile-utf8.lua")
+local codepoint_range = compile_utf8.codepoint_range
+local compile_codepoint_range = compile_utf8.compile_codepoint_range
+
 
 function util.make_nextline_function(fn)
    return io.lines(UCD_DIR .. fn)
@@ -56,6 +60,27 @@ function util.merge_ranges(R1, R2, value_name)
    end
    return result
 end
+
+-- -----------------------------------------------------------------------------
+-- Compile the ranges
+-- -----------------------------------------------------------------------------
+
+function util.compile_all_ranges(range_table)
+   local patterns = {}
+   for cat, ranges in pairs(range_table) do
+      local utf8_range = {"+"}
+      for _,range in ipairs(ranges) do
+	 table.insert(utf8_range, codepoint_range(range[1], range[2]))
+      end
+      if #ranges > 0 then
+	 patterns[cat] = compile_codepoint_range(utf8_range)
+      else
+	 print("ERROR", cat, "has no ranges")
+      end
+   end
+   return patterns
+end
+
 
 ----------------------------------------------------------------------------------------
 -- Dinky utilities
