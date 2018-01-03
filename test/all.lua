@@ -31,6 +31,7 @@ test.dofile(TEST_HOME .. "/cli-test.lua")
 test.dofile(TEST_HOME .. "/repl-test.lua")
 
 test.dofile(TEST_HOME .. "/utf8-test.lua")
+test.dofile(TEST_HOME .. "/rpl-char-test.lua")
 
 passed = test.print_grand_total()
 
