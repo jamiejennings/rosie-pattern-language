@@ -18,6 +18,7 @@ local P, V, C, S, R, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Cmt, lpeg.B
 
 local common = require "common"
+local ustring = require "ustring"
 local novalue = common.novalue
 local taggedvalue = common.taggedvalue
 local pattern = common.pattern
@@ -124,7 +125,7 @@ local function make_parser_from(parse_something, expected_pt_node)
 		table.insert(messages, err)
 		return false
 	     end
-	     return ast.from_parse_tree(pt, source_record)
+	     return ast.from_parse_tree(pt, source_record, messages)
 	  end
 end
 
@@ -154,7 +155,7 @@ c2.expand_expression = expand.expression
 local expression;
 
 local function literal(a, env, prefix, messages)
-   local str, offense = common.unescape_string(a.value)
+   local str, offense = ustring.unescape_string(a.value)
    if not str then
       raise_error("invalid escape sequence in literal: \\" .. offense, a)
    end
@@ -163,7 +164,7 @@ local function literal(a, env, prefix, messages)
 end
 
 local function rpl_string(a, env, prefix, messages)
-   local str, offense = common.unescape_string(a.value)
+   local str, offense = ustring.unescape_string(a.value)
    if not str then
       raise_error("invalid escape sequence in string: \\" .. offense, a)
    end
@@ -271,6 +272,10 @@ end
 -- TODO: Make the cs_* UTF-8 AND ASCII compatible.  Essentially, change each "1" below to
 -- a reference to the identifier "."
 
+-- TODO: Ensure that the char list, range, and name are processed correctly wrt escaping.
+-- QUESTION: Do this here, or perhaps in ast.lua?  Where should we get rid of the strings "as
+-- entered" and store only the ACTUAL string after un-escaping?
+
 
 local function cs_named(a, env, prefix, messages)
    local peg = locale[a.name]
@@ -283,10 +288,10 @@ end
 
 -- TODO: This impl works only for single byte chars!
 local function cs_range(a, env, prefix, messages)
-   local c1, offense1 = common.unescape_charlist(a.first)
-   local c2, offense2 = common.unescape_charlist(a.last)
+   local c1, offense1 = ustring.unescape_charlist(a.first)
+   local c2, offense2 = ustring.unescape_charlist(a.last)
    if (not c1) or (not c2) then
-      raise_error("invalid escape sequence in character set: \\" ..
+      raise_error("invalid escape sequence in character range: \\" ..
 		  ((c1 and offense2) or offense1),
 	 a)
    end
@@ -301,7 +306,7 @@ function cs_list(a, env, prefix, messages)
    assert(#a.chars > 0, "empty character set list?")
    local alternatives
    for i, c in ipairs(a.chars) do
-      local char, offense = common.unescape_charlist(c)
+      local char, offense = ustring.unescape_charlist(c)
       if not char then
 	 raise_error("invalid escape sequence in character set: \\" .. offense, a)
       end
@@ -313,8 +318,6 @@ function cs_list(a, env, prefix, messages)
 		      ast=a}
    return a.pat
 end
-
---local cexp;
 
 function bracket(a, env, prefix, messages)
    if ast.bracket.is(a.cexp) then
@@ -331,28 +334,6 @@ function bracket(a, env, prefix, messages)
       local p = expression(a.cexp, env, prefix, messages)
       a.pat = pattern.new{name="bracket", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
       return a.pat
-      
-   -- elseif ast.choice.is(a.cexp) then
-   --    assert(#a.cexp.exps > 0, "empty character set union?")
-   --    local alternatives = expression(a.cexp.exps[1], env, prefix, messages).peg
-   --    for i = 2, #a.cexp.exps do
-   -- 	 alternatives = alternatives + expression(a.cexp.exps[i], env, prefix, messages).peg
-   --    end
-   --    a.pat = pattern.new{name="bracket",
-   -- 			 peg=((a.complement and (1-alternatives)) or alternatives),
-   -- 			 ast=a}
-   --    return a.pat
-   -- elseif ast.cs_intersection.is(a.cexp) then
-   --    raise_error("character set intersection is not implemented", a)
-   -- elseif ast.cs_difference.is(a.cexp) then
-   --    raise_error("character set difference is not implemented", a)
-   -- elseif ast.simple_charset_p(a.cexp) then
-   --    local p = expression(a.cexp, env, prefix, messages)
-   --    a.pat = pattern.new{name="bracket", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
-   --    return a.pat
-   -- else
-   --    table.print(a.cexp)
-   --    assert(false, "compile: unknown cexp inside bracket: " .. tostring(a.cexp))
    end
 end
 

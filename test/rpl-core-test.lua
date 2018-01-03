@@ -1184,15 +1184,17 @@ test_charsets("[[:cntrl:]]", {"\b", "\r"}, {"a", "X", "0", " "})
 test_charsets("[:cntrl:]", {"\b", "\r"}, {"a", "X", "0", " "})
 
 subheading("Character ranges")
+-- Remember that this is Lua code, so backslashes need to be escaped once for Lua!
 test_charsets("[[a-z]]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[a-z]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[[a-a]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[b-a]]", {}, {"a", "b", "c", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[$-&]]", {"$", "%", "&"}, {"^", "-", "z", " ", "X", "0", "!"})
 test_charsets("[[--.]]", {"-", "."}, {"+", "/", "z", " ", "X", "0", "!"})
-test_charsets("[[\\[-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})
+test_charsets("[[\\[\\-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})
 
 subheading("Character lists")
+-- Remember that this is Lua code, so backslashes need to be escaped once for Lua!
 test_charsets('["]', {'"'}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[\\[]", {"["}, {"]", "+", "/", "z", " ", "X", "0", "!"}) -- a single open bracket
 test_charsets("[\\]]", {"]"}, {"[", "+", "/", "z", " ", "X", "0", "!"}) -- a single close bracket
@@ -1203,7 +1205,7 @@ test_charsets("[aa]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[abczyx]]", {"a", "b", "c", "x", "y", "z"}, {"r", "d", "m", " ", "X", "0", "!"})
 test_charsets("[[-]]", {"-"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[ \t]]", {" ", "\t"}, {"\n", "b", "y", "z", "X", "0", "!"})
-test_charsets("[[!#$%\\^&*()_-+=|\\\\'`~?/{}{}:;]]", 
+test_charsets("[[!#$%\\^&*()_\\-+=|\\\\'`~?/{}{}:;]]", 
 	      {"!", "#", "$", "%", "^", "&", "*", "(", ")", "_", "-", "+", "=", "|", "\\", "'", "`", "~", "?", "/", "{", "}", "{", "}", ":", ";"},
 	      {"a", "Z", " ", "\r", "\n"})
 
@@ -1214,7 +1216,7 @@ test_charsets("[^-x]", {"b", "y", "z", "^", " ", "X", "0", "!"}, {"x", "-"})
 test_charsets("[^a]", {"b", "y", "z", "^", " ", "X", "0", "!"}, {"a"})
 test_charsets("[^abc]", {"d", "y", "z", "^", " ", "X", "0", "!"}, {"a", "b", "c"})
 test_charsets("[^a-z]", {" ", "X", "0", "!"}, {"a", "b", "y", "z"})
-test_charsets("[^ab-z]", {"c", "d", " ", "X", "0", "!"}, {"a", "b", "-", "z"}) -- NOT a range!
+test_charsets("[^ab\\-z]", {"c", "d", " ", "X", "0", "!"}, {"a", "b", "-", "z"}) -- NOT a range!
 test_charsets("[:^digit:]", {"a", " ", "!"}, {"0", "9"})
 test_charsets("[[:^space:]]", {"A", "0", "\b"}, {" ", "\t", "\n", "\r"})
 test_charsets("[^[:^digit:]]+", {"0", "123"}, {"", " ", "d", "@"})

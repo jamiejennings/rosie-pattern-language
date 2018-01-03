@@ -21,6 +21,7 @@ violation.syntax = recordtype.new(
    { who = NIL,
      message = NIL, 
      sourceref = NIL,
+     ast = NIL,					    -- usually nil
   })
 
 violation.compile = recordtype.new(

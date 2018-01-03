@@ -7,13 +7,13 @@
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- TODO: Ensure there are tests for these recent changes.
---   - x.y.z is a parse error. Else the second "." would parse as dot
---   - .y.z is a parse error.  Else the first "." would parse as dot
---   - Sequences of the one-char identifiers need no whitespace separating them:
---      ... is NOT a parse error.
---      .~ is NOT a parse error.
---      .$ is NOT a parse error.  
+-- Notes regarding when whitespace is needed:
+-- (1) x.y.z is a parse error. Else the second "." would parse as dot (confusing).
+-- (2) .y.z is a parse error.  Else the first "." would parse as dot (confusing).
+-- (3) Sequences of the one-char identifiers need no whitespace separating them:
+--     ... is NOT a parse error.  It is a sequence of 3 dots.
+--     .~ is NOT a parse error.  It is a dot followed by a tilde (boundary).
+--     .$ is NOT a parse error.  It is a dot followed by a dollar sign (end of input).
 
 package rpl_1_1
 
@@ -29,8 +29,9 @@ dot = "."
 alias unoverloaded_id_symbol = [[$~^]]
 alias id_symbol = dot / unoverloaded_id_symbol
 
--- It is important that an error consume at least one character here.
--- As a tactic for continuing to parse after an error , we will skip to eol and try to continue. 
+-- It is important that an error consume at least one character here.  As a
+-- tactic for continuing to parse after an error , we will skip to eol and try
+-- to continue.
 rest_of_line = { {!"\n" .}+ "\n" / $}
 syntax_error = rest_of_line
 
@@ -38,6 +39,10 @@ localname = unoverloaded_id_symbol / {dot !id} / {id !dot}
 packagename = id
 identifier = { {packagename [[.]]}? localname }
 
+-- During parsing, we enforce two rules about string literals: ESC must be
+-- followed by another character, and a double quote (inside the literal) must
+-- be escaped.  Further interpretation of the literal occurs during
+-- compilation. 
 alias dquote = [[\"]]
 alias esc =    [[\\]]
 literal = { {!{esc/dquote} .} / {esc .} }* 
@@ -54,24 +59,24 @@ alias end_token = { "end" !id_char }
 alias keyword_list = "local" / "alias" / "grammar" / "end"
 keyword = { keyword_list !id_char }
 
+-- Two rules are enforced for all character sets during parsing: ESC must be
+-- followed by another character; an open or close bracket (inside the character
+-- set) must be escaped.
+-- At parse time, the only difference between a range and a list is that a range
+-- will have an unescaped dash in it.
+-- Further interpretation occurs at compile time for the contents of a character
+-- list, the ends of a character range, and the name of a named set.
 complement = "^"
 character = { {!esc !"[" !"]" .} / {esc .} }
-range = { complement? character [[-]] !"]" character } 
+range_first = {!"-" character}+
+range_last = {!"]" character}+
+range = { complement? range_first "-" range_last } 
 charlist = { complement? {!"]" character}+ }		    -- cannot be empty
 name = {!":" .}+
 named_charset = { complement? name } 
 alias simple_charset = { "[" { ":" named_charset ":]" } /
 	                  { range "]" } /
 		          { charlist "]" } }
--- grammar
---    charset_exp = compound_charset / simple_charset
---    compound_charset = { "[" complement? combination atmos "]" }
---    alias combination = { atmos charset_exp { atmos op atmos charset_exp }* }
---    op = intersection / difference / union
---    union = ""
---    intersection = "&"
---    difference = "-"
--- end
 
 low =  [[0-9]]*				    -- an int or nothing
 high = [[0-9]]* 

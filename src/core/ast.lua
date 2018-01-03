@@ -6,12 +6,20 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
+local violation = require "violation"
+local catch = violation.catch
+local raise = violation.raise
+local is_exception = violation.is_exception
+
 local recordtype = require "recordtype"
 local NIL = recordtype.NIL
+
 local list = require "list"
 local map = list.map; apply = list.apply; append = list.append; foreach = list.foreach; filter = list.filter
 
-not_atmosphere = common.not_atmosphere		    -- Predicate on ast type
+local ustring = require "ustring"
+
+local not_atmosphere = common.not_atmosphere		    -- Predicate on ast type
 
 local ast = {}
 
@@ -220,6 +228,12 @@ end
 -- Convert a parse tree into an ast
 ---------------------------------------------------------------------------------------------------
 
+local function raise_error(msg, a)
+   return raise(violation.syntax.new{who='parser',
+				     message=msg,
+				     ast=a})
+end
+
 local convert_exp;
 
 function ast.simple_charset_p(a)
@@ -282,6 +296,12 @@ function convert_bracket(pt, sref)
 			  sourceref=sref}
 end
 
+local function unescape_char(c)
+   return ustring.unescape_char(c,
+			     ustring.escape_substitutions,
+			     ustring.charset_escape_substitutions)
+end
+
 function convert_simple_charset(pt, sref)
    local exps = list.from(pt.subs)
    local compflag = (pt.subs[1].type=="complement")
@@ -295,8 +315,22 @@ function convert_simple_charset(pt, sref)
 			     complement = compflag,
 			     sourceref=sref}
    elseif pt.type=="range" then
-      return ast.cs_range.new{first = exps[1].data,
-			      last = exps[2].data,
+      -- N.B. 'range_first', 'range_last' are part of RPL 1.1.  The core parser
+      -- will produce sub-expressions of type 'character'.
+      assert(exps[1].type=="range_first" or exps[1].type=="character")
+      assert(exps[2].type=="range_last" or exps[2].type=="character")
+      local first_char, offense1 = unescape_char(exps[1].data)
+      local last_char, offense2 = unescape_char(exps[2].data)
+      if (not first_char) or (not last_char) then
+	 raise_error("invalid escape sequence in character range: \\" ..
+		     ((first_char and offense2) or offense1),
+		  sref)
+      end
+
+
+
+      return ast.cs_range.new{first = first_char,
+			      last = last_char,
 			      complement = compflag,
 			      sourceref=sref}
    
@@ -465,7 +499,7 @@ local function expand_import_decl(decl_parse_node)
       local typ, pos, text, subs, fin = decode_match(spec)
       assert(subs and subs[1], "missing package name to import?")
       local typ, pos, importpath = decode_match(subs[1])
-      importpath = common.dequote(importpath)
+      importpath = ustring.dequote(importpath)
       common.note("*\t", "import |", importpath, "|")
       if subs[2] then
 	 typ, pos, prefix = decode_match(subs[2])
@@ -554,7 +588,18 @@ local function convert(pt, source_record)
    end
 end
 
-ast.from_parse_tree = convert
+function ast.from_parse_tree(pt, sref, messages)
+   local ok, result = catch(convert, pt, sref)
+   if not ok then
+      error("Internal error in ast module: " .. tostring(result))
+   end
+   if is_exception(result) then
+      table.insert(messages, result[1])
+      return false
+   end
+   return result
+end
+   
 
 ---------------------------------------------------------------------------------------------------
 -- Convert a parse tree produced by the rpl core parser
@@ -565,7 +610,7 @@ function convert_core_charset_exp(pt, sref)
    local cs_exps = map(function(exp) return convert_simple_charset(exp, sref) end, pt.subs)
    return ast.bracket.new{cexp = ast.choice.new{exps=cs_exps,
 						sourceref=sref},
-			  complement = false,
+			  complement = false,	    -- complement not supported
 			  sourceref=sref}
 end
 
@@ -671,7 +716,16 @@ local function convert_core(pt, source_record)
    end
 end
 
-ast.from_core_parse_tree = convert_core
+function ast.from_core_parse_tree(pt, sref)
+   local ok, result = catch(convert_core, pt, sref)
+   if not ok then
+      error("Internal error in core section of ast module: " .. tostring(result))
+   end
+   if is_exception(result) then
+      error(violation.tostring(result[1]))
+   end
+   return result
+end
 
 ---------------------------------------------------------------------------------------------------
 -- Find all references in an ast where the ref has a non-nil packagename

@@ -18,6 +18,7 @@ local rosie = require "rosie"
 local readline = rosie.import "readline"
 
 local common = require "common"
+local ustring = require "ustring"
 local ui = require "ui"
 local environment = require "environment"
 local lpeg = require "lpeg"
@@ -199,14 +200,14 @@ function repl.repl(en)
 			-- needs them there.  This is inelegant.  <sigh>
 			local str
 			if ast.literal.is(a) then
-			   str = '"' .. common.escape_string(a.value) .. '"'
+			   str = '"' .. ustring.escape_string(a.value) .. '"'
 			else
 			   str = exp_string
 			end
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			assert(tname=="word.dq")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
-			input_text = common.unescape_string(input_text:sub(2, -2))
+			input_text = ustring.unescape_string(input_text:sub(2, -2))
 			-- Compile the expression given in the command
 			local rplx, errs = en:compile(str)
 			if not rplx then

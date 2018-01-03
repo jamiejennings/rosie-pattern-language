@@ -10,6 +10,7 @@ local p = {}
 local cli_common = import("cli-common")
 local io = import("io")
 local common = import("common")
+local ustring = import("ustring")
 local violation = import("violation")
 
 local function startswith(str,sub)
@@ -177,7 +178,7 @@ function p.run(rosie, en, args, filename)
 	    for i = literals, #m.subs do
 	       total = total + 1
 	       local teststr = m.subs[i].data
-	       teststr = common.unescape_string(teststr)
+	       teststr = ustring.unescape_string(teststr)
 	       local includes = test_includes_ident(testIdentifier, teststr, containedIdentifier)
 	       local msg
 	       if includes==nil then
@@ -201,7 +202,7 @@ function p.run(rosie, en, args, filename)
 	    for i = literals, #m.subs do
 	       total = total + 1
 	       local teststr = m.subs[i].data
-	       teststr = common.unescape_string(teststr) -- allow, e.g. \" inside the test string
+	       teststr = ustring.unescape_string(teststr) -- allow, e.g. \" inside the test string
 	       if not test_funcs[m.subs[2].data](testIdentifier, teststr) then
 		  if #teststr==0 then teststr = "the empty string"; end -- for display purposes
 		  write_error("FAIL: ", testIdentifier, " did not ", m.subs[2].data:sub(1,-2), " ", teststr)

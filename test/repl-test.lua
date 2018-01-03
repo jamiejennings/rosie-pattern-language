@@ -115,4 +115,16 @@ output = table.concat(results, '\n')
 check(output:find('syntax error while reading statement'))
 
 
+results = run('.load test/ok.rpl')
+check(results)
+output = table.concat(results, '\n')
+check(output:find('Loaded test/ok.rpl'))
+
+results = run('.load test/synerr.rpl')
+check(results)
+output = table.concat(results, '\n')
+check(output:find('syntax error'))
+check(output:find('synerr.rpl'))
+
+
 return test.finish()
