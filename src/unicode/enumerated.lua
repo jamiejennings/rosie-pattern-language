@@ -17,14 +17,14 @@
 local enumerated = {}
 
 local util = dofile("util.lua")
--- local rosie = require("rosie")
---local list = rosie.import("list")
---local map = list.map
 
--- run() -- from ucd.lua
--- ranges["Category"] = general_category_ranges
--- patterns["Category"] = general_category_patterns
-
+-- Note: When comparing block names, casing, whitespace, hyphens, and underbars
+--       are ignored.  For example, "Latin Extended-A" and "latin extended a"
+--       are equivalent.  We will canonicalize all Unicode values, in case other
+--       properties have values with spaces or dashes.
+function canonicalize_value(val)
+   return (val:gsub(' ', '_'):gsub('-','_'))
+end
 
 local function storeEnumeratedProperty(data, ranges)
    assert(data.type=='EnumeratedProp_line')
@@ -45,7 +45,7 @@ local function storeEnumeratedProperty(data, ranges)
    end
 
    assert(data.subs[2].type=='propertyName')
-   local property_value = data.subs[2].data
+   local property_value = canonicalize_value(data.subs[2].data)
 
    if not ranges[property_value] then ranges[property_value] = {}; end
    table.insert(ranges[property_value], {start, finish})

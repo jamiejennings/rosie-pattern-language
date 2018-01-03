@@ -17,6 +17,13 @@ function util.make_nextline_function(fn)
    return io.lines(UCD_DIR .. fn)
 end
 
+-- Note:   When comparing block names, casing, whitespace, hyphens,
+--         and underbars are ignored.
+--         For example, "Latin Extended-A" and "latin extended a" are equivalent.
+function util.canonicalize_value(val)
+   return (val:gsub(' ', '_'):gsub('-','_'))
+end
+
 -- -----------------------------------------------------------------------------
 -- Compile the ranges
 -- -----------------------------------------------------------------------------
