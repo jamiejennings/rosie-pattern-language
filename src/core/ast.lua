@@ -228,9 +228,10 @@ end
 -- Convert a parse tree into an ast
 ---------------------------------------------------------------------------------------------------
 
-local function raise_error(msg, a)
+local function raise_error(msg, sref, a)
    return raise(violation.syntax.new{who='parser',
 				     message=msg,
+				     sourceref=sref,
 				     ast=a})
 end
 
@@ -296,13 +297,8 @@ function convert_bracket(pt, sref)
 			  sourceref=sref}
 end
 
-local function unescape_char(c)
-   return ustring.unescape_char(c,
-			     ustring.escape_substitutions,
-			     ustring.charset_escape_substitutions)
-end
-
 function convert_simple_charset(pt, sref)
+   assert(sref)
    local exps = list.from(pt.subs)
    local compflag = (pt.subs[1].type=="complement")
    if compflag then
@@ -319,18 +315,22 @@ function convert_simple_charset(pt, sref)
       -- will produce sub-expressions of type 'character'.
       assert(exps[1].type=="range_first" or exps[1].type=="character")
       assert(exps[2].type=="range_last" or exps[2].type=="character")
-      local first_char, offense1 = unescape_char(exps[1].data)
-      local last_char, offense2 = unescape_char(exps[2].data)
-      if (not first_char) or (not last_char) then
+      local c1, offense1 = ustring.unescape_charlist(exps[1].data)
+      local c2, offense2 = ustring.unescape_charlist(exps[2].data)
+      if (not c1) or (not c2) then
 	 raise_error("invalid escape sequence in character range: \\" ..
-		     ((first_char and offense2) or offense1),
-		  sref)
+		     ((c1 and offense2) or offense1),
+		  sref,
+		  pt)
       end
-
-
-
-      return ast.cs_range.new{first = first_char,
-			      last = last_char,
+      local invalid_length_msg = "start of character range must be exactly one character: "
+      if (ustring.len(c1) ~= 1) then
+	 raise_error(invalid_length_msg .. c1, sref)
+      elseif (ustring.len(c2) ~= 1) then
+	 raise_error(invalid_length_msg .. c2, sref)
+      end
+      return ast.cs_range.new{first = c1,
+			      last = c2,
 			      complement = compflag,
 			      sourceref=sref}
    
