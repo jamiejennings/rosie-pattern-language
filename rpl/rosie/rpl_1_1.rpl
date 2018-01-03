@@ -26,7 +26,7 @@ alias id_char = [[:alnum:]] / [[_]]
 alias id = { [[:alpha:]] id_char* }
 
 dot = "."
-alias unoverloaded_id_symbol = [[$~^]]
+alias unoverloaded_id_symbol = [[$~\^]]
 alias id_symbol = dot / unoverloaded_id_symbol
 
 -- It is important that an error consume at least one character here.  As a
@@ -43,7 +43,7 @@ identifier = { {packagename [[.]]}? localname }
 -- followed by another character, and a double quote (inside the literal) must
 -- be escaped.  Further interpretation of the literal occurs during
 -- compilation. 
-alias dquote = [[\"]]
+alias dquote = [["]]					    -- "
 alias esc =    [[\\]]
 literal = { {!{esc/dquote} .} / {esc .} }* 
 alias quoted_string = { dquote literal dquote }

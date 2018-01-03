@@ -122,7 +122,7 @@ fqdn = { {fqdn_strict_alias / subdomain} port_spec? }
 --     backslash.  The escaped form is NOT SUPPORTED IN the 'name' pattern below, as it is rarely seen
 --     in practice (and subject to debate in the Errata).
 
-local alias name_char = { [:alnum:] / [!#$%&'*+\-/=?^_`.{|}~] }
+local alias name_char = { [:alnum:] / [!#$%&'*+\-/=?\^_`.{|}~] }
 local alias unquoted_name = { name_char {name_char / "."}* }
 local alias quoted_name = { ["] [^"]+ ["] }		    -- " cannot be inside the name
 name = quoted_name / unquoted_name
@@ -192,7 +192,7 @@ authpath = { "//" authority path_abempty } /
 local fragment = { pchar / "/" / "?" }*
 local query = { pchar / "/" / "?" }*
 
-scheme = { [:alpha:] [[:alnum:][+.-]]* }
+scheme = { [:alpha:] [[:alnum:][+.\-]]* }
 
 uri = { scheme ":" authpath? { "?" query }? { "#" fragment }? }
 

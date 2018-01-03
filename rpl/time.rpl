@@ -47,7 +47,7 @@ secfrac = { [:,.] [0-9]+ }
 -- test secfrac accepts ",0", ",12435"
 -- test secfrac rejects "", "0", ".", ".now", ".0r", ".never"
 
-numoffset = { [+-] hour ":" minute }
+numoffset = { [+\-] hour ":" minute }
 -- test numoffset accepts "+00:10", "-23:59"
 -- test numoffset rejects "@12:34", "-55:00", "+2:30"
 
@@ -76,7 +76,7 @@ rfc3339_strict = { rfc3339_time offset }
 --   No support for military time zones (which are marked obsolete)
 --   Not restricting 'day' value based on the values of month and year.  0-31 is always valid.
 
-alias rfc2822_numeric_zone = { [+-] d{4} }
+alias rfc2822_numeric_zone = { [+\-] d{4} }
 -- test rfc2822_numeric_zone accepts "+0000", "-4321", "+9999", "-9870"
 -- test rfc2822_numeric_zone rejects "", "@0100", "-1", "+50", "1000"
 

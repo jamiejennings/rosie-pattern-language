@@ -16,7 +16,7 @@ alias hex_letter = [[a-f][A-F]]
 alias hex_digit = digit / hex_letter
 --alias hex = { digit hex_digits+ } / { hex_only+ digit hex_digits* }
 
-int = { [+-]? digit+ !hex_letter}	     -- at least one digit, and not a hex number
+int = { [+\-]? digit+ !hex_letter}	     -- at least one digit, and not a hex number
 -- test int accepts "34", "+34", "-34"
 -- test int rejects "BEEF", "0x20"
 
@@ -24,11 +24,11 @@ frac = { [.] digit+ }
 -- test frac accepts ".0", ".01", ".3210009831", ".1"
 -- test frac rejects "0.", "1.1", "-.1"
 
-mantissa = { [+-]? digit+ "." digit+ }  -- float with digits on either side of radix
+mantissa = { [+\-]? digit+ "." digit+ }  -- float with digits on either side of radix
 -- test mantissa accepts "1.23", "+1.23", "-1.23"
 -- test mantissa rejects "12", "bob", "1."
 
-exp = { [eE] [+-]? digit+ }
+exp = { [eE] [+\-]? digit+ }
 -- test exp accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
 -- test exp rejects "e0.", "e0a", "e+-10", "Ef"
 

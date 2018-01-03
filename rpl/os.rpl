@@ -14,7 +14,7 @@ package os
 -- This definition is essentially what grok uses, which isn't great:
 --   unix_path = { "/" ([:alnum:]/[_%!$@:.,~-])+ / ".." / "." }+
 
-alias path_unix = { {".." / "."}? {"/" {[:alnum:]/[_%!$@:.,~-]}+ }+  }
+alias path_unix = { {".." / "."}? {"/" {[:alnum:]/[_%!$@:.,~\-]}+ }+  }
 --alias os.pathchar = [[:alnum:][_%!$@:.,~-]]
 --alias os.unix_path = { {"../" / "./" / "/"}? {pathchar+ {"/" pathchar+}+ } }
 alias path_windows = { {[:alpha:]+ ":"}? {"\\" {![\\?*] .}* }+ }

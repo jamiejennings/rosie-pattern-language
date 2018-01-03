@@ -192,7 +192,9 @@ end
 function create_rpl_1_1_engine(e)
 --   common.notes = true
 
-   assert( (e:import("rosie/rpl_1_1", ".")) )
+   local ok, pkg, messages = e:import("rosie/rpl_1_1", ".")
+   assert(ok, util.table_to_pretty_string(messages, false))
+
    local version = common.rpl_version.new(1, 1)
    local rplx_preparse, errs = e:compile("preparse")
    assert(rplx_preparse, errs and util.table_to_pretty_string(errs) or "no err info")

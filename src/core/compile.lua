@@ -155,7 +155,7 @@ c2.expand_expression = expand.expression
 local expression;
 
 local function literal(a, env, prefix, messages)
-   local str, offense = ustring.unescape_string(a.value)
+   local str, offense = ustring.unescape_string_literal(a.value)
    if not str then
       raise_error("invalid escape sequence in literal: \\" .. offense, a)
    end
@@ -164,7 +164,7 @@ local function literal(a, env, prefix, messages)
 end
 
 local function rpl_string(a, env, prefix, messages)
-   local str, offense = ustring.unescape_string(a.value)
+   local str, offense = ustring.unescape(a.value)
    if not str then
       raise_error("invalid escape sequence in string: \\" .. offense, a)
    end
@@ -288,13 +288,14 @@ end
 
 -- TODO: This impl works only for single byte chars!
 local function cs_range(a, env, prefix, messages)
-   local c1, offense1 = ustring.unescape_charlist(a.first)
-   local c2, offense2 = ustring.unescape_charlist(a.last)
-   if (not c1) or (not c2) then
-      raise_error("invalid escape sequence in character range: \\" ..
-		  ((c1 and offense2) or offense1),
-	 a)
-   end
+--   local c1, offense1 = ustring.unescape_charlist(a.first)
+--   local c2, offense2 = ustring.unescape_charlist(a.last)
+--   if (not c1) or (not c2) then
+--      raise_error("invalid escape sequence in character range: \\" ..
+--		  ((c1 and offense2) or offense1),
+--	 a)
+--   end
+   local c1, c2 = a.first, a.last
    local peg = R(c1..c2)
    a.pat = pattern.new{name="cs_range", peg=(a.complement and (1-peg)) or peg, ast=a}
    return a.pat

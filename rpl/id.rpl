@@ -9,8 +9,8 @@
 package id
 
 id1 = { [:alpha:] [[_][:alnum:]]* }			    -- allows dashes
-id2 = { [:alpha:] [[_-][:alnum:]]* }			    -- ... and underscores
-id3 = { [:alpha:] [[$_-][:alnum:]]* }			    -- ... and dollar signs
+id2 = { [:alpha:] [[_\-][:alnum:]]* }			    -- ... and underscores
+id3 = { [:alpha:] [[$_\-][:alnum:]]* }			    -- ... and dollar signs
 
 id = id3
 dotted = { id {"." id}+ }

@@ -207,7 +207,7 @@ function repl.repl(en)
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			assert(tname=="word.dq")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
-			input_text = ustring.unescape_string(input_text:sub(2, -2))
+			input_text = ustring.unescape(input_text:sub(2, -2))
 			-- Compile the expression given in the command
 			local rplx, errs = en:compile(str)
 			if not rplx then

@@ -27,8 +27,8 @@ local alias escaped_squote = "\\'" / "\\'\\'" / "''"	    -- \' or \'\' or ''
 -- equivalent because in rpl any character can be escaped.  (Some characters, like 'n', have special
 -- meanings when escaped: \n means newline.)
 
-local dquoted_field_contents = {escaped_dquote / [^\"]}*         -- contents of a quoted field
-local dquoted_field = [\"] dquoted_field_contents [\"]		 -- the actual quoted field
+local dquoted_field_contents = {escaped_dquote / [^"]}*         -- contents of a " quoted field
+local dquoted_field = ["] dquoted_field_contents ["]		-- the actual " quoted field
 
 local squoted_field_contents = {escaped_squote / [^']}*          -- contents of a quoted field
 local squoted_field = ['] squoted_field_contents [']             -- the actual quoted field
