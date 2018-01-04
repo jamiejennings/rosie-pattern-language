@@ -301,6 +301,23 @@ for _,thing in ipairs({'\\U', '\\U4', '\\U43', '\\U432', '\\U1234567',
    check(msg:find('invalid Unicode escape'))
 end
 
+----------------------------------------------------------------------------------------
+heading("Generating escape sequences")
+----------------------------------------------------------------------------------------
+escape = rosie.env.ustring.escape
+for i = 0, 0xFF do
+   local str = escape(string.char(i))
+   if i==7 then check(str=='\\a')
+   elseif i==8 then check(str=='\\b')
+   elseif i==9 then check(str=='\\t')
+   elseif i==10 then check(str=='\\n')
+   elseif i==11 then check(str=='\\f')
+   elseif i==13 then check(str=='\\r')
+   else check(str == string.format("\\x%02x", i))
+   end
+end
+
+
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
 return test.finish()
