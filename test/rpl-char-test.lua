@@ -232,8 +232,74 @@ check(match)
 check(leftover == 0)
 
 
+----------------------------------------------------------------------------------------
+heading("Escape sequences")
+----------------------------------------------------------------------------------------
 
+subheading("Valid escapes")
 
+literals = {{"A", "A"},				   -- A quick sanity check first
+	    {"\\x41", "A"},
+	    {"\\u0041", "A"},
+	    {"\\U00000041", "A"},
+	    {"\\u2323", "⌣"},
+	    {"\\U00002323", "⌣"},
+	    {"\\U00010175", "𐅵"},
+	    {"\\U00010175", utf8.char(0x10175)},
+	    {"\\a", "\a"},
+	    {"\\b", "\b"},
+	    {"\\f", "\f"},
+	    {"\\n", "\n"},
+	    {"\\r", "\r"},
+	    {"\\t", "\t"},
+	 }
+for i=0, 0xFF do
+   table.insert(literals, {string.format("\\x%02x", i), string.char(i)})
+end
+
+for _, entry in ipairs(literals) do
+   local literal, input = entry[1], entry[2]
+   check_match('"' .. literal .. '"', input, true, 0)
+end
+
+subheading("Invalid escapes")
+
+pat, err = e:compile("\\x")
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find('syntax error'))
+
+for _,thing in ipairs({'\\x', '\\x4', '\\x0 ', '\\x 1', '\\x1G'}) do
+   pat, err = e:compile('"' .. thing .. '"')
+   check(not pat)
+   msg = violation.tostring(err[1])
+   check(msg:find('invalid hex escape'))
+end
+
+pat, err = e:compile("\\u")
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find('syntax error'))
+
+for _,thing in ipairs({'\\u', '\\uF', '\\uFF', '\\u432', '\\u012 ', '\\u 234', '\\uABCG'}) do
+   pat, err = e:compile('"' .. thing .. '"')
+   check(not pat)
+   msg = violation.tostring(err[1])
+   check(msg:find('invalid unicode escape'))
+end
+
+pat, err = e:compile("\\U")
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find('syntax error'))
+
+for _,thing in ipairs({'\\U', '\\U4', '\\U43', '\\U432', '\\U1234567',
+		       '\\U1234567 ', '\\U 0010FF80', '\\U0010FF8X'}) do
+   pat, err = e:compile('"' .. thing .. '"')
+   check(not pat)
+   msg = violation.tostring(err[1])
+   check(msg:find('invalid Unicode escape'))
+end
 
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:

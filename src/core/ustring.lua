@@ -68,23 +68,40 @@ local function simple_escape(char)
 	  end
 end
 
-local function unicode_escape(...)
-   return nil, "unicode escape not implemented"
+local function unicode_escape(s, start)
+   local hex_chars = s:sub(start+1, start+4)
+   local i, j = hex_chars:find('%x+')
+   if (#hex_chars ~= 4) or (i ~= 1) or (j ~= 4) then
+      return nil, "invalid unicode escape sequence: " .. ESC .. s:sub(start, start+4)
+   end
+   local codepoint = tonumber(hex_chars, 16)
+   assert((codepoint >= 0) and (codepoint <= 0xFFFF))
+   return utf8.char(codepoint), start+5
 end
-local function Unicode_escape(...)
-   return nil, "unicode escape not implemented"
+
+local function Unicode_escape(s, start)
+   local hex_chars = s:sub(start+1, start+8)
+   local i, j = hex_chars:find('%x+')
+   if (#hex_chars ~= 8) or (i ~= 1) or (j ~= 8) then
+      return nil, "invalid Unicode escape sequence: " .. ESC .. s:sub(start, start+8)
+   end
+   local codepoint = tonumber(hex_chars, 16)
+   assert(codepoint >= 0)
+   if codepoint > 0x10FFFF then
+      return nil, "unicode codepoint out of range"
+   end
+   return utf8.char(codepoint), start+9
 end
 
 local function hex_escape(s, start)
    local hex_chars = s:sub(start+1, start+2)
-   if #hex_chars ~= 2 then
+   local i, j = hex_chars:find('%x+')
+   if (#hex_chars ~= 2) or (i ~= 1) or (j ~= 2) then
       return nil, "invalid hex escape sequence: " .. ESC .. s:sub(start, start+2)
    end
    local byte_val = tonumber(hex_chars, 16)
-   if not byte_val then
-      return nil, "invalid hex escape sequence: " .. ESC .. s:sub(start, start+2)
-   end
-   assert( (byte_val >=0) and (byte_val <= 255) )
+   assert(byte_val)
+   assert((byte_val >=0) and (byte_val <= 255))
    return string.char(byte_val), start+3
 end
 
