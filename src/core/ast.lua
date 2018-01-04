@@ -307,7 +307,9 @@ function convert_simple_charset(pt, sref)
    if pt.type=="named_charset" then
       return convert_cs_named(pt, sref)
    elseif pt.type=="charlist" then
-      return ast.cs_list.new{chars = map(function(sub) return sub.data; end, exps),
+      local raw_chars = table.concat(map(function(sub) return sub.data; end, exps))
+      local chars = ustring.unescape_charlist(raw_chars)
+      return ast.cs_list.new{chars = ustring.explode(chars),
 			     complement = compflag,
 			     sourceref=sref}
    elseif pt.type=="range" then
@@ -318,12 +320,10 @@ function convert_simple_charset(pt, sref)
       local c1, offense1 = ustring.unescape_charlist(exps[1].data)
       local c2, offense2 = ustring.unescape_charlist(exps[2].data)
       if (not c1) or (not c2) then
-	 raise_error("invalid escape sequence in character range: \\" ..
-		     ((c1 and offense2) or offense1),
-		  sref,
-		  pt)
+	 raise_error(tostring((c1 and offense2) or offense1), sref, pt)
       end
-      local invalid_length_msg = "start of character range must be exactly one character: "
+      local invalid_length_msg =
+	 "invalid character range edge (not a single character): "
       if (ustring.len(c1) ~= 1) then
 	 raise_error(invalid_length_msg .. c1, sref)
       elseif (ustring.len(c2) ~= 1) then
@@ -862,7 +862,7 @@ function ast.tostring(a, already_grouped)
    elseif ast.raw.is(a) then
       return "{" .. ast.tostring(a.exp, true) .. "}"
    elseif ast.literal.is(a) then
-      return '"' .. a.value .. '"'
+      return '"' .. ustring.escape_string(a.value) .. '"'
    elseif ast.bracket.is(a) then
       return "[" .. (a.complement and "^" or "") .. ast.tostring(a.cexp, true) .. "]"
    elseif ast.cs_named.is(a) then
@@ -870,11 +870,11 @@ function ast.tostring(a, already_grouped)
    elseif ast.cs_list.is(a) then
       return ( "[" ..
 	       (a.complement and "^" or "") ..
-	       table.concat(a.chars, "") ..
+	       ustring.escape_charlist(table.concat(a.chars, "")) ..
 	       "]" )
    elseif ast.cs_range.is(a) then
       return ( "[" .. (a.complement and "^" or "") ..
-	       a.first .. "-" .. a.last ..
+	       ustring.escape_charlist(a.first) .. "-" .. ustring.escape_charlist(a.last) ..
 	       "]" )
    elseif ast.cs_intersection.is(a) then
       return table.concat(map(ast.tostring(a.cexps)), "&&")

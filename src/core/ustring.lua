@@ -14,25 +14,54 @@ local utf8 = require "utf8"
 
 local ESC = "\\"				    -- a single backslash
 
--- Return the number of pseudo-characters, where a pseudo-character is either a
--- valid UTF-8 encoding of a Unicode codepoint (assigned or not), OR a single
--- byte. 
-function ustring.len(s)
-   local total = 0
-   local i = 1
-   while true do
-      local len, badpos = utf8.len(s, i)
-      if len then
-	 return len+total
+
+function ustring.codepoint_len(cp)
+   if cp < 0x7F then return 1
+   elseif cp < 0x7FF then return 2
+   elseif cp < 0xFFFF then return 3
+   else return 4
+   end
+end
+
+-- Reduce a string, one pseudo-character at a time, where a pseudo-character is
+-- either (1) a valid UTF-8 encoding of a Unicode codepoint (assigned or not),
+-- OR (2) a single byte.
+function ustring.reduce(f, accum, str, i)
+   local cp_len = ustring.codepoint_len
+   i = i or 1
+   while i <= #str do
+      local ok, codepoint = pcall(utf8.codepoint, str, i, i+3)
+      if ok then
+	 local cp = assert(codepoint)
+	 return ustring.reduce(f, f(accum, utf8.char(cp)), str, i+cp_len(cp))
       else
-	 len = ((badpos - i) > 1) and utf8.len(s, i, badpos-1) or 0
-	 total = total + len + 1
-	 i = badpos + 1
+	 return ustring.reduce(f, f(accum, str:sub(i, i)), str, i+1)
       end
    end -- while
-   return total
+   return accum
+end
+
+-- Return the number of pseudo-characters in s 
+function ustring.len(s)
+   return ustring.reduce(function(len, _) return len+1; end,
+			 0,
+			 s)
+end
+
+-- Return a list of the pseudo-characters in s
+function ustring.explode(s)
+   local ls = {}
+   ustring.reduce(function(_, next_char) table.insert(ls, next_char) end,
+		  nil,
+		  s)
+   return ls
 end
       
+
+-- -----------------------------------------------------------------------------
+-- Escape, un-escape
+-- -----------------------------------------------------------------------------
+
 local function simple_escape(char)
    return function(s, pos)
 	     return char, pos+1
@@ -40,10 +69,23 @@ local function simple_escape(char)
 end
 
 local function unicode_escape(...)
+   return nil, "unicode escape not implemented"
 end
 local function Unicode_escape(...)
+   return nil, "unicode escape not implemented"
 end
-local function hex_escape(...)
+
+local function hex_escape(s, start)
+   local hex_chars = s:sub(start+1, start+2)
+   if #hex_chars ~= 2 then
+      return nil, "invalid hex escape sequence: " .. ESC .. s:sub(start, start+2)
+   end
+   local byte_val = tonumber(hex_chars, 16)
+   if not byte_val then
+      return nil, "invalid hex escape sequence: " .. ESC .. s:sub(start, start+2)
+   end
+   assert( (byte_val >=0) and (byte_val <= 255) )
+   return string.char(byte_val), start+3
 end
 
 ustring.translations =		     -- characters that change when escaped are:
@@ -72,11 +114,15 @@ function ustring.unescape(s, mandatories)
 	 end
 	 local actual, nextpos = translate(s, i+1)
 	 if not actual then
+	    assert(type(nextpos)=="string")
 	    return nil, nextpos			    -- nextpos is error message
 	 end
 	 assert(type(actual)=="string")
 	 assert(type(nextpos)=="number")
 	 assert(nextpos > i)
+
+--	 print("*** translated produced: " .. actual)
+	 
 	 result = result .. actual
 	 i = nextpos
       elseif mandatories and mandatories[s:sub(i,i)] then
@@ -92,7 +138,7 @@ end
 ustring.mandatory_string_escapes =
    { ['"'] = simple_escape('"') }
 
-function ustring.unescape_string_literal(s)
+function ustring.unescape_string(s)
    return ustring.unescape(s, ustring.mandatory_string_escapes)
 end
 
@@ -102,7 +148,7 @@ function ustring.dequote(str)
    if str:sub(1,1)=='"' then
       assert(str:sub(-1)=='"', 
 	     "malformed quoted string: " .. str)
-      return ustring.unescape_string_literal(str:sub(2,-2))
+      return ustring.unescape_string(str:sub(2,-2))
    end
    return str
 end
@@ -182,11 +228,26 @@ function ustring.escape(s, inv_mandatories)
    return result
 end	       
 
+ustring.inv_mandatory_charset_escapes = 
+   { ['['] = '[';				 -- open bracket
+     [']'] = ']';				 -- close bracket
+     ['-'] = '-';				 -- hyphen / dash
+     ['^'] = '^';				 -- caret (signifies complement)
+  }
+
+function ustring.escape_charlist(str)
+   return ustring.escape(str, ustring.inv_mandatory_charset_escapes)
+end
+
 ustring.inv_mandatory_string_escapes =
    { ['"'] = '"' }
 
+function ustring.escape_string(str)
+   return ustring.escape(str, ustring.inv_mandatory_string_escapes)
+end
+
 function ustring.requote(str)
-   return '"' .. ustring.escape(str, ustring.inv_mandatory_string_escapes) .. '"'
+   return '"' .. ustring.escape_string(str) .. '"'
 end
 
 

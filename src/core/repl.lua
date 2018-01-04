@@ -200,14 +200,16 @@ function repl.repl(en)
 			-- needs them there.  This is inelegant.  <sigh>
 			local str
 			if ast.literal.is(a) then
-			   str = '"' .. ustring.escape_string(a.value) .. '"'
+			   --str = '"' .. ustring.unescape_string(a.value) .. '"'
+			   str = '"' .. (a.value) .. '"'
 			else
 			   str = exp_string
 			end
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			assert(tname=="word.dq")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
-			input_text = ustring.unescape(input_text:sub(2, -2))
+			--input_text = ustring.unescape(input_text:sub(2, -2))
+			input_text = input_text:sub(2, -2)
 			-- Compile the expression given in the command
 			local rplx, errs = en:compile(str)
 			if not rplx then

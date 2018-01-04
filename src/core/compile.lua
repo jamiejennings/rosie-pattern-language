@@ -155,9 +155,9 @@ c2.expand_expression = expand.expression
 local expression;
 
 local function literal(a, env, prefix, messages)
-   local str, offense = ustring.unescape_string_literal(a.value)
+   local str, offense = ustring.unescape_string(a.value)
    if not str then
-      raise_error("invalid escape sequence in literal: \\" .. offense, a)
+      raise_error(tostring(offense), a)
    end
    a.pat = pattern.new{name="literal"; peg=P(str); ast=a}
    return a.pat
@@ -166,7 +166,7 @@ end
 local function rpl_string(a, env, prefix, messages)
    local str, offense = ustring.unescape(a.value)
    if not str then
-      raise_error("invalid escape sequence in string: \\" .. offense, a)
+      raise_error(tostring(offense), a)
    end
    a.pat = taggedvalue.new{type="string"; value=str; ast=a}
    return a.pat
@@ -307,10 +307,12 @@ function cs_list(a, env, prefix, messages)
    assert(#a.chars > 0, "empty character set list?")
    local alternatives
    for i, c in ipairs(a.chars) do
-      local char, offense = ustring.unescape_charlist(c)
-      if not char then
-	 raise_error("invalid escape sequence in character set: \\" .. offense, a)
-      end
+--       local char, offense = ustring.unescape_charlist(c)
+--       if not char then
+-- 	 raise_error("invalid escape sequence in character set: \\" .. offense, a)
+--       end
+      local char=c
+
       if not alternatives then alternatives = P(char)
       else alternatives = alternatives + P(char); end
    end -- for
