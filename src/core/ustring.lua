@@ -137,9 +137,6 @@ function ustring.unescape(s, mandatories)
 	 assert(type(actual)=="string")
 	 assert(type(nextpos)=="number")
 	 assert(nextpos > i)
-
---	 print("*** translated produced: " .. actual)
-	 
 	 result = result .. actual
 	 i = nextpos
       elseif mandatories and mandatories[s:sub(i,i)] then
@@ -217,7 +214,13 @@ function ustring.escape(s, inv_mandatories)
 	    local ok, cp = pcall(utf8.codepoint, s, i, i)
 	    if ok and (cp >= 0x20) then
 	       if cp <= 0x7F then
-		  result = result .. string.char(cp)
+		  if cp == 0x5C then
+		     result = result .. ESC .. ESC
+		  elseif cp == 0x7F then
+		     result = result .. ESC .. 'x7F'
+		  else
+		     result = result .. string.char(cp)
+		  end
 		  i = i + 1
 	       elseif cp <= 0xFFFF then
 		  local hex = string.format("%04X", cp)

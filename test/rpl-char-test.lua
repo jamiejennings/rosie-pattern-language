@@ -311,9 +311,13 @@ for i = 0, 0xFF do
    elseif i==8 then check(str=='\\b')
    elseif i==9 then check(str=='\\t')
    elseif i==10 then check(str=='\\n')
-   elseif i==11 then check(str=='\\f')
+   elseif i==12 then check(str=='\\f')
    elseif i==13 then check(str=='\\r')
-   else check(str == string.format("\\x%02x", i))
+   elseif i==92 then check(str=='\\\\')
+   elseif i>=32 and i<=126 then
+      check(str == string.char(i), "failed at char " .. tostring(i))
+   else
+      check(str == string.format("\\x%02X", i), "failed at char " .. tostring(i))
    end
 end
 
