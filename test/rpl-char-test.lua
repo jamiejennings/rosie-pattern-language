@@ -301,10 +301,11 @@ for _,thing in ipairs({'\\U', '\\U4', '\\U43', '\\U432', '\\U1234567',
    check(msg:find('invalid Unicode escape'))
 end
 
-----------------------------------------------------------------------------------------
-heading("Generating escape sequences")
-----------------------------------------------------------------------------------------
+
+subheading("Generating escape sequences")
+
 escape = rosie.env.ustring.escape
+
 for i = 0, 0xFF do
    local str = escape(string.char(i))
    if i==7 then check(str=='\\a')
@@ -320,6 +321,17 @@ for i = 0, 0xFF do
       check(str == string.format("\\x%02X", i), "failed at char " .. tostring(i))
    end
 end
+
+for _, i in ipairs({0x100, 0x7FF, 0x1000, 0x7FFF, 0xFFFF}) do
+   local str = escape(utf8.char(i))
+   check(str == string.format("\\u%04X", i), "failed at char " .. tostring(i))
+end
+
+for _, i in ipairs({0x10000, 0x7FFFF, 0x100000, 0x107FFF, 0x10FFFF}) do
+   local str = escape(utf8.char(i))
+   check(str == string.format("\\U%08X", i), "failed at char " .. tostring(i))
+end
+
 
 
 -- return the test results in case this file is being called by another one which is collecting
