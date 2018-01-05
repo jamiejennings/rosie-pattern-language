@@ -1,3 +1,56 @@
+2018-01-05  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-8
+
+	NEW: The "fancy" new character set support is ready for users to try
+	out.  Expressions are now allowed within square brackets.  The new
+	operator & is useful here, since it provides short notation for set
+	intersection.  Examples:
+	[[A-Z] & [A-F]] is equivalent to [A-F];
+	[[ \t] comment] is equivalent to {[ \t] / comment};
+	[comment] is a syntax error; it is interpreted as a character list, and
+	it has a duplicate character ("m");
+	[cmt] is a character list matching "c", "m", and "t";
+	[[] cmt] is equivalent to pattern cmt;
+	[[] p1 p2] is equivalent to {p1 / p2};
+	[] matches nothing (it is a disjunction of zero characters);
+	[^] matches everything (it is the complement of []);
+
+	NEW: A couple of scripts that count source lines of code were added in
+	the extra/examples directory.
+
+	NEW: Three kinds of new escape sequences are supported.  They are valid
+	in literal strings (in double quotes) and in character lists/ranges (in
+	square brackets).  They are:
+	\xHH  hex escape; HH are hex digits; range \x00-\xFF
+	\uHHHH  unicode escape; 4 hex digits; range \u0000-\uFFFF
+	\UHHHHHHHH  long unicode escape; 8 hex digits; range \U00000000-\U0010FFFF
+	Note that the hex digits may be upper or lower case.
+
+	NEW: Every part of Rosie should now be Unicode-aware, as long as the
+	encoding of the input data is UTF-8.
+
+	CHANGED: Unfortunately, this is a change that can BREAK EXISTING CODE.
+	Character lists like [abc] and ranges like [a-z] now enforce these two
+	rules:
+	(1) To include these characters, they MUST be escaped: [ ] ^ -
+	For example, [+\-] matches + and -, and [^\^] matches anything but ^.
+	(2) In a range, the ends of the range MUST be in order.  So [a-z] is
+	legal, but [z-a] is not.
+
+	FIXED: The "make install" command now copies liblua.5.3.so/dylib into
+	the destination directory, alongside librosie.so/dylib.
+
+	FIXED: Bug in the repl command ".load" introduced in the previous
+	release.
+
+	FIXED: The dot "." is intended to match any unicode character, or,
+	failing that, a single non-character byte.  It did not match a
+	non-character byte until this fix.
+
+	FIXED: Default compiler is cc (clang) on OS X.  Use
+	"make CC=gcc" to force gcc.
+
 2017-12-22  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-7
