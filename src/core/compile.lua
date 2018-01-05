@@ -268,21 +268,20 @@ local function predicate(a, env, prefix, messages)
    return a.pat
 end
 
-
--- TODO: Make the cs_* UTF-8 AND ASCII compatible.  Essentially, change each "1" below to
--- a reference to the identifier "."
-
--- TODO: Ensure that the char list, range, and name are processed correctly wrt escaping.
--- QUESTION: Do this here, or perhaps in ast.lua?  Where should we get rid of the strings "as
--- entered" and store only the ACTUAL string after un-escaping?
-
+local function lookup_builtin(name, env, a)
+   local pat = env:lookup(name)
+   if (not pat) then raise_error("unbound identifier: " .. name, a); end
+   check_pattern(pat, a)
+   return pat.peg
+end
 
 local function cs_named(a, env, prefix, messages)
+   local dot = lookup_builtin('.', env, a)
    local peg = locale[a.name]
    if not peg then
       raise_error("unknown named charset: " .. a.name, a)
    end
-   a.pat = pattern.new{name="cs_named", peg=((a.complement and 1-peg) or peg), ast=a}
+   a.pat = pattern.new{name="cs_named", peg=((a.complement and dot-peg) or peg), ast=a}
    return a.pat
 end
 
@@ -293,9 +292,19 @@ local function one_char_warn(messages, a)
 				      ast=a})
 end
 
--- TODO: This impl works only for single byte chars!
+-- FUTURE optimization: The multi-byte chars can be organized by common prefix. 
+local function utf8_range_to_peg(cp1, cp2)
+   local peg = lpeg.P(false)
+   for cp = cp1, cp2 do
+      local char = utf8.char(cp)
+      if not char then return nil, "invalid unicode codepoint: " .. tostring(cp); end
+      peg = peg + lpeg.P(char)
+   end
+   return peg
+end
+
 local function cs_range(a, env, prefix, messages)
-   local dot = 1
+   local dot = lookup_builtin('.', env, a)
    local c1, c2 = a.first, a.last
    if #c1==1 and #c2==1 then
       if string.byte(c1) > string.byte(c2) then
@@ -323,17 +332,15 @@ local function cs_range(a, env, prefix, messages)
       end
       if cp1 == cp2 then one_char_warn(messages, a); end
       
---       local peg = utf8_range_to_peg(cp1, cp2)
---       a.pat = pattern.new{name="cs_range", peg=(a.complement and (dot-peg)) or peg, ast=a}
---       return a.pat
-   
-      return raise_error("multi-byte character ranges not implemented yet", a)
+      local peg, msg = utf8_range_to_peg(cp1, cp2)
+      if not peg then raise_error(msg, a); end
+      a.pat = pattern.new{name="cs_range", peg=(a.complement and (dot-peg)) or peg, ast=a}
+      return a.pat
    end
 end
 
--- FUTURE optimization: All the single-byte chars can be put into one call to lpeg.S().
--- FUTURE optimization: The multi-byte chars can be organized by common prefix. 
 function cs_list(a, env, prefix, messages)
+   local dot = lookup_builtin('.', env, a)
    local alternatives
    for i, c in ipairs(a.chars) do
       local char=c
@@ -345,12 +352,13 @@ function cs_list(a, env, prefix, messages)
       alternatives = lpeg.P(false)		    -- empty charlist matches nothing
    end
    a.pat = pattern.new{name="cs_list",
-		      peg=(a.complement and (1-alternatives) or alternatives),
+		      peg=(a.complement and (dot-alternatives) or alternatives),
 		      ast=a}
    return a.pat
 end
 
 function bracket(a, env, prefix, messages)
+   local dot = lookup_builtin('.', env, a)
    if ast.bracket.is(a.cexp) then
       if not a.complement then
 	 -- outer bracket does not affect semantics, so drop it
@@ -363,7 +371,7 @@ function bracket(a, env, prefix, messages)
       end
    else
       local p = expression(a.cexp, env, prefix, messages)
-      a.pat = pattern.new{name="bracket", peg=((a.complement and (1-p.peg)) or p.peg), ast=a}
+      a.pat = pattern.new{name="bracket", peg=((a.complement and (dot-p.peg)) or p.peg), ast=a}
       return a.pat
    end
 end

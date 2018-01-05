@@ -30,7 +30,7 @@ function set_expression(exp)
       end
       print("\nThis exp failed to compile: " .. tostring(exp))
       print(tostring(msg))
-      error("compile failed in rpl-core-test", 2)
+      error("compile failed in rpl-char-test", 2)
    end
 end
 
@@ -385,19 +385,30 @@ check_match(global_rplx, "A", true, 0)
 check_match(global_rplx, "B", true, 0)
 check_match(global_rplx, "C", false)
 
---[[ TEMPORARILY OMITTED
 set_expression('[\\u00e8-\\u00EB]')
 for _,char in ipairs{"è", "é", "ê", "ë"} do
    check_match(global_rplx, char, true, 0)
 end
---]]
+
+set_expression('[^\\u00e8-\\u00EB]')
+for _,char in ipairs{"è", "é", "ê", "ë", ""} do
+   check_match(global_rplx, char, false, 0)
+end
+for _,char in ipairs{"a", "e", "i", "Ø", "ß", " "} do
+   check_match(global_rplx, char, true, 0)
+end
+for _,char in ipairs{"abc", "aè", "eè", "iè", "Øè", "ßè"} do
+   check_match(global_rplx, char, true, 2)	    -- 2 because BYTES, not characters
+end
 
 check_match('[^\x41-\x42]', "A", false)
 check_match('[^\x41-\x42]', "B", false)
 check_match('[^\x41-\x42]', "C", true, 0)
 check_match('[^\x41-\x42]', "@", true, 0)
+check_match('[^\x41-\x42]', "@!", true, 1)
 
 check_match('[^\x41-\x42]', "ä", true, 0)
+check_match('[^\x41-\x42]+', "  ", true, 0)
 
 
 ----------------------------------------------------------------------------------------
