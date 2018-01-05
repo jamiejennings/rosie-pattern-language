@@ -286,36 +286,64 @@ local function cs_named(a, env, prefix, messages)
    return a.pat
 end
 
+local function one_char_warn(messages, a)
+   table.insert(messages,
+		violation.warning.new{who="compiler",
+				      message="character range contains only one character",
+				      ast=a})
+end
+
 -- TODO: This impl works only for single byte chars!
 local function cs_range(a, env, prefix, messages)
---   local c1, offense1 = ustring.unescape_charlist(a.first)
---   local c2, offense2 = ustring.unescape_charlist(a.last)
---   if (not c1) or (not c2) then
---      raise_error("invalid escape sequence in character range: \\" ..
---		  ((c1 and offense2) or offense1),
---	 a)
---   end
+   local dot = 1
    local c1, c2 = a.first, a.last
-   local peg = R(c1..c2)
-   a.pat = pattern.new{name="cs_range", peg=(a.complement and (1-peg)) or peg, ast=a}
-   return a.pat
+   if #c1==1 and #c2==1 then
+      if string.byte(c1) > string.byte(c2) then
+	 return raise_error("character range start comes after end", a)
+      end
+      if string.byte(c1) == string.byte(c2) then one_char_warn(messages, a); end
+      local peg = R(c1..c2)
+      a.pat = pattern.new{name="cs_range", peg=(a.complement and (dot-peg)) or peg, ast=a}
+      return a.pat
+   else
+      -- At least one edge is a multi-byte character
+      local invalid_start_msg =
+	 "invalid codepoint at start of range (where end of range is valid multi-byte codepoint)"
+      local invalid_end_msg =
+	 "invalid codepoint at end of range (where start of range is valid multi-byte codepoint)"
+      local ok, cp1, cp2
+      assert(ustring.len(a.first)==1)		    -- checked during ast creation
+      assert(ustring.len(a.last)==1)		    -- checked during ast creation
+      ok, cp1 = pcall(utf8.codepoint, a.first)
+      if not ok then raise_error(invalid_start_msg, a); end
+      ok, cp2 = pcall(utf8.codepoint, a.last)
+      if not ok then raise_error(invalid_end_msg, a); end
+      if cp1 > cp2 then
+	 raise_error("character range start codepoint comes after end codepoint", a)
+      end
+      if cp1 == cp2 then one_char_warn(messages, a); end
+      
+--       local peg = utf8_range_to_peg(cp1, cp2)
+--       a.pat = pattern.new{name="cs_range", peg=(a.complement and (dot-peg)) or peg, ast=a}
+--       return a.pat
+   
+      return raise_error("multi-byte character ranges not implemented yet", a)
+   end
 end
 
 -- FUTURE optimization: All the single-byte chars can be put into one call to lpeg.S().
 -- FUTURE optimization: The multi-byte chars can be organized by common prefix. 
 function cs_list(a, env, prefix, messages)
-   assert(#a.chars > 0, "empty character set list?")
    local alternatives
    for i, c in ipairs(a.chars) do
---       local char, offense = ustring.unescape_charlist(c)
---       if not char then
--- 	 raise_error("invalid escape sequence in character set: \\" .. offense, a)
---       end
       local char=c
-
       if not alternatives then alternatives = P(char)
       else alternatives = alternatives + P(char); end
    end -- for
+   if not alternatives then
+      assert(#a.chars == 0)
+      alternatives = lpeg.P(false)		    -- empty charlist matches nothing
+   end
    a.pat = pattern.new{name="cs_list",
 		      peg=(a.complement and (1-alternatives) or alternatives),
 		      ast=a}

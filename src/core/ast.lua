@@ -297,19 +297,32 @@ function convert_bracket(pt, sref)
 			  sourceref=sref}
 end
 
+local function process_raw_charlist(char_exps, sref, pt)
+   local raw_chars = table.concat(map(function(sub) return sub.data; end, char_exps))
+   local chars, offense = ustring.unescape_charlist(raw_chars)
+   if not chars then raise_error(tostring(offense), sref, pt); end
+   local set = ustring.explode(chars)
+   local seen = {}
+   for _, char in ipairs(set) do
+      if seen[char] then
+	 raise_error("duplicate characters in character list: " .. ustring.escape(char), sref, pt)
+      end
+      seen[char] = true
+   end
+   return set
+end
+   
 function convert_simple_charset(pt, sref)
    assert(sref)
-   local exps = list.from(pt.subs)
-   local compflag = (pt.subs[1].type=="complement")
+   local exps = list.from(pt.subs or {})
+   local compflag = exps[1] and exps[1].type=="complement"
    if compflag then
       exps = list.cdr(exps)
    end
    if pt.type=="named_charset" then
       return convert_cs_named(pt, sref)
    elseif pt.type=="charlist" then
-      local raw_chars = table.concat(map(function(sub) return sub.data; end, exps))
-      local chars = ustring.unescape_charlist(raw_chars)
-      return ast.cs_list.new{chars = ustring.explode(chars),
+      return ast.cs_list.new{chars = process_raw_charlist(exps, sref, pt),
 			     complement = compflag,
 			     sourceref=sref}
    elseif pt.type=="range" then

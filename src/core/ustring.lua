@@ -30,7 +30,8 @@ function ustring.reduce(f, accum, str, i)
    local cp_len = ustring.codepoint_len
    i = i or 1
    while i <= #str do
-      local ok, codepoint = pcall(utf8.codepoint, str, i, i+3)
+      local stopping_point = math.min(#str, i + 3)
+      local ok, codepoint = pcall(utf8.codepoint, str, i, stopping_point)
       if ok then
 	 local cp = assert(codepoint)
 	 return ustring.reduce(f, f(accum, utf8.char(cp)), str, i+cp_len(cp))

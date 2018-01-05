@@ -25,9 +25,12 @@ global_rplx = false;
 function set_expression(exp)
    global_rplx, msg = e:compile(exp)
    if not global_rplx then
+      if type(msg)=="table" then
+	 msg = table.concat(list.map(violation.tostring, msg), '\n')
+      end
       print("\nThis exp failed to compile: " .. tostring(exp))
-      table.print(msg)
-      error("compile failed in rpl-core-test")
+      print(tostring(msg))
+      error("compile failed in rpl-core-test", 2)
    end
 end
 
@@ -331,6 +334,75 @@ for _, i in ipairs({0x10000, 0x7FFFF, 0x100000, 0x107FFF, 0x10FFFF}) do
    local str = escape(utf8.char(i))
    check(str == string.format("\\U%08X", i), "failed at char " .. tostring(i))
 end
+
+
+----------------------------------------------------------------------------------------
+heading("Character ranges with escape sequences")
+----------------------------------------------------------------------------------------
+subheading("Ranges with \\x escapes")
+
+set_expression('[\\x41-\\x42]')
+check_match(global_rplx, "A", true, 0)
+check_match(global_rplx, "B", true, 0)
+check_match(global_rplx, "C", false)
+
+set_expression('[\\x01-\\x10]')
+for i = 1, 16 do
+   check_match(global_rplx, string.char(i), true, 0)
+end
+check_match(global_rplx, string.char(0), false, 0)
+for i = 17, 20 do
+   check_match(global_rplx, string.char(i), false, 0)
+end
+
+pat, err = e:compile('[\\x03-\\x02]')
+check(not pat)
+msg = violation.tostring(err[1])
+
+pat, err = e:compile('[\\x44-\\x44]')
+check(pat)
+msg = violation.tostring(err[1])
+check(msg:find("Warning") and msg:find("contains only one character"))
+
+pat, err = e:compile('[\\x41-A]')
+check(pat)
+msg = violation.tostring(err[1])
+check(msg:find("Warning") and msg:find("contains only one character"))
+
+pat, err = e:compile('[A-\\x41]')
+check(pat)
+msg = violation.tostring(err[1])
+check(msg:find("Warning") and msg:find("contains only one character"))
+
+pat, err = e:compile('[\\u0044-\\x44]')
+check(pat)
+msg = violation.tostring(err[1])
+check(msg:find("Warning") and msg:find("contains only one character"))
+
+subheading("Ranges with \\u escapes")
+set_expression('[\\u0041-\\u0042]')
+check_match(global_rplx, "A", true, 0)
+check_match(global_rplx, "B", true, 0)
+check_match(global_rplx, "C", false)
+
+--[[ TEMPORARILY OMITTED
+set_expression('[\\u00e8-\\u00EB]')
+for _,char in ipairs{"è", "é", "ê", "ë"} do
+   check_match(global_rplx, char, true, 0)
+end
+--]]
+
+check_match('[^\x41-\x42]', "A", false)
+check_match('[^\x41-\x42]', "B", false)
+check_match('[^\x41-\x42]', "C", true, 0)
+check_match('[^\x41-\x42]', "@", true, 0)
+
+check_match('[^\x41-\x42]', "ä", true, 0)
+
+
+----------------------------------------------------------------------------------------
+heading("Character lists with escape sequences")
+----------------------------------------------------------------------------------------
 
 
 

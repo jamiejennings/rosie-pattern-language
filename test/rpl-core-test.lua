@@ -28,9 +28,12 @@ global_rplx = false;
 function set_expression(exp)
    global_rplx, msg = e:compile(exp)
    if not global_rplx then
+      if type(msg)=="table" then
+	 msg = table.concat(list.map(violation.tostring, msg), '\n')
+      end
       print("\nThis exp failed to compile: " .. tostring(exp))
-      table.print(msg)
-      error("compile failed in rpl-core-test")
+      print(tostring(msg))
+      error("compile failed in rpl-core-test", 2)
    end
 end
 
@@ -1131,21 +1134,20 @@ check_match('{{a b}{2,2}}', 'abab ', true, 1)
 heading("Character sets")
 
 subheading("Rejecting illegal expressions")
-for _, exp in ipairs{"[]]",
---		     "[^]",
---		     "[xyz^]",
---		     "[[abc] / [def]]",
---		     "[[a-z] misplaced_identifier [def]]",
+for _, exp in ipairs{"[]]",			    -- open brack in middle needs escape
+		     "[^^]",			    -- second ^ needs escape
+		     "[xyz^]",			    -- ^ needs escape
+		     "[b-a]",			    -- wrong order, a-b is valid
+		     "[[b-a]]",			    -- wrong order, a-b is valid
 		     "[[a-z] [def]",		    -- no final closing bracket
-		     "[]",			    -- this was legal before v0.99?
-                     "[[abc][]]"} do
+		     "[aa]",			    -- duplicate chars
+		     "[[aa]]",			    -- "
+		  } do
    pat, msg = e:compile(exp)
    check(not pat, "this expression was expected to fail: " .. exp)
    if (type(msg)=="table" and msg[1]) then
-      check(violation.syntax.is(msg[1]), "No violation for: " .. exp)
+      check(violation.syntax.is(msg[1]) or violation.compile.is(msg[1]), "No violation for: " .. exp)
    end
-   -- :find("Syntax error at line 1"), "Did not get syntax error for exp " ..
-   -- exp .. ".  Message was: " .. msg .. '\n')
 end
 success, msg = e:compile("[:foobar:]")
 check(not success)
@@ -1188,7 +1190,6 @@ subheading("Character ranges")
 test_charsets("[[a-z]]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[a-z]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[[a-a]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
-test_charsets("[[b-a]]", {}, {"a", "b", "c", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[$-&]]", {"$", "%", "&"}, {"^", "-", "z", " ", "X", "0", "!"})
 test_charsets("[[\\--.]]", {"-", "."}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\[\\-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})
@@ -1200,12 +1201,12 @@ test_charsets("[\\[]", {"["}, {"]", "+", "/", "z", " ", "X", "0", "!"}) -- a sin
 test_charsets("[\\]]", {"]"}, {"[", "+", "/", "z", " ", "X", "0", "!"}) -- a single close bracket
 test_charsets("[[\\[\\]\\-]]", {"]", "[", "-"}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\]]]", {"]"}, {"[", "-", "+", "/", "z", " ", "X", "0", "!"})
-test_charsets("[[aa]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
-test_charsets("[aa]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
+test_charsets("[[a]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
+test_charsets("[a]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[abczyx]]", {"a", "b", "c", "x", "y", "z"}, {"r", "d", "m", " ", "X", "0", "!"})
 test_charsets("[[\\-]]", {"-"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[ \t]]", {" ", "\t"}, {"\n", "b", "y", "z", "X", "0", "!"})
-test_charsets("[[!#$%\\^&*()_\\-+=|\\\\'`~?/{}{}:;]]", 
+test_charsets("[[!#$%\\^&*()_\\-+=|\\\\'`~?/{}:;]]", 
 	      {"!", "#", "$", "%", "^", "&", "*", "(", ")", "_", "-", "+", "=", "|", "\\", "'", "`", "~", "?", "/", "{", "}", "{", "}", ":", ";"},
 	      {"a", "Z", " ", "\r", "\n"})
 
