@@ -490,6 +490,132 @@ for _,char in ipairs{"abc", "aè", "eè", "iè", "Øè", "ßè"} do
 end
 
 
+subheading("Lists with \\U escapes")
+
+pat, err = e:compile('[\\U0000044\\x44]')
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find("invalid Unicode"))
+
+pat, err = e:compile('[\\U00000044\\x44]')
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find("duplicate"))
+
+pat, err = e:compile('[\\U00000044\\u0044]')
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find("duplicate"))
+
+set_expression('[\\U00000041\\U00000042]')
+check_match(global_rplx, "A", true, 0)
+check_match(global_rplx, "B", true, 0)
+check_match(global_rplx, "C", false)
+
+set_expression('[\\U00000042\\U00000041]')
+check_match(global_rplx, "A", true, 0)
+check_match(global_rplx, "B", true, 0)
+check_match(global_rplx, "C", false)
+
+set_expression('[\\U000000e8\\U000000e9\\U000000ea\\U000000eb]')
+for _,char in ipairs{"è", "é", "ê", "ë"} do
+   check_match(global_rplx, char, true, 0)
+end
+
+set_expression('[^\\U000000e8\\U000000e9\\U000000ea\\U000000eb]')
+for _,char in ipairs{"è", "é", "ê", "ë", ""} do
+   check_match(global_rplx, char, false, 0)
+end
+for _,char in ipairs{"a", "e", "i", "Ø", "ß", " "} do
+   check_match(global_rplx, char, true, 0)
+end
+for _,char in ipairs{"abc", "aè", "eè", "iè", "Øè", "ßè"} do
+   check_match(global_rplx, char, true, 2)	    -- 2 because BYTES, not characters
+end
+
+
+----------------------------------------------------------------------------------------
+heading("Literal strings with escape sequences")
+----------------------------------------------------------------------------------------
+subheading("Strings with \\x escapes")
+
+set_expression('"\\x41\\x42"')
+check_match(global_rplx, "AB", true, 0)
+check_match(global_rplx, "ABC", true, 1)
+check_match(global_rplx, "C", false)
+
+set_expression('"\\x10\\x0f\\x0E\\x0d\\x0C\\x0b\\x0A\\x09\\x08\\x07\\x06\\x05\\x04\\x03\\x02\\x01"')
+input = ""
+for i = 16, 1, -1 do
+   input = input .. string.char(i)
+end
+check_match(global_rplx, input, true, 0)
+
+check_match(global_rplx, string.char(0), false, 0)
+check_match(global_rplx, string.char(9), false, 0)
+check_match(global_rplx, 'A', false, 0)
+
+check_match('"\\x41A"', 'AA', true, 0)
+
+set_expression('"A\\x41"')
+check_match(global_rplx, 'AA', true, 0)
+check_match(global_rplx, "ä", false, 2)		    -- 2 BYTES
+check_match(global_rplx, "  ", false, 2)
+
+
+subheading("Strings with \\u escapes")
+
+set_expression('"\\u0041\\x42"')
+check_match(global_rplx, "AB", true, 0)
+check_match(global_rplx, "ABC", true, 1)
+check_match(global_rplx, "C", false)
+
+set_expression('"\\u0041\\u0042"')
+check_match(global_rplx, "AB", true, 0)
+check_match(global_rplx, "ABC", true, 1)
+check_match(global_rplx, "C", false)
+
+set_expression('"\\u0042\\u0041"')
+check_match(global_rplx, "BA", true, 0)
+check_match(global_rplx, "BAC", true, 1)
+check_match(global_rplx, "C", false)
+
+set_expression('"\\u00e8\\u00e9\\u00ea\\u00eb"')
+check_match(global_rplx, table.concat{"è", "é", "ê", "ë"}, true, 0)
+check_match(global_rplx, table.concat{"é", "ê", "ë"}, false, 6)
+
+
+subheading("Strings with \\U escapes")
+
+pat, err = e:compile('"\\U0000044\\x44"')
+msg = violation.tostring(err[1])
+check(msg:find("invalid Unicode"))
+
+set_expression('"\\U00000041\\x41"')
+check_match(global_rplx, 'AA', true, 0)
+check_match(global_rplx, "ä", false, 2)		    -- 2 BYTES
+check_match(global_rplx, "  ", false, 2)
+
+set_expression('"\\U00000041\\u0041"')
+check_match(global_rplx, 'AA', true, 0)
+check_match(global_rplx, "ä", false, 2)		    -- 2 BYTES
+check_match(global_rplx, "  ", false, 2)
+
+set_expression('"\\U00000041\\U00000042"')
+check_match(global_rplx, "AB", true, 0)
+check_match(global_rplx, "ABC", true, 1)
+check_match(global_rplx, "C", false)
+
+set_expression('"\\U00000042\\U00000041"')
+check_match(global_rplx, "BA", true, 0)
+check_match(global_rplx, "BAC", true, 1)
+check_match(global_rplx, "C", false)
+
+set_expression('"\\U000000e8\\U000000e9\\U000000ea\\U000000eb"')
+check_match(global_rplx, table.concat{"è", "é", "ê", "ë"}, true, 0)
+check_match(global_rplx, table.concat{"é", "ê", "ë"}, false, 6)
+
+
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
 return test.finish()
