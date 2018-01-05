@@ -102,7 +102,7 @@ local function compile_expression(e, input)
    local ast = input
    if type(input)=="string" then
       ast = e.compiler.parse_expression(common.source.new{text=input}, messages)
-      -- Syntax errors will be in messages table
+      -- Syntax and other errors will be in messages table
       if not ast then return false, messages; end
    end
    if not recordtype.parent(ast) then

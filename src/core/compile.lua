@@ -339,18 +339,21 @@ local function cs_range(a, env, prefix, messages)
    end
 end
 
+-- FUTURE optimization: The multi-byte chars can be organized by common prefix. 
+-- Note that this approach works for non-UTF8 characters as well.  
+local function utf8_charlist_to_peg(chars)
+   local peg = lpeg.P(false)
+   for _, char in ipairs(chars) do
+      -- Length 1 is enforced by ustring.explode, called during ast creation:
+      assert(ustring.len(char)==1)	
+      peg = peg + lpeg.P(char)
+   end
+   return peg
+end
+
 function cs_list(a, env, prefix, messages)
    local dot = lookup_builtin('.', env, a)
-   local alternatives
-   for i, c in ipairs(a.chars) do
-      local char=c
-      if not alternatives then alternatives = P(char)
-      else alternatives = alternatives + P(char); end
-   end -- for
-   if not alternatives then
-      assert(#a.chars == 0)
-      alternatives = lpeg.P(false)		    -- empty charlist matches nothing
-   end
+   local alternatives = utf8_charlist_to_peg(a.chars)
    a.pat = pattern.new{name="cs_list",
 		      peg=(a.complement and (dot-alternatives) or alternatives),
 		      ast=a}

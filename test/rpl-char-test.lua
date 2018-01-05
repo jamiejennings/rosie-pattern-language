@@ -379,6 +379,16 @@ check(pat)
 msg = violation.tostring(err[1])
 check(msg:find("Warning") and msg:find("contains only one character"))
 
+check_match('[^\x41-\x42]', "A", false)
+check_match('[^\x41-\x42]', "B", false)
+check_match('[^\x41-\x42]', "C", true, 0)
+check_match('[^\x41-\x42]', "@", true, 0)
+check_match('[^\x41-\x42]', "@!", true, 1)
+
+check_match('[^\x41-\x42]', "ä", true, 0)
+check_match('[^\x41-\x42]+', "  ", true, 0)
+
+
 subheading("Ranges with \\u escapes")
 set_expression('[\\u0041-\\u0042]')
 check_match(global_rplx, "A", true, 0)
@@ -401,20 +411,83 @@ for _,char in ipairs{"abc", "aè", "eè", "iè", "Øè", "ßè"} do
    check_match(global_rplx, char, true, 2)	    -- 2 because BYTES, not characters
 end
 
-check_match('[^\x41-\x42]', "A", false)
-check_match('[^\x41-\x42]', "B", false)
-check_match('[^\x41-\x42]', "C", true, 0)
-check_match('[^\x41-\x42]', "@", true, 0)
-check_match('[^\x41-\x42]', "@!", true, 1)
-
-check_match('[^\x41-\x42]', "ä", true, 0)
-check_match('[^\x41-\x42]+', "  ", true, 0)
-
 
 ----------------------------------------------------------------------------------------
 heading("Character lists with escape sequences")
 ----------------------------------------------------------------------------------------
+subheading("Lists with \\x escapes")
 
+set_expression('[\\x41\\x42]')
+check_match(global_rplx, "A", true, 0)
+check_match(global_rplx, "B", true, 0)
+check_match(global_rplx, "C", false)
+
+set_expression('[\\x10\\x0f\\x0E\\x0d\\x0C\\x0b\\x0A\\x09\\x08\\x07\\x06\\x05\\x04\\x03\\x02\\x01]')
+for i = 1, 16 do
+   check_match(global_rplx, string.char(i), true, 0)
+end
+check_match(global_rplx, string.char(0), false, 0)
+for i = 17, 20 do
+   check_match(global_rplx, string.char(i), false, 0)
+end
+
+pat, err = e:compile('[\\x41\\x41]')
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find("duplicate"))
+
+pat, err = e:compile('[\\x41A]')
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find("duplicate"))
+
+pat, err = e:compile('[A\\x41]')
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find("duplicate"))
+
+check_match('[^\x41\x42]', "A", false)
+check_match('[^\x41\x42]', "B", false)
+check_match('[^\x41\x42]', "C", true, 0)
+check_match('[^\x41\x42]', "@", true, 0)
+check_match('[^\x41\x42]', "@!", true, 1)
+
+check_match('[^\x41\x42]', "ä", true, 0)
+check_match('[^\x41\x42]+', "  ", true, 0)
+
+
+subheading("Lists with \\u escapes")
+
+pat, err = e:compile('[\\u0044\\x44]')
+check(not pat)
+msg = violation.tostring(err[1])
+check(msg:find("duplicate"))
+
+set_expression('[\\u0041\\u0042]')
+check_match(global_rplx, "A", true, 0)
+check_match(global_rplx, "B", true, 0)
+check_match(global_rplx, "C", false)
+
+set_expression('[\\u0042\\u0041]')
+check_match(global_rplx, "A", true, 0)
+check_match(global_rplx, "B", true, 0)
+check_match(global_rplx, "C", false)
+
+set_expression('[\\u00e8\\u00e9\\u00ea\\u00eb]')
+for _,char in ipairs{"è", "é", "ê", "ë"} do
+   check_match(global_rplx, char, true, 0)
+end
+
+set_expression('[^\\u00e8\\u00e9\\u00ea\\u00eb]')
+for _,char in ipairs{"è", "é", "ê", "ë", ""} do
+   check_match(global_rplx, char, false, 0)
+end
+for _,char in ipairs{"a", "e", "i", "Ø", "ß", " "} do
+   check_match(global_rplx, char, true, 0)
+end
+for _,char in ipairs{"abc", "aè", "eè", "iè", "Øè", "ßè"} do
+   check_match(global_rplx, char, true, 2)	    -- 2 because BYTES, not characters
+end
 
 
 -- return the test results in case this file is being called by another one which is collecting

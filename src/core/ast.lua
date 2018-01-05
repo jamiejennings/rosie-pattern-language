@@ -280,8 +280,6 @@ function convert_bracket(pt, sref)
    if compflag then
       exps = list.cdr(exps)
    end
-   if exps[2] then
-      print("*** in convert_bracket, exps table is:"); table.print(exps); end
    assert(exps[1] and (not exps[2]))
    local cexp
    if exps[1].type=="exp.sequence" then
@@ -297,15 +295,15 @@ function convert_bracket(pt, sref)
 			  sourceref=sref}
 end
 
-local function process_raw_charlist(char_exps, sref, pt)
+local function process_raw_charlist(char_exps)
    local raw_chars = table.concat(map(function(sub) return sub.data; end, char_exps))
    local chars, offense = ustring.unescape_charlist(raw_chars)
-   if not chars then raise_error(tostring(offense), sref, pt); end
+   if not chars then return nil, offense; end
    local set = ustring.explode(chars)
    local seen = {}
    for _, char in ipairs(set) do
       if seen[char] then
-	 raise_error("duplicate characters in character list: " .. ustring.escape(char), sref, pt)
+	 return nil, "duplicate characters in character list: " .. ustring.escape(char)
       end
       seen[char] = true
    end
@@ -322,7 +320,9 @@ function convert_simple_charset(pt, sref)
    if pt.type=="named_charset" then
       return convert_cs_named(pt, sref)
    elseif pt.type=="charlist" then
-      return ast.cs_list.new{chars = process_raw_charlist(exps, sref, pt),
+      local chars, err = process_raw_charlist(exps)
+      if not chars then raise_error(err, sref); end
+      return ast.cs_list.new{chars = chars,
 			     complement = compflag,
 			     sourceref=sref}
    elseif pt.type=="range" then
