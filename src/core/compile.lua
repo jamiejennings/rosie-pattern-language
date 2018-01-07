@@ -285,13 +285,6 @@ local function cs_named(a, env, prefix, messages)
    return a.pat
 end
 
-local function one_char_warn(messages, a)
-   table.insert(messages,
-		violation.warning.new{who="compiler",
-				      message="character range contains only one character",
-				      ast=a})
-end
-
 -- FUTURE optimization: The multi-byte chars can be organized by common prefix. 
 local function utf8_range_to_peg(cp1, cp2)
    local peg = lpeg.P(false)
@@ -308,9 +301,11 @@ local function cs_range(a, env, prefix, messages)
    local c1, c2 = a.first, a.last
    if #c1==1 and #c2==1 then
       if string.byte(c1) > string.byte(c2) then
-	 return raise_error("character range start comes after end", a)
+	 raise_error("character range start comes after end", a)
       end
-      if string.byte(c1) == string.byte(c2) then one_char_warn(messages, a); end
+      if string.byte(c1) == string.byte(c2) then
+	 raise_error("character range contains only one character", a)
+      end
       local peg = R(c1..c2)
       a.pat = pattern.new{name="cs_range", peg=(a.complement and (dot-peg)) or peg, ast=a}
       return a.pat
@@ -330,8 +325,9 @@ local function cs_range(a, env, prefix, messages)
       if cp1 > cp2 then
 	 raise_error("character range start codepoint comes after end codepoint", a)
       end
-      if cp1 == cp2 then one_char_warn(messages, a); end
-      
+      if cp1 == cp2 then
+	 raise_error("character range contains only one character", a)
+      end
       local peg, msg = utf8_range_to_peg(cp1, cp2)
       if not peg then raise_error(msg, a); end
       a.pat = pattern.new{name="cs_range", peg=(a.complement and (dot-peg)) or peg, ast=a}
