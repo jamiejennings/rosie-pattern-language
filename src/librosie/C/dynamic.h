@@ -66,5 +66,5 @@ int (*fp_rosie_matchfile)(void *L, int pat, char *encoder, int wholefileflag,
 		    str *err);
 int (*fp_rosie_trace)(void *L, int pat, int start, char *trace_style, str *input, int *matched, str *trace);
 int (*fp_rosie_load)(void *L, int *ok, str *src, str *pkgname, str *errors);
-int (*fp_rosie_import)(void *L, int *ok, str *pkgname, str *as, str *errors);
+int (*fp_rosie_import)(void *L, int *ok, str *pkgname, str *as, str *actual_pkgname, str *errors);
 

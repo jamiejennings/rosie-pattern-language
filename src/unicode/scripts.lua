@@ -40,7 +40,7 @@ function read_ucd_property_file(filename)
 end
 
 function read_ucd_scripts()
-   return read_ucd_property_file("/Users/jjennings/Work/Dev/private/rosie-plus/unicode/UCD/Scripts.txt")
+   return read_ucd_property_file("/Users/jennings/Projects/rosie-pattern-language/src/unicode/UCD/Scripts.txt")
 end
 
 					   

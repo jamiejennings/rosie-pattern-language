@@ -1,3 +1,57 @@
+2017-12-22  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-7
+
+	CHANGED: The rosie configuration returned by rosie_config() in librosie
+	now has a more simple structure.  It is a list of entries, each of which
+	contains a name, description, value, and possibly other attributes.
+
+	CHANGED: The sample Go client remains unfinished.  The part that is
+	implemented only works because the main goroutine is locked to the OS
+	thread.  Without this, the tiny stacks allocated by Go cause problems
+	for goroutines that use librosie.
+
+	CHANGED: librosie now provides rosie_loadfile.
+
+	FIXED: REPL engine now gets the libpath set on the command line (if any).
+
+	FIXED: Violation messages returned by librosie now have internal data
+	stripped away, leaving only text that is useful to a librosie client.
+
+	CHANGED: librosie now requires pthreads to compile.
+
+	CHANGED: Now building librosie.dylib on OS X because .dylib and .so
+	files are treated differently by Python's cffi package (grrrr).
+
+	NEW: There are now 3 sample clients for librosie that are written in C:
+	one statically linked, one dynamically linked, and one statically linked
+	and multi-threaded.  See src/librosie/C/Makefile ("test" target) for how
+	to invoke each one.
+
+	INFO: Some future changes may be coming to how librosie is built.  Today
+	it links with lua.5.3.so in the same directory, which can complicate
+	'make install'.
+
+	CHANGED: In librosie, the signature of rosie_import changed to provide
+	an additional "output arg" that contains the name of the package
+	actually imported.
+
+	NEW: The customized version of lpeg that rosie uses has been modified to
+	never read past the end of the input string.  It would peek beyond the
+	end by one char, which caused no harm when the input was a string
+	produced by lua_tolstring, which guarantees a null terminator.  In
+	Rosie, the input can be a "pointer and length" struct, where it is
+	incorrect to reference the char at the address pointer+length.
+
+	NEW: librosie is now thread-safe.  Example program in
+	src/librosie/C/mt.c.  The required stack size for a thread running a
+	rosie matching engine is currently 1MB.  Some implementation changes
+	could reduce this, possibly down to 512KB.  If you would like to see
+	this, please open an issue on Github.
+
+	FIXED: Updated docker files in extra/docker to reflect best practices
+	and to run all librosie client tests.
+
 2017-11-25  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-6

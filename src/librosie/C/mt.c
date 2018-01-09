@@ -11,6 +11,15 @@
 #include <pthread.h>
 #include "librosie.h"
 
+/* 
+ * Stack size in bytes, established as a pthread attribute:
+ *
+ * 784kb works in this sample program (on OS X 10.13.2,
+ * clang-900.0.39.2).  The right value to use will depend on what else
+ * the thread will be doing.
+ */
+#define ROSIE_STACK_SIZE ((size_t) 1024*1024*1)
+
 #define STR(literal) rosie_new_string((byte_ptr)(literal), strlen((literal)));
 
 #define E_BAD_ARG -1
@@ -21,6 +30,7 @@ void *make_engine() {
   int ok;
   str errors;
   str pkgname = STR("all");
+  str actual_pkgname;
   void *engine = rosie_new(&errors);
   if (!engine) {
     printf("Call to rosie_new failed.\n");
@@ -34,10 +44,16 @@ under the name 'rosie'.\n\
     exit(E_ENGINE_CREATE);
     }
   }
-  int err = rosie_import(engine, &ok, &pkgname, NULL, &errors);
+  int err = rosie_import(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
+  rosie_free_string(pkgname);
+  if (actual_pkgname.ptr != NULL) rosie_free_string(actual_pkgname);
+
   if (err) {
     printf("Call to rosie_import failed.\n");
-    if (errors.ptr) printf("%s", errors.ptr);
+    if (errors.ptr) {
+	 printf("%s", errors.ptr);
+	 rosie_free_string(errors);
+    }
     exit(E_ENGINE_IMPORT);
   }
   if (!ok) {
@@ -52,15 +68,13 @@ under the name 'rosie'.\n\
   if (errors.ptr) {
     rosie_free_string(errors);
   }
-  rosie_free_string(pkgname);
-
   printf("Engine %p created\n", engine);
   return engine;
 }  
 
 int compile(void *engine, str expression) {
   int pat;
-  str errors = STR("");		/* WTF??? */
+  str errors;
   int err = rosie_compile(engine, &expression, &pat, &errors);
   if (err) {
     printf("rosie call failed: compile expression\n");
@@ -93,13 +107,13 @@ void *do_work(void *engine) {
   int cin, cout, cerr;
   int pat;
   str exp = STR("all.things");
+  str errors;
 
   pat = compile(engine, exp);
   rosie_free_string(exp);
 
   char outfile[20];
   sprintf(&outfile[0], "%p.out", engine);
-  str *errors = NULL;
   for (int i=0; i<r; i++) {
     printf("Engine %p iteration %d writing file %s\n", engine, i, outfile);
     int err = rosie_matchfile(engine,
@@ -108,11 +122,11 @@ void *do_work(void *engine) {
 			      0,	/* not whole file at once */
 			      infile, outfile, "",
 			      &cin, &cout, &cerr,
-			      errors);
+			      &errors);
     if (err) printf("*** Error calling matchfile\n");
-    if (errors && errors->ptr) {
-      printf("matchfile() returned: %s\n", errors->ptr);
-      rosie_free_string_ptr(errors);
+    if (errors.ptr) {
+      printf("matchfile() returned: %.*s\n", errors.len, errors.ptr);
+      rosie_free_string(errors);
     }
     printf("Engine %p matchfile() returned: %d, %d, %d\n", engine, cin, cout, cerr);
   }
@@ -158,7 +172,7 @@ int main(int argc, char **argv) {
   for (int i=0; i<n; i++) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, (size_t) 1024*1024*10); /* !@# WHAT VALUE TO USE? */
+    pthread_attr_setstacksize(&attr, ROSIE_STACK_SIZE);
     int err = pthread_create(&thread[i], &attr, do_work, engine[i]);
     printf("thread[%d] = %p\n", i, &thread[i]); fflush(NULL);
     if (err) {
