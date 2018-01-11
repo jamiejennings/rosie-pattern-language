@@ -1,19 +1,23 @@
 <!--  -*- Mode: GFM; -*-  -->
 <!--
-<!--  © Copyright IBM Corporation 2016, 2017.                                -->
+<!--  © Copyright IBM Corporation 2016, 2017, 2018.                            -->
 <!--  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  -->
 <!--  AUTHOR: Jamie A. Jennings                                                -->
 
 # RPL 1.1 Language Reference
 
+_Last updated: 2018-01-10_
+
 Notes:
 1. The RPL language is versioned independently of Rosie itself.
-2. See also the [Command Line Interface manual](man/rosie.html) and the interactive [read-eval-print loop (repl)](repl.md) documentation.
+2. This is the language reference.  You may also want to look at:
+- the [Command Line Interface](man/rosie.html) manual
+- the interactive [read-eval-print loop (repl)](repl.md) documentation
 
-## Contents
+## Overview
 
-- [RPL reference](#rpl-reference)
-- [Pattern libraries](#pattern-libraries)
+
+
 
 ## Blocks
 
