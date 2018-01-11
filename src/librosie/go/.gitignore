@@ -1,8 +1,0 @@
-# Executable
-rtest
-# Links created during setup for the librosie Go client
-#src/include/*
-#rosie
-setvars
-
-
