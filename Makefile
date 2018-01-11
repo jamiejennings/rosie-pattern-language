@@ -88,7 +88,6 @@ clean:
 	-cd $(JSON_DIR) && make clean
 	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
 	-cd $(LIBROSIE_DIR) && make clean
-	rm -f $(submodule_sentinel)
 	rm -f build.log
 
 .PHONY: none
@@ -139,8 +138,9 @@ linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so $(LIBROSIE)
 windows:
 	@echo Windows installation not yet supported.
 
-# submodule_sentinel indicates that submodules have been initialized.
-# the sentile file is a file copied from a submodule repo, so that:
+# The submodule_sentinel indicates that submodules have been
+# initialized in the git sense, i.e. that they have been cloned.  The
+# sentile file is a file copied from a submodule repo, so that:
 # (1) the submodule must have been checked out, and
 # (2) the sentinel will not be newer than the submodule files
 submodule_sentinel=submodules/~~present~~ 
