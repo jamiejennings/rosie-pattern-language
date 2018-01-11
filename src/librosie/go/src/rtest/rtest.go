@@ -65,7 +65,4 @@ func main() {
 
 	fmt.Printf("Exiting...\n");
 
-	C.rosie_finalize(engine);
-
-
 }
