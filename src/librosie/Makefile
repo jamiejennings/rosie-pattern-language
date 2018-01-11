@@ -6,7 +6,7 @@
 ## LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ## AUTHOR: Jamie A. Jennings
 
-## Use "DEBUG=1" on the command line to enable logging to stderr
+## Use "DEBUG=1" on the command line to cause librosie to log to stderr
 
 HOME = $(shell cd ../..; pwd)
 ROSIE = "$(HOME)/bin/rosie"
@@ -96,8 +96,8 @@ librosie.so: librosie.o $(LUA_DYLIB)
 librosie.dylib: librosie.o $(LUA_DYLIB)
 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
 
-librosie.a: librosie.o
-	$(AR) $@ librosie.o
+librosie.a: librosie.o lua_objs
+	$(AR) $@ librosie.o liblua/*.o
 	$(RANLIB) $@
 
 clean:
