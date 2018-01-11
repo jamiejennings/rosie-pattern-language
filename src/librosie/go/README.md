@@ -3,6 +3,7 @@ The Go client here is currently broken.  To reproduce the problem:
 ```shell 
 git clone https://github.com/jamiejennings/rosie-pattern-language.git
 cd rosie-pattern-language
+git checkout goclient
 make
 cd src/librosie/go
 ./setup.sh
