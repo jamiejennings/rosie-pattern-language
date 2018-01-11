@@ -112,8 +112,8 @@ void *do_work(void *engine) {
   pat = compile(engine, exp);
   rosie_free_string(exp);
 
-  char outfile[20];
-  sprintf(&outfile[0], "%p.out", engine);
+  char outfile[40];
+  sprintf(&outfile[0], "/tmp/%p.out", engine);
   for (int i=0; i<r; i++) {
     printf("Engine %p iteration %d writing file %s\n", engine, i, outfile);
     int err = rosie_matchfile(engine,
