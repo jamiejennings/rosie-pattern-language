@@ -1,0 +1,8 @@
+# Executable
+rtest
+# Links and files created during setup for the librosie Go client
+#src/rosie/include
+rosie
+setvars
+
+
