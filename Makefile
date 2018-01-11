@@ -171,7 +171,7 @@ lib/lpeg.so: $(lpeg_lib)
 	cp $(lpeg_lib) lib
 
 $(lpeg_lib): $(submodules) 
-	cd $(LPEG_DIR)/src && $(MAKE) $(PLATFORM) CC=$(CC) LUADIR=../../$(LUA)
+	cd $(LPEG_DIR)/src && $(MAKE) CC=$(CC) LUADIR=../../$(LUA)
 	@$(BUILD_ROOT)/src/build_info.sh "lpeg" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 json_lib=$(JSON_DIR)/cjson.so
