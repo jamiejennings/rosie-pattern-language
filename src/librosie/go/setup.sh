@@ -16,14 +16,18 @@ ln -fs $LUALIB/luaxlib.h src/rosie/include/
 echo "Linking librosie.a from librosie directory"
 ln -fs $LIB/librosie.a src/rosie/librosie.a
 
-echo "Creating link 'rosie' to rosie installation directory"
 if [ -z $ROSIE_HOME ]; then
     ROSIE_HOME=`cd ../../.. && pwd`
     echo "ROSIE_HOME not set.  Assuming rosie installation is $ROSIE_HOME"
 else
     echo "ROSIE_HOME is already set to: $ROSIE_HOME"
 fi
-ln -fs $ROSIE_HOME rosie
+if [ ! -d rosie ]; then
+    echo "Creating link 'rosie' to rosie installation directory"
+    ln -fs $ROSIE_HOME rosie
+else
+    echo "Link 'rosie' to rosie installation directory already exists"
+fi
 
 
 echo "--------------------------------------------------------"
