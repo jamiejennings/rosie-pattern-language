@@ -91,8 +91,6 @@ local b1_lead = lpeg.R(string.char(0x00)..string.char(0x7F))   -- ASCII (1 byte)
 local b2_lead = lpeg.R(string.char(0xC0)..string.char(0xDF))
 local b3_lead = lpeg.R(string.char(0xE0)..string.char(0xEF))
 local b4_lead = lpeg.R(string.char(0xF0)..string.char(0xF7))
-local b5_lead = lpeg.R(string.char(0xF8)..string.char(0xFB))
-local b6_lead = lpeg.R(string.char(0xFC)..string.char(0xFD))
 local c_byte = lpeg.R(string.char(0x80)..string.char(0xBF)) -- continuation byte
 
 -- This is denoted \X in Perl, PCRE and some other regex
@@ -100,8 +98,6 @@ common.utf8_char_peg = b1_lead +
                (b2_lead * c_byte) +
 	       (b3_lead * c_byte * c_byte) +
 	       (b4_lead * c_byte * c_byte * c_byte) +
-	       (b5_lead * c_byte * c_byte * c_byte * c_byte) +
-	       (b6_lead * c_byte * c_byte * c_byte * c_byte * c_byte) +
 	       lpeg.P(1)			    -- fallback to any single byte
 
 -- Examples:

@@ -89,7 +89,8 @@ local function Unicode_escape(s, start)
    local codepoint = tonumber(hex_chars, 16)
    assert(codepoint >= 0)
    if codepoint > 0x10FFFF then
-      return nil, "unicode codepoint out of range"
+      return nil,
+	 "invalid Unicode escape sequence (out of range): " .. ESC .. s:sub(start, start+8)
    end
    return utf8.char(codepoint), start+9
 end

@@ -245,6 +245,7 @@ literals = {{"A", "A"},				   -- A quick sanity check first
 	    {"\\x41", "A"},
 	    {"\\u0041", "A"},
 	    {"\\U00000041", "A"},
+	    {"\\U0010FFFF", utf8.char(0x10FFFF)},
 	    {"\\u2323", "⌣"},
 	    {"\\U00002323", "⌣"},
 	    {"\\U00010175", "𐅵"},
@@ -296,8 +297,16 @@ check(not pat)
 msg = violation.tostring(err[1])
 check(msg:find('syntax error'))
 
-for _,thing in ipairs({'\\U', '\\U4', '\\U43', '\\U432', '\\U1234567',
-		       '\\U1234567 ', '\\U 0010FF80', '\\U0010FF8X'}) do
+for _,thing in ipairs({'\\U',
+		       '\\U4',
+		       '\\U43',
+		       '\\U432',
+		       '\\U1234567',
+		       '\\U1234567 ',
+		       '\\U 0010FF80',
+		       '\\U0010FF8X',
+		       "\\U00110000",		    -- out of range
+		    }) do
    pat, err = e:compile('"' .. thing .. '"')
    check(not pat)
    msg = violation.tostring(err[1])
