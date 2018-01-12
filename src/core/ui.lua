@@ -33,7 +33,7 @@ function ui.properties(name, obj)
 	      type="package",
 	      color="",
 	      binding=tostring(obj),
-	      source=origin and (origin.importpath or origin.filename)}
+	      source=origin and origin.filename}
    elseif common.pfunction.is(obj) then
       local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
       return {name=name,
