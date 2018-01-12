@@ -20,31 +20,34 @@ function ui.properties(name, obj)
       local binding = obj.ast and ast.tostring(obj.ast) or tostring(obj)
       local color, reason = co.query(name)
       local color_explanation = color
---      if reason=="default" then color_explanation = color_explanation .. " (default)"; end
       local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
-      local source = origin and (origin.importpath or origin.filename)
       return {name=name,
 	      type=kind,
 	      capture=capture,
 	      color=color_explanation,
 	      binding=binding,
-	      source=source}
+	      source=origin and (origin.importpath or origin.filename)}
    elseif environment.is(obj) then
+      local origin = obj.origin
       return {name=name,
 	      type="package",
 	      color="",
 	      binding=tostring(obj),
-	      source=(obj.origin and (obj.origin.importpath or obj.origin.filename))}
+	      source=origin and (origin.importpath or origin.filename)}
    elseif common.pfunction.is(obj) then
+      local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
       return {name=name,
 	      type="function",
 	      color="",
-	      binding=tostring(obj)}
+	      binding=tostring(obj),
+	      source=origin and (origin.importpath or origin.filename)}
    elseif common.macro.is(obj) then
+      local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
       return {name=name,
 	      type="macro",
 	      color="",
-	      binding=tostring(obj)}
+	      binding=tostring(obj),
+	      source=origin and (origin.importpath or origin.filename)}
    else
       error("Internal error: unknown object, stored at " ..
 	    tostring(name) .. ": " .. tostring(obj))
