@@ -65,6 +65,7 @@ check(type(t)=="table")
 heading("Testing application of primitive macros")
 ----------------------------------------------------------------------------------------
 
+--[[
 heading("Example macros")
 subheading("First")
 
@@ -208,6 +209,8 @@ check(type(leftover)=="number" and leftover==0)
 ok, m, leftover = e:match(p, "b b")
 check(ok)
 check(not m)
+
+--]]
 
 ----------------------------------------------------------------------------------------
 heading("Find and findall")
