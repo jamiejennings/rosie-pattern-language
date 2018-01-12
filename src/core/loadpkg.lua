@@ -262,12 +262,32 @@ local function create_package_bindings(prefix, pkgenv, target_env)
    end
 end
 
+local function is_builtin_package(importpath, fullpath, src)
+   -- Does the importpath start with "builtin/"?
+   --   Is the rosie library a prefix of fullpath?
+   --   If both are true, then this is a builtin package.
+   --   Else the failsafe:
+   --     If not src (i.e. file not found), then this is a builtin package.
+   --     Issue a warning because the file itself is not found.
+   -- Otherwise, not a built-in package.
+   return false
+end
+
+local function import_builtin(importpath)
+   local pkgname, env = builtins.import(importpath)
+   return true, pkgname, env
+end
+
 local function import_one_force(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    local origin = assert(source_record.origin)
    common.note("load: looking for ", origin.importpath)
    -- FUTURE: Next, look for a compiled version of the file to load
    -- Finally, look for a source file to compile and load
    local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
+   if is_builtin_package(origin.importpath, fullpath, src) then
+      common.note("load: loading ", origin.importpath, ", a built-in package")
+      return import_builtin(origin.importpath)
+   end
    if not src then return false; end 		    -- message already in 'messages'
    common.note("load: loading ", origin.importpath, " from ", fullpath)
    local sref = common.source.new{text=src,
