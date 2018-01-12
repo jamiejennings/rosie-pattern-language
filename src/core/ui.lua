@@ -20,7 +20,7 @@ function ui.properties(name, obj)
       local binding = obj.ast and ast.tostring(obj.ast) or tostring(obj)
       local color, reason = co.query(name)
       local color_explanation = color
-      if reason=="default" then color_explanation = color_explanation .. " (default)"; end
+--      if reason=="default" then color_explanation = color_explanation .. " (default)"; end
       local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
       local source = origin and origin.filename
       return {name=name,

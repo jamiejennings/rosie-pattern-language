@@ -8,6 +8,7 @@
 
 
 local ast = require "ast"
+local builtins = require "builtins"
 local common = require "common"
 local pattern = common.pattern
 local rmatch = common.rmatch
@@ -277,11 +278,11 @@ end
 -- FUTURE: A qualified reference to a separately compiled module may not have an AST available
 -- for debugging (unless it was compiled with debugging enabled).
 
--- N.B. Currently, when the AST field of a pattern is false, the pattern is a built-in.
 local function ref(e, a, input, start, expected, nextpos)
    local pat = a.pat
-   if not pat.ast then
-      -- In a trace, a reference has one sub (or none, if it is built-in)
+   assert(pat.ast, "missing ast?")
+   if pat.ast.sourceref == builtins.sourceref then
+      -- In a trace, a reference no subs if it is built-in
       return {match=expected, nextpos=nextpos, ast=a, input=input, start=start}
    else
       local result = expression(e, pat.ast, input, start)

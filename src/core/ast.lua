@@ -939,7 +939,7 @@ function ast.tostring(a, already_grouped)
 	    a_string = a_string .. tostring(k) .. ": " .. tostring(v) .. "\n"
 	 end
       end
-      error("do not know how to print this ast: " .. a_string)
+      error("Interal error: do not know how to print this ast: " .. a_string)
    end
 end
 

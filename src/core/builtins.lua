@@ -202,25 +202,49 @@ end
 -- Standard prelude, reified as the store of an environment
 -- -----------------------------------------------------------------------------
 
+local PRELUDE_IMPORTPATH = "builtin/prelude"
+
+local builtin_loadrequest = common.loadrequest.new{filename=PRELUDE_IMPORTPATH..".rpl"}
+
+builtins.sourceref = common.source.new{s=0, e=0,
+				       origin=builtin_loadrequest,
+				       text="",
+				       parent=nil}
+
 -- TODO: Decide whether to keep 'halt' in the env as a pattern, or expose it only as a macro that
 -- expands to the halt pattern.  (Or a pfunction that...)
 
 -- ENV is the standard prelude.  The actual structure is read-only so that it can be shared
 -- between environments (within an engine and across engines in the same Lua state).
-local ENV =
-    {[dot_id] = pattern.new{name=dot_id; peg=utf8_char_peg; alias=true};  -- any single character
-     [eol_id] = pattern.new{name=eol_id; peg=lpeg.P(-1); alias=true};	  -- end of input
-     [sol_id] = pattern.new{name=sol_id; peg=-lpeg.B(1); alias=true};	  -- start of input
-     [b_id] = pattern.new{name=b_id; peg=boundary; alias=true};		  -- token boundary
-     [halt_id] = pattern.new{name=halt_id; peg=lpeg.Halt(); alias=true};
-     ["message"] = pfunction.new{primop=message_peg};
-     ["error"] = pfunction.new{primop=error_peg};
-     ["keepto"] = macro.new{primop=macro_keepto};
-     ["find"] = macro.new{primop=macro_find};
-     ["findall"] = macro.new{primop=macro_findall};
-     ["ci"] = macro.new{primop=macro_case_insensitive};
-  }
-	      
+local ENV = {}
+local prelude_entries = {
+   {dot_id, pattern, utf8_char_peg, true},
+   {eol_id, pattern, lpeg.P(-1), true},
+   {sol_id, pattern, -lpeg.B(1), true},		    -- start of input
+   {b_id, pattern, boundary, true},		    -- token boundary
+   {halt_id, pattern, lpeg.Halt(), true},
+   {"message", pfunction, message_peg},
+   {"error", pfunction, error_peg},
+   {"keepto", macro, macro_keepto},
+   {"find", macro, macro_find},
+   {"findall", macro, macro_findall},
+   {"ci", macro, macro_case_insensitive},
+}
+
+for _, e in ipairs(prelude_entries) do
+   local ref = ast.ref.new{localname=e[1],
+			   sourceref=builtins.sourceref}
+   if e[2]==pattern then
+      ENV[e[1]] = e[2].new{name=e[1]; peg=e[3]; alias=e[4]; ast=ref}
+   elseif e[2]==pfunction then
+      ENV[e[1]] = e[2].new{primop=e[3]; ast=ref}
+   elseif e[2]==macro then
+      ENV[e[1]] = e[2].new{primop=e[3]; ast=ref}
+   else
+      error("error initializing standard prelude")
+   end
+end
+      
 setmetatable(ENV, {__tostring = function(env)
 				   return "<standard prelude environment>"
 				end;
@@ -235,7 +259,7 @@ function builtins.get_prelude()
 end
 
 function builtins.get_prelude_importpath()
-   return "builtin/prelude"
+   return PRELUDE_IMPORTPATH
 end
 
 return builtins

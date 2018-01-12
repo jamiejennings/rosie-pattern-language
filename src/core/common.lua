@@ -343,14 +343,16 @@ common.taggedvalue =
 
 common.pfunction =
    recordtype.new("pfunction",
-		  { primop=NIL;	    -- if primitive, holds a lua function
+		  { primop=NIL;			    -- if primitive, holds a lua function
 		    exported=true;
+		    ast=NIL;			    -- for origin
 		  })
 
 common.macro =
    recordtype.new("macro",
-		  { primop=NIL;	    -- if primitive, holds a lua function
+		  { primop=NIL;			    -- if primitive, holds a lua function
 		    exported=true;
+		    ast=NIL;			    -- for origin
 		  })
 
 common.pattern = 
