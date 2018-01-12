@@ -230,11 +230,13 @@ setmetatable(ENV, {__tostring = function(env)
 				end;
 		})
 
-
 function builtins.get_prelude()
    return ENV
 end
 
+function builtins.get_prelude_importpath()
+   return "builtin/prelude"
+end
 
 return builtins
 

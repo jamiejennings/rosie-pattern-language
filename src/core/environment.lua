@@ -104,12 +104,18 @@ env = recordtype.new("environment",
 
 local base_environment = env.new()
 base_environment.store = builtins.get_prelude()
+environment.prelude_importpath = builtins.get_prelude_importpath()
 
 environment.is = env.is
 
-environment.new = function (...)
-		     if #{...}==0 then return env.new(base_environment); end
-		     error("new environment called with arg(s)")
+environment.new = function (prelude)
+		     if not prelude then
+			return env.new()
+		     elseif environment.is(prelude) then
+			return env.new(prelude)
+		     else
+			error("invalid prelude argument to environment.new")
+		     end
 		  end
 
 environment.extend = function (parent)
@@ -138,8 +144,10 @@ end
 
 -- Each engine has a "global" package table that maps: importpath -> env
 -- where env is the environment for the module, containing both local and exported bindings. 
-function environment.make_module_table()
-   return setmetatable({}, {__tostring = function(env) return "<module_table>"; end;})
+function environment.new_package_table()
+   local pkgtable = setmetatable({}, {__tostring = function(env) return "<package_table>"; end;})
+   common.pkgtableset(pkgtable, environment.prelude_importpath, nil, "prelude", base_environment)
+   return pkgtable
 end
 
 return environment

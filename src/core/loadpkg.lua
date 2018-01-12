@@ -169,7 +169,9 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    local env
    if a.block_pdecl then
       assert(a.block_pdecl.name)
-      env = environment.new()
+      local _, prelude = common.pkgtableref(pkgtable, environment.prelude_importpath, nil)
+      assert(prelude)
+      env = environment.new(prelude)
       env.origin = origin
    else
       env = environment.extend(top_level_env)
@@ -202,7 +204,9 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
       return false
    end
    origin.packagename = a.block_pdecl.name
-   local env = environment.new()
+   local _, prelude = common.pkgtableref(pkgtable, environment.prelude_importpath, nil)
+   assert(prelude)
+   local env = environment.new(prelude)
    env.origin = origin
    if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, loadinglist, messages) then
       return false
