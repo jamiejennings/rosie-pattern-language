@@ -22,7 +22,7 @@ function ui.properties(name, obj)
       local color_explanation = color
 --      if reason=="default" then color_explanation = color_explanation .. " (default)"; end
       local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
-      local source = origin and origin.filename
+      local source = origin and (origin.importpath or origin.filename)
       return {name=name,
 	      type=kind,
 	      capture=capture,
@@ -34,7 +34,7 @@ function ui.properties(name, obj)
 	      type="package",
 	      color="",
 	      binding=tostring(obj),
-	      source=(obj.origin and obj.origin.filename)}
+	      source=(obj.origin and (obj.origin.importpath or obj.origin.filename))}
    elseif common.pfunction.is(obj) then
       return {name=name,
 	      type="function",
@@ -112,11 +112,11 @@ end
 
 function ui.print_props(tbl, skip_header)
    local count, total = tbl[1], tbl[2]		    -- ugh.
-   local fmt = "%-30s %-4s %-10s %-15s %s"
+   local fmt = "%-24s %-4s %-8s %-15s %s"
    if not skip_header then
       print();
       print(string.format(fmt, "Name", "Cap?", "Type", "Color", "Source"))
-      print("------------------------------ ---- ---------- --------------- ------------------------------")
+      print("------------------------ ---- -------- --------------- -------------------------")
    end
    local kind, color, cap
    local s, e
@@ -128,7 +128,8 @@ function ui.print_props(tbl, skip_header)
    for _,v in ipairs(names) do
       local color = tbl[v].color
       local cap = (tbl[v].capture and "Yes" or "")
-      local source = shorten(tbl[v].source or "", 30)
+--      local source = shorten(tbl[v].source or "", 36)
+      local source = tbl[v].source or ""
       print(string.format(fmt, v, cap, tbl[v].type, color, source))
    end
    if not skip_header then

@@ -204,7 +204,7 @@ end
 
 local PRELUDE_IMPORTPATH = "builtin/prelude"
 
-local builtin_loadrequest = common.loadrequest.new{filename=PRELUDE_IMPORTPATH..".rpl"}
+local builtin_loadrequest = common.loadrequest.new{importpath=PRELUDE_IMPORTPATH}
 
 builtins.sourceref = common.source.new{s=0, e=0,
 				       origin=builtin_loadrequest,
