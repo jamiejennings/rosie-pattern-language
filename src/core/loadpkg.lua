@@ -47,6 +47,7 @@
 
 local ast = require "ast"
 local environment = require "environment"
+local builtins = require "builtins"
 local common = require "common"
 local violation = require "violation"
 
@@ -169,7 +170,7 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    local env
    if a.block_pdecl then
       assert(a.block_pdecl.name)
-      local _, prelude = common.pkgtableref(pkgtable, environment.prelude_importpath, nil)
+      local _, prelude = common.pkgtableref(pkgtable, environment.PRELUDE_IMPORTPATH, nil)
       assert(prelude)
       env = environment.new(prelude)
       env.origin = origin
@@ -204,7 +205,7 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
       return false
    end
    origin.packagename = a.block_pdecl.name
-   local _, prelude = common.pkgtableref(pkgtable, environment.prelude_importpath, nil)
+   local _, prelude = common.pkgtableref(pkgtable, environment.PRELUDE_IMPORTPATH, nil)
    assert(prelude)
    local env = environment.new(prelude)
    env.origin = origin
@@ -262,20 +263,12 @@ local function create_package_bindings(prefix, pkgenv, target_env)
    end
 end
 
-local function is_builtin_package(importpath, fullpath, src)
-   -- Does the importpath start with "builtin/"?
-   --   Is the rosie library a prefix of fullpath?
-   --   If both are true, then this is a builtin package.
-   --   Else the failsafe:
-   --     If not src (i.e. file not found), then this is a builtin package.
-   --     Issue a warning because the file itself is not found.
-   -- Otherwise, not a built-in package.
-   return false
-end
-
 local function import_builtin(importpath)
-   local pkgname, env = builtins.import(importpath)
-   return true, pkgname, env
+   local pkgname, env = builtins.get_package(importpath)
+   if pkgname then 
+      return true, pkgname, env
+   end
+   return false
 end
 
 local function import_one_force(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
@@ -284,11 +277,11 @@ local function import_one_force(compiler, pkgtable, searchpath, source_record, l
    -- FUTURE: Next, look for a compiled version of the file to load
    -- Finally, look for a source file to compile and load
    local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
-   if is_builtin_package(origin.importpath, fullpath, src) then
+   if not src then return false; end 		    -- message already in 'messages'
+   if builtins.is_builtin_package(origin.importpath, fullpath) then
       common.note("load: loading ", origin.importpath, ", a built-in package")
       return import_builtin(origin.importpath)
    end
-   if not src then return false; end 		    -- message already in 'messages'
    common.note("load: loading ", origin.importpath, " from ", fullpath)
    local sref = common.source.new{text=src,
 				  origin=common.loadrequest.new{importpath=origin.importpath,

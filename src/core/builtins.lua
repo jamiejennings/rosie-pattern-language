@@ -202,9 +202,10 @@ end
 -- Standard prelude, reified as the store of an environment
 -- -----------------------------------------------------------------------------
 
-local PRELUDE_IMPORTPATH = "builtin/prelude"
+local DIRECTORY = "builtin/"
+builtins.PRELUDE_IMPORTPATH = DIRECTORY .. "prelude"
 
-local builtin_loadrequest = common.loadrequest.new{importpath=PRELUDE_IMPORTPATH}
+local builtin_loadrequest = common.loadrequest.new{importpath=builtins.PRELUDE_IMPORTPATH}
 
 builtins.sourceref = common.source.new{s=0, e=0,
 				       origin=builtin_loadrequest,
@@ -254,12 +255,36 @@ setmetatable(ENV, {__tostring = function(env)
 				end;
 		})
 
+local BUILTINS = {
+   {pkgname="prelude", env=ENV},
+}
+
 function builtins.get_prelude()
    return ENV
 end
 
-function builtins.get_prelude_importpath()
-   return PRELUDE_IMPORTPATH
+-- -----------------------------------------------------------------------------
+-- Utilities
+-- -----------------------------------------------------------------------------
+
+function builtins.is_builtin_package(importpath, fullpath)
+   -- If the importpath does not start with "builtin/", then false.
+   -- Did we find the file (using the engine's searchpath) in the rosie standard library?
+   -- If yes, then true (this is a builtin package), otherwise false.
+   assert(type(importpath)=="string")
+   assert(type(fullpath)=="string")
+   assert(type(ROSIE_LIBDIR)=="string")
+   if importpath:sub(1,#DIRECTORY) ~= DIRECTORY then return false; end
+   if fullpath:sub(1,#ROSIE_LIBDIR) ~= ROSIE_LIBDIR then return false; end
+   return true
+end
+
+function builtins.get_package(importpath)
+   local probe = BUILTINS[importpath]
+   if probe then
+      return probe.pkgname, probe.env
+   end
+   return false
 end
 
 return builtins

@@ -104,7 +104,8 @@ env = recordtype.new("environment",
 
 local base_environment = env.new()
 base_environment.store = builtins.get_prelude()
-environment.prelude_importpath = builtins.get_prelude_importpath()
+
+environment.PRELUDE_IMPORTPATH = assert(builtins.PRELUDE_IMPORTPATH)
 
 environment.is = env.is
 
@@ -146,7 +147,7 @@ end
 -- where env is the environment for the module, containing both local and exported bindings. 
 function environment.new_package_table()
    local pkgtable = setmetatable({}, {__tostring = function(env) return "<package_table>"; end;})
-   common.pkgtableset(pkgtable, environment.prelude_importpath, nil, "prelude", base_environment)
+   common.pkgtableset(pkgtable, environment.PRELUDE_IMPORTPATH, nil, "prelude", base_environment)
    return pkgtable
 end
 
