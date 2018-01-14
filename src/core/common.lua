@@ -7,6 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 local lpeg = import "lpeg"
+local R, P = lpeg.R, lpeg.P
 local util = import "util"
 local recordtype = import "recordtype"
 local NIL = recordtype.NIL
@@ -418,6 +419,21 @@ function common.lookup_encoder(name)
    return entry[1], entry[2]
 end
 
+-- Do not want to depend at all on the process or thread's locale setting.  This
+-- is the C/Posix locale for the ascii character set.
+common.locale = {
+   lower = R("az"),
+   graph = R(string.char(0x21, 0x7e)),
+   cntrl = R(string.char(0x00, 0x1f)) + P(string.char(0x7f)),
+   xdigit = R("09") + R("AF") + R("af"),
+   alpha = R("AZ") + R("az"),
+   space = R("\t\r") + P(" "),
+   digit = R("09"),
+   upper = R("AZ"),
+   alnum = R("09") + R("AZ") + R("az"),
+   punct = R("!/") + R(":@") + R("[`") + R("{~"),
+   print = R(" ~")
+}
 
 
 return common

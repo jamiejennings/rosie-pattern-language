@@ -13,11 +13,12 @@
 local c2 = {}
 
 local lpeg = require "lpeg"
-local locale = lpeg.locale()
 local P, V, C, S, R, Cmt, B =
    lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R, lpeg.Cmt, lpeg.B
 
 local common = require "common"
+local locale = common.locale
+
 local ustring = require "ustring"
 local novalue = common.novalue
 local taggedvalue = common.taggedvalue

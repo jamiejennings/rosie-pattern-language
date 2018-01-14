@@ -14,7 +14,8 @@ local macro = common.macro
 local pfunction = common.pfunction
 local ast = import "ast"
 local lpeg = import "lpeg"
-local locale = lpeg.locale()
+
+local locale = common.locale
 
 local boundary_ref = ast.ref.new{localname=common.boundary_identifier,
 				 sourceref=
