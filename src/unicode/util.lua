@@ -28,7 +28,7 @@ end
 -- Compile the ranges
 -- -----------------------------------------------------------------------------
 
-function util.compile_all_ranges(range_table)
+function util.compile_all_ranges(range_table, as_peg)
    local patterns = {}
    for cat, ranges in pairs(range_table) do
       local utf8_range = {"+"}
@@ -36,7 +36,7 @@ function util.compile_all_ranges(range_table)
 	 table.insert(utf8_range, codepoint_range(range[1], range[2]))
       end
       if #ranges > 0 then
-	 patterns[cat] = compile_codepoint_range(utf8_range)
+	 patterns[cat] = compile_codepoint_range(utf8_range, as_peg)
       else
 	 print("ERROR", cat, "has no ranges")
       end

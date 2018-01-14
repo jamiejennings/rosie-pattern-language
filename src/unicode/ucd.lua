@@ -46,6 +46,8 @@
 
 local ucd = {}
 local util = dofile("util.lua")
+local list = import("list")
+local violation = import("violation")
 
 local function storeUnicodeData(data, character_data, defined_ranges)
    assert(data.type=='UnicodeData_line')
@@ -91,7 +93,10 @@ local function loadUnicodeData(engine, filename)
    print("Reading UnicodeData.txt")
    local character_data = {n = 0; max_codepoint = 0}
    local defined_ranges = {n = 0}
-   local parser = engine:compile("UnicodeData_line")
+   local parser, errs = engine:compile("UnicodeData_line")
+   if not parser then
+      error(table.concat(list.map(violation.tostring, errs), "\n"))
+   end
    local nl = util.make_nextline_function(filename)
    local i = 1
    local line = nl()
