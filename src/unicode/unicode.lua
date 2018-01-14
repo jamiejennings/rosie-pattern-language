@@ -179,7 +179,7 @@ function read()
    populate_property_db()
    os.setlocale("C")
    read_ascii()
-   source_property_db.ascii = ascii_patterns
+   source_property_db.Ascii = ascii_patterns
 end
 
 function write(optional_directory)
