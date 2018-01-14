@@ -7,7 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 local lpeg = import "lpeg"
-local R, P = lpeg.R, lpeg.P
+local R, P, S = lpeg.R, lpeg.P, lpeg.S
 local util = import "util"
 local recordtype = import "recordtype"
 local NIL = recordtype.NIL
@@ -432,7 +432,10 @@ common.locale = {
    upper = R("AZ"),
    alnum = R("09") + R("AZ") + R("az"),
    punct = R("!/") + R(":@") + R("[`") + R("{~"),
-   print = R(" ~")
+   print = R(" ~"),
+   blank = S(" \t"),
+   word = R("09") + R("AZ") + R("az") + S("_"),
+   ascii = R(string.char(0x0, 0x7f)),
 }
 
 
