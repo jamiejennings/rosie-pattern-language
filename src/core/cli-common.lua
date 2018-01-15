@@ -39,6 +39,7 @@ end
 
 local function import_dependencies(en, a, msgs)
    local deps = en.compiler.dependencies_of(a)
+   local all_ok = true
    for _, packagename in ipairs(deps) do
       local ok, actual_pkgname, errs = en:import(packagename, nil)
       if not ok then
@@ -47,10 +48,10 @@ local function import_dependencies(en, a, msgs)
 	 else
 	    io.stderr:write("Unspecified error importing ", tostring(packagename), '\n')
 	 end
-	 return false
+	 all_ok = false
       end
    end -- for each dependency
-   return true
+   return all_ok
 end
 
 function p.setup_engine(en, args)
@@ -86,10 +87,8 @@ function p.setup_engine(en, args)
 	 end
 	 
 	 local ok = import_dependencies(en, AST, errs)
-	 if not ok then
-	    write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
-	    os.exit(-4)
-	 end
+	 -- Nothing to do if the automated import fails, because the user may have included an
+	 -- --rpl option with an "import ... as" statement, or an "import foo/bar/baz".
 
 	 local success, msg = p.load_string(en, stm)
 	 if not success then
@@ -125,10 +124,8 @@ function p.setup_engine(en, args)
       end
 
       local ok = import_dependencies(en, AST, errs)
-      if not ok then
-	 write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
-	 os.exit(-4)
-      end
+      -- Nothing to do if the automated import fails, because the user may have included an
+      -- --rpl option with an "import ... as" statement, or an "import foo/bar/baz".
       local ok, errs
       compiled_pattern, errs = en:compile(AST)
       if not compiled_pattern then

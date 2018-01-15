@@ -324,9 +324,9 @@ if (#results <=0) or (code == 0) then
 end
 msg = results[1]
 check(msg:find("error"))
-check(msg:find("loader"))
-check(msg:find("cannot open file"))
-check(msg:find("foonet.rpl"))
+check(msg:find("compiler"))
+check(msg:find("unbound identifier"))
+check(msg:find("foonet.any"))
 
 cmd = rosie_cmd .. " -f test/mod4.rpl grep foonet.any /etc/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
