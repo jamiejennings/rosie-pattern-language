@@ -422,20 +422,20 @@ end
 -- Do not want to depend at all on the process or thread's locale setting.  This
 -- is the C/Posix locale for the ascii character set.
 common.locale = {
-   lower = R("az"),
-   graph = R(string.char(0x21, 0x7e)),
-   cntrl = R(string.char(0x00, 0x1f)) + P(string.char(0x7f)),
-   xdigit = R("09") + R("AF") + R("af"),
-   alpha = R("AZ") + R("az"),
-   space = R("\t\r") + P(" "),
-   digit = R("09"),
-   upper = R("AZ"),
    alnum = R("09") + R("AZ") + R("az"),
-   punct = R("!/") + R(":@") + R("[`") + R("{~"),
-   print = R(" ~"),
-   blank = S(" \t"),
-   word = R("09") + R("AZ") + R("az") + S("_"),
+   alpha = R("AZ") + R("az"),
    ascii = R(string.char(0x0, 0x7f)),
+   blank = S(" \t"),
+   cntrl = R(string.char(0x00, 0x1f)) + P(string.char(0x7f)),
+   digit = R("09"),
+   graph = R(string.char(0x21, 0x7e)),
+   lower = R("az"),
+   print = R(" ~"),
+   punct = R("!/") + R(":@") + R("[`") + R("{~"),
+   space = R("\t\r") + P(" "),
+   upper = R("AZ"),
+   word = R("09") + R("AZ") + R("az") + S("_"),
+   xdigit = R("09") + R("AF") + R("af"),
 }
 
 

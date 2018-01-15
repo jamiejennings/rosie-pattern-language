@@ -625,6 +625,30 @@ check_match(global_rplx, table.concat{"è", "é", "ê", "ë"}, true, 0)
 check_match(global_rplx, table.concat{"é", "ê", "ë"}, false, 6)
 
 
+----------------------------------------------------------------------------------------
+heading("Unicode character classes")
+----------------------------------------------------------------------------------------
+subheading("Scripts")
+
+print("NEED TESTS HERE")
+
+ok, pkgname, errs = e:import('Unicode/Script')
+check(ok)
+text = "plus ça change, plus c'est la même chose"
+
+rplx, err = e:compile('[Script.Latin [:blank:] [:punct:]]+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+----------------------------------------------------------------------------------------
+heading("Ascii character classes")
+----------------------------------------------------------------------------------------
+
+print("NEED TESTS HERE")
+
+
 -- return the test results in case this file is being called by another one which is collecting
 -- up all the results:
 return test.finish()
