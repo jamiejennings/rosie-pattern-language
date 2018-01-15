@@ -103,7 +103,8 @@ ascii_patterns = {}
 function ranges_from_locale_peg(peg)
    local ranges = {}
    local start = nil
-   for c = 0x0, 0x7F do
+   local last_ascii = 0x7F
+   for c = 0x0, last_ascii do
       if peg:match(string.char(c)) then
 	 if not start then start = c; end
       else
@@ -114,7 +115,7 @@ function ranges_from_locale_peg(peg)
 	 end
       end
    end
-   if start then table.insert(ranges, {start, start}); end
+   if start then table.insert(ranges, {start, last_ascii}); end
    return ranges
 end
 
