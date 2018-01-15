@@ -2,7 +2,7 @@
 --
 -- rpl-char-test.lua
 --
--- © Copyright Jamie A. Jennings 2018.
+-- ©  Copyright IBM Corporation 2017, 2018.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
@@ -630,8 +630,6 @@ heading("Unicode character classes")
 ----------------------------------------------------------------------------------------
 subheading("Scripts")
 
-print("NEED TESTS HERE")
-
 ok, pkgname, errs = e:import('Unicode/Script')
 check(ok)
 text = "plus ça change, plus c'est la même chose"
@@ -641,6 +639,63 @@ check(rplx)
 m, leftover = rplx:match(text)
 check(m)
 check(leftover==0)
+
+rplx, err = e:compile('[Script.Thai [:blank:] [:punct:]]+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(not m)
+
+-- Playing the violin for the buffalo to listen
+text = "สีซอให้ควายฟัง"
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+-- At entrance to Plato's Academy: Let no one untrained in geometry enter here
+text = "ἀγεωμέτρητος μηδεὶς εἰσίτω."
+m, leftover = rplx:match(text)
+check(not m)
+
+rplx, err = e:compile('[Script.Latin [:blank:] [:punct:]]+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(not m)
+
+rplx, err = e:compile('[Script.Greek [:blank:] [:punct:]]+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+-- In Japanese: 0 1 2 3 4
+text = "零 一 二 三 四"
+m, leftover = rplx:match(text)
+check(not m)
+
+ok, pkgname, errs = e:import('Unicode/NumericType')
+check(ok)
+
+rplx, err = e:compile('(NumericType.Numeric)+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+ok, pkgname, errs = e:import('Unicode/Category')
+check(ok)
+
+rplx, err = e:compile('(Category.Zs)+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(not m)
+
+rplx, err = e:compile('{. Category.Zs / $}+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+
 
 ----------------------------------------------------------------------------------------
 heading("Ascii character classes")
