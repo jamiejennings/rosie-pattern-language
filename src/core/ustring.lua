@@ -33,7 +33,7 @@ function ustring.reduce(f, accum, str, i)
       local stopping_point = math.min(#str, i + 3)
       local ok, codepoint = pcall(utf8.codepoint, str, i, stopping_point)
       if ok then
-	 local cp = assert(codepoint)
+	 local cp = codepoint
 	 return ustring.reduce(f, f(accum, utf8.char(cp)), str, i+cp_len(cp))
       else
 	 return ustring.reduce(f, f(accum, str:sub(i, i)), str, i+1)
@@ -76,7 +76,7 @@ local function unicode_escape(s, start)
       return nil, "invalid unicode escape sequence: " .. ESC .. s:sub(start, start+4)
    end
    local codepoint = tonumber(hex_chars, 16)
-   assert((codepoint >= 0) and (codepoint <= 0xFFFF))
+--   assert((codepoint >= 0) and (codepoint <= 0xFFFF))
    return utf8.char(codepoint), start+5
 end
 
@@ -87,7 +87,7 @@ local function Unicode_escape(s, start)
       return nil, "invalid Unicode escape sequence: " .. ESC .. s:sub(start, start+8)
    end
    local codepoint = tonumber(hex_chars, 16)
-   assert(codepoint >= 0)
+--   assert(codepoint >= 0)
    if codepoint > 0x10FFFF then
       return nil,
 	 "invalid Unicode escape sequence (out of range): " .. ESC .. s:sub(start, start+8)
@@ -102,8 +102,6 @@ local function hex_escape(s, start)
       return nil, "invalid hex escape sequence: " .. ESC .. s:sub(start, start+2)
    end
    local byte_val = tonumber(hex_chars, 16)
-   assert(byte_val)
-   assert((byte_val >=0) and (byte_val <= 255))
    return string.char(byte_val), start+3
 end
 

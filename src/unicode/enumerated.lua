@@ -156,7 +156,7 @@ function enumerated.processPropertyFile(engine, filename, property_name, as_peg)
       source_patterns = patterns
       patterns = {}
       for name, source in pairs(source_patterns) do
-	 print("Compiling", name, source)
+	 print("Compiling", name, source:sub(1,40).."...")
 	 local rplx, errs = engine:compile(source)
 	 if not rplx then
 	    error(table.concat(list.map(violation.tostring, errs), "\n"))

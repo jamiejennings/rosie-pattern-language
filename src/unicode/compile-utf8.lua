@@ -205,6 +205,18 @@ function compile_utf8.codepoint_range(n, m)
    return expand_full_ranges(R(utf8.char(n), utf8.char(m)));
 end
 
+function flatten_star(range)
+   local op = range[1]
+   if op ~= "*" then
+      return {range}
+   else
+      local firsts = flatten_star(range[2])
+      local seconds = flatten_star(range[3])
+      table.move(seconds, 1, #seconds, #firsts+1, firsts)
+      return firsts
+   end
+end
+      
 function compile_utf8.compile_codepoint_range(range, as_peg)
    assert(type(range)=="table", "range not a table: " .. tostring(range))
    local op = range[1]
@@ -219,12 +231,20 @@ function compile_utf8.compile_codepoint_range(range, as_peg)
 	 end
       end
    elseif op=="*" then
-      local first = compile_utf8.compile_codepoint_range(range[2], as_peg)
-      local second = compile_utf8.compile_codepoint_range(range[3], as_peg)
-      if as_peg then
-	 return first * second			    -- lpeg *
+      local components = flatten_star(range)
+      local result = compile_utf8.compile_codepoint_range(components[1], as_peg)
+      for i=2,#components do
+	 local nextcomponent = compile_utf8.compile_codepoint_range(components[i], as_peg)
+	 if as_peg then
+	    result = result + nextcomponent	    -- lpeg +
+	 else
+	    result = result .. " " .. nextcomponent
+	 end
+      end
+      if #components > 1 then
+	 return "{" .. result .. "}"
       else
-	 return "{" .. first .. " " .. second .. "}"
+	 return result
       end
    elseif op=="+" then
       -- "+" takes from 1..k args
@@ -235,7 +255,7 @@ function compile_utf8.compile_codepoint_range(range, as_peg)
 	 if as_peg then
 	    result = result + nextcomponent	    -- lpeg +
 	 else
-	    result = result .. " / {" .. nextcomponent .. "}"
+	    result = result .. " / " .. nextcomponent
 	 end
       end
       return result

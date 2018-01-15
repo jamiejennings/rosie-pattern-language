@@ -39,7 +39,27 @@ local function raise_error(msg, a)
 						ast=a})
 end
 
-						
+-- Here is the bare beginnings of some compiler profiling:
+local PROFILE = false
+local PROFILE_PREFIX = "*prof* "
+local profile_print =
+   function(...)
+      io.stderr:write(PROFILE_PREFIX)
+      for _,item in ipairs({...}) do
+	 io.stderr:write(tostring(item))
+      end
+      io.stderr:flush()
+   end
+local profile_println =
+   function(...)
+      profile_print(...)
+      io.stderr:write('\n')
+      io.stderr:flush()
+   end
+local function time(since)
+   return (math.floor((os.clock() - since)*100000 + 0.5))/100 -- ms, rounded to nearest 1/100
+end
+
 ---------------------------------------------------------------------------------------------------
 -- Create parser
 ---------------------------------------------------------------------------------------------------
@@ -93,7 +113,18 @@ local function make_parser_from(parse_something, expected_pt_node)
 	     local origin = source_record.origin
 	     assert(type(src)=="string", "src is " .. tostring(src))
 	     assert(origin==nil or common.loadrequest.is(origin), "origin is: " .. tostring(origin))
+
+	     local t0
+	     if PROFILE then
+		profile_println("parsing block ")
+		t0 = os.clock()
+	     end
+	     
 	     local pt, syntax_errors, leftover = parse_something(src)
+	     if PROFILE then
+		profile_println("time = ", time(t0), "ms")
+	     end
+
 	     if not pt then
 		for _, err in ipairs(syntax_errors) do
 		   local ok = enqueue_syntax_error({data=src, type="rpl_language_declaration"},
@@ -103,7 +134,7 @@ local function make_parser_from(parse_something, expected_pt_node)
 		return false
 	     end
 	     if #syntax_errors > 0 then
-		-- TODO: Use the parse tree, pt, to help pinpoint the error (or use 'trace')
+		-- FUTURE: Use the parse tree, pt, to help pinpoint the error (or use 'trace')
 		local ok
 		for _, err in ipairs(syntax_errors) do
 		   for _, sub in ipairs(err.subs or {}) do
@@ -126,7 +157,16 @@ local function make_parser_from(parse_something, expected_pt_node)
 		table.insert(messages, err)
 		return false
 	     end
-	     return ast.from_parse_tree(pt, source_record, messages)
+	     if PROFILE then
+		profile_println("block to ast ")
+		t0 = os.clock()
+	     end
+	     
+	     local a = ast.from_parse_tree(pt, source_record, messages)
+	     if PROFILE then
+		profile_println("time = ", time(t0), "ms")
+	     end
+	     return a
 	  end
 end
 
@@ -175,13 +215,13 @@ end
 
 local function hashtag(a, env, prefix, messages)
    local str = a.value
-   assert(type(str)=="string")
+--   assert(type(str)=="string")
    a.pat = taggedvalue.new{type="hashtag"; value=str; ast=a}
    return a.pat
 end
 
 local function check_pattern(thing, a)
-   assert(a, "missing ast parameter?")
+--   assert(a, "missing ast parameter?")
    if not pattern.is(thing) then
       if novalue.is(thing) then throw(thing); end
       local msg = "type error: expected a pattern, received " .. tostring(thing)
@@ -191,12 +231,8 @@ local function check_pattern(thing, a)
    end
 end
 
-local function time(since)
-   return (math.floor((os.clock() - since)*100000 + 0.5))/100 -- ms, rounded to nearest 1/100
-end
-
 local function sequence(a, env, prefix, messages)
-   assert(#a.exps > 0, "empty sequence?")
+--   assert(#a.exps > 0, "empty sequence?")
    local e = expression(a.exps[1], env, prefix, messages)
    -- The meaning of a sequence of 1 item is the meaning of the item itself.
    if #a.exps == 1 then
@@ -207,7 +243,7 @@ local function sequence(a, env, prefix, messages)
 	 return e				    -- a taggedvalue
       end
    end
-   assert(#a.exps > 1)
+--   assert(#a.exps > 1)
    check_pattern(e, a.exps[1])
    local peg = e.peg
    for i = 2, #a.exps do
@@ -220,7 +256,7 @@ local function sequence(a, env, prefix, messages)
 end
 
 local function choice(a, env, prefix, messages)
-   assert(#a.exps > 0, "empty choice?")
+--   assert(#a.exps > 0, "empty choice?")
    local peg = expression(a.exps[1], env, prefix, messages).peg
    for i = 2, #a.exps do
       peg = peg + expression(a.exps[i], env, prefix, messages).peg
@@ -230,7 +266,7 @@ local function choice(a, env, prefix, messages)
 end
 
 local function and_exp(a, env, prefix, messages)
-   assert(#a.exps > 0, "empty and_exp?")
+--   assert(#a.exps > 0, "empty and_exp?")
    local last = #a.exps
    local peg = expression(a.exps[last], env, prefix, messages).peg
    for i = last-1, 1, -1 do
@@ -317,8 +353,8 @@ local function cs_range(a, env, prefix, messages)
       local invalid_end_msg =
 	 "invalid codepoint at end of range (where start of range is valid multi-byte codepoint)"
       local ok, cp1, cp2
-      assert(ustring.len(a.first)==1)		    -- checked during ast creation
-      assert(ustring.len(a.last)==1)		    -- checked during ast creation
+--      assert(ustring.len(a.first)==1)		    -- checked during ast creation
+--      assert(ustring.len(a.last)==1)		    -- checked during ast creation
       ok, cp1 = pcall(utf8.codepoint, a.first)
       if not ok then raise_error(invalid_start_msg, a); end
       ok, cp2 = pcall(utf8.codepoint, a.last)
@@ -342,7 +378,7 @@ local function utf8_charlist_to_peg(chars)
    local peg = lpeg.P(false)
    for _, char in ipairs(chars) do
       -- Length 1 is enforced by ustring.explode, called during ast creation:
-      assert(ustring.len(char)==1)	
+--      assert(ustring.len(char)==1)	
       peg = peg + lpeg.P(char)
    end
    return peg
@@ -377,7 +413,7 @@ function bracket(a, env, prefix, messages)
 end
 
 local function wrap_pattern(pat, name, optional_force_flag)
-   assert(type(name)=="string")
+--   assert(type(name)=="string")
    if pat.uncap then
       -- If pat.uncap exists, then pat.peg is already wrapped in a capture.  (N.B. The converse is
       -- NOT true for grammar expressions.) In order to wrap pat with a capture called 'name', we
@@ -588,29 +624,11 @@ function expression(a, env, prefix, messages)
    return a.pat
 end
 
--- Here is the bare beginnings of some compiler profiling:
-local PROFILE = false
-local PROFILE_PREFIX = "*prof* "
-local profile_print =
-   function(...)
-      io.stderr:write(PROFILE_PREFIX)
-      for _,item in ipairs({...}) do
-	 io.stderr:write(tostring(item))
-      end
-      io.stderr:flush()
-   end
-local profile_println =
-   function(...)
-      profile_print(...)
-      io.stderr:write('\n')
-      io.stderr:flush()
-   end
-
 local function compile_expression(exp, env, prefix, messages)
 
    local t0
    if PROFILE then
-      profile_println("compiling ", ast.tostring(exp))
+      profile_println("compiling ", ast.tostring(exp):sub(1,50), "...")
       t0 = os.clock()
    end
 
@@ -673,7 +691,7 @@ end
 
 function initialize_bindings(stmts, pkgenv, prefix, messages)
    for _, b in ipairs(stmts) do
-      assert(ast.binding.is(b))			    -- ensured by expand.block()
+--      assert(ast.binding.is(b))			    -- ensured by expand.block()
       local ref = b.ref
       if ref.packagename then
 	 table.insert(messages,

@@ -924,7 +924,7 @@ function ast.tostring(a, already_grouped)
    elseif ast.hashtag.is(a) then
       return '#' .. a.value
    elseif ast.string.is(a) then
-      return common.requote(a.value)
+      return ustring.requote(a.value)
    elseif ast.int.is(a) then
       return tostring(a.value)
    elseif ast.ldecl.is(a) then
