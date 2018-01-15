@@ -303,6 +303,7 @@ install_luac_bin:
 	mkdir -p "$(INSTALL_LIB_DIR)"
 	cp lib/*.luac "$(INSTALL_LIB_DIR)"
 
+# TODO: Parameterize this, or use a wildcard
 # Install the provided RPL patterns
 .PHONY: install_rpl
 install_rpl:
@@ -310,6 +311,10 @@ install_rpl:
 	cp rpl/*.rpl "$(INSTALL_RPL_DIR)"
 	mkdir -p "$(INSTALL_RPL_DIR)"/rosie
 	cp rpl/rosie/*.rpl "$(INSTALL_RPL_DIR)"/rosie/
+	mkdir -p "$(INSTALL_RPL_DIR)"/builtin
+	cp rpl/builtin/*.rpl "$(INSTALL_RPL_DIR)"/builtin/
+	mkdir -p "$(INSTALL_RPL_DIR)"/Unicode
+	cp rpl/Unicode/*.rpl "$(INSTALL_RPL_DIR)"/Unicode/
 
 # Install librosie
 .PHONY: install_librosie
