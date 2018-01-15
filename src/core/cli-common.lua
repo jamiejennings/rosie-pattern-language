@@ -12,6 +12,8 @@ local violation = require "violation"
 local list = require "list"
 map = list.map
 
+local write_error = function(...) io.stderr:write(...) end
+
 function p.load_string(en, input)
    local ok, pkgname, messages = en:load(input)
    if not ok then
@@ -19,7 +21,7 @@ function p.load_string(en, input)
       if ROSIE_DEV then
 	 error(err_string)
       else
-	 io.write("Cannot load rpl: \n", err_string)
+	 write_error("Cannot load rpl: \n", err_string)
 	 os.exit(-1)
       end
    end
@@ -30,7 +32,7 @@ function p.load_file(en, filename)
    local ok, pkgname, messages, actual_path = en:loadfile(filename)
    if not ok then
       if ROSIE_DEV then error("Cannot load file: \n" .. messages)
-      else io.write("Cannot load file: \n", messages); os.exit(-1); end
+      else write_error("Cannot load file: \n", messages); os.exit(-1); end
    end
    return ok, messages
 end
@@ -79,19 +81,19 @@ function p.setup_engine(en, args)
 	 local errs = {}
 	 local AST = en.compiler.parse_block(common.source.new{text=stm}, errs)
 	 if not AST then
-	    io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	    write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	    os.exit(-4)
 	 end
 	 
 	 local ok = import_dependencies(en, AST, errs)
 	 if not ok then
-	    io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	    write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	    os.exit(-4)
 	 end
 
 	 local success, msg = p.load_string(en, stm)
 	 if not success then
-	    io.stdout:write(msg, "\n")
+	    write_error(msg, "\n")
 	    os.exit(-4)
 	 end
       end
@@ -110,7 +112,7 @@ function p.setup_engine(en, args)
 
       local AST = en.compiler.parse_expression(common.source.new{text=expression}, errs)
       if not AST then
-	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	 write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 os.exit(-4)
       end
 
@@ -124,13 +126,13 @@ function p.setup_engine(en, args)
 
       local ok = import_dependencies(en, AST, errs)
       if not ok then
-	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	 write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 os.exit(-4)
       end
       local ok, errs
       compiled_pattern, errs = en:compile(AST)
       if not compiled_pattern then
-	 io.write(table.concat(map(violation.tostring, errs), "\n"), "\n")
+	 write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 os.exit(-4)
       end
    end

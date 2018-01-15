@@ -9,6 +9,8 @@
 local match = {}
 local cli_common = import("cli-common")
 
+local write_error = function(...) io.stderr:write(...) end
+
 -- FUTURE: use lua_filesystem equivalent instead of this:
 local function readable_file(fn)
    if fn=="" then return true; end			    -- "" means standard input
@@ -53,7 +55,7 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
       if ok then io.write(printable_infilename, ":\n"); end    -- print name of file before its output
    end
    if not ok then
-      io.stderr:write(printable_infilename, ": ", msg, "\n")
+      write_error(printable_infilename, ": ", msg, "\n")
       return
    end
    
@@ -67,14 +69,14 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
 	    (args.command=="trace") and trace_style or encoder,
 	    args.wholefile)
 
-   if not ok then io.write(cin, "\n"); return; end	-- cin is error message (a string) in this case
+   if not ok then write_error(cin, "\n"); return; end	-- cin is error message (a string) in this case
    
    -- (6) Print summary
    if args.verbose then
       local fmt = "Rosie: %d input item%s processed (%d matched, %d item%s unmatched)\n"
       local cin_plural = (cin ~= 1) and "s" or ""
       local cerr_plural = (cerr ~= 1) and "s" or ""
-      io.stderr:write(string.format(fmt, cin, cin_plural, cout, cerr, cerr_plural))
+      write_error(string.format(fmt, cin, cin_plural, cout, cerr, cerr_plural))
    end
 end
 

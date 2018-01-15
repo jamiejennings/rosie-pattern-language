@@ -40,31 +40,40 @@ function run(import, expression, grep_flag, expectations)
    test.heading(expression)
    test.subheading((grep_flag and "Using grep command") or "Using match command")
    local verb = (grep_flag and "Grepping for") or "Matching"
-   print("\nSTART ----------------- " .. verb .. " '" .. expression .. "' against fixed input -----------------")
    local import_option = ""
    if import then import_option = " --rpl '" .. import .. "' "; end
    local grep_extra_options = type(grep_flag)=="string" and (" " .. grep_flag .. " ") or ""
    local cmd = rosie_cmd .. grep_extra_options .. import_option ..
       (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
-   cmd = cmd .. " 2>/dev/null"
-   print(cmd)
+   cmd = cmd .. " 2>&1"
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
-   if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
+   if not results then
+      print(cmd)
+      print("\nTesting " .. verb .. " '" .. expression .. "' against fixed input ")
+      error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
    local mismatch_flag = false;
    if expectations then
+      if results[1]=="Loading rosie from source" then
+	 table.remove(results, 1)
+      end
       for i=1, #expectations do 
-	 print(results[i])
 	 if expectations then
-	    if results[i]~=expectations[i] then print("Mismatch"); mismatch_flag = true; end
+	    if results[i]~=expectations[i] then
+	       print(results[i])
+	       print("Mismatch")
+	       mismatch_flag = true
+	    end
 	 end
       end -- for
       if mismatch_flag then
-	 print("********** SOME MISMATCHED OUTPUT WAS FOUND. **********");
-      else
-	 print("END ----------------- All output matched expectations. -----------------");
+	 print(cmd)
+	 io.write("\nTesting " .. verb .. " '" .. expression .. "' against fixed input: ")
+	 print("SOME MISMATCHED OUTPUT WAS FOUND.");
       end
       if (not (#results==#expectations)) then
-	 print(string.format("********** Mismatched number of results (%d) versus expectations (%d) **********", #results, #expectations))
+	 print(cmd)
+	 io.write("\nTesting " .. verb .. " '" .. expression .. "' against fixed input: ")
+	 print(string.format("Received %d results, expected %d", #results, #expectations))
       end
       check((not mismatch_flag), "Mismatched output compared to expectations", 1)
       check((#results==#expectations), "Mismatched number of results compared to expectations", 1)
@@ -195,34 +204,42 @@ ok, ignore = pcall(run, "import word", '"Gold"', nil, nil)
 check(ok, [[testing for a shell quoting error in which rpl expressions containing double quotes
       were not properly passed to lua in bin/run-rosie]])
 
-print("\nChecking that the command line expression can contain [[...]] per Issue #22")
-cmd = rosie_cmd .. " list --rpl 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+'"
-print(cmd)
+cmd = rosie_cmd .. " list --rpl 'lua_ident = {[[:alpha:]] / \"_\" / \".\" / \":\"}+' 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "Expression on command line can contain [[.,.]]") -- command succeeded
 check(code==0, "Return code is zero")
 results_txt = table.concat(results, '\n')
 check(results_txt:find("lua_ident"))
 check(results_txt:find("names"))
+if (#results <=0) or (code ~= 0) then
+   print(cmd)
+   print("\nChecking that the command line expression can contain [[...]] per Issue #22")
+end
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Test command")
 
-print("\nSniff test of the lightweight test facility (MORE TESTS LIKE THIS ARE NEEDED)")
 -- Passing tests
-cmd = rosie_cmd .. " test " .. TEST_HOME .. "/lightweight-test-pass.rpl"
-print(cmd)
+cmd = rosie_cmd .. " test " .. TEST_HOME .. "/lightweight-test-pass.rpl 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0)
 check(code==0, "Return code is zero")
 check(results[#results]:find("tests passed"))
+if (#results <=0) or (code ~= 0) then
+   print(cmd)
+   print("\nSniff test of the lightweight test facility (MORE TESTS LIKE THIS ARE NEEDED)")
+end
+
 -- Failing tests
-cmd = rosie_cmd .. " test " .. TEST_HOME .. "/lightweight-test-fail.rpl"
-print(cmd)
+cmd = rosie_cmd .. " test " .. TEST_HOME .. "/lightweight-test-fail.rpl 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0)
 check(type(results[1])=="string")
 check(code~=0, "Return code not zero")
+if (#results <=0) or (code == 0) then
+   print(cmd)
+end
+
 -- The last two output lines explain the test failures in our sample input file
 local function split(s, sep)
    sep = lpeg.P(sep)
@@ -231,6 +248,9 @@ local function split(s, sep)
    return lpeg.match(p, s)
 end
 lines = split(results[1], "\n")
+if lines[1]=="Loading rosie from source" then
+   table.remove(lines, 1)
+end
 check(lines[1]:find("FAIL"))
 check(lines[2]:find("FAIL"))
 check(lines[3]:find("2 tests failed out of"))
@@ -239,11 +259,14 @@ check(lines[4]=="")
 ---------------------------------------------------------------------------------------------------
 test.heading("Config command")
 
-cmd = rosie_cmd .. " config"
-print(); print(cmd)
+cmd = rosie_cmd .. " config 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "config command failed")
 check(code==0, "Return code is zero")
+if (#results <=0) or (code ~= 0) then
+   print(cmd)
+end
+
 -- check for a few of the items displayed by the info command
 check(results[1]:find("ROSIE_HOME"))      
 check(results[1]:find("ROSIE_VERSION"))      
@@ -252,95 +275,80 @@ check(results[1]:find("ROSIE_COMMAND"))
 ---------------------------------------------------------------------------------------------------
 test.heading("Help command")
 
-cmd = rosie_cmd .. " help"
-print(); print(cmd)
+cmd = rosie_cmd .. " help 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code==0, "Return code is zero")
 check(results[1]:find("Usage:"))
 check(results[1]:find("Options:"))
 check(results[1]:find("Commands:"))
+if (#results <=0) or (code ~= 0) then
+   print(cmd)
+end
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Error reporting")
 
-cmd = rosie_cmd .. " -f test/nested-test.rpl grep foo test/resolv.conf"
-print(); print(cmd)
+cmd = rosie_cmd .. " -f test/nested-test.rpl grep foo test/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code ~= 0, "return code should not be zero")
--- _,_,results_table = util.split_path(results[1], "\n")
--- n = #results_table
--- check(results_table[1]:find("Error"))
--- check(results_table[2]:find("loader"))
--- check(results_table[2]:find("cannot open file"))
--- check(results_table[3]:find("in test/nested-test.rpl:2:1:", 1, true))
+if (#results <=0) or (code == 0) then
+   print(cmd)
+end
 msg = results[1]
 check(msg:find('loader'))
 check(msg:find('cannot open file'))
 check(msg:find("in test/nested-test.rpl:2:1:", 1, true))
 
-cmd = rosie_cmd .. " --libpath " .. TEST_HOME .. " -f test/nested-test2.rpl grep foo test/resolv.conf"
-print(); print(cmd)
+cmd = rosie_cmd .. " --libpath " .. TEST_HOME .. " -f test/nested-test2.rpl grep foo test/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code ~= 0, "return code should not be zero")
--- _,_,results_table = util.split_path(results[1], "\n")
--- check(results_table[1]:find("Syntax error"))
--- check(results_table[2]:find("parser"))
--- check(results_table[3]:find("test/mod4.rpl:2:1:", 1, true))
--- check(results_table[5]:find("in test/nested-test2.rpl:6:3:", 1, true))
+if (#results <=0) or (code == 0) then
+   print(cmd)
+end
+
 msg = results[1]
 check(msg:find("Syntax error"))
 check(msg:find("parser"))
 check(msg:find("test/mod4.rpl:2:1:", 1, true))
 check(msg:find("in test/nested-test2.rpl:6:3:", 1, true))
 
-
-cmd = rosie_cmd .. " -f test/mod1.rpl grep foonet.any /etc/resolv.conf"
-print(); print(cmd)
+cmd = rosie_cmd .. " -f test/mod1.rpl grep foonet.any /etc/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code ~= 0, "return code should not be zero")
--- _,_,results_table = util.split_path(results[1], "\n")
--- check(results_table[1]:find("error"))
--- check(results_table[2]:find("compiler"))
--- check(results_table[2]:find("unbound identifier"))
--- check(results_table[2]:find("foonet.any"))
--- check(results_table[3]:find("in user input :1:1"))
+if (#results <=0) or (code == 0) then
+   print(cmd)
+end
 msg = results[1]
 check(msg:find("error"))
 check(msg:find("loader"))
 check(msg:find("cannot open file"))
 check(msg:find("foonet.rpl"))
---check(msg:find("in user input :1:1"))
 
-cmd = rosie_cmd .. " -f test/mod4.rpl grep foonet.any /etc/resolv.conf "
-print(); print(cmd)
+cmd = rosie_cmd .. " -f test/mod4.rpl grep foonet.any /etc/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code ~= 0, "return code should not be zero")
--- _,_,results_table = util.split_path(results[1], "\n")
--- check(results_table[1]:find("error"))
--- check(results_table[2]:find("parser"))
--- check(results_table[3]:find("in test/mod4.rpl:2:1"))
--- check(results_table[3]:find("package !@#"))
+if (#results <=0) or (code == 0) then
+   print(cmd)
+end
 msg = results[1]
 check(msg:find("error"))
 check(msg:find("parser"))
 check(msg:find("in test/mod4.rpl:2:1"))
 check(msg:find("package !@#"))
 
-cmd = rosie_cmd .. " --libpath test -f test/nested-test3.rpl grep foo test/resolv.conf"
+cmd = rosie_cmd .. " --libpath test -f test/nested-test3.rpl grep foo test/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code ~= 0, "return code should not be zero")
--- _,_,results_table = util.split_path(results[1], "\n")
--- check(results_table[1]:find("error"))
--- check(results_table[2]:find("loader"))
--- check(results_table[2]:find("not a module"))
--- check(results_table[3]:find("in test/nested-test2.rpl", 1, true))
--- check(results_table[4]:find("in test/nested-test3.rpl:5:2", 1, true))
+if (#results <=0) or (code == 0) then
+   print(cmd)
+end
+
 msg = results[1]
 check(msg:find("error"))
 check(msg:find("loader"))
@@ -348,10 +356,14 @@ check(msg:find("not a module"))
 check(msg:find("in test/nested-test2.rpl", 1, true))
 check(msg:find("in test/nested-test3.rpl:5:2", 1, true))
 
-cmd = rosie_cmd .. " --rpl 'import net' list net.*"
+cmd = rosie_cmd .. " --rpl 'import net' list net.* 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code == 0, "return code should be zero")
+if (#results <=0) or (code ~= 0) then
+   print(cmd)
+end
+
 msg = results[1]
 nextline = util.string_nextline(msg)
 line = nextline()
