@@ -91,7 +91,10 @@ def new_cstr(py_string=None):
         return ffi.gc(obj, free_cstr_ptr)
 
 def read_cstr(cstr_ptr):
-    return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
+    if cstr_ptr.ptr == ffi.NULL:
+        return None
+    else:
+        return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
 
 # -----------------------------------------------------------------------------
 
@@ -162,12 +165,8 @@ class engine ():
         if ok != 0:
             raise RuntimeError("compile() failed (please report this as a bug)")
         if Cpat[0] == 0:
-            pat = None
-            errs = read_cstr(Cerrs)
-        else:
-            pat = Cpat
-            errs = None
-        return pat, errs
+            Cpat = None
+        return Cpat, read_cstr(Cerrs)
 
     def load(self, src):
         Cerrs = new_cstr()
@@ -178,7 +177,6 @@ class engine ():
         if ok != 0:
             raise RuntimeError("load() failed (please report this as a bug)")
         errs = read_cstr(Cerrs)
-        if errs == '{}': errs = None
         pkgname = read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
@@ -191,7 +189,6 @@ class engine ():
         if ok != 0:
             raise RuntimeError("loadfile() failed (please report this as a bug)")
         errs = read_cstr(Cerrs)
-        if errs == '{}': errs = None
         pkgname = read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
@@ -204,9 +201,8 @@ class engine ():
         ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cactual_pkgname, Cerrs)
         if ok != 0:
             raise RuntimeError("import() failed (please report this as a bug)")
-        actual_pkgname = read_cstr(Cactual_pkgname) if Cactual_pkgname.ptr != ffi.NULL else None
+        actual_pkgname = read_cstr(Cactual_pkgname) #if Cactual_pkgname.ptr != ffi.NULL else None
         errs = read_cstr(Cerrs)
-        if errs == '{}': errs = None
         return Csuccess[0], actual_pkgname, errs
 
     def match(self, Cpat, input, start, encoder):

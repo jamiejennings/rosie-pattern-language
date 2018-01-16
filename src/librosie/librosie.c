@@ -211,37 +211,47 @@ static int boot (lua_State *L, str *messages) {
   return TRUE;
 }
 
-str to_json_string(lua_State *L, int pos) {
+/* FUTURE: Return any errors from the json encoder to the client? */
+int to_json_string(lua_State *L, int pos, str *json_string) {
      size_t len;
      byte_ptr str;
      int t;
      int top = lua_gettop(L);
      get_registry(json_encoder_key);
      lua_pushvalue(L, pos-1);                /* offset because we pushed json_encoder */
+     *json_string = rosie_string_from(NULL, 0);
+     if (!lua_istable(L, pos)) return ERR_SYSCALL_FAILED;
+     /* When the messages table is empty, be sure to return a null rosie_string */
+     lua_pushnil(L);
+     if (!lua_next(L, pos-1)) {
+       return LUA_OK;
+     } else {
+       lua_pop(L, 2);
+     }
      t = lua_pcall(L, 1, LUA_MULTRET, 0);
      if (t != LUA_OK) {
        LOG("call to json encoder failed\n"); /* more detail may not be useful to the user */
        LOGstack(L);
-       return rosie_string_from(NULL, 0);
+       return ERR_SYSCALL_FAILED;
      }
      if ((lua_gettop(L) - top) > 1) {
        /* Top of stack is error msg */
        LOG("call to json encoder returned more than one value\n");
        if (lua_isstring(L, -1) && lua_isnil(L, -2)) {
-	 /* FUTURE: return the error from the json encoder to the client */
 	 LOGf("error message from json encoder: %s\n", lua_tolstring(L, -1, NULL));
 	 LOGstack(L);
-	 return rosie_string_from(NULL, 0);
+	 return ERR_SYSCALL_FAILED;
        }
        else {
 	 /* Something really strange happened!  Is there any useful info to return? */
 	 LOG("call to json encoder returned unexpected values\n");
 	 LOGstack(L);
-	 return rosie_string_from(NULL, 0);
+	 return ERR_SYSCALL_FAILED;
        }
      }
      str = (byte_ptr) lua_tolstring(L, -1, &len);
-     return rosie_new_string(str, len);
+     *json_string = rosie_new_string(str, len);
+     return LUA_OK;
 }
 
 static int strip_violation_messages(lua_State *L) {
@@ -376,8 +386,8 @@ int rosie_config(Engine *e, str *retval) {
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
-  r = to_json_string(e->L, -1);
-  if (r.ptr == NULL) {
+  t = to_json_string(e->L, -1, &r);
+  if (t != LUA_OK) {
     LOG("in config(), could not convert config information to json\n");
     *retval = rosie_new_string_from_const("in config(), could not convert config information to json");
     lua_settop(e->L, 0);
@@ -491,8 +501,8 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   if ( lua_isboolean(L, -2) ) {
     *pat = 0;
     CHECK_TYPE("compile messages", lua_type(L, -1), LUA_TTABLE);
-    temp_rs = to_json_string(L, -1);
-    if (temp_rs.ptr == NULL) {
+    t = to_json_string(L, -1, &temp_rs);
+    if (t != LUA_OK) {
       LOG("in compile() could not convert compile messages to json\n");
       lua_settop(L, 0);
       RELEASE_ENGINE_LOCK(e);
@@ -514,8 +524,8 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
 #endif
   LOGf("storing rplx object at index %d\n", *pat);
 
-  temp_rs = to_json_string(L, -1);
-  if (temp_rs.ptr == NULL) {
+  t = to_json_string(L, -1, &temp_rs);
+  if (t != LUA_OK) {
     LOG("in compile(), could not convert warning information to json\n");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
@@ -737,7 +747,11 @@ have_pattern:
   (*matched) = lua_toboolean(L, -2);
 
   if (lua_istable(L, -1)) {
-    rs = to_json_string(L, -1);
+    t = to_json_string(L, -1, &rs);
+    if (t != LUA_OK) {
+      rs = rosie_new_string_from_const("error: could not convert trace data to json");      
+      goto fail_with_message;
+    }
   }
   else if (lua_isstring(L, -1)) {
     byte_ptr temp_str;
@@ -753,6 +767,8 @@ have_pattern:
     return ERR_ENGINE_CALL_FAILED;
   }
 
+ fail_with_message:
+  
   (*trace).ptr = rs.ptr;
   (*trace).len = rs.len;
 
@@ -798,14 +814,14 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
     pkgname->len = 0;
   }
   
-  temp_rs = to_json_string(L, -1);
-  if (temp_rs.ptr == NULL) {
+  t = to_json_string(L, -1, &temp_rs);
+  if (t != LUA_OK) {
     LOG("in load(), could not convert error information to json\n");
-    *messages = rosie_new_string_from_const("in load(), could not convert error information to json");
-    lua_settop(L, 0);
-    RELEASE_ENGINE_LOCK(e);
-    return ERR_ENGINE_CALL_FAILED;
+    temp_rs = rosie_new_string_from_const("in load(), could not convert error information to json");
+    goto fail_load_with_messages;
     }
+
+ fail_load_with_messages:
   (*messages).ptr = temp_rs.ptr;
   (*messages).len = temp_rs.len;
 
@@ -862,8 +878,8 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED; 
   } 
-  temp_rs = to_json_string(L, -1);
-  if (temp_rs.ptr == NULL) {
+  t = to_json_string(L, -1, &temp_rs);
+  if (t != LUA_OK) {
     LOG("in load(), could not convert error information to json\n");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
@@ -929,8 +945,8 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname,
     return ERR_ENGINE_CALL_FAILED; 
   } 
 
-  temp_rs = to_json_string(L, -1);
-  if (temp_rs.ptr == NULL) {
+  t = to_json_string(L, -1, &temp_rs);
+  if (t != LUA_OK) {
     LOG("in import(), could not convert error information to json\n");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);

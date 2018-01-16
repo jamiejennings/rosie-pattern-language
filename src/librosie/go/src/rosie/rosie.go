@@ -10,14 +10,7 @@
 package rosie
 
 // #cgo LDFLAGS: ${SRCDIR}/librosie.a -lm -ldl
-// #include <assert.h>
-// #include <signal.h>
-// #include <stdio.h>
 // #include <stdlib.h>
-// #include <string.h>
-// #include <stdarg.h>
-// #include <dlfcn.h>
-// #include <libgen.h>
 // #include "librosie.h"
 //
 // char *to_char_ptr(uint8_t *buf) {
@@ -28,7 +21,7 @@ package rosie
 // }
 // int *new_int() { return (int *)malloc(sizeof(int)); }
 //
-// #cgo CFLAGS: -fpermissive -I./include
+// #cgo CFLAGS: -I./include
 import "C"
 
 //import "unsafe"
@@ -40,24 +33,25 @@ import "encoding/json"
 //import "sort"
 //import "strconv"
 
-//type rosieStringType C.struct_rosie_string
+type (
+	RosieString = C.struct_rosie_string
+)
 
 // goString converts a rosie string to a go string
-func goString(cstr C.struct_rosie_string) string {
+func goString(cstr RosieString) string {
 	return C.GoStringN(C.to_char_ptr(cstr.ptr), C.int(cstr.len))
 }
 
 // rosieString converts a go string to a rosie string
-func rosieString(s string) C.struct_rosie_string {
+func rosieString(s string) RosieString {
 	var cstr = C.rosie_new_string(C.to_uint8_ptr(C.CString(s)), C.size_t(len(s)))
 	return cstr
 }
 
-func rosieStringPtr(s string) *C.struct_rosie_string {
+func rosieStringPtr(s string) *RosieString {
 	var cstr_ptr = C.rosie_new_string_ptr(C.to_uint8_ptr(C.CString(s)), C.size_t(len(s)))
 	return cstr_ptr
 }
-
 
 type Engine struct {
  	ptr *C.struct_rosie_engine
@@ -70,8 +64,6 @@ func New(name string) (en *Engine, err error) {
 	en_ptr, err = C.rosie_new(&messages)
 	if en_ptr == nil {
 		var printable_message string
-		fmt.Printf("Return value from initialize was NULL!\n")
-		fmt.Printf("Err field returned by initialize was: %v\n", err)
 		if messages.ptr == nil || messages.len == 0 {
 			printable_message = "initialization failed with an unknown error"
 		} else {
@@ -86,47 +78,62 @@ func New(name string) (en *Engine, err error) {
 
 
 func finalizeEngine(en *Engine) {
-	fmt.Println("Finalizing engine ", en)
 	C.rosie_finalize(en.ptr)
 }
 		
 
 type Configuration [] map[string] string
 
-
-func (en *Engine) Config(cfg *Configuration) error {
+func (en *Engine) Config() (cfg Configuration, err error) {
 	var data C.struct_rosie_string
  	ok, err := C.rosie_config(en.ptr, &data)
- 	if ok == 0 {
- 		cfgString := goString(data)
- 		err = json.Unmarshal([]byte(cfgString), &cfg)
- 		if err != nil {
-			return error(err)
- 		}
-		return nil
- 	} else {
-		return error(err)
- 	}
+	if ok != 0 {
+		return nil, err
+	}
+	err = json.Unmarshal([]byte(goString(data)), &cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
-//type Pattern C.int
+type (
+	Pattern = C.int
+)
 
-func (en *Engine) Compile(exp string) (pat int, err error) {
-	var foo = "foo"
- 	var CexpPtr = rosieStringPtr(exp)
-	var CdataPtr = rosieStringPtr(foo)
-//	var Cpat = C.int(0)
-//	var CpatPtr = &Cpat
-	var CpatPtr = C.new_int()
+type (
+	Messages = [] interface{}
+)
 
-//	fmt.Println(en, goString(Cexp), Cpat, goString(Cdata))
- 	ok := C.rosie_compile(en.ptr, CexpPtr, CpatPtr, CdataPtr)
- 	if ok != 0 {
-		// TODO: return data as well, which contains warnings and errors
-		return pat, err //errors.New("compile failed")
+func mungeMessages(Cmessages RosieString) (messages Messages, err error) {
+	if Cmessages.ptr != nil {
+		err := json.Unmarshal([]byte(goString(Cmessages)), &messages)
+		fmt.Printf("*** err from Unmarshal is %v\n", err)
+		fmt.Printf("*** input: %s\n", goString(Cmessages))
+		if err != nil {
+			return nil, err
+		}
+		if len(messages) != 0 {
+			return messages, nil
+		}
  	} 
-	pat = int(*CpatPtr)
-	return pat, nil
+	return nil, nil
+}
+
+func (en *Engine) Compile(exp string) (pat Pattern, messages Messages, err error) {
+ 	var CexpPtr = rosieStringPtr(exp)
+	var Cmessages RosieString
+	pat = C.int(0)
+
+ 	ok, err := C.rosie_compile(en.ptr, CexpPtr, &pat, &Cmessages)
+ 	if ok != 0 {
+		return pat, nil, err
+	}
+	messages, err = mungeMessages(Cmessages)
+	if err != nil {
+		pat = C.int(0)
+	}
+	return pat, messages, err
 }
 
 // 	var foo string = "1111111111222222222211111111112222222222111111111122222222221111111111222222222211111111112222222222"

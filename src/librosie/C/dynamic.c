@@ -44,7 +44,9 @@ void *librosie;
      } while (0)
 
 
-/* RTLD_GLOBAL needed on Ubuntu, but not Fedora/Centos/Arch family.  Why? */
+#define STR(literal) (*fp_rosie_new_string)((byte_ptr)(literal), strlen((literal)));
+
+/* Note: RTLD_GLOBAL is not default on Ubuntu.  Must be explicit.*/
 static int init(const char *librosie_path){
   librosie = dlopen(librosie_path, RTLD_NOW | RTLD_GLOBAL);
   if (librosie == NULL) {
@@ -149,8 +151,6 @@ int main(int argc, char **argv) {
     exitStatus = -4;
     goto quit;
   }
-
-#define STR(literal) (*fp_rosie_new_string)((byte_ptr)(literal), strlen((literal)));
 
   int pat;
   str expression = STR("all.things");

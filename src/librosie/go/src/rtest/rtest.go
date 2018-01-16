@@ -37,8 +37,7 @@ func main() {
 	runtime.GC()
 	fmt.Printf("Engine is %v\n", engine)
 
-	var cfg rosie.Configuration
- 	err = engine.Config(&cfg)
+ 	cfg, err := engine.Config()
 	if err == nil {
 		for _, entry := range cfg {
 			fmt.Printf("%s = %s (%s)\n", entry["name"], entry["value"], entry["desc"])
@@ -48,18 +47,34 @@ func main() {
  		os.Exit(-1)
  	}
 
-	for i:=0; i<100; i++ {
+	fmt.Println("The next compilation is expected to fail.")
+	pat, msgs, err := engine.Compile("foo")
+	fmt.Printf("Pattern returned is %v\n", pat)
+	if msgs != nil {
+		fmt.Println("Messages are:")
+		fmt.Println(msgs)
+	}
+
+
+	for i:=0; i<10; i++ {
 
 		runtime.GC()
 	
 		exp := "[:digit:]+"
-		pat, err := engine.Compile(exp)
+		pat, msgs, err := engine.Compile(exp)
 
 		if err != nil {
 			fmt.Println(pat, err)
 			os.Exit(-1)
 		} else {
-			fmt.Println("Successfully compiled pattern", pat)
+			if pat != 0 {
+				fmt.Println("Successfully compiled pattern", pat)
+			} else {
+				fmt.Println("FAILED TO compile pattern", pat)
+			}
+			if msgs != nil {
+				fmt.Println(msgs)
+			}
 		}
 	}
 
