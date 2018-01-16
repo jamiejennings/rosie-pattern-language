@@ -428,8 +428,10 @@ end
 
 function expression(e, a, input, start)
    local pat = a.pat
-   assert(pattern.is(pat),
-	  "no pattern stored in ast node " .. tostring(a) .. " (found " .. tostring(pat) .. ")")
+   if not pattern.is(pat) then
+      error("Internal error: no pattern stored in ast node " .. ast.tostring(a)
+	 .. " (found " .. tostring(pat) .. ")")
+   end
    local peg = common.match_node_wrap(pat.peg, "*")
    local ok, m, leftover = pcall(rmatch, peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
    if not ok then
