@@ -11,7 +11,7 @@ mkdir -p src/rosie/include
 ln -fs $LIB/librosie.h src/rosie/include/
 ln -fs $RPEGLIB/rpeg.h src/rosie/include/
 ln -fs $RPEGLIB/rbuf.h src/rosie/include/
-ln -fs $LUALIB/luaxlib.h src/rosie/include/
+ln -fs $LUALIB/lauxlib.h src/rosie/include/
 
 echo "Linking librosie.a from librosie directory"
 ln -fs $LIB/librosie.a src/rosie/librosie.a
