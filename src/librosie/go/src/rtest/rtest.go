@@ -49,10 +49,14 @@ func main() {
 
 	fmt.Println("The next compilation is expected to fail.")
 	pat, msgs, err := engine.Compile("foo")
-	fmt.Printf("Pattern returned is %v\n", pat)
+	if pat == 0 {
+		fmt.Printf("And it failed as expected: pattern returned is %v\n", pat)
+	} else {
+		fmt.Printf("ERROR: received a valid pattern %v\n", pat)
+		os.Exit(-1)
+	}
 	if msgs != nil {
-		fmt.Println("Messages are:")
-		fmt.Println(msgs)
+		fmt.Println("Messages are: ", msgs)
 	}
 
 

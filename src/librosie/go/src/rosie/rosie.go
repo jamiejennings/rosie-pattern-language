@@ -26,7 +26,7 @@ import "C"
 
 //import "unsafe"
 import "errors"
-import "fmt"
+//import "fmt"
 import "runtime"
 import "encoding/json"
 //import "os"
@@ -108,8 +108,6 @@ type (
 func mungeMessages(Cmessages RosieString) (messages Messages, err error) {
 	if Cmessages.ptr != nil {
 		err := json.Unmarshal([]byte(goString(Cmessages)), &messages)
-		fmt.Printf("*** err from Unmarshal is %v\n", err)
-		fmt.Printf("*** input: %s\n", goString(Cmessages))
 		if err != nil {
 			return nil, err
 		}
