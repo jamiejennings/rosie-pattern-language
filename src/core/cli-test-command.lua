@@ -71,13 +71,12 @@ local function indent(str, col)
 end
 
 function p.run(rosie, en, args, filename)
-   local right_column = 28
+   local right_column = 4
    -- fresh engine for testing this file
    local test_engine = rosie.engine.new()
    -- set it up using whatever rpl strings or files were given on the command line
    cli_common.setup_engine(test_engine, args)
-   local shortfilename = shorten(filename, right_column-3)
-   io.stdout:write(shortfilename, string.rep(".", right_column-#shortfilename))
+   io.stdout:write(filename, '\n')
    -- load the rpl code we are going to test (second arg true means "do not search")
    local ok, pkgname, errs, actual_path = test_engine:loadfile(filename, true)
    if not ok then
@@ -86,13 +85,8 @@ function p.run(rosie, en, args, filename)
       io.write(indent(msg, right_column), "\n")
       return false, 0, 0
    end
-   local first_error = true
    local function write_test_result(...)
-      if not first_error then
-	 io.write(string.rep(" ", right_column))
-      else
-	 first_error = false;
-      end
+      io.write(string.rep(" ", right_column))
       for _,item in ipairs{...} do io.write(item); end
       io.write("\n")
    end

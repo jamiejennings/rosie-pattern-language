@@ -206,7 +206,7 @@ local function run(args)
 	 total_tests = total_tests + total
       end
       if args.verbose and (#args.filenames > 1) then
-	 print("TOTALS:")
+	 print("\nTOTALS:")
 	 io.stdout:write(tostring(#args.filenames), " files, ")
 	 if total_files == total_compiled then
 	    io.stdout:write("all compiled successfully\n")

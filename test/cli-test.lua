@@ -251,10 +251,10 @@ lines = split(results[1], "\n")
 if lines[1]=="Loading rosie from source" then
    table.remove(lines, 1)
 end
-check(lines[1]:find("FAIL"))
+check(lines[1]:find("lightweight-test-fail.rpl", 1, true))
 check(lines[2]:find("FAIL"))
-check(lines[3]:find("2 tests failed out of"))
-check(lines[4]=="")
+check(lines[3]:find("FAIL"))
+check(lines[4]:find("2 tests failed out of"))
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Config command")
