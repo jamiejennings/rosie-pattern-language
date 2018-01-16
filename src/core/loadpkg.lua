@@ -159,9 +159,21 @@ end
 local load_dependencies;
 
 local function parse_block(compiler, source_record, messages)
+
+   local t0
+   if PROFILE then
+      t0 = os.clock()
+      profile_println("importing (parsing / parse_block) ", tostring(source_record.origin and source_record.origin.filename))
+   end
    local a = compiler.parse_block(source_record, messages)
    if not a then return false; end		    -- errors will be in messages table
+   if PROFILE then
+      profile_println("parsing / parse_block time = ", time(t0), "ms")
+      t0 = os.clock()
+      profile_println("importing (parsing / validate_block) ", tostring(source_record.origin and source_record.origin.filename))
+   end
    if not validate_block(a, messages) then return false; end
+   if PROFILE then profile_println("parsing / validate_block time = ", time(t0), "ms"); end
    -- Via side effects, a.block_pdecl and a.block_ideclists are now filled in.
    return a
 end

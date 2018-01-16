@@ -116,13 +116,12 @@ local function make_parser_from(parse_something, expected_pt_node)
 
 	     local t0
 	     if PROFILE then
-		profile_println("parsing block ")
 		t0 = os.clock()
 	     end
 	     
 	     local pt, syntax_errors, leftover = parse_something(src)
 	     if PROFILE then
-		profile_println("time = ", time(t0), "ms")
+		profile_println("compile.parse_block time = ", time(t0), "ms")
 	     end
 
 	     if not pt then
@@ -158,13 +157,12 @@ local function make_parser_from(parse_something, expected_pt_node)
 		return false
 	     end
 	     if PROFILE then
-		profile_println("block to ast ")
 		t0 = os.clock()
 	     end
 	     
 	     local a = ast.from_parse_tree(pt, source_record, messages)
 	     if PROFILE then
-		profile_println("time = ", time(t0), "ms")
+		profile_println("block to ast time = ", time(t0), "ms")
 	     end
 	     return a
 	  end
@@ -626,26 +624,26 @@ end
 
 local function compile_expression(exp, env, prefix, messages)
 
-   local t0
-   if PROFILE then
-      profile_println("compiling ", ast.tostring(exp):sub(1,50), "...")
-      t0 = os.clock()
-   end
+   -- local t0
+   -- if PROFILE then
+   --    profile_println("compiling ", ast.tostring(exp):sub(1,50), "...")
+   --    t0 = os.clock()
+   -- end
 
    local ok, value = catch(expression, exp, env, prefix, messages)
 
-   if PROFILE then
-      profile_println("time = ", time(t0), "ms")
-      collectgarbage('collect')
-      profile_println("heapsize = ", math.floor(collectgarbage('count')+0.5), "Kb")
-      if pattern.is(value) then
-	 local treesize = math.floor(((lpeg.usize(value.peg)+512)*10)/1024)/10
-	 --local inst = lpeg.codegen(value.peg)
-	 --profile_println("#inst = ", inst)
-	 profile_println("treesize = ", treesize, "Kb")
-	 profile_println()
-      end
-   end
+   -- if PROFILE then
+   --    profile_println("time = ", time(t0), "ms")
+   --    collectgarbage('collect')
+   --    profile_println("heapsize = ", math.floor(collectgarbage('count')+0.5), "Kb")
+   --    if pattern.is(value) then
+   -- 	 local treesize = math.floor(((lpeg.usize(value.peg)+512)*10)/1024)/10
+   -- 	 --local inst = lpeg.codegen(value.peg)
+   -- 	 --profile_println("#inst = ", inst)
+   -- 	 profile_println("treesize = ", treesize, "Kb")
+   -- 	 profile_println()
+   --    end
+   -- end
 
    if not ok then
       local full_message = "Internal error in compile_expression:" .. tostring(value) .. "\n"

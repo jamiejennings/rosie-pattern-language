@@ -243,6 +243,11 @@ end
 function common.rmatch(peg, input, start, rmatch_encoder, fn_encoder, total_time, lpegvm_time)
    local m, leftover, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
    if not m then return false, start, abend, t1, t2; end
+   -- local t0
+   -- t0 = os.clock()
+   -- results = {fn_encoder(m, input, start), leftover, abend, t1, t2}
+   -- print("*** fn_encoder time = ", (os.clock()-t0)*1000)
+   -- return table.unpack(results)
    return fn_encoder(m, input, start), leftover, abend, t1, t2
 end
 
