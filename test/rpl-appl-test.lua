@@ -385,35 +385,24 @@ msg = table.concat(list.map(violation.tostring, errs), '\n')
 check(msg)
 if msg then check(msg:find('can match the empty string')); end
 
---[[
-check(false, "NOT TESTING BRACKET EXPS")
-
 subheading("Message inside brackets")
 
-p, errs = e:compile('[message:#Hello]')
+p, errs = e:compile('[[]message:#Hello]')
 check(p)
+if not p then print("ERRORS ARE"); table.print(errs); end
 ok, m, leftover = e:match(p, "")
 check(ok)
-check(not m)
+check(m)
+check(m.type=="*")
+check(m.subs and m.subs[1] and m.subs[1].type=="message")
 
-test_message('[message:#Hello]', "a")
+test_message('[[a]message:#Hello]', "a")
 check(m.data=="a")
 check(m.subs==nil)
 check(leftover==0)
 
-test_message('[message:#Hello]+', "a b")
-check(m.data=="a")
-check(m.subs==nil)
-check(leftover==2)
 
-test_message('[ {message:#Hello}+ ]', "ab")
-check(m.data=="a")
-check(m.subs==nil)
-check(leftover==1)
-
-print("*** "); table.print(m)
---]]
-
+--[[ Removed halt on Tuesday, January 16, 2018 because it's not useful by itself.
 subheading("Halt")
 
 function test_halt(exp, input)
@@ -426,7 +415,6 @@ function test_halt(exp, input)
    else
       ok, m, leftover, abend = e:match(p, input)
       check(ok, "match failed to execute", 1)
---print("***", m, leftover, abend, "***")
    end
 end
 
@@ -523,52 +511,8 @@ end
 check(abend==true)
 check(leftover==7)
 
-
-
-
-
---[[
-test_message('message:#Hello', "abc")
-check(m.data=="")
-check(#m.subs==1)
-check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
-check(leftover==3)
-
-test_message('{"ab" message:#Hello}', "abc")
-check(m.data=="ab")
-check(#m.subs==1)
-check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
-check(leftover==1)
-
-test_message('"abc" message:#Hello', "abc")
-check(m.data=="abc")
-check(#m.subs==1)
-check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
-check(leftover==0)
-
-test_message('"abc" message:#Hello', "abc def")
-check(m.data=="abc ")
-check(#m.subs==1)
-check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
-check(leftover==3)
-
-test_message('"abc" message:#Hello "def"', "abc def")
-check(m.data=="abc def")
-check(#m.subs==1)
-check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
-check(leftover==0)
-
-test_message('"abc" / message:#Hello', "abc")
-check(m.data=="abc")
-check(m.subs==nil)
-check(leftover==0)
-
-test_message('"abc" / message:#Hello', "ab")
-check(m.data=="")
-check(#m.subs==1)
-check(m.subs[1].type=="message" and m.subs[1].data=="Hello")
-check(leftover==2)
 --]]
+
 
 ----------------------------------------------------------------------------------------
 heading("Case sensitivity")

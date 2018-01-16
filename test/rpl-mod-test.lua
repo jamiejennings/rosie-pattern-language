@@ -100,7 +100,6 @@ check(p)
 ok, m, left, t0 = e:match("name_is_unexpectedly_different_from_file_name.y", "hello world")
 check(ok)
 check(m)
---table.print(m, false)
 
 -- ensure that the package name is the one in the module source (i.e. the package declaration in
 -- mod3.rpl) and not the name in the import declaration ("import mod3" above).
@@ -201,8 +200,6 @@ ok, pkgname, msgs = e:import("mod8")
 check(ok)
 check(pkgname=="mod8")
 msg = table.concat(map(violation.tostring, msgs), "\n")
---check(msg:find("Info") and msg:find("consists only of declarations"))
-print("***", msg)
 
 
 -- return the test results in case this file is being called by another one which is collecting
