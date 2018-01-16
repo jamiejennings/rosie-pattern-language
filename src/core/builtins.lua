@@ -143,7 +143,7 @@ local s_peg = locale.space
 local w_peg = lpeg.R"AZ" + lpeg.R"az" + lpeg.R"09"
 local b_peg = #w_peg - lpeg.B(w_peg)
 local pb_peg = #locale.punct + lpeg.B(locale.punct)
-local sb_peg = (lpeg.B(s_peg) - #s_peg) + (#s_peg - lpeg.B(s_peg))
+local sb_peg = (lpeg.B(s_peg) - #s_peg) --+ (#s_peg - lpeg.B(s_peg))
 
 local boundary = ( s_peg^1
 		   + b_peg
@@ -158,7 +158,7 @@ local b_id = common.boundary_identifier
 local dot_id = common.any_char_identifier
 local eol_id = common.end_of_input_identifier
 local sol_id = common.start_of_input_identifier
-local halt_id = common.halt_pattern_identifier
+--local halt_id = common.halt_pattern_identifier
 
 -- -----------------------------------------------------------------------------
 -- Message, error, and halt
@@ -213,9 +213,6 @@ builtins.sourceref = common.source.new{s=0, e=0,
 				       text="",
 				       parent=nil}
 
--- TODO: Decide whether to keep 'halt' in the env as a pattern, or expose it only as a macro that
--- expands to the halt pattern.  (Or a pfunction that...)
-
 -- ENV is the standard prelude.  The actual structure is read-only so that it can be shared
 -- between environments (within an engine and across engines in the same Lua state).
 local ENV = {}
@@ -224,7 +221,7 @@ local prelude_entries = {
    {eol_id, pattern, lpeg.P(-1), true},
    {sol_id, pattern, -lpeg.B(1), true},		    -- start of input
    {b_id, pattern, boundary, true},		    -- token boundary
-   {halt_id, pattern, lpeg.Halt(), true},
+--   {halt_id, pattern, lpeg.Halt(), true},
    {"message", pfunction, message_peg},
    {"error", pfunction, error_peg},
    {"keepto", macro, macro_keepto},
@@ -234,17 +231,20 @@ local prelude_entries = {
 }
 
 for _, e in ipairs(prelude_entries) do
-   local ref = ast.ref.new{localname=e[1],
-			   sourceref=builtins.sourceref}
    if e[2]==pattern then
-      ENV[e[1]] = e[2].new{name=e[1]; peg=e[3]; alias=e[4]; ast=ref}
+      pat = e[2].new{name=e[1]; peg=e[3]; alias=e[4]}
    elseif e[2]==pfunction then
-      ENV[e[1]] = e[2].new{primop=e[3]; ast=ref}
+      pat = e[2].new{primop=e[3]}
    elseif e[2]==macro then
-      ENV[e[1]] = e[2].new{primop=e[3]; ast=ref}
+      pat = e[2].new{primop=e[3]}
    else
       error("error initializing standard prelude")
    end
+   local a = ast.ref.new{localname=e[1],
+			 sourceref=builtins.sourceref,
+			 pat=pat}
+   pat.ast = a
+   ENV[e[1]] = pat
 end
       
 setmetatable(ENV, {__tostring = function(env)
