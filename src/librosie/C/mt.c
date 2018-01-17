@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
     if (err) {
       printf("Error in pthread_create(), thread #%d\n", i);
       fflush(NULL);
-      thread[i] = NULL;
+      thread[i] = (pthread_t)NULL;
     }
   }
   
