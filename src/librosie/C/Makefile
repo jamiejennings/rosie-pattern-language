@@ -66,14 +66,17 @@ ROSIE_A=$(HOME)/src/librosie/librosie.a
 
 LUA_DYLIB_NAME=lua.5.3
 ROSIE_DYLIB_NAME=rosie
+
 ifeq ($(PLATFORM), macosx)
 LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
-DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. ./dynamic librosie.dylib
+SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic librosie.dylib
+LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. $(SYSTEM_DYNAMIC_TEST_COMMAND)
 else
 LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
-DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic librosie.so
+SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic librosie.so
+LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. $(SYSTEM_DYNAMIC_TEST_COMMAND)
 endif
 
 
@@ -111,13 +114,16 @@ test: static dynamic mt $(ROSIE_DYLIB)
 	./static
 	@echo
 	@echo Dynamically linked test program:
-	$(DYNAMIC_TEST_COMMAND)
+	$(LOCAL_DYNAMIC_TEST_COMMAND)
 	@echo
 	@echo Multi-threaded, statically linked test program:
 	./mt 4 25 $(HOME)/test/logfile 
 
-installtest:
-	@echo No tests of C client configured to use system installation of librosie
+installtest: static dynamic mt
+	@echo Running dynamic C client tests on installed librosie
+	@echo
+	@echo Dynamically linked test program:
+	$(SYSTEM_DYNAMIC_TEST_COMMAND)
 
 echo:
 	@echo "HOME= $(HOME)"
