@@ -38,14 +38,14 @@ ifeq ($(PLATFORM),macosx)
 CFLAGS += -std=gnu99
 SYSCFLAGS=-DLUA_USE_MACOSX
 SYSLIBS=
-SYSLDFLAGS=-undefined error -L. -l$(LUA_DYLIB_NAME)
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
+SYSLDFLAGS=-undefined error #-L. -l$(LUA_DYLIB_NAME)
+#LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
 SYSLDFLAGS=
 SYSLIBS=-lpthread -ldl -lm -Wl,--no-undefined
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
+#LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
@@ -64,16 +64,16 @@ MYOBJS=
 
 ROSIE_A=$(HOME)/src/librosie/librosie.a
 
-LUA_DYLIB_NAME=lua.5.3
+#LUA_DYLIB_NAME=lua.5.3
 ROSIE_DYLIB_NAME=rosie
 
 ifeq ($(PLATFORM), macosx)
-LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
+#LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
 SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic librosie.dylib
 LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. $(SYSTEM_DYNAMIC_TEST_COMMAND)
 else
-LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
+#LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic librosie.so
 LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. $(SYSTEM_DYNAMIC_TEST_COMMAND)
@@ -84,20 +84,20 @@ dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
 # TODO: Should not have liblua.so dependency here!
-dynamic: dynamic.o $(LUA_DYLIB)
-	$(CC) -o $@ dynamic.o $(LUA_DYLIB) $(SYSLIBS)
+dynamic: dynamic.o 
+	$(CC) -o $@ dynamic.o $(SYSLIBS)
 
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
-static: static.o $(ROSIE_A) $(LUA_DYLIB)
-	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
+static: static.o $(ROSIE_A) 
+	$(CC) -o $@ static.o $(ROSIE_A)  $(SYSLIBS)
 
 mt.o: mt.c
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
-mt: mt.o $(ROSIE_A) $(LUA_DYLIB)
-	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
+mt: mt.o $(ROSIE_A) 
+	$(CC) -o $@ mt.o $(ROSIE_A) $(SYSLIBS)
 
 clean:
 	$(RM) dynamic.o dynamic

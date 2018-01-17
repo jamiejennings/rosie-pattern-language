@@ -25,22 +25,22 @@ PLATFORM=none
 endif
 
 LUA_A=$(HOME)/submodules/lua/src/liblua.a
-LUA_DYLIB_NAME=lua.5.3
+#LUA_DYLIB_NAME=lua.5.3
 ROSIE_DYLIB_NAME=rosie
 ROSIE_A=lib$(ROSIE_DYLIB_NAME).a
 
 ifeq ($(PLATFORM),macosx)
 SYSCFLAGS=-DLUA_USE_MACOSX
 SYSLIBS=
-SYSLDFLAGS=-undefined error -L. -l$(LUA_DYLIB_NAME)
+SYSLDFLAGS=-undefined error
 CFLAGS += -std=gnu99
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
+#LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
 SYSLDFLAGS=
 SYSLIBS=-lpthread -shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
+#LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
@@ -65,11 +65,11 @@ MYOBJS=
 
 default: $(ROSIE_DYLIB) $(ROSIE_A)
 
-lib$(LUA_DYLIB_NAME).dylib: lua_objs
-	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
+# lib$(LUA_DYLIB_NAME).dylib: lua_objs
+# 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
 
-lib$(LUA_DYLIB_NAME).so: lua_objs
-	$(CC) -o $@ liblua/*.o -shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
+# lib$(LUA_DYLIB_NAME).so: lua_objs
+# 	$(CC) -o $@ liblua/*.o -shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined -Wl,-E
 
 $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
@@ -92,14 +92,14 @@ endif
 librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
-librosie.so: librosie.o $(LUA_DYLIB)
-	$(CC) -o $@ librosie.o $(LUA_DYLIB) $(SYSLIBS) $(LDFLAGS)
+librosie.so: librosie.o lua_objs
+	$(CC) -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
 
-librosie.dylib: librosie.o $(LUA_DYLIB)
-	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
+librosie.dylib: librosie.o lua_objs
+	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o liblua/*.o $(SYSLIBS) $(LDFLAGS)
 
-librosie.a: librosie.o
-	$(AR) $@ librosie.o
+librosie.a: librosie.o lua_objs
+	$(AR) $@ librosie.o liblua/*.o
 	$(RANLIB) $@
 
 clean:
