@@ -37,12 +37,13 @@ endif
 ifeq ($(PLATFORM),macosx)
 CFLAGS += -std=gnu99
 SYSCFLAGS=-DLUA_USE_MACOSX
-SYSLDFLAGS=-undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)
+SYSLDFLAGS=
 SYSLIBS=-lpthread
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
+SYSLDFLAGS=
 SYSLIBS=-lpthread -ldl -lm -Wl,--no-undefined
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
