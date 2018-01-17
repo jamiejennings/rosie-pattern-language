@@ -36,10 +36,18 @@
 int main() {
      int exitStatus = 0;
 
-  printf("*** Important note: This sample program will only work if it can find\n\
-*** the rosie installation in the same directory as this executable,\n\
-*** under the name 'rosie'.\n\
+  printf("Important note: This sample program will only work if it can find\n\
+the rosie installation in the same directory as this executable,\n\
+under the name 'rosie'.  Testing that now...\
 ");
+
+  FILE *fp = fopen("rosie/Makefile", "r");
+  if (!fp) {
+    printf(" FAILED to find rosie/Makefile.\n");
+    printf("Exiting...\n");
+    return -1;
+  }
+  printf(" ok.\n");
 
   str errors;
 
@@ -49,8 +57,8 @@ int main() {
 
   if (engine == NULL) {
     LOG("rosie_new failed\n");
-    exitStatus = -1;
-    return exitStatus;
+    LOGf("errors were: %.*s\n", errors.len, errors.ptr);
+    return -1;
   }
   LOG("obtained rosie matching engine\n");
 
