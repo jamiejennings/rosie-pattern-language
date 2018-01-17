@@ -61,11 +61,11 @@ str *rosie_new_string_ptr(byte_ptr msg, size_t len) {
 }
 
 void rosie_free_string_ptr(str *ref) {
-     free(ref->ptr);
-     free(ref);
+  if (ref->ptr) free(ref->ptr);
+  free(ref);
 }
 
 void rosie_free_string(str s) {
-     free(s.ptr);
+  if (s.ptr) free(s.ptr);
 }
 
