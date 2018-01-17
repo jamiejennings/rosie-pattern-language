@@ -35,23 +35,6 @@
 
 #include "rpeg.h"
 
-#define ACQUIRE_ENGINE_LOCK(e) do {				    \
-    int r = pthread_mutex_lock(&((e)->lock));			    \
-    if (r) {                                                        \
-        fprintf(stderr, "pthread_mutex_lock failed with %d\n", r);  \
-        abort();                                                    \
-    }                                                               \
-} while (0)
-
-#define RELEASE_ENGINE_LOCK(e) do {				    \
-    int r = pthread_mutex_unlock(&((e)->lock));			    \
-    if (r) {                                                        \
-        fprintf(stderr, "pthread_mutex_unlock failed with %d\n", r);\
-        abort();                                                    \
-    }                                                               \
-} while (0)
-
-
 typedef struct rosie_engine {
      lua_State *L;
      pthread_mutex_t lock;

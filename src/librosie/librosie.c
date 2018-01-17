@@ -80,6 +80,27 @@ void *rpeg_lib;
 #include "rosiestring.c"
 
 /* ----------------------------------------------------------------------------------------
+ * Engine locks
+ * ----------------------------------------------------------------------------------------
+ */
+
+#define ACQUIRE_ENGINE_LOCK(e) do {				    \
+    int r = pthread_mutex_lock(&((e)->lock));			    \
+    if (r) {                                                        \
+        fprintf(stderr, "pthread_mutex_lock failed with %d\n", r);  \
+        abort();                                                    \
+    }                                                               \
+} while (0)
+
+#define RELEASE_ENGINE_LOCK(e) do {				    \
+    int r = pthread_mutex_unlock(&((e)->lock));			    \
+    if (r) {                                                        \
+        fprintf(stderr, "pthread_mutex_unlock failed with %d\n", r);\
+        abort();                                                    \
+    }                                                               \
+} while (0)
+
+/* ----------------------------------------------------------------------------------------
  * Utility functions
  * ----------------------------------------------------------------------------------------
  */
@@ -281,8 +302,7 @@ static int strip_violation_messages(lua_State *L) {
 Engine *rosie_new(str *messages) {
   int t;
   Engine *e = malloc(sizeof(Engine));
-  pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-  e->lock = lock;
+  pthread_mutex_init(&(e->lock), NULL);
   lua_State *L = luaL_newstate();
   if (L == NULL) {
     *messages = rosie_new_string_from_const("not enough memory to initialize");
