@@ -47,7 +47,7 @@ func main() {
 
 	fmt.Println("The next compilation is expected to fail.")
 	pat, msgs, err := engine.Compile("foo")
-	if !pat.Valid() {
+	if pat != nil {
 		fmt.Printf("And it failed as expected: pattern returned is invalid\n")
 		fmt.Println("Messages are: ", msgs)
 	} else {
@@ -66,7 +66,7 @@ func main() {
 			fmt.Println(pat, err)
 			os.Exit(-1)
 		} else {
-			if pat.Valid() {
+			if pat != nil {
 				fmt.Println("Successfully compiled pattern", pat)
 			} else {
 				fmt.Println("FAILED TO compile pattern", pat)
@@ -74,6 +74,19 @@ func main() {
 			if msgs != nil {
 				fmt.Println(msgs)
 			}
+		}
+
+		var match *rosie.Match
+		if i%2 == 0 {
+			match, err = pat.Match("12345", 1, "json")
+		} else {
+			match, err = pat.Match("kjh12345", 1, "json")
+		}
+		fmt.Println(match, err)
+		if match.Data == nil {
+			fmt.Println("Match FAILED")
+		} else {
+			fmt.Println("Match succeeded")
 		}
 	}
 
