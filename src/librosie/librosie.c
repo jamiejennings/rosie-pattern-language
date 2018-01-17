@@ -570,6 +570,7 @@ int rosie_match(Engine *e, int pat, int start, char *encoder_name, str *input, m
   unsigned char *temp_str;
   rBuffer *buf;
   lua_State *L = e->L;
+  LOG("rosie_match called\n");
   ACQUIRE_ENGINE_LOCK(e);
   collect_if_needed(L);
   if (!pat)
@@ -596,6 +597,7 @@ have_pattern:
    */
 
   encoder = encoder_name_to_code(encoder_name);
+  LOGf("in rosie_match, encoder value is %d\n", encoder);
   if (!encoder) {
     /* Path through Lua */
     t = lua_getfield(L, -1, "match");
@@ -641,11 +643,15 @@ have_pattern:
 
   buf = lua_touserdata(L, -1);
   if (buf) {
+    LOG("in rosie_match, match succeeded\n");
     (*match).data.ptr = (unsigned char *)buf->data;
     (*match).data.len = buf->n;
   }
   else if (lua_isboolean(L, -1)) {
+    LOG("in rosie_match, match failed\n");
     set_match_error(match, ERR_NO_MATCH);
+    (*match).data.ptr = NULL;
+    (*match).data.len = 0;
   }
   else if (lua_isstring(L, -1)) {
     if (encoder) {
