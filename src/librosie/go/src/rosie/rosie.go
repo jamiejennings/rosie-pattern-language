@@ -12,19 +12,10 @@ package rosie
 // #cgo LDFLAGS: ${SRCDIR}/librosie.a -lm -ldl
 // #include <stdlib.h>
 // #include "librosie.h"
-//
-// char *to_char_ptr(uint8_t *buf) {
-//   return (char *) buf;
-// }
-// uint8_t *to_uint8_ptr(char *buf) {
-//   return (uint8_t *) buf;
-// }
-// int *new_int() { return (int *)malloc(sizeof(int)); }
-//
 // #cgo CFLAGS: -I./include
 import "C"
 
-//import "unsafe"
+import "unsafe"
 import "errors"
 //import "fmt"
 import "runtime"
@@ -39,19 +30,18 @@ type (
 
 // goString converts a rosie string to a go string
 func goString(cstr RosieString) string {
-	return C.GoStringN(C.to_char_ptr(cstr.ptr), C.int(cstr.len))
+	return C.GoStringN((*C.char)(unsafe.Pointer(cstr.ptr)), C.int(cstr.len))
 }
 
 // rosieString converts a go string to a rosie string
 func rosieString(s string) RosieString {
-	var cstr = C.rosie_new_string(C.to_uint8_ptr(C.CString(s)), C.size_t(len(s)))
-	return cstr
+	return C.rosie_string_from((*C.uchar)(unsafe.Pointer(C.CString(s))), C.size_t(len(s)))
 }
 
-func rosieStringPtr(s string) *RosieString {
-	var cstr_ptr = C.rosie_new_string_ptr(C.to_uint8_ptr(C.CString(s)), C.size_t(len(s)))
-	return cstr_ptr
-}
+// func rosieStringPtr(s string) *RosieString {
+// 	var cstr_ptr = C.rosie_new_string_ptr((*C.uchar)(unsafe.Pointer(C.CString(s))), C.size_t(len(s)))
+// 	return cstr_ptr
+// }
 
 type Engine struct {
  	ptr *C.struct_rosie_engine
@@ -59,17 +49,17 @@ type Engine struct {
 
 // New constructs a fresh rosie pattern engine
 func New(name string) (en *Engine, err error) {
-	var messages C.struct_rosie_string
+	var messages RosieString
 	var en_ptr *C.struct_rosie_engine
 	en_ptr, err = C.rosie_new(&messages)
 	if en_ptr == nil {
 		var printable_message string
-		if messages.ptr == nil || messages.len == 0 {
+		if messages.ptr == nil {
 			printable_message = "initialization failed with an unknown error"
 		} else {
 			printable_message = goString(messages)
 		}
-		return nil, errors.New("rosie: " + printable_message)
+		return nil, errors.New(printable_message)
 	}
 	engine := Engine{en_ptr}
 	runtime.SetFinalizer(&engine, finalizeEngine)
@@ -82,11 +72,10 @@ func finalizeEngine(en *Engine) {
 }
 		
 
-type Configuration [] map[string] string
-
 func (en *Engine) Config() (cfg Configuration, err error) {
 	var data C.struct_rosie_string
  	ok, err := C.rosie_config(en.ptr, &data)
+	defer C.rosie_free_string(data)
 	if ok != 0 {
 		return nil, err
 	}
@@ -98,12 +87,14 @@ func (en *Engine) Config() (cfg Configuration, err error) {
 }
 
 type (
-	Pattern = C.int
+	Configuration [] map[string] string
+	Messages [] interface{}
 )
 
-type (
-	Messages = [] interface{}
-)
+type Pattern struct {
+	id C.int
+	engine *Engine
+}
 
 func mungeMessages(Cmessages RosieString) (messages Messages, err error) {
 	if Cmessages.ptr != nil {
@@ -111,25 +102,36 @@ func mungeMessages(Cmessages RosieString) (messages Messages, err error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(messages) != 0 {
-			return messages, nil
-		}
+		return messages, nil
  	} 
 	return nil, nil
 }
 
-func (en *Engine) Compile(exp string) (pat Pattern, messages Messages, err error) {
- 	var CexpPtr = rosieStringPtr(exp)
-	var Cmessages RosieString
-	pat = C.int(0)
+func (p *Pattern) Valid() (bool) {
+	return (p.id != 0)
+}
 
- 	ok, err := C.rosie_compile(en.ptr, CexpPtr, &pat, &Cmessages)
+func finalizePattern(p *Pattern) {
+	if p.Valid() {
+		C.rosie_free_rplx(p.engine.ptr, p.id)
+		p.id = C.int(0)
+	}
+}
+
+func (en *Engine) Compile(exp string) (pat Pattern, messages Messages, err error) {
+ 	var Cexp = rosieString(exp)
+	var Cmessages RosieString
+	pat = Pattern{C.int(0), en}
+	runtime.SetFinalizer(&pat, finalizePattern)
+	
+ 	ok, err := C.rosie_compile(en.ptr, &Cexp, &(pat.id), &Cmessages)
+	defer C.rosie_free_string(Cmessages)
  	if ok != 0 {
 		return pat, nil, err
 	}
 	messages, err = mungeMessages(Cmessages)
 	if err != nil {
-		pat = C.int(0)
+		pat.id = C.int(0)
 	}
 	return pat, messages, err
 }

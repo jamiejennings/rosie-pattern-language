@@ -17,8 +17,6 @@ import "runtime"
 
 func main() {
 
-//	runtime.LockOSThread()
-	
 	fmt.Printf("Initializing Rosie... ")
 	
 	engine, err := rosie.New("hi")
@@ -49,16 +47,13 @@ func main() {
 
 	fmt.Println("The next compilation is expected to fail.")
 	pat, msgs, err := engine.Compile("foo")
-	if pat == 0 {
-		fmt.Printf("And it failed as expected: pattern returned is %v\n", pat)
+	if !pat.Valid() {
+		fmt.Printf("And it failed as expected: pattern returned is invalid\n")
+		fmt.Println("Messages are: ", msgs)
 	} else {
 		fmt.Printf("ERROR: received a valid pattern %v\n", pat)
 		os.Exit(-1)
 	}
-	if msgs != nil {
-		fmt.Println("Messages are: ", msgs)
-	}
-
 
 	for i:=0; i<10; i++ {
 
@@ -71,7 +66,7 @@ func main() {
 			fmt.Println(pat, err)
 			os.Exit(-1)
 		} else {
-			if pat != 0 {
+			if pat.Valid() {
 				fmt.Println("Successfully compiled pattern", pat)
 			} else {
 				fmt.Println("FAILED TO compile pattern", pat)
