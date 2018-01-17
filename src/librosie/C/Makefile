@@ -87,14 +87,14 @@ dynamic: dynamic.o $(LUA_DYLIB)
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
-static: static.o $(ROSIE_A)
-	$(CC) -o $@ static.o $(ROSIE_A) $(SYSLIBS)
+static: static.o $(ROSIE_A) $(LUA_DYLIB)
+	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
 
 mt.o: mt.c
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
 mt: mt.o $(ROSIE_A) $(LUA_DYLIB)
-	$(CC) -o $@ mt.o $(ROSIE_A) $(SYSLIBS)
+	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
 
 clean:
 	$(RM) dynamic.o dynamic

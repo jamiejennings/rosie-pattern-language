@@ -98,8 +98,8 @@ librosie.so: librosie.o $(LUA_DYLIB)
 librosie.dylib: librosie.o $(LUA_DYLIB)
 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
 
-librosie.a: librosie.o lua_objs
-	$(AR) $@ librosie.o liblua/*.o
+librosie.a: librosie.o
+	$(AR) $@ librosie.o
 	$(RANLIB) $@
 
 clean:
