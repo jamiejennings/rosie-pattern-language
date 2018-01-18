@@ -64,16 +64,16 @@ MYOBJS=
 
 ROSIE_A=$(HOME)/src/librosie/librosie.a
 
-#LUA_DYLIB_NAME=lua.5.3
+LUA_DYLIB_NAME=lua.5.3
 ROSIE_DYLIB_NAME=rosie
 
 ifeq ($(PLATFORM), macosx)
-#LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
+LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
 SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic librosie.dylib
 LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. $(SYSTEM_DYNAMIC_TEST_COMMAND)
 else
-#LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
+LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic librosie.so
 LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. $(SYSTEM_DYNAMIC_TEST_COMMAND)
@@ -83,21 +83,21 @@ endif
 dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
-# TODO: Should not have liblua.so dependency here!
 dynamic: dynamic.o 
 	$(CC) -o $@ dynamic.o $(SYSLIBS)
 
+# TODO: Should not have liblua dependency here!
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
 static: static.o $(ROSIE_A) 
-	$(CC) -o $@ static.o $(ROSIE_A)  $(SYSLIBS)
+	$(CC) -o $@ static.o $(ROSIE_A) -L.. -l$(LUA_DYLIB_NAME) $(SYSLIBS)
 
 mt.o: mt.c
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
 mt: mt.o $(ROSIE_A) 
-	$(CC) -o $@ mt.o $(ROSIE_A) $(SYSLIBS)
+	$(CC) -o $@ mt.o $(ROSIE_A) -L.. -l$(LUA_DYLIB_NAME) $(SYSLIBS)
 
 clean:
 	$(RM) dynamic.o dynamic

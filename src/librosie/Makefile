@@ -40,9 +40,9 @@ ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
 SYSLDFLAGS=
-SYSLIBS=-lpthread -shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined
+SYSLIBS=-lpthread -shared -ldl -lm
 LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
-LIBLUA_LDFLAGS=-shared -ldl -lm -Wl,--export-dynamic -Wl,--no-undefined
+LIBLUA_LDFLAGS=-shared -ldl -lm
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
