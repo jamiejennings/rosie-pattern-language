@@ -62,8 +62,7 @@ static char *get_libdir(void *symbol) {
     LOG("librosie: call to basename/dirname failed");
     return NULL;
   }
-  char *libdir = malloc(strnlen(dir, MAXPATHLEN));
-  strncpy(libdir, dir, MAXPATHLEN);
+  char *libdir = strndup(dir, MAXPATHLEN);
   LOGf("libdir is %s, and libname is %s\n", libdir, base);
   return libdir;
 }

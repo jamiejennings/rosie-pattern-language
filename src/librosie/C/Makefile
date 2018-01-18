@@ -72,7 +72,7 @@ else
 LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic system librosie.so
-LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. local librosie.so
+LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic local librosie.so
 endif
 
 
@@ -85,18 +85,18 @@ dynamic: dynamic.o
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
+#OLD COMMENT#
 # TODO: Would prefer to NOT link with liblua here.  But that would
 # force librosie to dynamically bind all 38 or so lua/luaL functions
 # it uses.
-static: static.o $(ROSIE_A) $(LUA_DYLIB)
-	$(CC) -o $@ static.o $(ROSIE_A) -L.. -l$(LUA_DYLIB_NAME) $(SYSLIBS)
+static: static.o $(ROSIE_A) 
+	$(CC) -o $@ static.o $(ROSIE_A) $(SYSLIBS)
 
 mt.o: mt.c
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
-# TODO: Would prefer to NOT link with liblua here.
-mt: mt.o $(ROSIE_A) $(LUA_DYLIB)
-	$(CC) -o $@ mt.o $(ROSIE_A) -L.. -l$(LUA_DYLIB_NAME) $(SYSLIBS)
+mt: mt.o $(ROSIE_A)
+	$(CC) -o $@ mt.o $(ROSIE_A) $(SYSLIBS)
 
 clean:
 	$(RM) dynamic.o dynamic
