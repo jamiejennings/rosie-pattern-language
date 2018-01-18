@@ -189,6 +189,7 @@ static pthread_once_t initialized = PTHREAD_ONCE_INIT;
 static int all_is_lost = TRUE;
 
 static void initialize() {
+  LOG("INITIALIZE start\n");
   set_libinfo();
   set_bootscript();
   char *next = stpncpy(liblua_path, rosiehomedir, MAXPATHLEN); 
@@ -205,6 +206,7 @@ static void initialize() {
   }
   prepare_for_boot();
   all_is_lost = FALSE;
+  LOG("INITIALIZE finish\n");
   return;
 }
 
@@ -317,6 +319,9 @@ static int strip_violation_messages(lua_State *L) {
 
 pthread_mutex_t newstate_lock = PTHREAD_MUTEX_INITIALIZER;
 
+/* Not sure this protection is needed.  It was added while trying to
+   isolate a bug that occurs on Linux but not on OS X.
+*/
 lua_State *protected_luaL_newstate() {
     int r = pthread_mutex_lock(&newstate_lock);
     if (r) {
@@ -324,6 +329,8 @@ lua_State *protected_luaL_newstate() {
         abort();
     }
     lua_State *newL = luaL_newstate();
+    luaL_checkversion(newL); /* Ensures several critical things needed to use Lua */
+    luaL_openlibs(newL);     /* Open lua's standard libraries */
     r = pthread_mutex_unlock(&newstate_lock);
     if (r) {
         fprintf(stderr, "pthread_mutex_unlock for NEWSTATE_LOCK failed with %d\n", r);
@@ -353,9 +360,6 @@ Engine *rosie_new(str *messages) {
     *messages = rosie_new_string_from_const("not enough memory to initialize");
     return NULL;
   }
-  e->L = L;
-  luaL_checkversion(L);		/* Ensures several critical things needed to use Lua */
-  luaL_openlibs(L);		/* Open lua's standard libraries */
 
   if (!boot(L, messages)) {
     return NULL;		/* messages already set by boot */
@@ -408,6 +412,7 @@ Engine *rosie_new(str *messages) {
   set_registry(violation_strip_key);
 
   pthread_mutex_init(&(e->lock), NULL);
+  e->L = L;
 
   lua_settop(L, 0);
   LOGf("Engine %p created\n", e);

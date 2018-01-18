@@ -96,7 +96,7 @@ mt.o: mt.c
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
 mt: mt.o $(ROSIE_A)
-	$(CC) -o $@ mt.o $(ROSIE_A) $(SYSLIBS)
+	$(CC) -o $@ mt.o $(ROSIE_A) $(SYSLIBS) $(SYSLDFLAGS)
 
 clean:
 	$(RM) dynamic.o dynamic

@@ -26,7 +26,7 @@
 #define E_ENGINE_CREATE -3
 #define E_ENGINE_IMPORT -4
 
-void *make_engine() {
+static void *make_engine() {
   int ok;
   str errors;
   void *engine = rosie_new(&errors);
@@ -71,7 +71,7 @@ under the name 'rosie'.\n\
   return engine;
 }  
 
-int compile(void *engine, str expression) {
+static int compile(void *engine, str expression) {
   int pat;
   str errors;
   int err = rosie_compile(engine, &expression, &pat, &errors);
@@ -98,10 +98,10 @@ int compile(void *engine, str expression) {
 
 
 /* Globals because we can. */
-int r=0;
-char *infile;
+static int r=0;
+static char *infile;
 
-void *do_work(void *engine) {
+static void *do_work(void *engine) {
   printf("Thread running with engine %p\n", engine); fflush(NULL);
   int cin, cout, cerr;
   int pat;
