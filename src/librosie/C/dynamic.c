@@ -13,6 +13,7 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <stdlib.h>
+#include <libgen.h>		/* for basename, dirname (used for testing) */
 #include "dynamic.h"
 
 void *librosie;
@@ -45,6 +46,28 @@ void *librosie;
 
 
 #define STR(literal) (*fp_rosie_new_string)((byte_ptr)(literal), strlen((literal)));
+
+static char *get_libdir(void *symbol) {
+  Dl_info dl;
+  char *base, *dir;
+  int ok = dladdr(symbol, &dl);
+  if (!ok) {
+    LOG("call to dladdr failed");
+    return NULL;
+  }
+  LOGf("dli_fname is %s\n", dl.dli_fname);
+  base = basename((char *)dl.dli_fname);
+  dir = dirname((char *)dl.dli_fname);
+  if (!base || !dir) {
+    LOG("librosie: call to basename/dirname failed");
+    return NULL;
+  }
+  char *libdir = malloc(strnlen(dir, MAXPATHLEN));
+  strncpy(libdir, dir, MAXPATHLEN);
+  LOGf("libdir is %s, and libname is %s\n", libdir, base);
+  return libdir;
+}
+
 
 /* Note: RTLD_GLOBAL is not default on Ubuntu.  Must be explicit.*/
 static int init(const char *librosie_path){
@@ -108,21 +131,43 @@ static int bind(void *lib){
   return FALSE;
 }
 
+static void print_usage(char *progname) {
+  printf("Usage: %s [system|local] <librosie_name>\n", progname);
+}
+
 /* Main */
 
 int main(int argc, char **argv) {
 
-  if (argc != 2) {
-    printf("Usage: %s <full_path_for_librosie>\n", argv[0]);
+  if (argc != 3) {
+    print_usage(argv[0]);
     exit(-1);
   }
-  char *librosie_path = argv[1];
+  char *test_type = argv[1];
+  char *librosie_path = argv[2];
 
   int exitStatus = 0;
 
   init(librosie_path);
-
   if (!bind(librosie)) return -1;
+  char *librosie_dir = get_libdir(fp_rosie_new);
+  printf("Found librosie at %s\n", librosie_dir); fflush(NULL);
+
+  if (strncmp(test_type, "local", 6)==0) {
+    if (strncmp(librosie_dir, "/usr/", 4)==0) {
+      printf("ERROR: librosie was found in the system location\n");
+      exit(-1);
+    }
+  } else if (strncmp(test_type, "system", 7)==0) {
+    if (strncmp(librosie_dir, "/usr/", 4)!=0) {
+      printf("ERROR: librosie was NOT found in the system location\n");
+      exit(-1);
+    }
+  } else {
+    printf("error: test type not system or local\n");
+    print_usage(argv[0]);
+  }
+
 
   str errors;
   void *engine = (*fp_rosie_new)(&errors);

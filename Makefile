@@ -280,9 +280,9 @@ install_lua: bin/lua
 
 # Install all of the shared objects
 .PHONY: install_so
-install_so: lib/lpeg.so lib/cjson.so lib/readline.so
+install_so: 
 	mkdir -p "$(INSTALL_LIB_DIR)"
-	cp lib/lpeg.so lib/cjson.so lib/readline.so "$(INSTALL_LIB_DIR)"
+	cp lib/*.so "$(INSTALL_LIB_DIR)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
