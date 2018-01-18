@@ -80,7 +80,7 @@ dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
 dynamic: dynamic.o 
-	$(CC) -o $@ dynamic.o $(SYSLIBS)
+	$(CC) -o $@ dynamic.o $(SYSLIBS) # $(SYSLDFLAGS) not needed?
 
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
@@ -90,7 +90,7 @@ static.o: static.c static.h
 # force librosie to dynamically bind all 38 or so lua/luaL functions
 # it uses.
 static: static.o $(ROSIE_A) 
-	$(CC) -o $@ static.o $(ROSIE_A) $(SYSLIBS)
+	$(CC) -o $@ static.o $(ROSIE_A) $(SYSLIBS) $(SYSLDFLAGS)
 
 mt.o: mt.c
 	$(CC) -o $@ -c mt.c $(CFLAGS)
