@@ -41,8 +41,8 @@ SYSLIBS=
 SYSLDFLAGS=-undefined error
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
-SYSLDFLAGS=
-SYSLIBS=-lpthread -ldl -lm -Wl,--no-undefined
+SYSLDFLAGS=-Wl,--export-dynamic
+SYSLIBS=-lpthread -ldl -lm
 endif
 
 CFLAGS= -pthread -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
