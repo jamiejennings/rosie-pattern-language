@@ -145,25 +145,6 @@ static void set_bootscript() {
   LOGf("Bootscript filename set to %s\n", bootscript);
 }
 
-static int initialize() {
-  if (lua_lib) return TRUE;
-  set_libinfo();
-  set_bootscript();
-  char *next = stpncpy(liblua_path, rosiehomedir, MAXPATHLEN); 
-  if ((MAXPATHLEN - (unsigned int)(next - liblua_path + 1)) < strlen(LIBLUA_LOCATION)) {
-    LOG("liblua_path exceeds MAXPATHLEN\n");
-    return FALSE;
-  }
-  strncpy(next, LIBLUA_LOCATION, (MAXPATHLEN - (next - liblua_path + 1)));
-  LOGf("liblua path (calculated) is %s\n", liblua_path);
-  lua_lib = dlopen(liblua_path, RTLD_NOW | RTLD_GLOBAL);
-  if (lua_lib == NULL) {
-    LOGf("dlopen(liblua) returned NULL: unable to open %s\n", liblua_path);
-    return FALSE;
-  }
-  return TRUE;
-}
-
 static int encoder_name_to_code(const char *name) {
   const r_encoder_t *entry = r_encoders;
   while (entry->name) {
@@ -204,11 +185,31 @@ static void prepare_for_boot() {
   }
 }  
 
-static pthread_once_t ready_to_boot = PTHREAD_ONCE_INIT;
+static pthread_once_t initialized = PTHREAD_ONCE_INIT;
+static int all_is_lost = TRUE;
 
-static int boot (lua_State *L, str *messages) {
+static void initialize() {
+  set_libinfo();
+  set_bootscript();
+  char *next = stpncpy(liblua_path, rosiehomedir, MAXPATHLEN); 
+  if ((MAXPATHLEN - (unsigned int)(next - liblua_path + 1)) < strlen(LIBLUA_LOCATION)) {
+    LOG("liblua_path exceeds MAXPATHLEN\n");
+    return;
+  }
+  strncpy(next, LIBLUA_LOCATION, (MAXPATHLEN - (next - liblua_path + 1)));
+  LOGf("liblua path (calculated) is %s\n", liblua_path);
+  lua_lib = dlopen(liblua_path, RTLD_NOW | RTLD_GLOBAL);
+  if (lua_lib == NULL) {
+    LOGf("dlopen(liblua) returned NULL: unable to open %s\n", liblua_path);
+    return;
+  }
+  prepare_for_boot();
+  all_is_lost = FALSE;
+  return;
+}
+
+static int boot(lua_State *L, str *messages) {
   char *msg = NULL;
-  pthread_once(&ready_to_boot, prepare_for_boot);
   if (!*bootscript) {
     *messages = rosie_new_string_from_const("failed to set bootscript or libinfo");
     return FALSE;
@@ -321,8 +322,9 @@ static int strip_violation_messages(lua_State *L) {
 
 Engine *rosie_new(str *messages) {
 
-  if (!initialize()) {
-    *messages = rosie_new_string_from_const("failed to load liblua");
+  pthread_once(&initialized, initialize);
+  if (all_is_lost) {
+    *messages = rosie_new_string_from_const("initialization failed; enable DEBUG output for details");
     return NULL;
   }
 
