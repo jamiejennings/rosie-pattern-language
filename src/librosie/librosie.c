@@ -315,6 +315,24 @@ static int strip_violation_messages(lua_State *L) {
 }
 
 
+pthread_mutex_t newstate_lock = PTHREAD_MUTEX_INITIALIZER;
+
+lua_State *protected_luaL_newstate() {
+    int r = pthread_mutex_lock(&newstate_lock);
+    if (r) {
+        fprintf(stderr, "pthread_mutex_lock for NEWSTATE_LOCK failed with %d\n", r);
+        abort();
+    }
+    lua_State *newL = luaL_newstate();
+    r = pthread_mutex_unlock(&newstate_lock);
+    if (r) {
+        fprintf(stderr, "pthread_mutex_unlock for NEWSTATE_LOCK failed with %d\n", r);
+        abort();
+    }
+    return newL;
+}
+  
+
 /* ----------------------------------------------------------------------------------------
  * Exported functions
  * ----------------------------------------------------------------------------------------
@@ -330,8 +348,7 @@ Engine *rosie_new(str *messages) {
 
   int t;
   Engine *e = malloc(sizeof(Engine));
-  pthread_mutex_init(&(e->lock), NULL);
-  lua_State *L = luaL_newstate();
+  lua_State *L = protected_luaL_newstate();
   if (L == NULL) {
     *messages = rosie_new_string_from_const("not enough memory to initialize");
     return NULL;
@@ -390,7 +407,7 @@ Engine *rosie_new(str *messages) {
   CHECK_TYPE("rosie.env.violation.strip_each", t, LUA_TFUNCTION);
   set_registry(violation_strip_key);
 
-  rosie_set_alloc_limit(e, INITIAL_ALLOC_LIMIT_MB);
+  pthread_mutex_init(&(e->lock), NULL);
 
   lua_settop(L, 0);
   LOGf("Engine %p created\n", e);
@@ -426,25 +443,25 @@ int rosie_config(Engine *e, str *retval) {
   get_registry(rosie_key);
   t = lua_getfield(L, -1, "config");
   CHECK_TYPE("config", t, LUA_TFUNCTION);
-  t = lua_pcall(e->L, 0, 1, 0);
+  t = lua_pcall(L, 0, 1, 0);
   if (t != LUA_OK) {
     LOG("rosie.config() failed\n");
     *retval = rosie_new_string_from_const("rosie.config() failed");
-    lua_settop(e->L, 0);
+    lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
-  t = to_json_string(e->L, -1, &r);
+  t = to_json_string(L, -1, &r);
   if (t != LUA_OK) {
     LOG("in config(), could not convert config information to json\n");
     *retval = rosie_new_string_from_const("in config(), could not convert config information to json");
-    lua_settop(e->L, 0);
+    lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
   retval->len = r.len;
   retval->ptr = r.ptr;
-  lua_settop(e->L, 0);
+  lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
 }

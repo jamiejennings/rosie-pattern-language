@@ -7,7 +7,6 @@
 /*  AUTHOR: Jamie A. Jennings                                                */
 
 #define INITIAL_RPLX_SLOTS 32
-#define INITIAL_ALLOC_LIMIT_MB 0
 #define MIN_ALLOC_LIMIT_MB 10
 
 #define TRUE 1

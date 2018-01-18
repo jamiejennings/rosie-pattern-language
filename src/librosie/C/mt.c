@@ -29,21 +29,20 @@
 void *make_engine() {
   int ok;
   str errors;
-  str pkgname = STR("all");
-  str actual_pkgname;
   void *engine = rosie_new(&errors);
   if (!engine) {
     printf("Call to rosie_new failed.\n");
-    if (errors.ptr) printf("%s", errors.ptr);
-    if (engine == NULL) {
-      printf("Creation of engine failed.\n");
-      printf("Important note: This sample program will only work if it can find\n\
+    if (errors.ptr) printf("%.*s", errors.len, errors.ptr);
+    printf("Creation of engine failed.\n");
+    printf("Important note: This sample program will only work if it can find\n\
 the rosie installation in the same directory as this executable,\n	\
 under the name 'rosie'.\n\
 ");
+    fflush(NULL);
     exit(E_ENGINE_CREATE);
-    }
   }
+  str pkgname = STR("all");
+  str actual_pkgname;
   int err = rosie_import(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
   rosie_free_string(pkgname);
   if (actual_pkgname.ptr != NULL) rosie_free_string(actual_pkgname);
@@ -165,10 +164,10 @@ int main(int argc, char **argv) {
   void **engine = calloc(n, sizeof(void *));
   pthread_t *thread = calloc(n, sizeof(pthread_t));
 
-  printf("Making engines for %d threads\n", n);
+  printf("Making engines for %d threads\n", n); fflush(NULL);
   for (int i=0; i<n; i++) engine[i] = make_engine();
 
-  printf("Creating %d threads\n", n);
+  printf("Creating %d threads\n", n); fflush(NULL);
   for (int i=0; i<n; i++) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
