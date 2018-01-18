@@ -76,7 +76,7 @@ static char bootscript[MAXPATHLEN];
 char rpeg_path[MAXPATHLEN];
 void *rpeg_lib;
 char liblua_path[MAXPATHLEN];
-void *liblua_lib;
+void *lua_lib;
 
 #include "logging.c"
 #include "registry.c"
@@ -146,6 +146,7 @@ static void set_bootscript() {
 }
 
 static int initialize() {
+  if (lua_lib) return TRUE;
   set_libinfo();
   set_bootscript();
   char *next = stpncpy(liblua_path, rosiehomedir, MAXPATHLEN); 
@@ -155,7 +156,7 @@ static int initialize() {
   }
   strncpy(next, LIBLUA_LOCATION, (MAXPATHLEN - (next - liblua_path + 1)));
   LOGf("liblua path (calculated) is %s\n", liblua_path);
-  void *lua_lib = dlopen(liblua_path, RTLD_NOW | RTLD_GLOBAL);
+  lua_lib = dlopen(liblua_path, RTLD_NOW | RTLD_GLOBAL);
   if (lua_lib == NULL) {
     LOGf("dlopen(liblua) returned NULL: unable to open %s\n", liblua_path);
     return FALSE;
