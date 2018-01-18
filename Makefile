@@ -78,7 +78,7 @@ INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_RPL_DIR = $(ROSIED)/rpl
 INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
 INSTALL_LIBROSIE = $(LIBROSIED)/$(LIBROSIE)
-INSTALL_LIBLUA = $(LIBROSIED)/$(LIBLUA)
+#INSTALL_LIBLUA = $(LIBROSIED)/$(LIBLUA)
 
 .PHONY: clean
 clean:
@@ -320,7 +320,7 @@ install_rpl:
 .PHONY: install_librosie
 install_librosie: $(LIBROSIE)
 	cp "$(LIBROSIE_DIR)/$(LIBROSIE)" "$(INSTALL_LIBROSIE)"
-	cp "$(LIBROSIE_DIR)/$(LIBLUA)" "$(INSTALL_LIBLUA)"
+#	cp "$(LIBROSIE_DIR)/$(LIBLUA)" "$(INSTALL_LIBLUA)"
 
 # Main install rule
 .PHONY: install

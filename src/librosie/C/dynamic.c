@@ -48,7 +48,8 @@ void *librosie;
 
 /* Note: RTLD_GLOBAL is not default on Ubuntu.  Must be explicit.*/
 static int init(const char *librosie_path){
-  librosie = dlopen(librosie_path, RTLD_NOW | RTLD_GLOBAL);
+
+  librosie = dlopen(librosie_path, RTLD_LAZY | RTLD_GLOBAL);
   if (librosie == NULL) {
     displayf("failed to dlopen %s\n", librosie_path);
     return FALSE;
@@ -138,7 +139,10 @@ int main(int argc, char **argv) {
   pkgname = (*fp_rosie_new_string)((byte_ptr)"all", 3);
   errors = (*fp_rosie_new_string)((byte_ptr)"", 0);
   as = (*fp_rosie_new_string)((byte_ptr)"", 0);
-  printf("pkgname = %.*s; as = %s; errors = %s\n", pkgname.len, pkgname.ptr, as.ptr, errors.ptr);
+  printf("pkgname = %.*s; as = %.*s; errors = %.*s\n",
+	 pkgname.len, pkgname.ptr,
+	 as.len, as.ptr,
+	 errors.len, errors.ptr);
   LOG("allocated strs\n");
   err = (*fp_rosie_import)(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
   if (err) {

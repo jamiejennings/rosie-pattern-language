@@ -66,6 +66,7 @@ foo_t fp_r_newbuffer_wrap;	/* defined in rbuf.c */
 #define ROSIEHOME "/rosie"
 #define BOOTSCRIPT "/lib/boot.luac"
 #define RPEG_LOCATION "/lib/lpeg.so"
+#define LIBLUA_LOCATION "/lib/liblua.5.3.so"
 
 static char libname[MAXPATHLEN];
 static char libdir[MAXPATHLEN];
@@ -74,6 +75,8 @@ static char bootscript[MAXPATHLEN];
 
 char rpeg_path[MAXPATHLEN];
 void *rpeg_lib;
+char liblua_path[MAXPATHLEN];
+void *liblua_lib;
 
 #include "logging.c"
 #include "registry.c"
@@ -101,18 +104,9 @@ void *rpeg_lib;
 } while (0)
 
 /* ----------------------------------------------------------------------------------------
- * Utility functions
+ * Start-up / boot functions
  * ----------------------------------------------------------------------------------------
  */
-
-static int encoder_name_to_code(const char *name) {
-  const r_encoder_t *entry = r_encoders;
-  while (entry->name) {
-    if (!strncmp(name, entry->name, MAX_ENCODER_NAME_LENGTH)) return entry->code;
-    entry++;
-  }
-  return 0;
-}
 
 static void set_libinfo() {
   Dl_info dl;
@@ -137,8 +131,7 @@ static void set_libinfo() {
 static void set_bootscript() {
   size_t len;
   static char *last;
-  if (!*libdir) set_libinfo();
-  /* set rosiehomedir */
+  /* set rosiehomedir using libinfo */
   len = strnlen(ROSIEHOME, MAXPATHLEN);
   last = stpncpy(rosiehomedir, libdir, (MAXPATHLEN - len - 1));
   last = stpncpy(last, ROSIEHOME, len);
@@ -152,9 +145,35 @@ static void set_bootscript() {
   LOGf("Bootscript filename set to %s\n", bootscript);
 }
 
+static int initialize() {
+  set_libinfo();
+  set_bootscript();
+  char *next = stpncpy(liblua_path, rosiehomedir, MAXPATHLEN); 
+  if ((MAXPATHLEN - (unsigned int)(next - liblua_path + 1)) < strlen(LIBLUA_LOCATION)) {
+    LOG("liblua_path exceeds MAXPATHLEN\n");
+    return FALSE;
+  }
+  strncpy(next, LIBLUA_LOCATION, (MAXPATHLEN - (next - liblua_path + 1)));
+  LOGf("liblua path (calculated) is %s\n", liblua_path);
+  void *lua_lib = dlopen(liblua_path, RTLD_NOW | RTLD_GLOBAL);
+  if (lua_lib == NULL) {
+    LOGf("dlopen(liblua) returned NULL: unable to open %s\n", liblua_path);
+    return FALSE;
+  }
+  return TRUE;
+}
+
+static int encoder_name_to_code(const char *name) {
+  const r_encoder_t *entry = r_encoders;
+  while (entry->name) {
+    if (!strncmp(name, entry->name, MAX_ENCODER_NAME_LENGTH)) return entry->code;
+    entry++;
+  }
+  return 0;
+}
+
 static void prepare_for_boot() {
   /* boot incoming */
-  set_bootscript();
 
   char *next = stpncpy(rpeg_path, rosiehomedir, MAXPATHLEN); 
   if ((MAXPATHLEN - (unsigned int)(next - rpeg_path + 1)) < strlen(RPEG_LOCATION)) {
@@ -300,6 +319,12 @@ static int strip_violation_messages(lua_State *L) {
  */
 
 Engine *rosie_new(str *messages) {
+
+  if (!initialize()) {
+    *messages = rosie_new_string_from_const("failed to load liblua");
+    return NULL;
+  }
+
   int t;
   Engine *e = malloc(sizeof(Engine));
   pthread_mutex_init(&(e->lock), NULL);
