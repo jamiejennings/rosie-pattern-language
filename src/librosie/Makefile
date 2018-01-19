@@ -98,7 +98,7 @@ librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
 librosie.so: librosie.o liblua
-	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
+	$(CC) -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
 
 librosie.dylib: librosie.o liblua
 	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
