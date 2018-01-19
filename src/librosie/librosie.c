@@ -346,7 +346,7 @@ int luaopen_cjson_safe(lua_State *l);
     luaL_checkversion(newL); /* Ensures several critical things needed to use Lua */
     luaL_openlibs(newL);     /* Open lua's standard libraries */
     luaL_requiref(newL, "lpeg", luaopen_lpeg, 0);
-    luaL_requiref(newL, "cjson_safe", luaopen_cjson_safe, 0);
+    luaL_requiref(newL, "cjson.safe", luaopen_cjson_safe, 0);
     r = pthread_mutex_unlock(&newstate_lock);
     if (r) {
         fprintf(stderr, "pthread_mutex_unlock for NEWSTATE_LOCK failed with %d\n", r);
