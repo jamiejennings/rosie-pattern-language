@@ -71,7 +71,11 @@ LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. ./dynamic local librosie.dylib
 else
 LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
-SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic system librosie.so
+# Some linux distros may not have DESTDIR on their search path by
+# default, like when running as root in a docker image.  (This can be
+# checked with `/sbin/ldconfig -v`.) So we explicitly set
+# LD_LIBRARY_PATH in the SYSTEM test of the dynamically linked client.
+SYSTEM_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=$(DESTDIR) ./dynamic system librosie.so
 LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic local librosie.so
 endif
 

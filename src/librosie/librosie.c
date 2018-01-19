@@ -170,11 +170,11 @@ static void prepare_for_boot() {
   strncpy(next, RPEG_LOCATION, (MAXPATHLEN - (next - rpeg_path + 1)));
   LOGf("rpeg path (calculated) is %s\n", rpeg_path);
   
-  rpeg_lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
-  if (rpeg_lib == NULL) {
-    LOG("dlopen(rpeg) returned NULL: unable to reopen rpeg library\n");
-    return;
-  }
+/*   rpeg_lib = dlopen(rpeg_path, RTLD_NOW); /\* reopen to get handle *\/ */
+/*   if (rpeg_lib == NULL) { */
+/*     LOG("dlopen(rpeg) returned NULL: unable to reopen rpeg library\n"); */
+/*     return; */
+/*   } */
 
 /*   char *msg = NULL; */
 

@@ -39,8 +39,12 @@ clean:
 test: $(ROSIE_DYLIB)
 	LD_LIBRARY_PATH=.. python test.py local
 
+# Some linux distros may not have DESTDIR on their search path by
+# default, like when running as root in a docker image.  (This can be
+# checked with `/sbin/ldconfig -v`.) So we explicitly set
+# LD_LIBRARY_PATH in the SYSTEM installation test.
 installtest:
-	python test.py system
+	LD_LIBRARY_PATH=$(DESTDIR) python test.py system
 
 echo:
 	@echo "HOME= $(HOME)"
