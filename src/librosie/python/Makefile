@@ -44,7 +44,7 @@ test: $(ROSIE_DYLIB)
 # checked with `/sbin/ldconfig -v`.) So we explicitly set
 # LD_LIBRARY_PATH in the SYSTEM installation test.
 installtest:
-	LD_LIBRARY_PATH=$(DESTDIR) python test.py system
+	LD_LIBRARY_PATH=$(DESTDIR)/lib python test.py system
 
 echo:
 	@echo "HOME= $(HOME)"

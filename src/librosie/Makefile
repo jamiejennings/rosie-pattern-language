@@ -8,6 +8,11 @@
 
 ## Use "DEBUG=1" on the command line to cause librosie to log to stderr
 
+# Same default as in top-level makefile, so that we can run "make
+# installtest" locally from the librosie directory without having to
+# specify DESTDIR.
+DESTDIR=/usr/local
+
 HOME = $(shell cd ../..; pwd)
 ROSIE = "$(HOME)/bin/rosie"
 
@@ -110,19 +115,23 @@ librosie.a: librosie.o liblua
 clean:
 	$(RM) librosie.dylib librosie.so librosie.o librosie.a liblua.5.3.dylib
 	$(RM) -rf liblua
-	here="$(shell pwd)"; \
+	@here="$(shell pwd)"; \
 	for client in $(ALLCLIENTS); do cd $${here}/$$client && $(MAKE) clean; done
 
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
 test: $(ROSIE_DYLIB) $(ROSIE_A)
+	@if [ -z "$(clients)" ]; then \
+	echo Missing client list to test.  Try "CLIENTS=all".; \
+	exit 1; \
+	fi; \
 	here="$(shell pwd)"; \
 	for client in $(clients); do cd $${here}/$$client && $(MAKE) test; done
 
 installtest:
-	here="$(shell pwd)"; \
-	for client in $(clients); do cd $${here}/$$client && $(MAKE) installtest; done
+	@here="$(shell pwd)"; \
+	for client in $(clients); do cd $${here}/$$client && $(MAKE) DESTDIR=$(DESTDIR) installtest; done
 
 echo:
 	@echo "HOME= $(HOME)"

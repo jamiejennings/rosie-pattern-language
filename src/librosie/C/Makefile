@@ -75,7 +75,7 @@ ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 # default, like when running as root in a docker image.  (This can be
 # checked with `/sbin/ldconfig -v`.) So we explicitly set
 # LD_LIBRARY_PATH in the SYSTEM test of the dynamically linked client.
-SYSTEM_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=$(DESTDIR) ./dynamic system librosie.so
+SYSTEM_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=$(DESTDIR)/lib ./dynamic system librosie.so
 LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic local librosie.so
 endif
 

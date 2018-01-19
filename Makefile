@@ -387,7 +387,7 @@ installtest:
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D)
 	@if [ -n "$(CLIENTS)" ]; then \
 		echo "** Running librosie client tests **"; \
-		cd $(LIBROSIE_DIR) && $(MAKE) installtest; \
+		cd $(LIBROSIE_DIR) && $(MAKE) DESTDIR=$(DESTDIR) installtest; \
 	else \
 		echo "Skipping librosie client tests."; \
 		echo "To enable, set CLIENTS=all or CLIENTS=\"C python\" or such (space separated list in quotes)."; \
