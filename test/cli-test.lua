@@ -21,7 +21,7 @@ local try = io.open(rosie_cmd, "r")
 if try then
    try:close()					    -- found it.  will use it.
 else
-   local tbl, status, code = util.os_execute_capture("which rosie")
+   local tbl, status, code = util.os_execute_capture("command -v rosie")
    if code==0 and tbl and tbl[1] and type(tbl[1])=="string" then
       rosie_cmd = tbl[1]:sub(1,-2)			    -- remove lf at end
    else

@@ -50,19 +50,23 @@ void *librosie;
 static char *get_libdir(void *symbol) {
   Dl_info dl;
   char *base, *dir;
+  char buf[MAXPATHLEN];
   int ok = dladdr(symbol, &dl);
   if (!ok) {
     LOG("call to dladdr failed");
     return NULL;
   }
   LOGf("dli_fname is %s\n", dl.dli_fname);
-  base = basename((char *)dl.dli_fname);
-  dir = dirname((char *)dl.dli_fname);
+  /* basename and dirname may MODIFY the string you pass to them. arghh. */
+  strncpy(buf, dl.dli_fname, MAXPATHLEN);
+  base = basename(buf);
+  strncpy(buf, dl.dli_fname, MAXPATHLEN);
+  dir = dirname(buf);
   if (!base || !dir) {
     LOG("librosie: call to basename/dirname failed");
     return NULL;
   }
-  char *libdir = strndup(dir, MAXPATHLEN);
+  char *libdir = strndup(dir, MAXPATHLEN); /* heap allocated */
   LOGf("libdir is %s, and libname is %s\n", libdir, base);
   return libdir;
 }
@@ -150,7 +154,7 @@ int main(int argc, char **argv) {
   if (!init(librosie_path)) return -1;
   if (!bind(librosie)) return -1;
   char *librosie_dir = get_libdir(fp_rosie_new);
-  printf("Found librosie at %s\n", librosie_dir); fflush(NULL);
+  printf("Found librosie in directory %s\n", librosie_dir); fflush(NULL);
 
   if (strncmp(test_type, "local", 6)==0) {
     if (strncmp(librosie_dir, "/usr/", 4)==0) {

@@ -41,7 +41,7 @@ SYSLIBS=
 SYSLDFLAGS=-undefined error
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
-SYSLDFLAGS=-Wl,--export-dynamic
+SYSLDFLAGS=-Wl,--no-undefined
 SYSLIBS=-lpthread -ldl -lm
 endif
 
@@ -80,15 +80,11 @@ dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
 dynamic: dynamic.o 
-	$(CC) -o $@ dynamic.o $(SYSLIBS) # $(SYSLDFLAGS) not needed?
+	$(CC) -o $@ dynamic.o $(SYSLIBS) $(SYSLDFLAGS)
 
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
-#OLD COMMENT#
-# TODO: Would prefer to NOT link with liblua here.  But that would
-# force librosie to dynamically bind all 38 or so lua/luaL functions
-# it uses.
 static: static.o $(ROSIE_A) 
 	$(CC) -o $@ static.o $(ROSIE_A) $(SYSLIBS) $(SYSLDFLAGS)
 

@@ -111,18 +111,23 @@ void *lua_lib;
 static void set_libinfo() {
   Dl_info dl;
   char *base, *dir;
-  int ok = dladdr((void *)set_libinfo, &dl);
+  char buf[MAXPATHLEN];
+  int ok = dladdr((void *)rosie_new, &dl);
   if (!ok) {
     display("librosie: call to dladdr failed");
     exit(ERR_SYSCALL_FAILED);
   }
   LOGf("dli_fname is %s\n", dl.dli_fname);
-  base = basename((char *)dl.dli_fname);
-  dir = dirname((char *)dl.dli_fname);
+  /* basename and dirname may MODIFY the string you pass to them. arghh. */
+  strncpy(buf, dl.dli_fname, MAXPATHLEN);
+  base = basename(buf);
+  strncpy(buf, dl.dli_fname, MAXPATHLEN);
+  dir = dirname(buf);
   if (!base || !dir) {
     display("librosie: call to basename/dirname failed");
     exit(ERR_SYSCALL_FAILED);
   }
+  /* basename and dirname return pointers to temporary internal storage. arghh. */
   strncpy(libname, base, MAXPATHLEN);
   strncpy(libdir, dir, MAXPATHLEN);
   LOGf("libdir is %s, and libname is %s\n", libdir, libname);
