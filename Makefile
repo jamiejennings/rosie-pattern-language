@@ -320,7 +320,6 @@ install_rpl:
 .PHONY: install_librosie
 install_librosie: $(LIBROSIE)
 	cp "$(LIBROSIE_DIR)/$(LIBROSIE)" "$(INSTALL_LIBROSIE)"
-#	cp "$(LIBROSIE_DIR)/$(LIBLUA)" "$(INSTALL_LIBLUA)"
 
 # Main install rule
 .PHONY: install
@@ -333,6 +332,8 @@ uninstall:
 	@-rm -vf $(INSTALL_ROSIEBIN)
 	@echo "Removing $(ROSIED)"
 	@-rm -Rvf $(ROSIED)/
+	@echo "Removing $(INSTALL_LIBROSIE)"
+	@-rm -vf "$(INSTALL_LIBROSIE)"
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)

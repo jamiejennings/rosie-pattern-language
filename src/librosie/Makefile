@@ -71,17 +71,16 @@ default: $(ROSIE_DYLIB) $(ROSIE_A)
 # #	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
 # 	$(CC) -dynamiclib -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
 
-lib$(LUA_DYLIB_NAME).so: lua_objs
-	$(CC) -o $@ liblua/*.o $(LIBLUA_LDFLAGS)
-	cp $@ ../../lib/$@
+# lib$(LUA_DYLIB_NAME).so: lua_objs
+# 	$(CC) -o $@ liblua/*.o $(LIBLUA_LDFLAGS)
+# 	cp $@ ../../lib/$@
 
 $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
 	@false
 
 
-.PHONY: lua_objs
-lua_objs: $(LUA_A)
+liblua: $(LUA_A)
 	mkdir -p liblua
 	cd liblua && ar x $(LUA_A)
 
@@ -93,21 +92,24 @@ else
   clients=$(CLIENTS)
 endif
 
+dependent_objs=liblua/*.o ../../submodules/rosie-lpeg/src/*.o ../../submodules/lua-cjson/*.o
+
 librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
 
-librosie.so: librosie.o $(LUA_DYLIB)
+librosie.so: librosie.o liblua
 	$(CC) -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
 
-librosie.dylib: librosie.o $(LUA_DYLIB)
-	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(SYSLIBS) $(LDFLAGS)
+librosie.dylib: librosie.o liblua
+	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
 
-librosie.a: librosie.o lua_objs
-	$(AR) $@ librosie.o liblua/*.o
+librosie.a: librosie.o liblua
+	$(AR) $@ librosie.o $(dependent_objs)
 	$(RANLIB) $@
 
 clean:
-	$(RM) librosie.dylib librosie.so librosie.o librosie.a liblua.5.3.dylib liblua/*
+	$(RM) librosie.dylib librosie.so librosie.o librosie.a liblua.5.3.dylib
+	$(RM) -rf liblua
 	here="$(shell pwd)"; \
 	for client in $(ALLCLIENTS); do cd $${here}/$$client && $(MAKE) clean; done
 

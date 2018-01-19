@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 
   int exitStatus = 0;
 
-  init(librosie_path);
+  if (!init(librosie_path)) return -1;
   if (!bind(librosie)) return -1;
   char *librosie_dir = get_libdir(fp_rosie_new);
   printf("Found librosie at %s\n", librosie_dir); fflush(NULL);

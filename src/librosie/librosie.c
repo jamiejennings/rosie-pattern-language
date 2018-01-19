@@ -173,16 +173,20 @@ static void prepare_for_boot() {
 
   char *msg = NULL;
 
-  fp_r_match_C = dlsym(rpeg_lib, "r_match_C");
-  if ((msg = dlerror()) != NULL) LOGf("r_match_C dlerror = %s\n", msg);
+  /* TEMPORARY */
+  fp_r_match_C = &r_match_C;
+  fp_r_newbuffer_wrap = &r_newbuffer_wrap;
 
-  fp_r_newbuffer_wrap = (foo_t) dlsym(rpeg_lib, "r_newbuffer_wrap");
-  if ((msg = dlerror()) != NULL) LOGf("r_newbuffer_wrap dlerror = %s\n", msg);
+/*   fp_r_match_C = dlsym(rpeg_lib, "r_match_C"); */
+/*   if ((msg = dlerror()) != NULL) LOGf("r_match_C dlerror = %s\n", msg); */
 
-  if ((fp_r_match_C == NULL) || (fp_r_newbuffer_wrap == NULL)) {
-    LOG("Failed to find rpeg functions\n");
-    return;
-  }
+/*   fp_r_newbuffer_wrap = (foo_t) dlsym(rpeg_lib, "r_newbuffer_wrap"); */
+/*   if ((msg = dlerror()) != NULL) LOGf("r_newbuffer_wrap dlerror = %s\n", msg); */
+
+/*   if ((fp_r_match_C == NULL) || (fp_r_newbuffer_wrap == NULL)) { */
+/*     LOG("Failed to find rpeg functions\n"); */
+/*     return; */
+/*   } */
 }  
 
 static pthread_once_t initialized = PTHREAD_ONCE_INIT;
@@ -199,11 +203,14 @@ static void initialize() {
   }
   strncpy(next, LIBLUA_LOCATION, (MAXPATHLEN - (next - liblua_path + 1)));
   LOGf("liblua path (calculated) is %s\n", liblua_path);
-  lua_lib = dlopen(liblua_path, RTLD_NOW | RTLD_GLOBAL);
-  if (lua_lib == NULL) {
-    LOGf("dlopen(liblua) returned NULL: unable to open %s\n", liblua_path);
-    return;
-  }
+/*   lua_lib = dlopen(liblua_path, RTLD_NOW | RTLD_GLOBAL); */
+/*   if (lua_lib == NULL) { */
+/*     LOGf("dlopen(liblua) returned NULL: unable to open %s\n", liblua_path); */
+/*     return; */
+/*   } */
+  /* TEMPORARY: */
+  lua_lib = &lua_lib;		/* any pointer */
+  
   prepare_for_boot();
   all_is_lost = FALSE;
   LOG("INITIALIZE finish\n");
@@ -322,7 +329,9 @@ pthread_mutex_t newstate_lock = PTHREAD_MUTEX_INITIALIZER;
 /* Not sure this protection is needed.  It was added while trying to
    isolate a bug that occurs on Linux but not on OS X.
 */
-lua_State *protected_luaL_newstate() {
+int luaopen_lpeg (lua_State *L);
+int luaopen_cjson_safe(lua_State *l);
+  lua_State *protected_luaL_newstate() {
     int r = pthread_mutex_lock(&newstate_lock);
     if (r) {
         fprintf(stderr, "pthread_mutex_lock for NEWSTATE_LOCK failed with %d\n", r);
@@ -331,6 +340,8 @@ lua_State *protected_luaL_newstate() {
     lua_State *newL = luaL_newstate();
     luaL_checkversion(newL); /* Ensures several critical things needed to use Lua */
     luaL_openlibs(newL);     /* Open lua's standard libraries */
+    luaL_requiref(newL, "lpeg", luaopen_lpeg, 0);
+    luaL_requiref(newL, "cjson_safe", luaopen_cjson_safe, 0);
     r = pthread_mutex_unlock(&newstate_lock);
     if (r) {
         fprintf(stderr, "pthread_mutex_unlock for NEWSTATE_LOCK failed with %d\n", r);
