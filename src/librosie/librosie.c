@@ -171,7 +171,7 @@ static void prepare_for_boot() {
     return;
   }
 
-  char *msg = NULL;
+/*   char *msg = NULL; */
 
   /* TEMPORARY */
   fp_r_match_C = &r_match_C;
