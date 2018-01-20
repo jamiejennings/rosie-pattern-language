@@ -31,8 +31,16 @@
  *   global information about the libs, and reinitializes the
  *   ready_to_boot lock.
  * 
- * - Probably need a list of engines so we can destroy those before
- *   unloading and resetting?  This will be tricky to get right.
+ *   - Probably need a list of engines so we can destroy those before
+ *     unloading and resetting?  This could be tricky to get right,
+ *     since a client could hold an engine pointer.  However, if we
+ *     keep an array of extant engines, we can validate the engine
+ *     passed into librosie by the client on each call.  
+ *
+ *   - Maybe we give the client a small integer to identify an engine,
+ *     instead of a pointer.  The cost would be one array index
+ *     operation per call to librosie, to ensure the engine is live.
+ *     Yes, this is a good idea.
  */
 
 #include <assert.h>
@@ -268,7 +276,7 @@ static int boot(lua_State *L, str *messages) {
 }
 
 /* FUTURE: Return any errors from the json encoder to the client? */
-int to_json_string(lua_State *L, int pos, str *json_string) {
+static int to_json_string(lua_State *L, int pos, str *json_string) {
      size_t len;
      byte_ptr str;
      int t;
@@ -329,30 +337,16 @@ static int strip_violation_messages(lua_State *L) {
 }
 
 
-pthread_mutex_t newstate_lock = PTHREAD_MUTEX_INITIALIZER;
-
-/* Not sure this protection is needed.  It was added while trying to
-   isolate a bug that occurs on Linux but not on OS X.
-*/
 int luaopen_lpeg (lua_State *L);
 int luaopen_cjson_safe(lua_State *l);
-  lua_State *protected_luaL_newstate() {
-    int r = pthread_mutex_lock(&newstate_lock);
-    if (r) {
-        fprintf(stderr, "pthread_mutex_lock for NEWSTATE_LOCK failed with %d\n", r);
-        abort();
-    }
-    lua_State *newL = luaL_newstate();
-    luaL_checkversion(newL); /* Ensures several critical things needed to use Lua */
-    luaL_openlibs(newL);     /* Open lua's standard libraries */
-    luaL_requiref(newL, "lpeg", luaopen_lpeg, 0);
-    luaL_requiref(newL, "cjson.safe", luaopen_cjson_safe, 0);
-    r = pthread_mutex_unlock(&newstate_lock);
-    if (r) {
-        fprintf(stderr, "pthread_mutex_unlock for NEWSTATE_LOCK failed with %d\n", r);
-        abort();
-    }
-    return newL;
+
+static lua_State *newstate() {
+  lua_State *newL = luaL_newstate();
+  luaL_checkversion(newL); /* Ensures several critical things needed to use Lua */
+  luaL_openlibs(newL);     /* Open lua's standard libraries */
+  luaL_requiref(newL, "lpeg", luaopen_lpeg, 0);
+  luaL_requiref(newL, "cjson.safe", luaopen_cjson_safe, 0);
+  return newL;
 }
   
 
@@ -371,7 +365,7 @@ Engine *rosie_new(str *messages) {
 
   int t;
   Engine *e = malloc(sizeof(Engine));
-  lua_State *L = protected_luaL_newstate();
+  lua_State *L = newstate();
   if (L == NULL) {
     *messages = rosie_new_string_from_const("not enough memory to initialize");
     return NULL;
@@ -427,6 +421,9 @@ Engine *rosie_new(str *messages) {
   CHECK_TYPE("rosie.env.violation.strip_each", t, LUA_TFUNCTION);
   set_registry(violation_strip_key);
 
+  lua_pushinteger(L, 0);
+  set_registry(alloc_set_limit_key);
+
   pthread_mutex_init(&(e->lock), NULL);
   e->L = L;
 
@@ -435,22 +432,41 @@ Engine *rosie_new(str *messages) {
   return e;
 }
      
-int rosie_set_alloc_limit (Engine *e, int newlimit) {
+/* newlimit of -1 means query for current limit */
+int rosie_alloc_limit (Engine *e, int *newlimit, int *usage) {
   int memusg, actual_limit;
   lua_State *L = e->L;
+  LOGf("rosie_alloc_limit() called with int pointers %p, %p\n", newlimit, usage);
   ACQUIRE_ENGINE_LOCK(e);
-  if ((newlimit != 0) && (newlimit < MIN_ALLOC_LIMIT_MB)) return ERR_ENGINE_CALL_FAILED;
-  else {
-    lua_gc(L, LUA_GCCOLLECT, 0);
-    lua_gc(L, LUA_GCCOLLECT, 0);	/* second time to free resources marked for finalization */
-    memusg = lua_gc(L, LUA_GCCOUNT, 0); /* KB */
-    actual_limit = memusg + (newlimit * 1024);
-    lua_pushinteger(L, (newlimit == 0) ? 0 : actual_limit);
-    set_registry(alloc_limit_key);
-    lua_pop(L, 1);
-    if (newlimit == 0) LOGf("set alloc limit to UNLIMITED above current usage level of %0.1f MB\n", memusg/1024.0);
-    else LOGf("set alloc limit to %d MB above current usage level of %0.1f MB\n", newlimit, memusg/1024.0);
+  lua_gc(L, LUA_GCCOLLECT, 0);
+  lua_gc(L, LUA_GCCOLLECT, 0);        /* second time to free resources marked for finalization */
+  memusg = lua_gc(L, LUA_GCCOUNT, 0); /* KB */
+  if (usage) *usage = memusg;
+  if (newlimit) {
+    int limit = *newlimit;
+    if ((limit != -1) && (limit != 0) && (limit < MIN_ALLOC_LIMIT_MB)) {
+      RELEASE_ENGINE_LOCK(e);
+      return ERR_ENGINE_CALL_FAILED;
+    } 
+    if (limit == -1) {
+      /* query */
+      get_registry(alloc_set_limit_key);
+      *newlimit = lua_tointeger(L, -1);
+    } else {
+      /* set new limit */
+      lua_pushinteger(L, limit);
+      set_registry(alloc_set_limit_key);
+      actual_limit = memusg + limit;
+      lua_pushinteger(L, (limit == 0) ? 0 : actual_limit);
+      set_registry(alloc_actual_limit_key);
+      if (limit == 0) {
+	LOGf("set alloc limit to UNLIMITED above current usage level of %0.1f MB\n", memusg/1024.0);
+      } else {
+	LOGf("set alloc limit to %d MB above current usage level of %0.1f MB\n", *newlimit, memusg/1024.0);
+      }
+    }
   }
+  lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
 }
@@ -487,18 +503,27 @@ int rosie_config(Engine *e, str *retval) {
   return SUCCESS;
 }
 
-int rosie_setlibpath_engine(Engine *e, char *newpath) {
+int rosie_libpath(Engine *e, str *newpath) {
   int t;
   lua_State *L = e->L;
   ACQUIRE_ENGINE_LOCK(e);
   get_registry(engine_key);
-  t = lua_getfield(L, -1, "set_libpath");
-  CHECK_TYPE("engine.set_libpath()", t, LUA_TFUNCTION);
+  if (newpath->ptr) {
+    t = lua_getfield(L, -1, "set_libpath");
+    CHECK_TYPE("engine.set_libpath()", t, LUA_TFUNCTION);
+  } else {
+    t = lua_getfield(L, -1, "get_libpath");
+    CHECK_TYPE("engine.get_libpath()", t, LUA_TFUNCTION);
+  }    
   lua_pushvalue(L, -2);
-  lua_pushstring(L, (const char *)newpath);
-  t = lua_pcall(L, 2, 0, 0);
+  if (newpath->ptr) lua_pushlstring(L, (const char *)newpath->ptr, newpath->len);
+  t = lua_pcall(L, (newpath->ptr) ? 2 : 1, (newpath->ptr) ? 0 : 1, 0);
   if (t != LUA_OK) {
-    LOG("engine.set_libpath() failed\n");
+    if (newpath) {
+	LOG("engine.set_libpath() failed\n");
+      } else {
+	LOG("engine.get_libpath() failed\n");
+    }      
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
@@ -507,9 +532,17 @@ int rosie_setlibpath_engine(Engine *e, char *newpath) {
   do {
     get_registry(engine_key);
     t = lua_getfield(L, -1, "searchpath");
-    LOGf("searchpath is now: %s\n", lua_tostring(L, -1));
+    LOGf("searchpath obtained directly from engine object is: %s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
   } while (0);
 #endif
+  if (!newpath->ptr) {
+    size_t tmplen;
+    const char *tmpptr = lua_tolstring(L, -1, &tmplen);
+    str tmpstr = rosie_new_string((byte_ptr)tmpptr, tmplen);
+    (*newpath).ptr = tmpstr.ptr;
+    (*newpath).len = tmpstr.len;
+  }
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
@@ -525,18 +558,6 @@ int rosie_free_rplx (Engine *e, int pat) {
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
 }
-
-/* TODO!!!!
-
-   change set_alloc_limit to alloc_limit()
-   with arg, sets it
-   without arg, gets it
-
-   and libpath also
- */
-
-
-
 
 /* N.B. Client must free messages */
 int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
@@ -628,7 +649,7 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
 
 static inline void collect_if_needed(lua_State *L) {
   int limit, memusg;
-  get_registry(alloc_limit_key);
+  get_registry(alloc_actual_limit_key);
   limit = lua_tointeger(L, -1);	/* nil will convert to zero */
   lua_pop(L, 1);
   if (limit) {

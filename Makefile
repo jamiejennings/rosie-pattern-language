@@ -77,8 +77,6 @@ INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_RPL_DIR = $(ROSIED)/rpl
 INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
-INSTALL_LIBROSIE = $(LIBROSIED)/$(LIBROSIE)
-#INSTALL_LIBLUA = $(LIBROSIED)/$(LIBLUA)
 
 .PHONY: clean
 clean:
@@ -111,12 +109,12 @@ readlinetest:
 	   echo 'READLINE TEST: libreadline and readline.h appear to be installed' || \
 	   (echo 'READLINE TEST: Missing readline library or readline.h' && /usr/bin/false)
 
+LIBROSIE_A=librosie.a
 ifeq ($(PLATFORM),macosx)
 PLATFORM=macosx
 CC=cc
 CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
 LIBROSIE=librosie.dylib
-LIBLUA=liblua.5.3.dylib
 endif
 
 .PHONY: macosx
@@ -129,7 +127,6 @@ CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
 CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
 LINUX_CFLAGS=MYCFLAGS=-fPIC
 LIBROSIE=librosie.so
-LIBLUA=liblua.5.3.so
 endif
 .PHONY: linux
 linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so $(LIBROSIE) librosie.a compile sniff
@@ -318,8 +315,9 @@ install_rpl:
 
 # Install librosie
 .PHONY: install_librosie
-install_librosie: $(LIBROSIE)
-	cp "$(LIBROSIE_DIR)/$(LIBROSIE)" "$(INSTALL_LIBROSIE)"
+install_librosie: $(LIBROSIE) $(LIBROSIE_A)
+	cp "$(LIBROSIE_DIR)/$(LIBROSIE)" "$(LIBROSIED)/$(LIBROSIE)"
+	cp "$(LIBROSIE_DIR)/$(LIBROSIE_A)" "$(LIBROSIED)/$(LIBROSIE_A)"
 
 # Main install rule
 .PHONY: install
@@ -332,8 +330,9 @@ uninstall:
 	@-rm -vf $(INSTALL_ROSIEBIN)
 	@echo "Removing $(ROSIED)"
 	@-rm -Rvf $(ROSIED)/
-	@echo "Removing $(INSTALL_LIBROSIE)"
-	@-rm -vf "$(INSTALL_LIBROSIE)"
+	@echo "Removing librosie.a/.so from $(LIBROSIED)"
+	@-rm -vf "$(LIBROSIED)/$(LIBROSIE)"
+	@-rm -vf "$(LIBROSIED)/$(LIBROSIE_A)"
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)

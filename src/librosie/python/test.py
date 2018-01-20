@@ -104,6 +104,49 @@ class RosieConfigTest(unittest.TestCase):
             self.assertTrue(entry['desc'])
             if not entry['value']: print "NOTE: no value for config key", entry['name']
                 
+class RosieLibpathTest(unittest.TestCase):
+
+    engine = None
+
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        path = self.engine.libpath()
+        self.assertIsInstance(path, basestring)
+        newpath = "foo bar baz"
+        self.engine.libpath(newpath)
+        testpath = self.engine.libpath()
+        self.assertIsInstance(testpath, basestring)
+        self.assertTrue(testpath == newpath)
+                
+class RosieAlloclimitTest(unittest.TestCase):
+
+    engine = None
+
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        limit, usage = self.engine.alloc_limit()
+        self.assertIsInstance(limit, int)
+        self.assertTrue(limit == 0)
+        limit, usage = self.engine.alloc_limit(0)
+        limit, usage = self.engine.alloc_limit()
+        self.assertTrue(limit == 0)
+        limit, usage = self.engine.alloc_limit(8199)
+        self.assertTrue(limit == 8199)
+        with self.assertRaises(ValueError):
+            limit, usage = self.engine.alloc_limit(8191) # too low
+        limit, usage = self.engine.alloc_limit()
+        self.assertTrue(limit == 8199)
+
 class RosieImportTest(unittest.TestCase):
 
     engine = None

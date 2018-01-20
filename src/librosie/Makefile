@@ -30,7 +30,6 @@ PLATFORM=none
 endif
 
 LUA_A=$(HOME)/submodules/lua/src/liblua.a
-LUA_DYLIB_NAME=lua.5.3
 ROSIE_DYLIB_NAME=rosie
 ROSIE_A=lib$(ROSIE_DYLIB_NAME).a
 
@@ -39,14 +38,12 @@ SYSCFLAGS=-DLUA_USE_MACOSX
 SYSLIBS=
 SYSLDFLAGS=-undefined dynamic_lookup
 CFLAGS += -std=gnu99
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
 LIBLUA_LDFLAGS=-dynamiclib -compatibility_version 5.3 -current_version 5.3.2
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
 SYSLDFLAGS=
 SYSLIBS=-lpthread -shared -ldl -lm
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
 LIBLUA_LDFLAGS=-shared -ldl -lm
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
@@ -72,14 +69,6 @@ MYOBJS=
 
 default: $(ROSIE_DYLIB) $(ROSIE_A)
 
-# lib$(LUA_DYLIB_NAME).dylib: lua_objs
-# #	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
-# 	$(CC) -dynamiclib -compatibility_version 5.3 -current_version 5.3.2 -o $@ liblua/*.o
-
-# lib$(LUA_DYLIB_NAME).so: lua_objs
-# 	$(CC) -o $@ liblua/*.o $(LIBLUA_LDFLAGS)
-# 	cp $@ ../../lib/$@
-
 $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
 	@false
@@ -97,7 +86,7 @@ else
   clients=$(CLIENTS)
 endif
 
-dependent_objs=liblua/*.o ../../submodules/rosie-lpeg/src/*.o ../../submodules/lua-cjson/*.o
+dependent_objs=liblua/*.o $(HOME)/submodules/rosie-lpeg/src/*.o $(HOME)/submodules/lua-cjson/*.o
 
 librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
 	$(CC) -o $@ -c librosie.c $(CFLAGS)
@@ -113,7 +102,7 @@ librosie.a: librosie.o liblua
 	$(RANLIB) $@
 
 clean:
-	$(RM) librosie.dylib librosie.so librosie.o librosie.a liblua.5.3.dylib
+	$(RM) librosie.dylib librosie.so librosie.o librosie.a
 	$(RM) -rf liblua
 	@here="$(shell pwd)"; \
 	for client in $(ALLCLIENTS); do cd $${here}/$$client && $(MAKE) clean; done

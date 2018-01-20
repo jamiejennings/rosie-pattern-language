@@ -113,8 +113,8 @@ static int bind(void *lib){
   bind_function(fp_rosie_new_string_ptr, "rosie_new_string_ptr");
   bind_function(fp_rosie_free_string_ptr, "rosie_free_string_ptr");
 
-  bind_function(fp_rosie_setlibpath_engine, "rosie_setlibpath_engine");
-  bind_function(fp_rosie_set_alloc_limit, "rosie_set_alloc_limit");
+  bind_function(fp_rosie_libpath, "rosie_libpath");
+  bind_function(fp_rosie_alloc_limit, "rosie_alloc_limit");
   bind_function(fp_rosie_config, "rosie_config");
 
   bind_function(fp_rosie_compile, "rosie_compile");

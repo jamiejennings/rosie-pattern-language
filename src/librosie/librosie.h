@@ -7,7 +7,7 @@
 /*  AUTHOR: Jamie A. Jennings                                                */
 
 #define INITIAL_RPLX_SLOTS 32
-#define MIN_ALLOC_LIMIT_MB 10
+#define MIN_ALLOC_LIMIT_MB 8192	/* KB */
 
 #define TRUE 1
 #define FALSE 0
@@ -59,8 +59,8 @@ void rosie_free_string_ptr(str *s);
 
 Engine *rosie_new(str *messages);
 void rosie_finalize(Engine *e);
-int rosie_setlibpath_engine(Engine *e, char *newpath);
-int rosie_set_alloc_limit(Engine *e, int newlimit);
+int rosie_libpath(Engine *e, str *newpath);
+int rosie_alloc_limit(Engine *e, int *newlimit, int *usage);
 int rosie_config(Engine *e, str *retvals);
 int rosie_compile(Engine *e, str *expression, int *pat, str *messages);
 int rosie_free_rplx(Engine *e, int pat);

@@ -395,6 +395,7 @@ engine =
 		     loadfile=loadfile,
 		     import=import,
 		     set_libpath = function(self, newlibpath) self.searchpath = newlibpath; end,
+		     get_libpath = function(self) return self.searchpath; end,
 		     searchpath="",
 
 		     compile=compile_expression,

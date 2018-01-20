@@ -59,17 +59,13 @@ MYLIBS=
 MYOBJS=
 
 ROSIE_A=$(HOME)/src/librosie/librosie.a
-
-LUA_DYLIB_NAME=lua.5.3
 ROSIE_DYLIB_NAME=rosie
 
 ifeq ($(PLATFORM), macosx)
-LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
 SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic system librosie.dylib
 LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. ./dynamic local librosie.dylib
 else
-LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
 ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
 # Some linux distros may not have DESTDIR on their search path by
 # default, like when running as root in a docker image.  (This can be

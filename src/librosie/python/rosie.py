@@ -3,7 +3,7 @@
 # 
 #  rosie.py     An interface to librosie from Python
 # 
-#  © Copyright IBM Corporation 2016, 2017.
+#  © Copyright IBM Corporation 2016, 2017, 2018.
 #  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 #  AUTHOR: Jamie A. Jennings
 
@@ -49,8 +49,8 @@ void rosie_free_string(str s);
 
 void *rosie_new(str *errors);
 void rosie_finalize(void *L);
-int rosie_setlibpath_engine(void *L, char *newpath);
-int rosie_set_alloc_limit(void *L, int newlimit);
+int rosie_libpath(void *L, str *newpath);
+int rosie_alloc_limit(void *L, int *newlimit, int *usage);
 int rosie_config(void *L, str *retvals);
 int rosie_compile(void *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(void *L, int pat);
@@ -272,17 +272,30 @@ class engine ():
                 raise ValueError("unknown error caused matchfile to fail")
         return Ccin[0], Ccout[0], Ccerr[0]
 
-    def setlibpath(self, libpath):
-        ok = lib.rosie_setlibpath_engine(self.engine, libpath)
+    def libpath(self, libpath=None):
+        if libpath is None:
+            libpath_arg = new_cstr()
+        else:
+            libpath_arg = new_cstr(libpath)
+        ok = lib.rosie_libpath(self.engine, libpath_arg)
         if ok != 0:
-            raise RuntimeError("setpath() failed (please report this as a bug)")
+            raise RuntimeError("libpath() failed (please report this as a bug)")
+        return read_cstr(libpath_arg) if libpath is None else None
 
-    def set_alloc_limit(self, newlimit):
-        if (newlimit != 0) and (newlimit < 10):
-            raise ValueError("new allocation limit must be 10 MB or higher (or zero for unlimited)")
-        ok = lib.rosie_set_alloc_limit(self.engine, newlimit)
+    def alloc_limit(self, newlimit=None):
+        limit_arg = ffi.new("int *")
+        usage_arg = ffi.new("int *")
+        if newlimit is None:
+            limit_arg[0] = -1   # query
+        else:
+            if (newlimit != 0) and (newlimit < 8192):
+                raise ValueError("new allocation limit must be 8192 KB or higher (or zero for unlimited)")
+            limit_arg = ffi.new("int *")
+            limit_arg[0] = newlimit
+        ok = lib.rosie_alloc_limit(self.engine, limit_arg, usage_arg)
         if ok != 0:
-            raise RuntimeError("set_alloc_limit() failed (please report this as a bug)")
+            raise RuntimeError("alloc_limit() failed (please report this as a bug)")
+        return limit_arg[0], usage_arg[0]
 
     def __del__(self):
         if hasattr(self, 'engine') and (self.engine != ffi.NULL):
