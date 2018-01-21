@@ -1,3 +1,62 @@
+2018-01-20  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-9
+
+DRAFT
+Cleaned up some things in librosie.  CHANGED: alloc_limit, libpath APIs.
+
+Librosie is now statically linked.  It no longer loads any dynamic
+libraries.  Note that the Rosie CLI and REPL are still on the prior
+architecture, and they dynamically load several shared libraries from
+rosie-pattern-language/lib. 
+
+Tests of the installation now explicitly set LD_LIBRARY_PATH when
+using the shared library librosie.so/dylib
+
+Fixed a subtle bug which revealed that dlopen caches (at least the)
+dli.fname value.  Discovered this after learning that basename/dirname
+may change their (char *) argument.  Arghhhhh.
+
+
+The librosie test program "dynamic" now takes a system|local argument,
+like the python test program does.  It can then assure that it is
+getting librosie from the correct place.
+
+Added "installtest" for the C client, which runs the dynamically-linked librosie client
+
+The go client calls match now, although the results are currently
+being returned as a go string, which probably is not ideal.
+
+librosie now returns NULL ptr when there are no messages.
+
+NEW: prelude.rpl and the builtin dir.
+
+CHANGED: Removed "halt" (which was undocumented) from standard prelude
+
+FIXED: Tracing now works on built-in definitions.
+
+CHANGED: The output of the test command includes the full filename.
+
+NEW: Unicode patterns.  *** COMPILE TIMES issue
+Unicode rpl files now generated automatically, offline to Rosie execution...
+    
+FIXED: When the CLI auto-import fails, it now does so silently,
+because the user may have used other means to ensure that packages are
+loaded, such as an import statement on the command line
+
+CHANGED: CLI now prints error messages to stderr, not stdout.
+
+CHANGED: Now completely independent of locale system.
+
+NEW: Packages "list"ed now show the file from which they were loaded
+
+CHANGED: Removed support for 5,6-byte UTF-8 since those are deprecated.
+
+CHANGED: Multi-threaded test program now writes output files to /tmp
+
+/DRAFT
+	
+
 2018-01-05  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-8

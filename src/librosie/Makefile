@@ -34,17 +34,15 @@ ROSIE_DYLIB_NAME=rosie
 ROSIE_A=lib$(ROSIE_DYLIB_NAME).a
 
 ifeq ($(PLATFORM),macosx)
-SYSCFLAGS=-DLUA_USE_MACOSX
+SYSCFLAGS=-DLUA_USE_MACOSX -fPIC
 SYSLIBS=
-SYSLDFLAGS=-undefined dynamic_lookup
+SYSLDFLAGS=-dynamiclib
 CFLAGS += -std=gnu99
-LIBLUA_LDFLAGS=-dynamiclib -compatibility_version 5.3 -current_version 5.3.2
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
-SYSLDFLAGS=
-SYSLIBS=-lpthread -shared -ldl -lm
-LIBLUA_LDFLAGS=-shared -ldl -lm
+SYSLDFLAGS=-shared
+SYSLIBS=-lpthread -ldl -lm
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
@@ -89,13 +87,13 @@ endif
 dependent_objs=liblua/*.o $(HOME)/submodules/rosie-lpeg/src/*.o $(HOME)/submodules/lua-cjson/*.o
 
 librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
-	$(CC) -o $@ -c librosie.c $(CFLAGS)
+	$(CC) -fvisibility=hidden -o $@ -c librosie.c $(CFLAGS)
 
 librosie.so: librosie.o liblua
 	$(CC) -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
 
 librosie.dylib: librosie.o liblua
-	$(CC) -dynamiclib -install_name $(shell pwd)/$@ -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
+	$(CC) -install_name $(shell pwd)/$@ -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
 
 librosie.a: librosie.o liblua
 	$(AR) $@ librosie.o $(dependent_objs)

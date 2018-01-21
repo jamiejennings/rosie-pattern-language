@@ -94,12 +94,6 @@ none:
 
 ## ----------------------------------------------------------------------------- ##
 
-CJSON_MAKE_ARGS = LUA_VERSION=5.3 PREFIX=../$(LUA) 
-CJSON_MAKE_ARGS += FPCONV_OBJS="g_fmt.o dtoa.o" CJSON_CFLAGS+=-fpic
-CJSON_MAKE_ARGS += USE_INTERNAL_FPCONV=true CJSON_CFLAGS+=-DUSE_INTERNAL_FPCONV
-CJSON_MAKE_ARGS += CJSON_CFLAGS+="-pthread -DMULTIPLE_THREADS"
-CJSON_MAKE_ARGS += CJSON_LDFLAGS+=-pthread
-
 # Sigh.  Once we support Linux packages (like RPM), we won't need this test.
 # Note that this test should ALWAYS pass on OS X, since it ships with readline.
 .PHONY: readlinetest
@@ -113,7 +107,6 @@ LIBROSIE_A=librosie.a
 ifeq ($(PLATFORM),macosx)
 PLATFORM=macosx
 CC=cc
-CJSON_MAKE_ARGS += CJSON_LDFLAGS="-bundle -undefined dynamic_lookup"
 LIBROSIE=librosie.dylib
 endif
 
@@ -123,9 +116,6 @@ macosx: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so $(LIBROSIE) librosie.a 
 ifeq ($(PLATFORM),linux)
 PLATFORM=linux
 CC=gcc
-CJSON_MAKE_ARGS+=CJSON_CFLAGS+=-std=gnu99
-CJSON_MAKE_ARGS+=CJSON_LDFLAGS=-shared
-LINUX_CFLAGS=MYCFLAGS=-fPIC
 LIBROSIE=librosie.so
 endif
 .PHONY: linux
@@ -177,7 +167,7 @@ lib/cjson.so: $(json_lib)
 	cp $(json_lib) lib
 
 $(json_lib): $(submodules) 
-	cd $(JSON_DIR) && $(MAKE) CC=$(CC) $(CJSON_MAKE_ARGS)
+	cd $(JSON_DIR) && $(MAKE) CC=$(CC)
 	@$(BUILD_ROOT)/src/build_info.sh "json" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 lib/argparse.luac: $(submodules) submodules/argparse/src/argparse.lua bin/luac

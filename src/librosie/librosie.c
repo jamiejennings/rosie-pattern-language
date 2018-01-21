@@ -90,6 +90,9 @@ void *lua_lib;
 #include "registry.c"
 #include "rosiestring.c"
 
+/* Symbol visibility in the final library */
+#define EXPORT __attribute__ ((visibility("default")))
+
 /* ----------------------------------------------------------------------------------------
  * Engine locks
  * ----------------------------------------------------------------------------------------
@@ -355,6 +358,7 @@ static lua_State *newstate() {
  * ----------------------------------------------------------------------------------------
  */
 
+EXPORT
 Engine *rosie_new(str *messages) {
 
   pthread_once(&initialized, initialize);
@@ -433,6 +437,7 @@ Engine *rosie_new(str *messages) {
 }
      
 /* newlimit of -1 means query for current limit */
+EXPORT
 int rosie_alloc_limit (Engine *e, int *newlimit, int *usage) {
   int memusg, actual_limit;
   lua_State *L = e->L;
@@ -472,6 +477,7 @@ int rosie_alloc_limit (Engine *e, int *newlimit, int *usage) {
 }
 
 /* N.B. Client must free retval */
+EXPORT
 int rosie_config(Engine *e, str *retval) {
   int t;
   str r;
@@ -503,6 +509,7 @@ int rosie_config(Engine *e, str *retval) {
   return SUCCESS;
 }
 
+EXPORT
 int rosie_libpath(Engine *e, str *newpath) {
   int t;
   lua_State *L = e->L;
@@ -548,6 +555,7 @@ int rosie_libpath(Engine *e, str *newpath) {
   return SUCCESS;
 }
 
+EXPORT
 int rosie_free_rplx (Engine *e, int pat) {
   lua_State *L = e->L;
   LOGf("freeing rplx object with index %d\n", pat);
@@ -560,6 +568,7 @@ int rosie_free_rplx (Engine *e, int pat) {
 }
 
 /* N.B. Client must free messages */
+EXPORT
 int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   int t;
   str temp_rs;
@@ -670,7 +679,7 @@ static inline void collect_if_needed(lua_State *L) {
     (*(match)).data.len = (errno);    \
   } while (0);
 
-
+EXPORT
 int rosie_match(Engine *e, int pat, int start, char *encoder_name, str *input, match *match) {
   int t, encoder;
   size_t temp_len;
@@ -803,6 +812,7 @@ have_pattern:
 }
 
 /* N.B. Client must free trace */
+EXPORT
 int rosie_trace(Engine *e, int pat, int start, char *trace_style, str *input, int *matched, str *trace) {
   int t;
   str rs;
@@ -891,6 +901,7 @@ have_pattern:
 }
 
 /* N.B. Client must free 'messages' */
+EXPORT
 int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
   int t;
   size_t temp_len;
@@ -944,6 +955,7 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
 }
 
 /* N.B. Client must free 'messages' */
+EXPORT
 int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
   int t;
   size_t temp_len;
@@ -1007,6 +1019,7 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
 }
 
 /* N.B. Client must free 'messages' */
+EXPORT
 int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages) {
   int t;
   size_t temp_len;
@@ -1073,9 +1086,10 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname,
   return SUCCESS;
 }
 
-/* FUTURE: Expose engine_process_file() */
+/* FUTURE: Expose engine_process_file() ? */
 
 /* N.B. Client must free messages */
+EXPORT
 int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 		    char *infilename, char *outfilename, char *errfilename,
 		    int *cin, int *cout, int *cerr,
@@ -1157,6 +1171,7 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 }
 
 
+EXPORT
 void rosie_finalize(Engine *e) {
   lua_State *L = e->L;
   ACQUIRE_ENGINE_LOCK(e);
@@ -1188,4 +1203,41 @@ void rosie_finalize(Engine *e) {
    */
   free(e);
 }
+
+/* ----------------------------------------------------------------------------------------
+ * Functions to support the Lua implementation of the CLI
+ * ----------------------------------------------------------------------------------------
+ */
+
+EXPORT
+int rosie_exec_cli(Engine *e, char *fname, int argc, char **argv, char **err) {
+  ACQUIRE_ENGINE_LOCK(e);
+  lua_State *L = e->L;
+
+  get_registry(engine_key);
+  lua_setglobal(L, "cli_engine");
+  
+  lua_createtable(L, argc+1, 0);
+  for (int i = 0; i < argc; i++) {
+    lua_pushstring(L, argv[i]);
+    lua_rawseti(L, -2, i);
+  }
+  lua_setglobal(L, "arg");
+
+  int status = luaL_loadfile(L, fname);
+  if (status != LUA_OK) {
+    LOGf("Failed to load cli from %s\n", fname);
+    *err = strndup(lua_tostring(L, -1), MAXPATHLEN);
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return status;
+  }  
+  status = lua_pcall(L, 0, 0, 0);
+  if (status) LOGstack(L);
+  lua_settop(L, 0);
+  RELEASE_ENGINE_LOCK(e);
+  return status;
+}
+
+
 
