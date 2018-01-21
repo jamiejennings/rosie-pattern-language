@@ -35,7 +35,7 @@ ROSIE_A=lib$(ROSIE_DYLIB_NAME).a
 
 ifeq ($(PLATFORM),macosx)
 SYSCFLAGS=-DLUA_USE_MACOSX -fPIC
-SYSLIBS=
+SYSLIBS=-lreadline
 SYSLDFLAGS=-dynamiclib
 CFLAGS += -std=gnu99
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
@@ -84,7 +84,10 @@ else
   clients=$(CLIENTS)
 endif
 
-dependent_objs=liblua/*.o $(HOME)/submodules/rosie-lpeg/src/*.o $(HOME)/submodules/lua-cjson/*.o
+dependent_objs=liblua/*.o \
+               $(HOME)/submodules/rosie-lpeg/src/*.o \
+               $(HOME)/submodules/lua-cjson/*.o \
+               $(HOME)/submodules/lua-readline/src/*.o
 
 librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
 	$(CC) -fvisibility=hidden -o $@ -c librosie.c $(CFLAGS)

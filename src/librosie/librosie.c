@@ -1209,10 +1209,14 @@ void rosie_finalize(Engine *e) {
  * ----------------------------------------------------------------------------------------
  */
 
+int luaopen_readline (lua_State *L); /* will dynamically load the system libreadline/libedit */
+
 EXPORT
 int rosie_exec_cli(Engine *e, char *fname, int argc, char **argv, char **err) {
   ACQUIRE_ENGINE_LOCK(e);
   lua_State *L = e->L;
+
+  luaL_requiref(L, "readline", luaopen_readline, 0);
 
   get_registry(engine_key);
   lua_setglobal(L, "cli_engine");

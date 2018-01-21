@@ -12,10 +12,22 @@ PLATFORM=macosx
 else ifeq ($(REPORTED_PLATFORM), GNU/Linux)
 PLATFORM=linux
 else
-PLATFORM=none
+$(error Unsupported platform (uname reported "$(REPORTED_PLATFORM)"))
 endif
 
-PLATFORMS = linux macosx windows
+LIBROSIE_A=librosie.a
+
+ifeq ($(PLATFORM),macosx)
+PLATFORM=macosx
+CC=cc
+LIBROSIE_DYLIB=librosie.dylib
+endif
+
+ifeq ($(PLATFORM),linux)
+PLATFORM=linux
+CC=gcc
+LIBROSIE_DYLIB=librosie.so
+endif
 
 # Submodules
 ARGPARSE = argparse
@@ -25,19 +37,21 @@ JSON = lua-cjson
 READLINE = lua-readline
 LUAMOD = lua-modules
 
-
 BUILD_ROOT = $(shell pwd)
+
+# TODO: DECIDE ON THIS SOON:
+#   $(ROSIED)/pkg          standard library compiled (*.rosie)
+#   $(ROSIED)/rosie.lua    loads rosie into Lua 5.3 as a lua package
+
 
 # Install layout
 #
 # Almost everything gets copied to $(ROSIED): (e.g. /usr/local/lib/rosie)
-#   $(ROSIED)/bin          arch-dependent binaries (e.g. lua, 
-#   $(ROSIED)/lib          arch-dependent libraries (e.g. lpeg.so, *.luac)
+#   $(ROSIED)/bin          arch-dependent binaries (e.g. rosie, luac)
+#   $(ROSIED)/lib          arch-dependent libraries (e.g. *.luac)
 #   $(ROSIED)/rpl          standard library (*.rpl)
-#   $(ROSIED)/pkg          standard library compiled (*.rosie)
 #   $(ROSIED)/doc          documentation (html format)
-#   $(ROSIED)/extra        editor highlighting files, other things
-#   $(ROSIED)/rosie.lua    loads rosie into Lua 5.3 as a lua package
+#   $(ROSIED)/extra        editor highlighting files, sample docker files, other things
 #   $(ROSIED)/CHANGELOG    change log
 #   $(ROSIED)/CONTRIBUTORS project contributors, acknowledgements
 #   $(ROSIED)/LICENSE      license
@@ -58,7 +72,7 @@ LIBROSIED = $(DESTDIR)/lib
 # ROSIE_ROOT = $(DESTDIR)/share/rosie
 
 .PHONY: default
-default: $(PLATFORM)
+default: $(LIBROSIE_A) $(LIBROSIE_DYLIB) $(ROSIEBIN) compile sniff
 
 SUBMOD_DIR = submodules
 ROSIEBIN = $(BUILD_ROOT)/bin/rosie
@@ -72,6 +86,7 @@ JSON_DIR = $(SUBMOD_DIR)/$(JSON)
 READLINE_DIR = $(SUBMOD_DIR)/$(READLINE)
 LUAMOD_DIR = $(SUBMOD_DIR)/$(LUAMOD)
 LIBROSIE_DIR = $(BUILD_ROOT)/src/librosie
+CLI_DIR = $(BUILD_ROOT)/src/cli
 
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
@@ -88,9 +103,6 @@ clean:
 	-cd $(LIBROSIE_DIR) && make clean
 	rm -f build.log
 
-.PHONY: none
-none:
-	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
 ## ----------------------------------------------------------------------------- ##
 
@@ -102,28 +114,6 @@ readlinetest:
 	           cc -std=gnu99 -lreadline -o /dev/null -xc -) && \
 	   echo 'READLINE TEST: libreadline and readline.h appear to be installed' || \
 	   (echo 'READLINE TEST: Missing readline library or readline.h' && /usr/bin/false)
-
-LIBROSIE_A=librosie.a
-ifeq ($(PLATFORM),macosx)
-PLATFORM=macosx
-CC=cc
-LIBROSIE=librosie.dylib
-endif
-
-.PHONY: macosx
-macosx: bin/lua lib/lpeg.so lib/cjson.so lib/readline.so $(LIBROSIE) librosie.a compile sniff
-
-ifeq ($(PLATFORM),linux)
-PLATFORM=linux
-CC=gcc
-LIBROSIE=librosie.so
-endif
-.PHONY: linux
-linux: readlinetest bin/lua lib/lpeg.so lib/cjson.so lib/readline.so $(LIBROSIE) librosie.a compile sniff
-
-.PHONY: windows
-windows:
-	@echo Windows installation not yet supported.
 
 # The submodule_sentinel indicates that submodules have been
 # initialized in the git sense, i.e. that they have been cloned.  The
@@ -155,7 +145,7 @@ bin/luac: bin/lua
 lpeg_lib=$(LPEG_DIR)/src/lpeg.so
 lib/lpeg.so: $(lpeg_lib)
 	mkdir -p lib
-	cp $(lpeg_lib) lib
+#	cp $(lpeg_lib) lib
 
 $(lpeg_lib): $(submodules) 
 	cd $(LPEG_DIR)/src && $(MAKE) CC=$(CC) LUADIR=../../$(LUA)
@@ -164,7 +154,7 @@ $(lpeg_lib): $(submodules)
 json_lib=$(JSON_DIR)/cjson.so
 lib/cjson.so: $(json_lib) 
 	mkdir -p lib
-	cp $(json_lib) lib
+#	cp $(json_lib) lib
 
 $(json_lib): $(submodules) 
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC)
@@ -177,18 +167,11 @@ lib/argparse.luac: $(submodules) submodules/argparse/src/argparse.lua bin/luac
 readline_lib = $(READLINE_DIR)/readline.so
 lib/readline.so: $(readline_lib) 
 	mkdir -p lib
-	cp $(readline_lib) lib
+#	cp $(readline_lib) lib
 
 $(READLINE_DIR)/readline.so: $(submodules)
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUADIR=../$(LUA)
 	@$(BUILD_ROOT)/src/build_info.sh "readline_stub" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
-
-$(EXECROSIE): compile
-	@/usr/bin/env echo "Creating $(EXECROSIE)"
-	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(EXECROSIE)"
-	@/usr/bin/env echo -n "$(HOME)/lib/run-rosie $(HOME)" >> "$(EXECROSIE)"
-	@/usr/bin/env echo ' "$$@"' >> "$(EXECROSIE)"
-	@chmod 755 "$(EXECROSIE)"
 
 lib/strict.luac: $(LUAMOD_DIR)/strict.lua bin/luac
 	bin/luac -o $@ $<
@@ -209,67 +192,23 @@ lib/%.luac: src/core/%.lua bin/luac
 	bin/luac -o $@ $<
 	@$(BUILD_ROOT)/src/build_info.sh $@ $(BUILD_ROOT) "bin/luac" >> $(BUILD_ROOT)/build.log
 
-lib/run-rosie:
-	mkdir -p lib
-	@cp src/run-rosie lib
-
 core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
 other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
-librosie.dylib:
-librosie.so:
-librosie.a: $(luaobjects) lib/lpeg.so lib/cjson.so
+$(LIBROSIE_A):
+$(LIBROSIE_DYLIB): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
 	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC)
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
-compile: $(luaobjects) bin/luac bin/lua lib/lpeg.so lib/cjson.so lib/readline.so lib/run-rosie
+compile: $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 
-# The PHONY declaration below will force the creation of bin/rosie every time.  This is needed
-# only because the user may move the working directory.  When that happens, the user should
-# be able to run 'make' again to reconstruct a new bin/rosie script (which contains a
-# reference to the working directory).
-.PHONY: $(ROSIEBIN)
-$(ROSIEBIN): compile
-	@/usr/bin/env echo "Creating $(ROSIEBIN)"
-	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(ROSIEBIN)"
-	@/usr/bin/env echo -n "exec $(BUILD_ROOT)/lib/run-rosie " >> "$(ROSIEBIN)"
-	@/usr/bin/env echo -n ' "$$0"' >> "$(ROSIEBIN)"
-	@/usr/bin/env echo -n " $(BUILD_ROOT)" >> "$(ROSIEBIN)"
-	@/usr/bin/env echo ' "$$@"' >> "$(ROSIEBIN)"
-	@mkdir -p lib
-	@chmod 755 "$(ROSIEBIN)"
-	@/usr/bin/env echo "Creating $(BUILD_LUA_PACKAGE)"
-	@/usr/bin/env echo "local home = \"$(BUILD_ROOT)\"" > "$(BUILD_LUA_PACKAGE)"
-	@/usr/bin/env echo "return dofile(home .. \"/lib/boot.luac\")(home)" >> "$(BUILD_LUA_PACKAGE)"
+$(ROSIEBIN): compile $(LIBROSIE_A)
+	cd $(CLI_DIR) && $(MAKE) CC=$(CC)
+	cp $(CLI_DIR)/rosie "$(BUILD_ROOT)/bin"
 
-# See comment above re: ROSIEBIN
-.PHONY: $(INSTALL_ROSIEBIN)
-$(INSTALL_ROSIEBIN): compile
-	@/usr/bin/env echo "Creating $(INSTALL_ROSIEBIN)"
-	@mkdir -p "$(DESTDIR)"/bin
-	@/usr/bin/env echo "#!/usr/bin/env bash" > "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo -n "exec $(ROSIED)/lib/run-rosie " >> "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo -n ' "$$0"' >> "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo -n " $(ROSIED)" >> "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo ' "$$@"' >> "$(INSTALL_ROSIEBIN)"
-	@mkdir -p "$(ROSIED)"
-	@chmod 755 "$(INSTALL_ROSIEBIN)"
-	@/usr/bin/env echo "Creating $(INSTALL_LUA_PACKAGE)"
-	@/usr/bin/env echo "local home = \"$(ROSIED)\"" > "$(INSTALL_LUA_PACKAGE)"
-	@/usr/bin/env echo "return dofile(home .. \"/lib/boot.luac\")(home)" >> "$(INSTALL_LUA_PACKAGE)"
-
-# Install the lua interpreter
-.PHONY: install_lua
-install_lua: bin/lua
-	mkdir -p "$(INSTALL_BIN_DIR)"
-	cp bin/lua "$(INSTALL_BIN_DIR)"
-
-# Install all of the shared objects
-.PHONY: install_so
-install_so: 
-	mkdir -p "$(INSTALL_LIB_DIR)"
-	cp lib/*.so "$(INSTALL_LIB_DIR)"
+$(INSTALL_ROSIEBIN): $(ROSIEBIN)
+	cp $(CLI_DIR)/rosie "$(INSTALL_BIN_DIR)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
@@ -277,12 +216,6 @@ install_metadata:
 	mkdir -p "$(ROSIED)"
 	cp CHANGELOG CONTRIBUTORS LICENSE README VERSION "$(ROSIED)"
 	-cp $(BUILD_ROOT)/build.log "$(ROSIED)"
-
-# Install the real run script, and the rosie.lua file
-.PHONY: install_run_script
-install_run_script:
-	mkdir -p "$(INSTALL_LIB_DIR)"
-	@cp src/run-rosie "$(INSTALL_LIB_DIR)"
 
 # Install the lua pre-compiled binary files (.luac)
 .PHONY: install_luac_bin
@@ -305,8 +238,8 @@ install_rpl:
 
 # Install librosie
 .PHONY: install_librosie
-install_librosie: $(LIBROSIE) $(LIBROSIE_A)
-	cp "$(LIBROSIE_DIR)/$(LIBROSIE)" "$(LIBROSIED)/$(LIBROSIE)"
+install_librosie: $(LIBROSIE_DYLIB) $(LIBROSIE_A)
+	cp "$(LIBROSIE_DIR)/$(LIBROSIE_DYLIB)" "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
 	cp "$(LIBROSIE_DIR)/$(LIBROSIE_A)" "$(LIBROSIED)/$(LIBROSIE_A)"
 
 # Main install rule
@@ -321,7 +254,7 @@ uninstall:
 	@echo "Removing $(ROSIED)"
 	@-rm -Rvf $(ROSIED)/
 	@echo "Removing librosie.a/.so from $(LIBROSIED)"
-	@-rm -vf "$(LIBROSIED)/$(LIBROSIE)"
+	@-rm -vf "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
 	@-rm -vf "$(LIBROSIED)/$(LIBROSIE_A)"
 
 .PHONY: sniff
