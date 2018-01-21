@@ -34,7 +34,7 @@ RM= rm -f
 # Targets start here.
 default: rosie
 
-rosie: $(ROSIE_A)
+rosie: $(ROSIE_A) rosie.c
 	$(CC) -o $@ rosie.c $(CFLAGS) $(LDFLAGS) $(LIBS)
 
 clean:

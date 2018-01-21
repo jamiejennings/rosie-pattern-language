@@ -1,71 +1,33 @@
 ---- -*- Mode: Lua; -*-
 ----
----- cli.lua
+---- cli.lua    A Rosie CLI made to be launched from librosie:rosie_luacli()
 ----
----- © Copyright IBM Corporation 2016, 2017.
+---- © Copyright IBM Corporation 2016, 2017, 2018.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- This code is fed to the lua interpreter by a shell script.  The script supplies the first two
--- args (ROSIE_HOME and ROSIE_DEV) before the user-supplied Rosie CLI args.  ROSIE_HOME is the
--- full path to a Rosie install directory, and ROSIE_DEV is the string "true" if the CLI was
--- launched in "development mode", which drops into a Lua repl after loading Rosie:
---     "-D" is an 'undocumented' command line switch which, when it appears as the first command
---     line argument to the Rosie run script, will launch Rosie in development mode.  The code
---     below does not need to process that switch.
+rosie_command = arg[0]
 
-rosie_command = arg[1]
-ROSIE_HOME = arg[2]
-ROSIE_DEV = (arg[3]=="true")
+ROSIE_HOME = rosie.env.ROSIE_HOME
+ROSIE_DEV = false
 
 if not ROSIE_HOME then
 	io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
 	os.exit(-2)
 end
 
--- Reconstruct the command line using all the arg information available.  For readability, we
--- replace instances of ROSIE_HOME with the string "ROSIE_HOME" at the start of each arg.
--- local s=0; while arg[s] do s=s-1; end; s=s+1	                     -- Find first arg
--- local function munge_arg(a)                                          -- Replace
---    local s, e = a:find(ROSIE_HOME, 1, true)
---    if s then return "ROSIE_HOME" .. a:sub(e+1); else return a; end
--- end
--- local str=""; for i=s,#arg do str=str..munge_arg(arg[i]).." "; end   -- Assemble string
-
--- ROSIE_COMMAND = str:sub(1,-1)                                        -- Remove trailing space
-
--- Shift args, to remove n args: ROSIE_COMMAND, ROSIE_HOME and ROSIE_DEV
-local n = 3
-table.move(arg, n+1, #arg, 1); for i=#arg-n+1, #arg do arg[i]=nil; end
-
--- Load rosie
-package.path = ROSIE_HOME .. "/?.lua;" .. ROSIE_HOME .. "/lib/?.luac"
-
-local bootfn = loadfile(ROSIE_HOME .. "/lib/boot.luac") or loadfile(ROSIE_HOME .. "/src/core/boot.lua")
-if not bootfn then
-   io.write(stderr, "Failed to find boot code")
-   os.exit(-3)
-else
-   local boot = bootfn()
-   rosie = boot(ROSIE_HOME)
-end
+package.path = ROSIE_HOME .. "/lib/?.luac"
 
 import = rosie.import
-mod = import "submodule"
 
 ROSIE_VERSION = rosie.config().ROSIE_VERSION
 rosie.set_configuration("ROSIE_COMMAND", rosie_command)
-
-engine_module = assert(rosie.import("engine_module"), "failed to load engine_module package")
-common = assert(rosie.import("common"), "failed to open common package")
-lpeg = assert(rosie.import("lpeg"), "failed to open lpeg package")
 
 ui = assert(rosie.import("ui"), "failed to open ui package")
 argparser = assert(rosie.import("cli-parser"), "failed to load cli parser package")
 cli_match = assert(rosie.import("cli-match"), "failed to open cli match package")
 cli_test = assert(rosie.import("cli-test-command"), "failed to open cli test package")
 cli_common = assert(rosie.import("cli-common"), "failed to open cli common package")
-environment = assert(rosie.import("environment"), "failed to open environment package")
 
 parser = argparser.create(rosie)
 
@@ -132,15 +94,13 @@ end
 
 local function run(args)
    if args.verbose then ROSIE_VERBOSE = true; end
+   en = assert(cli_engine)
 
-   -- Do this BEFORE creating the CL_ENGINE
-   if args.libpath then rosie.set_libpath(args.libpath, "cli"); end
+   if args.libpath then
+      en:set_libpath(args.libpath)
+      rosie.set_libpath(args.libpath, "cli")
+   end
 
-   ok, msg = pcall(create_cl_engine, args)
-   if not ok then print("Error when creating cli engine: " .. msg); os.exit(-1); end
-
-   local en = CL_ENGINE
-   
    if not args.command then
       if ROSIE_DEV then greeting(); return
       else
@@ -252,5 +212,5 @@ local function run(args)
    end -- if command is list or repl or other
 end -- function run
 
-local args = parser:parse()
+local args = parser:parse(arg)
 run(args)

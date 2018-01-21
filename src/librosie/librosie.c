@@ -1209,13 +1209,22 @@ void rosie_finalize(Engine *e) {
  * ----------------------------------------------------------------------------------------
  */
 
+#define CLI_LUAC "/lib/cli.luac"
+
 int luaopen_readline (lua_State *L); /* will dynamically load the system libreadline/libedit */
 
 EXPORT
-int rosie_exec_cli(Engine *e, char *fname, int argc, char **argv, char **err) {
+int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
+  char fname[MAXPATHLEN];
+  size_t len = strnlen(rosiehomedir, MAXPATHLEN);
+  char *last = stpncpy(fname, rosiehomedir, (MAXPATHLEN - len - 1));
+  last = stpncpy(last, CLI_LUAC, len);
+  *last = '\0';
+
+  LOGf("Entering rosie_exec_cli, computed cli filename is %s\n", fname);
+
   ACQUIRE_ENGINE_LOCK(e);
   lua_State *L = e->L;
-
   luaL_requiref(L, "readline", luaopen_readline, 0);
 
   get_registry(engine_key);
@@ -1242,6 +1251,3 @@ int rosie_exec_cli(Engine *e, char *fname, int argc, char **argv, char **err) {
   RELEASE_ENGINE_LOCK(e);
   return status;
 }
-
-
-

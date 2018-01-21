@@ -19,7 +19,6 @@ int main (int argc, char **argv) {
   str messages;
 
   if (argv[0] && argv[0][0]) progname = argv[0];
-  printf("%s starting\n", progname);
 
   Engine *e = rosie_new(&messages);
   if (!e) {
@@ -28,7 +27,7 @@ int main (int argc, char **argv) {
   }
 
   char *err;
-  int status = rosie_exec_cli(e, "cli.lua", argc, argv, &err);
+  int status = rosie_exec_cli(e, argc, argv, &err);
   if (status)
     fprintf(stderr, "Error: exec_cli returned code %d, saying: %s\n", status, err ? err : "unspecified error");
 
