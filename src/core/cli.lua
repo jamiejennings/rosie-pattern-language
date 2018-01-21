@@ -26,7 +26,6 @@ rosie.set_configuration("ROSIE_COMMAND", rosie_command)
 ui = assert(rosie.import("ui"), "failed to open ui package")
 argparser = assert(rosie.import("cli-parser"), "failed to load cli parser package")
 cli_match = assert(rosie.import("cli-match"), "failed to open cli match package")
-cli_test = assert(rosie.import("cli-test-command"), "failed to open cli test package")
 cli_common = assert(rosie.import("cli-common"), "failed to open cli common package")
 
 parser = argparser.create(rosie)
@@ -155,6 +154,7 @@ local function run(args)
       --     get a fresh engine and load any rpl files or rpl strings
       --     load the file being tested
       --     call the test procedure
+      cli_test = assert(rosie.import("cli-test-command"), "failed to open cli test package")
       cli_test.setup(en)
       local total_failures, total_tests = 0, 0
       local total_files, total_compiled = 0, 0
@@ -200,7 +200,7 @@ local function run(args)
 	 os.exit(-1)
       end
    elseif args.command == "repl" then
-      local repl_mod = import("repl")
+      local repl_mod = assert(rosie.import("repl"), "failed to open the repl package")
       if not args.verbose then greeting(); end
       repl_mod.repl(en)
       os.exit()
