@@ -76,6 +76,10 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname,
 
 int rosie_exec_cli(Engine *e, int argc, char **argv, char **err);
   
+#ifdef LUADEBUG
+int rosie_exec_lua_repl(Engine *e, int argc, char **argv);
+#endif
+
 /*
 
 Administrative:

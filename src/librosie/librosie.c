@@ -1211,6 +1211,15 @@ void rosie_finalize(Engine *e) {
 
 #define CLI_LUAC "/lib/cli.luac"
 
+static void pushargs(lua_State *L, int argc, char **argv) {
+  lua_createtable(L, argc+1, 0);
+  for (int i = 0; i < argc; i++) {
+    lua_pushstring(L, argv[i]);
+    lua_rawseti(L, -2, i);
+  }
+  lua_setglobal(L, "arg");
+}
+
 int luaopen_readline (lua_State *L); /* will dynamically load the system libreadline/libedit */
 
 EXPORT
@@ -1230,12 +1239,7 @@ int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
   get_registry(engine_key);
   lua_setglobal(L, "cli_engine");
   
-  lua_createtable(L, argc+1, 0);
-  for (int i = 0; i < argc; i++) {
-    lua_pushstring(L, argv[i]);
-    lua_rawseti(L, -2, i);
-  }
-  lua_setglobal(L, "arg");
+  pushargs(L, argc, argv);
 
   int status = luaL_loadfile(L, fname);
   if (status != LUA_OK) {
@@ -1251,3 +1255,27 @@ int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
   RELEASE_ENGINE_LOCK(e);
   return status;
 }
+
+#ifdef LUADEBUG
+
+int lua_repl(lua_State *L, const char *main_progname);
+
+EXPORT
+int rosie_exec_lua_repl(Engine *e, int argc, char **argv) {
+  LOG("Entering rosie_exec_lua_repl\n");
+
+  ACQUIRE_ENGINE_LOCK(e);
+  lua_State *L = e->L;
+  luaL_requiref(L, "readline", luaopen_readline, 0);
+
+  get_registry(engine_key);
+  lua_setglobal(L, "cli_engine");
+  
+  pushargs(L, argc, argv);
+  lua_repl(L, argv[0]);
+  lua_settop(L, 0);
+  RELEASE_ENGINE_LOCK(e);
+  return SUCCESS;
+}
+
+#endif	/* LUADEBUG */

@@ -8,9 +8,13 @@
 
 ## Use "DEBUG=1" on the command line to cause librosie to log to stderr
 
-# Same default as in top-level makefile, so that we can run "make
-# installtest" locally from the librosie directory without having to
-# specify DESTDIR.
+# Use 'make LUADEBUG=1' to build in a lua repl that can be accessed by
+# passing '-D' as the first command line parameter.
+
+
+# We must use the same default as in top-level makefile, so that we
+# can run "make installtest" locally from the librosie directory
+# without having to specify DESTDIR.
 DESTDIR=/usr/local
 
 HOME = $(shell cd ../..; pwd)
@@ -84,13 +88,22 @@ else
   clients=$(CLIENTS)
 endif
 
+ifdef LUADEBUG
+lua_repl=lua_repl.o
+lua_debug="-DLUADEBUG"
+endif
+
+lua_repl.o: lua_repl.c lua_repl.h
+	$(CC) -o $@ -c lua_repl.c $(CFLAGS) -I$(HOME)/submodules/lua/src -fvisibility=hidden
+
 dependent_objs=liblua/*.o \
+               $(lua_repl) \
                $(HOME)/submodules/rosie-lpeg/src/*.o \
                $(HOME)/submodules/lua-cjson/*.o \
                $(HOME)/submodules/lua-readline/src/*.o
 
-librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
-	$(CC) -fvisibility=hidden -o $@ -c librosie.c $(CFLAGS)
+librosie.o: $(lua_repl) librosie.c librosie.h logging.c registry.c rosiestring.c
+	$(CC) -fvisibility=hidden -o $@ -c librosie.c $(CFLAGS) $(lua_debug)
 
 librosie.so: librosie.o liblua
 	$(CC) -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
@@ -103,7 +116,7 @@ librosie.a: librosie.o liblua
 	$(RANLIB) $@
 
 clean:
-	$(RM) librosie.dylib librosie.so librosie.o librosie.a
+	$(RM) librosie.dylib librosie.so librosie.o librosie.a lua_repl.o
 	$(RM) -rf liblua
 	@here="$(shell pwd)"; \
 	for client in $(ALLCLIENTS); do cd $${here}/$$client && $(MAKE) clean; done
@@ -131,14 +144,8 @@ echo:
 	@echo "LDFLAGS= $(LDFLAGS)"
 	@echo "LIBS= $(LIBS)"
 	@echo "RM= $(RM)"
+	@echo "LUADEBUG= $(LUADEBUG)"
 
-none:
-	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
 
-.PHONY: windows
-windows:
-	@echo Windows installation not yet supported.
-
-## Targets that do not create files
-.PHONY: default o a clean echo none
+.PHONY: default clean echo
 
