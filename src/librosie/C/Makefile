@@ -37,12 +37,12 @@ endif
 ifeq ($(PLATFORM),macosx)
 CFLAGS += -std=gnu99
 SYSCFLAGS=-DLUA_USE_MACOSX
-SYSLIBS=
+SYSLIBS=-lreadline
 SYSLDFLAGS=-undefined error
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
 SYSLDFLAGS=-Wl,--no-undefined
-SYSLIBS=-lpthread -ldl -lm
+SYSLIBS=-lpthread -lreadline -ldl -lm
 endif
 
 CFLAGS= -pthread -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
@@ -128,21 +128,6 @@ echo:
 	@echo "LDFLAGS= $(LDFLAGS)"
 	@echo "LIBS= $(LIBS)"
 	@echo "RM= $(RM)"
-
-none:
-	@echo "Your platform was not recognized.  Please do 'make PLATFORM=x', where x is one of these: $(PLATFORMS)"
-
-# linux:
-# 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-ldl -lm -lpthread" CC=$(CC)
-
-# macosx:
-# 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" SYSLIBS="-lpthread" CC=$(CC)
-
-# macosx: CFLAGS += -std=gnu99
-
-.PHONY: windows
-windows:
-	@echo Windows installation not yet supported.
 
 static.o: static.c static.h 
 dynamic.o: dynamic.c dynamic.h 

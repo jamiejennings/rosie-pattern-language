@@ -46,7 +46,7 @@ ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
 SYSLDFLAGS=-shared
-SYSLIBS=-lpthread -ldl -lm
+SYSLIBS=-lpthread -lreadline -ldl -lm
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
@@ -91,6 +91,7 @@ endif
 ifdef LUADEBUG
 lua_repl=lua_repl.o
 lua_debug="-DLUADEBUG"
+readline_lib="-lreadline"
 endif
 
 lua_repl.o: lua_repl.c lua_repl.h
@@ -106,10 +107,10 @@ librosie.o: $(lua_repl) librosie.c librosie.h logging.c registry.c rosiestring.c
 	$(CC) -fvisibility=hidden -o $@ -c librosie.c $(CFLAGS) $(lua_debug)
 
 librosie.so: librosie.o liblua
-	$(CC) -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
+	$(CC) -o $@ librosie.o $(dependent_objs) $(LIBS) $(LDFLAGS)
 
 librosie.dylib: librosie.o liblua
-	$(CC) -install_name $(shell pwd)/$@ -o $@ librosie.o $(dependent_objs) $(SYSLIBS) $(LDFLAGS)
+	$(CC) -install_name $(shell pwd)/$@ -o $@ librosie.o $(dependent_objs) $(LIBS) $(LDFLAGS)
 
 librosie.a: librosie.o liblua
 	$(AR) $@ librosie.o $(dependent_objs)

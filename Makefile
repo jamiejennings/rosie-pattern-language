@@ -293,6 +293,11 @@ sniff: $(ROSIEBIN)
 
 .PHONY: test
 test:
+
+	@$(BUILD_ROOT)/test/rosie-has-debug.sh $(ROSIEBIN); \
+	if [ "$$?" -ne "0" ]; then \
+	echo "Rosie was not built with LUADEBUG support.  Try 'make clean; make LUADEBUG=1'."; \
+	fi;
 	@echo Running tests in test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D)
 	@if [ -n "$(CLIENTS)" ]; then \
