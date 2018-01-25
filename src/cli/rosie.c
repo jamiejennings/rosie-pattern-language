@@ -35,11 +35,6 @@ int main (int argc, char **argv) {
 
   char *err;
   int status = rosie_exec_cli(e, argc, argv, &err);
-  if (status)
-    fprintf(stderr, "%s: exec_cli returned code %d, saying: %s\n",
-	    progname,
-	    status,
-	    err ? err : "unspecified error");
 
   if (invoke_repl) {
 #ifdef LUADEBUG

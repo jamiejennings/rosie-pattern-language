@@ -259,7 +259,7 @@ uninstall:
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)
-	@RESULT="$(shell $(ROSIEBIN) --version 2> /dev/null)"; \
+	@RESULT="$(shell $(ROSIEBIN) version 2> /dev/null)"; \
 	EXPECTED="$(shell head -1 $(BUILD_ROOT)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\

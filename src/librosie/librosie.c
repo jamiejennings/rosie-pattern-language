@@ -1209,6 +1209,53 @@ void rosie_finalize(Engine *e) {
  * ----------------------------------------------------------------------------------------
  */
 
+/*
+ * Message handler that will be invoked if the CLI should throw an
+ * exception (which would indicate a bug).  This handler is from
+ * Lua.org's lua.c (stand-alone Lua interpreter).
+ */
+static int msghandler (lua_State *L) {
+  const char *msg = lua_tostring(L, 1);
+  if (msg == NULL) {  /* is error object not a string? */
+    if (luaL_callmeta(L, 1, "__tostring") &&  /* does it have a metamethod */
+        lua_type(L, -1) == LUA_TSTRING)  /* that produces a string? */
+      return 1;  /* that is the message */
+    else
+      msg = lua_pushfstring(L, "(error object is a %s value)",
+                               luaL_typename(L, 1));
+  }
+  luaL_traceback(L, L, msg, 1);  /* append a standard traceback */
+  return 1;  /* return the traceback */
+}
+
+/*
+ * Interface to 'lua_pcall', which sets appropriate message function
+ * and C-signal handler. Used to run all chunks.  This is from
+ * Lua.org's lua.c.
+ */
+static lua_State *globalL = NULL;
+static void lstop (lua_State *L, lua_Debug *ar) {
+  (void)ar;  /* unused arg. */
+  lua_sethook(L, NULL, 0, 0);  /* reset hook */
+  luaL_error(L, "interrupted!");
+}
+static void laction (int i) {
+  signal(i, SIG_DFL); /* if another SIGINT happens, terminate process */
+  lua_sethook(globalL, lstop, LUA_MASKCALL | LUA_MASKRET | LUA_MASKCOUNT, 1);
+}
+static int docall (lua_State *L, int narg, int nres) {
+  int status;
+  int base = lua_gettop(L) - narg;  /* function index */
+  lua_pushcfunction(L, msghandler);  /* push message handler */
+  lua_insert(L, base);  /* put it under function and args */
+  globalL = L;  /* to be available to 'laction' */
+  signal(SIGINT, laction);  /* set C-signal handler */
+  status = lua_pcall(L, narg, nres, base);
+  signal(SIGINT, SIG_DFL); /* reset C-signal handler */
+  lua_remove(L, base);  /* remove message handler from the stack */
+  return status;
+}
+
 #define CLI_LUAC "/lib/cli.luac"
 
 static void pushargs(lua_State *L, int argc, char **argv) {
@@ -1249,8 +1296,17 @@ int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
     RELEASE_ENGINE_LOCK(e);
     return status;
   }  
-  status = lua_pcall(L, 0, 0, 0);
-  if (status) LOGstack(L);
+  globalL = L;
+  status = docall(L, 0, 1);
+  if (status != LUA_OK) {
+    const char *err = lua_tostring(L, -1);
+    lua_pop(L, 1);  /* remove message */
+    const char *progname = NULL;
+    if (argv[0] && argv[0][0]) progname = argv[0];
+    fprintf(stderr, "%s: error (%d) executing CLI (please report this as a bug):\n%s\n", progname, status, err);
+  } else {
+    status = lua_tointeger(L, -1);
+  }
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return status;

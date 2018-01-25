@@ -9,20 +9,24 @@
 rosie_command = arg[0]
 
 ROSIE_HOME = rosie.env.ROSIE_HOME
-ROSIE_DEV = false
+
+ERROR_USAGE = -1
+ERROR_INTERNAL = -2
+ERROR_CONFIG = -3
+ERROR_RESULT = -4
 
 if not ROSIE_HOME then
 	io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
-	os.exit(-2)
+	io.stderr:flush()
+	return ERROR_INTERNAL
 end
 
 package.path = ROSIE_HOME .. "/lib/?.luac"
 
-import = rosie.import
-
 ROSIE_VERSION = rosie.config().ROSIE_VERSION
 rosie.set_configuration("ROSIE_COMMAND", rosie_command)
 
+common = rosie.import("common")
 ui = assert(rosie.import("ui"), "failed to open ui package")
 argparser = assert(rosie.import("cli-parser"), "failed to load cli parser package")
 cli_match = assert(rosie.import("cli-match"), "failed to open cli match package")
@@ -92,8 +96,9 @@ local function make_help_epilog(args)
 end
 
 local function run(args)
-   if args.verbose then ROSIE_VERBOSE = true; end
    en = assert(cli_engine)
+
+   if args.verbose then ROSIE_VERBOSE = true; end
 
    if args.libpath then
       en:set_libpath(args.libpath)
@@ -101,20 +106,26 @@ local function run(args)
    end
 
    if not args.command then
-      if ROSIE_DEV then greeting(); return
-      else
-	 print("Usage: rosie command [options] pattern file [...]")
-	 os.exit(-1)
-      end
+      print("Usage: rosie command [options] pattern file [...]")
+      return ERROR_USAGE
    end
-   if (args.command=="config") then
+
+   if args.command=="version" then
+      io.write(ROSIE_VERSION, "\n")
+      return
+   end
+
+   if args.command=="config" then
       print_rosie_config()
-      os.exit()
-   elseif (args.command=="help") then
+      return
+   end
+   
+   if args.command=="help" then
       local text = make_help_epilog(args)
+      print("***", text)
       if text then parser:epilog(text); end
       print(parser:get_help())
-      os.exit()
+      return
    end
    
    if args.verbose then greeting(); end
@@ -134,7 +145,7 @@ local function run(args)
       local a = CL_ENGINE.compiler.parse_expression(common.source.new{text=args.expression}, errs)
       if not a then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
-	 os.exit(-1)
+	 return ERROR_RESULT
       end
       print("Parses as: ", ast.tostring(a, true))
       a = ast.ambient_cook_exp(a)
@@ -142,10 +153,10 @@ local function run(args)
       local aa = expand.expression(a, CL_ENGINE.env, errs)
       if not aa then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
-	 os.exit(-1)
+	 return ERROR_RESULT
       end
       print("Expands to: ", ast.tostring(aa, true))
-      os.exit()
+      return
    end
    
    if args.command == "test" then
@@ -180,10 +191,10 @@ local function run(args)
 	    io.stdout:write("all " .. tostring(total_tests) .. " tests passed\n")
 	 end
       end
-      if ((total_files-total_compiled) > 0) or (total_failures > 0) then
-	 os.exit(-1)
+      if ((total_files - total_compiled) > 0) or (total_failures > 0) then
+	 return ERROR_RESULT
       else
-	 os.exit(0)
+	 return
       end
    end
    
@@ -194,16 +205,16 @@ local function run(args)
       local props_table, msg = ui.to_property_table(en.env, args.filter)
       if props_table then
 	 ui.print_props(props_table)
-	 os.exit(0)
+	 return
       else
 	 print(msg)
-	 os.exit(-1)
+	 return ERROR_RESULT
       end
    elseif args.command == "repl" then
       local repl_mod = assert(rosie.import("repl"), "failed to open the repl package")
       if not args.verbose then greeting(); end
       repl_mod.repl(en)
-      os.exit()
+      return
    else
       -- match, trace, grep
       for _,fn in ipairs(args.filename) do
@@ -213,4 +224,4 @@ local function run(args)
 end -- function run
 
 local args = parser:parse(arg)
-run(args)
+return run(args)

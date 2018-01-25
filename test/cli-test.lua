@@ -278,7 +278,7 @@ test.heading("Help command")
 cmd = rosie_cmd .. " help 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
-check(code==0, "Return code is zero")
+check(code==0, "Return code is not zero")
 check(results[1]:find("Usage:"))
 check(results[1]:find("Options:"))
 check(results[1]:find("Commands:"))
