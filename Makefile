@@ -41,7 +41,6 @@ BUILD_ROOT = $(shell pwd)
 
 # TODO: DECIDE ON THIS SOON:
 #   $(ROSIED)/pkg          standard library compiled (*.rosie)
-#   $(ROSIED)/rosie.lua    loads rosie into Lua 5.3 as a lua package
 
 
 # Install layout
@@ -72,13 +71,12 @@ LIBROSIED = $(DESTDIR)/lib
 # ROSIE_ROOT = $(DESTDIR)/share/rosie
 
 .PHONY: default
+.NOTPARALLEL:
 default: $(LIBROSIE_A) $(LIBROSIE_DYLIB) $(ROSIEBIN) compile sniff
 
 SUBMOD_DIR = submodules
 ROSIEBIN = $(BUILD_ROOT)/bin/rosie
 INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
-
-BUILD_LUA_PACKAGE = $(BUILD_ROOT)/rosie.lua
 
 LUA_DIR = $(SUBMOD_DIR)/$(LUA)
 LPEG_DIR = $(SUBMOD_DIR)/$(LPEG)
@@ -91,16 +89,16 @@ CLI_DIR = $(BUILD_ROOT)/src/cli
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_RPL_DIR = $(ROSIED)/rpl
-INSTALL_LUA_PACKAGE = $(ROSIED)/rosie.lua
 
 .PHONY: clean
 clean:
-	rm -rf bin/* lib/* rosie.lua librosie.so librosie.dylib
+	rm -rf bin/* lib/* librosie.so librosie.dylib librosie.a
 	-cd $(LUA_DIR) && make clean
 	-cd $(LPEG_DIR)/src && make clean
 	-cd $(JSON_DIR) && make clean
 	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
 	-cd $(LIBROSIE_DIR) && make clean
+	-cd $(CLI_DIR) && make clean
 	rm -f build.log
 
 
@@ -131,21 +129,17 @@ $(submodule_sentinel):
 	cp -p $(LUA_DIR)/README $(submodule_sentinel)
 	@$(BUILD_ROOT)/src/build_info.sh "git_submodules" $(BUILD_ROOT) "git" >> $(BUILD_ROOT)/build.log
 
-bin/lua: $(LUA_DIR)/src/lua
+bin/luac: $(LUA_DIR)/src/lua
 	mkdir -p bin
-	cp $(LUA_DIR)/src/lua bin
+	cp $(LUA_DIR)/src/luac bin
 
 $(LUA_DIR)/src/lua: $(submodules)
 	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM) $(LINUX_CFLAGS) $(LINUX_LDFLAGS)
 	@$(BUILD_ROOT)/src/build_info.sh "lua" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
-bin/luac: bin/lua
-	cp $(LUA_DIR)/src/luac bin
-
 lpeg_lib=$(LPEG_DIR)/src/lpeg.so
 lib/lpeg.so: $(lpeg_lib)
 	mkdir -p lib
-#	cp $(lpeg_lib) lib
 
 $(lpeg_lib): $(submodules) 
 	cd $(LPEG_DIR)/src && $(MAKE) CC=$(CC) LUADIR=../../$(LUA)
@@ -154,7 +148,6 @@ $(lpeg_lib): $(submodules)
 json_lib=$(JSON_DIR)/cjson.so
 lib/cjson.so: $(json_lib) 
 	mkdir -p lib
-#	cp $(json_lib) lib
 
 $(json_lib): $(submodules) 
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC)
@@ -167,7 +160,6 @@ lib/argparse.luac: $(submodules) submodules/argparse/src/argparse.lua bin/luac
 readline_lib = $(READLINE_DIR)/readline.so
 lib/readline.so: $(readline_lib) 
 	mkdir -p lib
-#	cp $(readline_lib) lib
 
 $(READLINE_DIR)/readline.so: $(submodules)
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUADIR=../$(LUA)
@@ -293,7 +285,6 @@ sniff: $(ROSIEBIN)
 
 .PHONY: test
 test:
-
 	@$(BUILD_ROOT)/test/rosie-has-debug.sh $(ROSIEBIN); \
 	if [ "$$?" -ne "0" ]; then \
 	echo "Rosie was not built with LUADEBUG support.  Try 'make clean; make LUADEBUG=1'."; \
