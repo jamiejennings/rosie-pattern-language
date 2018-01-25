@@ -21,7 +21,7 @@ SYSCFLAGS=-DLUA_USE_MACOSX -fPIC -std=gnu99
 SYSLIBS=
 SYSLDFLAGS=
 else
-ifeq($(PLATFORM),linux)
+ifeq ($(PLATFORM),linux)
 CC=gcc
 SYSCFLAGS=-DLUA_USE_LINUX -fPIC -std=gnu99 -D_GNU_SOURCE=1
 SYSLIBS=-lpthread -ldl -lm
