@@ -164,23 +164,23 @@ $(READLINE_DIR)/readline.so: $(submodules)
 	@$(BUILD_ROOT)/src/build_info.sh "readline_stub" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 lib/strict.luac: $(LUAMOD_DIR)/strict.lua bin/luac
-	bin/luac -o $@ $<
+	@bin/luac -o $@ $<
 
 lib/list.luac: $(LUAMOD_DIR)/list.lua bin/luac
-	bin/luac -o $@ $<
+	@bin/luac -o $@ $<
 
 lib/thread.luac: $(LUAMOD_DIR)/thread.lua bin/luac
-	bin/luac -o $@ $<
+	@bin/luac -o $@ $<
 
 lib/recordtype.luac: $(LUAMOD_DIR)/recordtype.lua bin/luac
-	bin/luac -o $@ $<
+	@bin/luac -o $@ $<
 
 lib/submodule.luac: $(LUAMOD_DIR)/submodule.lua bin/luac
-	bin/luac -o $@ $<
+	@bin/luac -o $@ $<
 
 lib/%.luac: src/core/%.lua bin/luac
-	mkdir -p lib
-	bin/luac -o $@ $<
+	@mkdir -p lib
+	@bin/luac -o $@ $<
 	@$(BUILD_ROOT)/src/build_info.sh $@ $(BUILD_ROOT) "bin/luac" >> $(BUILD_ROOT)/build.log
 
 core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
