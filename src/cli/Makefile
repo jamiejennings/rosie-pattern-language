@@ -29,7 +29,7 @@ SYSLDFLAGS=
 endif
 endif
 
-CFLAGS=-O2 -Wall -Wextra -I../librosie -I../../submodules/rosie-lpeg/src $(SYSCFLAGS)
+CFLAGS=-O2 -Wall -Wextra -I../librosie -I../../submodules/rosie-lpeg/src -I../../submodules/lua/src $(SYSCFLAGS)
 LDFLAGS=-L../librosie $(SYSLDFLAGS) 
 LIBS=-lrosie $(SYSLIBS)
 
