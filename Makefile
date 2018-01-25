@@ -147,7 +147,6 @@ $(lpeg_lib): $(submodules)
 
 json_lib=$(JSON_DIR)/cjson.so
 lib/cjson.so: $(json_lib) 
-	mkdir -p lib
 
 $(json_lib): $(submodules) 
 	cd $(JSON_DIR) && $(MAKE) CC=$(CC)
@@ -159,7 +158,6 @@ lib/argparse.luac: $(submodules) submodules/argparse/src/argparse.lua bin/luac
 
 readline_lib = $(READLINE_DIR)/readline.so
 lib/readline.so: $(readline_lib) 
-	mkdir -p lib
 
 $(READLINE_DIR)/readline.so: $(submodules)
 	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUADIR=../$(LUA)
@@ -181,6 +179,7 @@ lib/submodule.luac: $(LUAMOD_DIR)/submodule.lua bin/luac
 	bin/luac -o $@ $<
 
 lib/%.luac: src/core/%.lua bin/luac
+	mkdir -p lib
 	bin/luac -o $@ $<
 	@$(BUILD_ROOT)/src/build_info.sh $@ $(BUILD_ROOT) "bin/luac" >> $(BUILD_ROOT)/build.log
 
