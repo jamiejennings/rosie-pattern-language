@@ -27,6 +27,7 @@ SYSCFLAGS=-DLUA_USE_LINUX -fPIC -std=gnu99 -D_GNU_SOURCE=1
 SYSLIBS=-lpthread -ldl -lm
 SYSLDFLAGS=
 endif
+endif
 
 CFLAGS=-O2 -Wall -Wextra -I../librosie -I../../submodules/rosie-lpeg/src $(SYSCFLAGS)
 LDFLAGS=-L../librosie $(SYSLDFLAGS) 
