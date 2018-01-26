@@ -1,3 +1,5 @@
+rosie_abs
+rosie_rel
 *.dylib
 *.so
 *.o
