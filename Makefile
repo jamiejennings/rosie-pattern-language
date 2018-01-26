@@ -16,7 +16,8 @@ $(error Unsupported platform (uname reported "$(REPORTED_PLATFORM)"))
 endif
 
 LIBROSIE_A=librosie.a
-ROSIE_CLI=rosie
+ROSIE_CLI_ABS=rosie_abs
+ROSIE_CLI_REL=rosie_rel
 
 ifeq ($(PLATFORM),macosx)
 PLATFORM=macosx
@@ -186,19 +187,23 @@ core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
 other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
-$(ROSIE_CLI):
+$(ROSIE_CLI_ABS):
+$(ROSIE_CLI_REL): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
+	cd $(LIBROSIE_DIR) && $(MAKE) $@ CC=$(CC) ROSIE_HOME=$(shell pwd)
+	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
+
 $(LIBROSIE_A):
 $(LIBROSIE_DYLIB): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC) ROSIE_HOME=$(shell pwd) LUADEBUG=1
+	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC)
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 compile: $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 
-$(ROSIEBIN): compile $(ROSIE_CLI)
-	cp $(LIBROSIE_DIR)/rosie "$(BUILD_ROOT)/bin"
+$(ROSIEBIN): compile $(ROSIE_CLI_ABS)
+	cp $(LIBROSIE_DIR)/rosie_abs "$(BUILD_ROOT)/bin/rosie"
 
-$(INSTALL_ROSIEBIN): $(ROSIEBIN)
-	cp $(LIBROSIE_DIR)/rosie "$(INSTALL_BIN_DIR)"
+$(INSTALL_ROSIEBIN): compile $(ROSIE_CLI_REL)
+	cp $(LIBROSIE_DIR)/rosie_rel "$(INSTALL_BIN_DIR)/rosie"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
@@ -283,9 +288,10 @@ sniff: $(ROSIEBIN)
 
 .PHONY: test
 test:
-	@$(BUILD_ROOT)/test/rosie-has-debug.sh $(ROSIEBIN); \
+	@$(BUILD_ROOT)/test/rosie-has-debug.sh $(ROSIEBIN) 2>/dev/null; \
 	if [ "$$?" -ne "0" ]; then \
 	echo "Rosie was not built with LUADEBUG support.  Try 'make clean; make LUADEBUG=1'."; \
+	exit -1; \
 	fi;
 	@echo Running tests in test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D)
