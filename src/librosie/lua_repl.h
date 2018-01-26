@@ -13,6 +13,7 @@
 #include <stddef.h>
 
 
+int docall (lua_State *L, int narg, int nres);
 int lua_repl(lua_State *L, char *main_progname);
 
 #define LUA_MULTRET	(-1)

@@ -13,25 +13,25 @@ else
 $(error Unsupported platform (uname reported "$(REPORTED_PLATFORM)"))
 endif
 
-ROSIE_A=../librosie/librosie.a
+ROSIE_CLI_A=../librosie/librosiecli.a
 
 ifeq ($(PLATFORM),macosx)
 CC=cc
 SYSCFLAGS=-DLUA_USE_MACOSX -fPIC -std=gnu99
-SYSLIBS=
+SYSLIBS=-lreadline
 SYSLDFLAGS=
-else
+endif
+
 ifeq ($(PLATFORM),linux)
 CC=gcc
 SYSCFLAGS=-DLUA_USE_LINUX -fPIC -std=gnu99 -D_GNU_SOURCE=1
-SYSLIBS=-lpthread -ldl -lm
+SYSLIBS=-lpthread -ldl -lm -lreadline
 SYSLDFLAGS=
-endif
 endif
 
 CFLAGS=-O2 -Wall -Wextra -I../librosie -I../../submodules/rosie-lpeg/src -I../../submodules/lua/src $(SYSCFLAGS)
-LDFLAGS=-L../librosie $(SYSLDFLAGS) 
-LIBS=-lrosie $(SYSLIBS)
+LDFLAGS=$(SYSLDFLAGS) 
+LIBS=$(SYSLIBS)
 
 RM= rm -f
 
@@ -41,8 +41,8 @@ endif
 
 default: rosie
 
-rosie: $(ROSIE_A) rosie.c
-	$(CC) -o $@ rosie.c $(CFLAGS) $(lua_debug) $(LDFLAGS) $(LIBS)
+rosie: $(ROSIE_CLI_A) rosie.c
+	$(CC) -o $@ rosie.c $(CFLAGS) $(lua_debug) $(LDFLAGS) $(LIBS) $(ROSIE_CLI_A)
 
 clean:
 	$(RM) rosie rosie.o

@@ -55,36 +55,23 @@
 #include <dlfcn.h>
 #include <libgen.h>
 
-typedef void *(*func_ptr_t)();
-int (*fp_r_match_C)();		/* defined in lptree.c */ 
-typedef rBuffer* (*foo_t)(lua_State *L, char *data, size_t len);
-foo_t fp_r_newbuffer_wrap;	/* defined in rbuf.c */ 
-
+#define ROSIEDIRNAME "/rosie"
+#define BOOTSCRIPT "/lib/boot.luac"
 
 /* ----------------------------------------------------------------------------------------
  * Paths relative to where librosie.so is found (for example):
  *  /usr/local/lib/librosie.so => 
  *    libname = librosie.so
  *    dirname = /usr/local/lib
- *    rosiehomedir = /usr/local/lib/rosie
+ *    rosiehome = /usr/local/lib/rosie
  *    bootscript = /usr/local/lib/rosie/lib/boot.luac
  * ----------------------------------------------------------------------------------------
  */
 
-#define ROSIEHOME "/rosie"
-#define BOOTSCRIPT "/lib/boot.luac"
-#define RPEG_LOCATION "/lib/lpeg.so"
-#define LIBLUA_LOCATION "/lib/liblua.5.3.so"
-
 static char libname[MAXPATHLEN];
 static char libdir[MAXPATHLEN];
-static char rosiehomedir[MAXPATHLEN];
+static char rosiehome[MAXPATHLEN];
 static char bootscript[MAXPATHLEN];
-
-char rpeg_path[MAXPATHLEN];
-void *rpeg_lib;
-char liblua_path[MAXPATHLEN];
-void *lua_lib;
 
 #include "logging.c"
 #include "registry.c"
@@ -147,14 +134,20 @@ static void set_libinfo() {
 static void set_bootscript() {
   size_t len;
   static char *last;
-  /* set rosiehomedir using libinfo */
-  len = strnlen(ROSIEHOME, MAXPATHLEN);
-  last = stpncpy(rosiehomedir, libdir, (MAXPATHLEN - len - 1));
-  last = stpncpy(last, ROSIEHOME, len);
+#ifdef ROSIE_HOME
+  /* set rosiehome to ROSIE_HOME */
+  len = strnlen(ROSIE_HOME, MAXPATHLEN);
+  last = stpncpy(rosiehome, ROSIE_HOME, (MAXPATHLEN - len - 1));
+#else
+  /* set rosiehome using libinfo */
+  len = strnlen(ROSIEDIRNAME, MAXPATHLEN);
+  last = stpncpy(rosiehome, libdir, (MAXPATHLEN - len - 1));
+  last = stpncpy(last, ROSIEDIRNAME, len);
+#endif
   *last = '\0';
   /* set absolute path to boot script */
   len = strnlen(BOOTSCRIPT, MAXPATHLEN);
-  last = stpncpy(bootscript, rosiehomedir, (MAXPATHLEN - len - 1));
+  last = stpncpy(bootscript, rosiehome, (MAXPATHLEN - len - 1));
   last = stpncpy(last, BOOTSCRIPT, len);
   *last = '\0';
   assert((last-bootscript) < MAXPATHLEN);
@@ -170,41 +163,6 @@ static int encoder_name_to_code(const char *name) {
   return 0;
 }
 
-static void prepare_for_boot() {
-  /* boot incoming */
-
-  char *next = stpncpy(rpeg_path, rosiehomedir, MAXPATHLEN); 
-  if ((MAXPATHLEN - (unsigned int)(next - rpeg_path + 1)) < strlen(RPEG_LOCATION)) {
-    LOG("rpeg_path exceeds MAXPATHLEN\n");
-    return;
-  }
-  strncpy(next, RPEG_LOCATION, (MAXPATHLEN - (next - rpeg_path + 1)));
-  LOGf("rpeg path (calculated) is %s\n", rpeg_path);
-  
-/*   rpeg_lib = dlopen(rpeg_path, RTLD_NOW); /\* reopen to get handle *\/ */
-/*   if (rpeg_lib == NULL) { */
-/*     LOG("dlopen(rpeg) returned NULL: unable to reopen rpeg library\n"); */
-/*     return; */
-/*   } */
-
-/*   char *msg = NULL; */
-
-  /* TEMPORARY */
-  fp_r_match_C = &r_match_C;
-  fp_r_newbuffer_wrap = &r_newbuffer_wrap;
-
-/*   fp_r_match_C = dlsym(rpeg_lib, "r_match_C"); */
-/*   if ((msg = dlerror()) != NULL) LOGf("r_match_C dlerror = %s\n", msg); */
-
-/*   fp_r_newbuffer_wrap = (foo_t) dlsym(rpeg_lib, "r_newbuffer_wrap"); */
-/*   if ((msg = dlerror()) != NULL) LOGf("r_newbuffer_wrap dlerror = %s\n", msg); */
-
-/*   if ((fp_r_match_C == NULL) || (fp_r_newbuffer_wrap == NULL)) { */
-/*     LOG("Failed to find rpeg functions\n"); */
-/*     return; */
-/*   } */
-}  
-
 static pthread_once_t initialized = PTHREAD_ONCE_INIT;
 static int all_is_lost = TRUE;
 
@@ -212,22 +170,6 @@ static void initialize() {
   LOG("INITIALIZE start\n");
   set_libinfo();
   set_bootscript();
-  char *next = stpncpy(liblua_path, rosiehomedir, MAXPATHLEN); 
-  if ((MAXPATHLEN - (unsigned int)(next - liblua_path + 1)) < strlen(LIBLUA_LOCATION)) {
-    LOG("liblua_path exceeds MAXPATHLEN\n");
-    return;
-  }
-  strncpy(next, LIBLUA_LOCATION, (MAXPATHLEN - (next - liblua_path + 1)));
-  LOGf("liblua path (calculated) is %s\n", liblua_path);
-/*   lua_lib = dlopen(liblua_path, RTLD_NOW | RTLD_GLOBAL); */
-/*   if (lua_lib == NULL) { */
-/*     LOGf("dlopen(liblua) returned NULL: unable to open %s\n", liblua_path); */
-/*     return; */
-/*   } */
-  /* TEMPORARY: */
-  lua_lib = &lua_lib;		/* any pointer */
-  
-  prepare_for_boot();
   all_is_lost = FALSE;
   LOG("INITIALIZE finish\n");
   return;
@@ -265,7 +207,7 @@ static int boot(lua_State *L, str *messages) {
     return FALSE;
   }
   LOG("Loading of boot code succeeded\n");
-  lua_pushlstring(L, (const char *)rosiehomedir, strnlen(rosiehomedir, MAXPATHLEN));
+  lua_pushlstring(L, (const char *)rosiehome, strnlen(rosiehome, MAXPATHLEN));
   status = lua_pcall(L, 1, LUA_MULTRET, 0);
   if (status!=LUA_OK) {
     LOG("Boot function failed.  Lua stack is: \n");
@@ -722,7 +664,7 @@ have_pattern:
     lua_settop(L, 2);
     /* Don't make a copy of the input.  Wrap it in an rbuf, which will
        be gc'd later (but will not free the original source data). */
-    (*fp_r_newbuffer_wrap)(L, (char *)input->ptr, input->len); 
+    r_newbuffer_wrap(L, (char *)input->ptr, input->len); 
     lua_pushinteger(L, start);
     lua_pushstring(L, encoder_name);
     assert(lua_gettop(L) == 5);
@@ -733,7 +675,7 @@ have_pattern:
     CHECK_TYPE("rplx pattern slot", t, LUA_TTABLE);
     t = lua_getfield(L, -1, "peg");
     CHECK_TYPE("rplx pattern peg slot", t, LUA_TUSERDATA);
-    lua_pushcfunction(L, *fp_r_match_C);
+    lua_pushcfunction(L, r_match_C);
     lua_copy(L, -1, 1);
     lua_copy(L, -2, 2);
     lua_settop(L, 2);
@@ -1204,134 +1146,3 @@ void rosie_finalize(Engine *e) {
   free(e);
 }
 
-/* ----------------------------------------------------------------------------------------
- * Functions to support the Lua implementation of the CLI
- * ----------------------------------------------------------------------------------------
- */
-
-/*
- * Message handler that will be invoked if the CLI should throw an
- * exception (which would indicate a bug).  This handler is from
- * Lua.org's lua.c (stand-alone Lua interpreter).
- */
-static int msghandler (lua_State *L) {
-  const char *msg = lua_tostring(L, 1);
-  if (msg == NULL) {  /* is error object not a string? */
-    if (luaL_callmeta(L, 1, "__tostring") &&  /* does it have a metamethod */
-        lua_type(L, -1) == LUA_TSTRING)  /* that produces a string? */
-      return 1;  /* that is the message */
-    else
-      msg = lua_pushfstring(L, "(error object is a %s value)",
-                               luaL_typename(L, 1));
-  }
-  luaL_traceback(L, L, msg, 1);  /* append a standard traceback */
-  return 1;  /* return the traceback */
-}
-
-/*
- * Interface to 'lua_pcall', which sets appropriate message function
- * and C-signal handler. Used to run all chunks.  This is from
- * Lua.org's lua.c.
- */
-static lua_State *globalL = NULL;
-static void lstop (lua_State *L, lua_Debug *ar) {
-  (void)ar;  /* unused arg. */
-  lua_sethook(L, NULL, 0, 0);  /* reset hook */
-  luaL_error(L, "interrupted!");
-}
-static void laction (int i) {
-  signal(i, SIG_DFL); /* if another SIGINT happens, terminate process */
-  lua_sethook(globalL, lstop, LUA_MASKCALL | LUA_MASKRET | LUA_MASKCOUNT, 1);
-}
-static int docall (lua_State *L, int narg, int nres) {
-  int status;
-  int base = lua_gettop(L) - narg;  /* function index */
-  lua_pushcfunction(L, msghandler);  /* push message handler */
-  lua_insert(L, base);  /* put it under function and args */
-  globalL = L;  /* to be available to 'laction' */
-  signal(SIGINT, laction);  /* set C-signal handler */
-  status = lua_pcall(L, narg, nres, base);
-  signal(SIGINT, SIG_DFL); /* reset C-signal handler */
-  lua_remove(L, base);  /* remove message handler from the stack */
-  return status;
-}
-
-#define CLI_LUAC "/lib/cli.luac"
-
-static void pushargs(lua_State *L, int argc, char **argv) {
-  lua_createtable(L, argc+1, 0);
-  for (int i = 0; i < argc; i++) {
-    lua_pushstring(L, argv[i]);
-    lua_rawseti(L, -2, i);
-  }
-  lua_setglobal(L, "arg");
-}
-
-int luaopen_readline (lua_State *L); /* will dynamically load the system libreadline/libedit */
-
-EXPORT
-int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
-  char fname[MAXPATHLEN];
-  size_t len = strnlen(rosiehomedir, MAXPATHLEN);
-  char *last = stpncpy(fname, rosiehomedir, (MAXPATHLEN - len - 1));
-  last = stpncpy(last, CLI_LUAC, len);
-  *last = '\0';
-
-  LOGf("Entering rosie_exec_cli, computed cli filename is %s\n", fname);
-
-  ACQUIRE_ENGINE_LOCK(e);
-  lua_State *L = e->L;
-  luaL_requiref(L, "readline", luaopen_readline, 0);
-
-  get_registry(engine_key);
-  lua_setglobal(L, "cli_engine");
-  
-  pushargs(L, argc, argv);
-
-  int status = luaL_loadfile(L, fname);
-  if (status != LUA_OK) {
-    LOGf("Failed to load cli from %s\n", fname);
-    *err = strndup(lua_tostring(L, -1), MAXPATHLEN);
-    lua_settop(L, 0);
-    RELEASE_ENGINE_LOCK(e);
-    return status;
-  }  
-  globalL = L;
-  status = docall(L, 0, 1);
-  if (status != LUA_OK) {
-    const char *err = lua_tostring(L, -1);
-    lua_pop(L, 1);  /* remove message */
-    const char *progname = NULL;
-    if (argv[0] && argv[0][0]) progname = argv[0];
-    fprintf(stderr, "%s: error (%d) executing CLI (please report this as a bug):\n%s\n", progname, status, err);
-  } else {
-    status = lua_tointeger(L, -1);
-  }
-  lua_settop(L, 0);
-  RELEASE_ENGINE_LOCK(e);
-  return status;
-}
-
-#ifdef LUADEBUG
-
-int lua_repl(lua_State *L, const char *main_progname);
-
-EXPORT
-int rosie_exec_lua_repl(Engine *e, int argc, char **argv) {
-  LOG("Entering rosie_exec_lua_repl\n");
-
-  ACQUIRE_ENGINE_LOCK(e);
-  lua_State *L = e->L;
-  luaL_requiref(L, "readline", luaopen_readline, 0);
-
-  get_registry(engine_key);
-  lua_setglobal(L, "cli_engine");
-  
-  pushargs(L, argc, argv);
-  lua_repl(L, argv[0]);
-  lua_settop(L, 0);
-  RELEASE_ENGINE_LOCK(e);
-  return SUCCESS;
-}
-
-#endif	/* LUADEBUG */

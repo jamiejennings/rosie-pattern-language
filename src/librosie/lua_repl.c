@@ -155,7 +155,7 @@ static int msghandler (lua_State *L) {
 ** Interface to 'lua_pcall', which sets appropriate message function
 ** and C-signal handler. Used to run all chunks.
 */
-static int docall (lua_State *L, int narg, int nres) {
+int docall (lua_State *L, int narg, int nres) {
   int status;
   int base = lua_gettop(L) - narg;  /* function index */
   lua_pushcfunction(L, msghandler);  /* push message handler */

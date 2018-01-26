@@ -1,15 +1,15 @@
 ## -*- Mode: Makefile; -*-                                             
 ##
-## Makefile for building librosie.so, on which Rosie's foreign function interface is based. 
+## Makefile for building librosie
 ##
-## © Copyright IBM Corporation 2016, 2017.
+## © Copyright IBM Corporation 2016, 2017, 2018.
 ## LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ## AUTHOR: Jamie A. Jennings
 
 ## Use "DEBUG=1" on the command line to cause librosie to log to stderr
-
-# Use 'make LUADEBUG=1' to build in a lua repl that can be accessed by
-# passing '-D' as the first command line parameter.
+## 
+## Use 'make LUADEBUG=1' to build in a lua repl that can be accessed by
+## passing '-D' as the first command line parameter.
 
 
 # We must use the same default as in top-level makefile, so that we
@@ -20,8 +20,12 @@ DESTDIR=/usr/local
 HOME = $(shell cd ../..; pwd)
 ROSIE = "$(HOME)/bin/rosie"
 
+ifdef ROSIE_HOME
+COPT+=-DROSIE_HOME="\"$(ROSIE_HOME)\""
+endif
+
 ifdef DEBUG
-COPT=-DDEBUG
+COPT+=-DDEBUG
 endif
 
 REPORTED_PLATFORM=$(shell (uname -o || uname -s) 2> /dev/null)
@@ -36,17 +40,18 @@ endif
 LUA_A=$(HOME)/submodules/lua/src/liblua.a
 ROSIE_DYLIB_NAME=rosie
 ROSIE_A=lib$(ROSIE_DYLIB_NAME).a
+ROSIE_CLI_A=lib$(ROSIE_DYLIB_NAME)cli.a
 
 ifeq ($(PLATFORM),macosx)
 SYSCFLAGS=-DLUA_USE_MACOSX -fPIC
-SYSLIBS=-lreadline
+SYSLIBS=
 SYSLDFLAGS=-dynamiclib
 CFLAGS += -std=gnu99
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
 SYSLDFLAGS=-shared
-SYSLIBS=-lpthread -lreadline -ldl -lm
+SYSLIBS=-lpthread -ldl -lm
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
@@ -69,7 +74,7 @@ MYLDFLAGS=
 MYLIBS= 
 MYOBJS=
 
-default: $(ROSIE_DYLIB) $(ROSIE_A)
+default: $(ROSIE_DYLIB) librosie.a rosie
 
 $(LUA_A):
 	@echo "Missing Rosie object files.  Need to build rosie first."
@@ -91,20 +96,20 @@ endif
 ifdef LUADEBUG
 lua_repl=lua_repl.o
 lua_debug="-DLUADEBUG"
-readline_lib="-lreadline"
 endif
 
 lua_repl.o: lua_repl.c lua_repl.h
 	$(CC) -o $@ -c lua_repl.c $(CFLAGS) -I$(HOME)/submodules/lua/src -fvisibility=hidden
 
 dependent_objs=liblua/*.o \
-               $(lua_repl) \
                $(HOME)/submodules/rosie-lpeg/src/*.o \
-               $(HOME)/submodules/lua-cjson/*.o \
-               $(HOME)/submodules/lua-readline/src/*.o
+               $(HOME)/submodules/lua-cjson/*.o 
 
-librosie.o: $(lua_repl) librosie.c librosie.h logging.c registry.c rosiestring.c
+librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
 	$(CC) -fvisibility=hidden -o $@ -c librosie.c $(CFLAGS) $(lua_debug)
+
+rosie.o: rosie.c librosie.c librosie.h logging.c registry.c rosiestring.c lua_repl.c lua_repl.h
+	$(CC) -o $@ -c rosie.c $(CFLAGS) $(lua_debug) 
 
 librosie.so: librosie.o liblua
 	$(CC) -o $@ librosie.o $(dependent_objs) $(LIBS) $(LDFLAGS)
@@ -112,12 +117,15 @@ librosie.so: librosie.o liblua
 librosie.dylib: librosie.o liblua
 	$(CC) -install_name $(shell pwd)/$@ -o $@ librosie.o $(dependent_objs) $(LIBS) $(LDFLAGS)
 
-librosie.a: librosie.o liblua
-	$(AR) $@ librosie.o $(dependent_objs)
+librosie.a: librosie.o lua_repl.o liblua
+	$(AR) $@ librosie.o lua_repl.o $(dependent_objs)
 	$(RANLIB) $@
 
+rosie: rosie.c lua_repl.o
+	$(CC) -o $@ rosie.c $(CFLAGS) $(lua_debug) $(LIBS) -lreadline lua_repl.o $(HOME)/submodules/lua-readline/src/*.o $(dependent_objs)
+
 clean:
-	$(RM) librosie.dylib librosie.so librosie.o librosie.a lua_repl.o
+	$(RM) librosie.dylib librosie.so librosie.o librosie.a lua_repl.o rosie.o rosie
 	$(RM) -rf liblua
 	@here="$(shell pwd)"; \
 	for client in $(ALLCLIENTS); do cd $${here}/$$client && $(MAKE) clean; done

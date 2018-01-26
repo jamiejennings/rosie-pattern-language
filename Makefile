@@ -16,6 +16,7 @@ $(error Unsupported platform (uname reported "$(REPORTED_PLATFORM)"))
 endif
 
 LIBROSIE_A=librosie.a
+ROSIE_CLI=rosie
 
 ifeq ($(PLATFORM),macosx)
 PLATFORM=macosx
@@ -84,7 +85,6 @@ JSON_DIR = $(SUBMOD_DIR)/$(JSON)
 READLINE_DIR = $(SUBMOD_DIR)/$(READLINE)
 LUAMOD_DIR = $(SUBMOD_DIR)/$(LUAMOD)
 LIBROSIE_DIR = $(BUILD_ROOT)/src/librosie
-CLI_DIR = $(BUILD_ROOT)/src/cli
 
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
@@ -98,7 +98,6 @@ clean:
 	-cd $(JSON_DIR) && make clean
 	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
 	-cd $(LIBROSIE_DIR) && make clean
-	-cd $(CLI_DIR) && make clean
 	rm -f build.log
 
 
@@ -187,19 +186,19 @@ core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
 other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
+$(ROSIE_CLI):
 $(LIBROSIE_A):
 $(LIBROSIE_DYLIB): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC)
+	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC) ROSIE_HOME=$(shell pwd) LUADEBUG=1
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 compile: $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 
-$(ROSIEBIN): compile $(LIBROSIE_A)
-	cd $(CLI_DIR) && $(MAKE) CC=$(CC)
-	cp $(CLI_DIR)/rosie "$(BUILD_ROOT)/bin"
+$(ROSIEBIN): compile $(ROSIE_CLI)
+	cp $(LIBROSIE_DIR)/rosie "$(BUILD_ROOT)/bin"
 
 $(INSTALL_ROSIEBIN): $(ROSIEBIN)
-	cp $(CLI_DIR)/rosie "$(INSTALL_BIN_DIR)"
+	cp $(LIBROSIE_DIR)/rosie "$(INSTALL_BIN_DIR)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
