@@ -189,12 +189,12 @@ luaobjects := $(core_objects) $(other_objects)
 
 $(ROSIE_CLI_ABS):
 $(ROSIE_CLI_REL): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) $@ CC=$(CC) ROSIE_HOME=$(shell pwd)
+	cd $(LIBROSIE_DIR) && $(MAKE) $(ROSIE_CLI_REL) $(ROSIE_CLI_REL) CC=$(CC) ROSIE_HOME=$(shell pwd)
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 $(LIBROSIE_A):
 $(LIBROSIE_DYLIB): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) CC=$(CC)
+	cd $(LIBROSIE_DIR) && $(MAKE) $(LIBROSIE_A) $(LIBROSIE_DYLIB) CC=$(CC)
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 compile: $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
@@ -203,7 +203,7 @@ $(ROSIEBIN): compile $(ROSIE_CLI_ABS)
 	cp $(LIBROSIE_DIR)/rosie_abs "$(BUILD_ROOT)/bin/rosie"
 
 $(INSTALL_ROSIEBIN): compile $(ROSIE_CLI_REL)
-	cp $(LIBROSIE_DIR)/rosie_rel "$(INSTALL_BIN_DIR)/rosie"
+	cp $(LIBROSIE_DIR)/rosie_rel "$(INSTALL_ROSIEBIN)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
@@ -239,8 +239,7 @@ install_librosie: $(LIBROSIE_DYLIB) $(LIBROSIE_A)
 
 # Main install rule
 .PHONY: install
-install: $(INSTALL_ROSIEBIN) install_lua install_so install_metadata \
-	install_run_script install_luac_bin install_rpl install_librosie
+install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie
 
 .PHONY: uninstall
 uninstall:
@@ -305,6 +304,11 @@ test:
 
 .PHONY: installtest
 installtest:
+	@$(BUILD_ROOT)/test/rosie-has-debug.sh $(INSTALL_ROSIEBIN) 2>/dev/null; \
+	if [ "$$?" -ne "0" ]; then \
+	echo "Rosie was not built with LUADEBUG support.  Try 'make clean; make LUADEBUG=1'; make install."; \
+	exit -1; \
+	fi;
 	@echo Running tests in $(BUILD_ROOT)/test/all.lua
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D)
 	@if [ -n "$(CLIENTS)" ]; then \
