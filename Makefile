@@ -199,10 +199,10 @@ $(LIBROSIE_DYLIB): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
 
 compile: $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 
-$(ROSIEBIN): compile $(ROSIE_CLI_ABS)
+$(ROSIEBIN): compile $(LIBROSIE_DIR)/$(ROSIE_CLI_ABS)
 	cp $(LIBROSIE_DIR)/rosie_abs "$(BUILD_ROOT)/bin/rosie"
 
-$(INSTALL_ROSIEBIN): compile $(ROSIE_CLI_REL)
+$(INSTALL_ROSIEBIN): compile $(LIBROSIE_DIR)/$(ROSIE_CLI_REL)
 	cp $(LIBROSIE_DIR)/rosie_rel "$(INSTALL_ROSIEBIN)"
 
 # Install any metadata needed by rosie
