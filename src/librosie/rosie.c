@@ -34,7 +34,7 @@ static int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
   char fname[MAXPATHLEN];
   size_t len = strnlen(rosiehome, MAXPATHLEN);
   char *last = stpncpy(fname, rosiehome, (MAXPATHLEN - len - 1));
-  last = stpncpy(last, CLI_LUAC, len);
+  last = stpncpy(last, CLI_LUAC, MAXPATHLEN - len - 1 - strlen(CLI_LUAC));
   *last = '\0';
 
   LOGf("Entering rosie_exec_cli, computed cli filename is %s\n", fname);
