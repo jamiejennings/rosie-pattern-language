@@ -30,8 +30,7 @@ static void pushargs(lua_State *L, int argc, char **argv) {
 
 int luaopen_readline (lua_State *L); /* will dynamically load the system libreadline/libedit */
 
-EXPORT
-int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
+static int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
   char fname[MAXPATHLEN];
   size_t len = strnlen(rosiehome, MAXPATHLEN);
   char *last = stpncpy(fname, rosiehome, (MAXPATHLEN - len - 1));
@@ -79,8 +78,7 @@ int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
 
 #ifdef LUADEBUG
 
-EXPORT
-int rosie_exec_lua_repl(Engine *e, int argc, char **argv) {
+static int rosie_exec_lua_repl(Engine *e, int argc, char **argv) {
   LOG("Entering rosie_exec_lua_repl\n");
 
   ACQUIRE_ENGINE_LOCK(e);

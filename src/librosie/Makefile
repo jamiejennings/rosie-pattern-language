@@ -144,10 +144,10 @@ rosie_rel.o: rosie.c librosie.c librosie.h logging.c registry.c rosiestring.c lu
 rosie_abs.o: rosie.c librosie.c librosie.h logging.c registry.c rosiestring.c lua_repl.c lua_repl.h
 	$(CC) -o $@ -c rosie.c $(CFLAGS) $(lua_debug) $(rosie_home)
 
-rosie_abs: rosie.c rosie_abs.o lua_repl.o
+rosie_abs: rosie.c rosie_abs.o lua_repl.o liblua
 	$(CC) -o $@ rosie_abs.o $(LIBS) -lreadline lua_repl.o $(HOME)/submodules/lua-readline/src/*.o $(dependent_objs)
 
-rosie_rel: rosie.c rosie_rel.o lua_repl.o
+rosie_rel: rosie.c rosie_rel.o lua_repl.o liblua
 	$(CC) -o $@ rosie_rel.o $(LIBS) -lreadline lua_repl.o $(HOME)/submodules/lua-readline/src/*.o $(dependent_objs)
 
 clean:

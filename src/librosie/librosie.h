@@ -74,12 +74,6 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages);
 int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages);
 int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages);
 
-int rosie_exec_cli(Engine *e, int argc, char **argv, char **err);
-  
-#ifdef LUADEBUG
-int rosie_exec_lua_repl(Engine *e, int argc, char **argv);
-#endif
-
 /*
 
 Administrative:
