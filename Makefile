@@ -15,6 +15,17 @@ else
 $(error Unsupported platform (uname reported "$(REPORTED_PLATFORM)"))
 endif
 
+SUBMOD_DIR = submodules
+ROSIEBIN = $(BUILD_ROOT)/bin/rosie
+INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
+
+LUA_DIR = $(SUBMOD_DIR)/$(LUA)
+LPEG_DIR = $(SUBMOD_DIR)/$(LPEG)
+JSON_DIR = $(SUBMOD_DIR)/$(JSON)
+READLINE_DIR = $(SUBMOD_DIR)/$(READLINE)
+LUAMOD_DIR = $(SUBMOD_DIR)/$(LUAMOD)
+LIBROSIE_DIR = $(BUILD_ROOT)/src/librosie
+
 LIBROSIE_A=librosie.a
 ROSIE_CLI_ABS=rosie_abs
 ROSIE_CLI_REL=rosie_rel
@@ -72,20 +83,8 @@ LIBROSIED = $(DESTDIR)/lib
 # ROSIE_DOC = $(DESTDIR)/share/doc
 # ROSIE_ROOT = $(DESTDIR)/share/rosie
 
-.PHONY: default
 .NOTPARALLEL:
 default: $(LIBROSIE_A) $(LIBROSIE_DYLIB) $(ROSIEBIN) compile sniff
-
-SUBMOD_DIR = submodules
-ROSIEBIN = $(BUILD_ROOT)/bin/rosie
-INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
-
-LUA_DIR = $(SUBMOD_DIR)/$(LUA)
-LPEG_DIR = $(SUBMOD_DIR)/$(LPEG)
-JSON_DIR = $(SUBMOD_DIR)/$(JSON)
-READLINE_DIR = $(SUBMOD_DIR)/$(READLINE)
-LUAMOD_DIR = $(SUBMOD_DIR)/$(LUAMOD)
-LIBROSIE_DIR = $(BUILD_ROOT)/src/librosie
 
 INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
@@ -187,23 +186,21 @@ core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
 other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
-$(ROSIE_CLI_ABS):
-$(ROSIE_CLI_REL): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) $(ROSIE_CLI_REL) $(ROSIE_CLI_REL) CC=$(CC) ROSIE_HOME=$(shell pwd)
+$(ROSIE_CLI_ABS) $(ROSIE_CLI_REL): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
+	cd $(LIBROSIE_DIR) && $(MAKE) $@ CC=$(CC) ROSIE_HOME=$(shell pwd)
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
-$(LIBROSIE_A):
-$(LIBROSIE_DYLIB): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) $(LIBROSIE_A) $(LIBROSIE_DYLIB) CC=$(CC)
+$(LIBROSIE_A) $(LIBROSIE_DYLIB): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
+	cd $(LIBROSIE_DIR) && $(MAKE) $@ CC=$(CC)
 	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 compile: $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 
-$(ROSIEBIN): compile $(LIBROSIE_DIR)/$(ROSIE_CLI_ABS)
-	cp $(LIBROSIE_DIR)/rosie_abs "$(BUILD_ROOT)/bin/rosie"
+$(ROSIEBIN): compile $(ROSIE_CLI_ABS)
+	cp $(LIBROSIE_DIR)/$(ROSIE_CLI_ABS) "$(BUILD_ROOT)/bin/rosie"
 
-$(INSTALL_ROSIEBIN): compile $(LIBROSIE_DIR)/$(ROSIE_CLI_REL)
-	cp $(LIBROSIE_DIR)/rosie_rel "$(INSTALL_ROSIEBIN)"
+$(INSTALL_ROSIEBIN): compile $(ROSIE_CLI_REL)
+	cp $(LIBROSIE_DIR)/$(ROSIE_CLI_REL) "$(INSTALL_ROSIEBIN)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
@@ -297,23 +294,6 @@ test:
 	@if [ -n "$(CLIENTS)" ]; then \
 		echo "** Running librosie client tests **"; \
 		cd $(LIBROSIE_DIR) && $(MAKE) test; \
-	else \
-		echo "Skipping librosie client tests."; \
-		echo "To enable, set CLIENTS=all or CLIENTS=\"C python\" or such (space separated list in quotes)."; \
-	fi
-
-.PHONY: installtest
-installtest:
-	@$(BUILD_ROOT)/test/rosie-has-debug.sh $(INSTALL_ROSIEBIN) 2>/dev/null; \
-	if [ "$$?" -ne "0" ]; then \
-	echo "Rosie was not built with LUADEBUG support.  Try 'make clean; make LUADEBUG=1'; make install."; \
-	exit -1; \
-	fi;
-	@echo Running tests in $(BUILD_ROOT)/test/all.lua
-	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(INSTALL_ROSIEBIN) -D)
-	@if [ -n "$(CLIENTS)" ]; then \
-		echo "** Running librosie client tests **"; \
-		cd $(LIBROSIE_DIR) && $(MAKE) DESTDIR=$(DESTDIR) installtest; \
 	else \
 		echo "Skipping librosie client tests."; \
 		echo "To enable, set CLIENTS=all or CLIENTS=\"C python\" or such (space separated list in quotes)."; \
