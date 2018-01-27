@@ -137,7 +137,7 @@ lua_repl.o: lua_repl.c lua_repl.h
 
 %/rosie: %/rosie.o lua_repl.o liblua
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $< lua_repl.o $(LIBS) -lreadline $(HOME)/submodules/lua-readline/src/*.o $(dependent_objs)
+	$(CC) -o $@ $< lua_repl.o -lreadline $(HOME)/submodules/lua-readline/src/*.o $(dependent_objs) $(LIBS)
 
 # Note: 'clean' also cleans the client directories because those are
 # "known" here, and not known by the top level Makefile.
