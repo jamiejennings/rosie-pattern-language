@@ -27,17 +27,17 @@ default: $(PLATFORM)
 ROSIE_DYLIB_NAME=rosie
 ifeq ($(PLATFORM), macosx)
 CC= clang
-ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
+ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
 else
 CC= gcc
-ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
+ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
 clean:
 	$(RM) rosie.pyc 
 
-test: $(ROSIE_DYLIB)
-	LD_LIBRARY_PATH=.. python test.py local
+test: ../local/$(ROSIE_DYLIB)
+	LD_LIBRARY_PATH=../local python test.py local
 
 # Some linux distros may not have DESTDIR on their search path by
 # default, like when running as root in a docker image.  (This can be

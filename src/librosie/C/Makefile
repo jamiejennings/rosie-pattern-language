@@ -1,8 +1,8 @@
 ## -*- Mode: Makefile; -*-                                             
 ##
-## Makefile for building librosie.so, on which Rosie's foreign function interface is based. 
+## Makefile for some sample C clients of librosie
 ##
-## © Copyright IBM Corporation 2016, 2017.
+## © Copyright IBM Corporation 2016, 2017, 2018.
 ## LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ## AUTHOR: Jamie A. Jennings
 
@@ -58,21 +58,21 @@ MYLDFLAGS=
 MYLIBS= 
 MYOBJS=
 
-ROSIE_A=$(HOME)/src/librosie/librosie.a
+ROSIE_A=../local/librosie.a
 ROSIE_DYLIB_NAME=rosie
 
 ifeq ($(PLATFORM), macosx)
-ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
+ROSIE_DYLIB=../local/lib$(ROSIE_DYLIB_NAME).dylib
 SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic system librosie.dylib
-LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. ./dynamic local librosie.dylib
+LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=../local ./dynamic local librosie.dylib
 else
-ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
+ROSIE_DYLIB=../local/lib$(ROSIE_DYLIB_NAME).so
 # Some linux distros may not have DESTDIR on their search path by
 # default, like when running as root in a docker image.  (This can be
 # checked with `/sbin/ldconfig -v`.) So we explicitly set
 # LD_LIBRARY_PATH in the SYSTEM test of the dynamically linked client.
 SYSTEM_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=$(DESTDIR)/lib ./dynamic system librosie.so
-LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic local librosie.so
+LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=../local ./dynamic local librosie.so
 endif
 
 
@@ -102,7 +102,7 @@ clean:
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
-test: static dynamic mt $(ROSIE_DYLIB)
+test: static dynamic mt
 	@echo Running C client tests on librosie
 	@echo
 	@echo Statically linked test program:

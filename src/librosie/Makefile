@@ -34,6 +34,7 @@ endif
 # can run "make installtest" locally from the librosie directory
 # without having to specify DESTDIR.
 DESTDIR=/usr/local
+
 HOME = $(shell cd ../..; pwd)
 
 ifdef LUADEBUG
@@ -146,9 +147,9 @@ clean:
 	@here="$(shell pwd)"; \
 	for client in $(ALLCLIENTS); do cd $${here}/$$client && $(MAKE) clean; done
 
-test: $(ROSIE_DYLIB) $(ROSIE_A)
+test:
 	@if [ -z "$(clients)" ]; then \
-	echo Missing client list to test.  Try "CLIENTS=all".; \
+	echo Missing client list to test.  Try \"make CLIENTS=all\".; \
 	exit 1; \
 	fi; \
 	here="$(shell pwd)"; \

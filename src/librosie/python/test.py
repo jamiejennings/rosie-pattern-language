@@ -366,7 +366,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
-        librosiedir = ".."
+        librosiedir = "../local"
         print "Loading librosie from", librosiedir
     elif sys.argv[1]=='system':
         librosiedir = None
