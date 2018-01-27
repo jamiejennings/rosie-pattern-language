@@ -43,6 +43,10 @@
  *     Yes, this is a good idea.
  */
 
+#ifndef ROSIE_HOME
+#error "ROSIE_HOME not defined"
+#endif
+
 #include <assert.h>
 #include <signal.h>
 #include <stdio.h>
@@ -58,18 +62,6 @@
 #define ROSIEDIRNAME "/rosie"
 #define BOOTSCRIPT "/lib/boot.luac"
 
-/* ----------------------------------------------------------------------------------------
- * Paths relative to where librosie.so is found (for example):
- *  /usr/local/lib/librosie.so => 
- *    libname = librosie.so
- *    dirname = /usr/local/lib
- *    rosiehome = /usr/local/lib/rosie
- *    bootscript = /usr/local/lib/rosie/lib/boot.luac
- * ----------------------------------------------------------------------------------------
- */
-
-static char libname[MAXPATHLEN];
-static char libdir[MAXPATHLEN];
 static char rosiehome[MAXPATHLEN];
 static char bootscript[MAXPATHLEN];
 
@@ -106,44 +98,12 @@ static char bootscript[MAXPATHLEN];
  * ----------------------------------------------------------------------------------------
  */
 
-static void set_libinfo() {
-  Dl_info dl;
-  char *base, *dir;
-  char buf[MAXPATHLEN];
-  int ok = dladdr((void *)rosie_new, &dl);
-  if (!ok) {
-    display("librosie: call to dladdr failed");
-    exit(ERR_SYSCALL_FAILED);
-  }
-  LOGf("dli_fname is %s\n", dl.dli_fname);
-  /* basename and dirname may MODIFY the string you pass to them. arghh. */
-  strncpy(buf, dl.dli_fname, MAXPATHLEN);
-  base = basename(buf);
-  strncpy(buf, dl.dli_fname, MAXPATHLEN);
-  dir = dirname(buf);
-  if (!base || !dir) {
-    display("librosie: call to basename/dirname failed");
-    exit(ERR_SYSCALL_FAILED);
-  }
-  /* basename and dirname return pointers to temporary internal storage. arghh. */
-  strncpy(libname, base, MAXPATHLEN);
-  strncpy(libdir, dir, MAXPATHLEN);
-  LOGf("libdir is %s, and libname is %s\n", libdir, libname);
-}
-
 static void set_bootscript() {
   size_t len;
   static char *last;
-#ifdef ROSIE_HOME
   /* set rosiehome to ROSIE_HOME */
   len = strnlen(ROSIE_HOME, MAXPATHLEN);
   last = stpncpy(rosiehome, ROSIE_HOME, (MAXPATHLEN - len - 1));
-#else
-  /* set rosiehome using libinfo */
-  len = strnlen(ROSIEDIRNAME, MAXPATHLEN);
-  last = stpncpy(rosiehome, libdir, (MAXPATHLEN - len - 1));
-  last = stpncpy(last, ROSIEDIRNAME, len);
-#endif
   *last = '\0';
   /* set absolute path to boot script */
   len = strnlen(BOOTSCRIPT, MAXPATHLEN);
@@ -168,29 +128,29 @@ static int all_is_lost = TRUE;
 
 static void initialize() {
   LOG("INITIALIZE start\n");
-  set_libinfo();
   set_bootscript();
   all_is_lost = FALSE;
   LOG("INITIALIZE finish\n");
   return;
 }
 
+#define NO_INSTALLATION_MSG "unable to find rosie installation files"
+
 static int boot(lua_State *L, str *messages) {
   char *msg = NULL;
   if (!*bootscript) {
-    *messages = rosie_new_string_from_const("failed to set bootscript or libinfo");
+    *messages = rosie_new_string_from_const(NO_INSTALLATION_MSG);
     return FALSE;
   }
   LOGf("Booting rosie from %s\n", bootscript);
 
   int status = luaL_loadfile(L, bootscript);
   if (status != LUA_OK) {
-    LOG("Failed to read boot code (using loadfile)\n");
-    if (asprintf(&msg, "missing or corrupt rosie boot loader %s", bootscript)) {
+    LOG("Failed to read rosie boot code (using loadfile)\n");
+    if (asprintf(&msg, "no rosie installation at %s", rosiehome)) {
       *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
-    }
-    else {
-      *messages = rosie_new_string_from_const("cannot find rosie boot code");
+    } else {
+      *messages = rosie_new_string_from_const(NO_INSTALLATION_MSG);
     }
     return FALSE;
   }
@@ -198,11 +158,10 @@ static int boot(lua_State *L, str *messages) {
   status = lua_pcall(L, 0, LUA_MULTRET, 0);
   if (status != LUA_OK) {
     LOG("Loading of boot code failed\n");
-    if (asprintf(&msg, "loading failed for %s", bootscript)) {
+    if (asprintf(&msg, "failed to load %s -- corrupt installation?", bootscript)) {
       *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
-    }
-    else {
-      *messages = rosie_new_string_from_const("loading of boot code failed");
+    } else {
+      *messages = rosie_new_string_from_const("loading of rosie boot code failed");
     }
     return FALSE;
   }
@@ -212,11 +171,10 @@ static int boot(lua_State *L, str *messages) {
   if (status!=LUA_OK) {
     LOG("Boot function failed.  Lua stack is: \n");
     LOGstack(L);
-    *messages = rosie_new_string_from_const("execution of boot loader failed");
+    *messages = rosie_new_string_from_const("execution of rosie boot loader failed");
     return FALSE;
   }
   LOG("Boot function succeeded\n");
-
   return TRUE;
 }
 

@@ -1,10 +1,12 @@
-## ----------------------------------------------------------------------------- ##
-## Customizable options:
+# -----------------------------------------------------------------------------
+# Customizable options
+# -----------------------------------------------------------------------------
 
 DESTDIR=/usr/local
 
-## End of customizable options
-## ----------------------------------------------------------------------------- ##
+# -----------------------------------------------------------------------------
+# Platform detection
+# -----------------------------------------------------------------------------
 
 REPORTED_PLATFORM=$(shell (uname -o || uname -s) 2> /dev/null)
 ifeq ($(REPORTED_PLATFORM), Darwin)
@@ -15,28 +17,27 @@ else
 $(error Unsupported platform (uname reported "$(REPORTED_PLATFORM)"))
 endif
 
-SUBMOD_DIR = submodules
+# -----------------------------------------------------------------------------
+# References to places in the build directory
+# -----------------------------------------------------------------------------
+
+SUBMOD_DIR = $(BUILD_ROOT)/submodules
 ROSIEBIN = $(BUILD_ROOT)/bin/rosie
-INSTALL_ROSIEBIN = $(DESTDIR)/bin/rosie
 
 LUA_DIR = $(SUBMOD_DIR)/$(LUA)
 LPEG_DIR = $(SUBMOD_DIR)/$(LPEG)
 JSON_DIR = $(SUBMOD_DIR)/$(JSON)
-READLINE_DIR = $(SUBMOD_DIR)/$(READLINE)
 LUAMOD_DIR = $(SUBMOD_DIR)/$(LUAMOD)
 LIBROSIE_DIR = $(BUILD_ROOT)/src/librosie
+READLINE_DIR = $(SUBMOD_DIR)/$(READLINE)
 
 LIBROSIE_A=librosie.a
-ROSIE_CLI_ABS=rosie_abs
-ROSIE_CLI_REL=rosie_rel
 
 ifeq ($(PLATFORM),macosx)
 PLATFORM=macosx
 CC=cc
 LIBROSIE_DYLIB=librosie.dylib
-endif
-
-ifeq ($(PLATFORM),linux)
+else ifeq ($(PLATFORM),linux)
 PLATFORM=linux
 CC=gcc
 LIBROSIE_DYLIB=librosie.so
@@ -52,13 +53,14 @@ LUAMOD = lua-modules
 
 BUILD_ROOT = $(shell pwd)
 
-# TODO: DECIDE ON THIS SOON:
-#   $(ROSIED)/pkg          standard library compiled (*.rosie)
-
-
+# -----------------------------------------------------------------------------
 # Install layout
-#
-# Almost everything gets copied to $(ROSIED): (e.g. /usr/local/lib/rosie)
+# -----------------------------------------------------------------------------
+
+LIBROSIED = $(DESTDIR)/lib
+ROSIED = $(DESTDIR)/lib/rosie
+
+# Almost everything gets copied to $(ROSIED): 
 #   $(ROSIED)/bin          arch-dependent binaries (e.g. rosie, luac)
 #   $(ROSIED)/lib          arch-dependent libraries (e.g. *.luac)
 #   $(ROSIED)/rpl          standard library (*.rpl)
@@ -70,45 +72,35 @@ BUILD_ROOT = $(shell pwd)
 #   $(ROSIED)/README       short text readme (e.g. where to open issues)
 #   $(ROSIED)/VERSION      installed version
 #
-# Rosie executable is created by 'make install': $(DESTDIR)/bin/rosie
+# Rosie executable is compiled during 'make install':
+#   $(DESTDIR)/bin/rosie
 #
 # FUTURE: Links into $(ROSIED)
 #   $(ROSIE_ROOT)/rpl  --> $(ROSIED)/rpl
 #   $(ROSIE_ROOT)/pkg  --> $(ROSIED)/pkg
 #   $(ROSIE_DOC)/rosie --> $(ROSIED)/doc
 
-ROSIED = $(DESTDIR)/lib/rosie
-LIBROSIED = $(DESTDIR)/lib
-# Future:
-# ROSIE_DOC = $(DESTDIR)/share/doc
-# ROSIE_ROOT = $(DESTDIR)/share/rosie
-
-.NOTPARALLEL:
-default: $(LIBROSIE_A) $(LIBROSIE_DYLIB) $(ROSIEBIN) compile sniff
-
-INSTALL_BIN_DIR = $(ROSIED)/bin
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_RPL_DIR = $(ROSIED)/rpl
+INSTALL_BIN_DIR = $(DESTDIR)/bin
+INSTALL_ROSIEBIN = $(INSTALL_BIN_DIR)/rosie
 
-.PHONY: clean
-clean:
-	rm -rf bin/* lib/* librosie.so librosie.dylib librosie.a
-	-cd $(LUA_DIR) && make clean
-	-cd $(LPEG_DIR)/src && make clean
-	-cd $(JSON_DIR) && make clean
-	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
-	-cd $(LIBROSIE_DIR) && make clean
-	rm -f build.log
+# -----------------------------------------------------------------------------
+# Targets
+# -----------------------------------------------------------------------------
 
+.PHONY:
+.NOTPARALLEL:
+default: LIBROSIE_TARGET=local
+default: binaries compile sniff
 
-## ----------------------------------------------------------------------------- ##
-
-# Sigh.  Once we support Linux packages (like RPM), we won't need this test.
-# Note that this test should ALWAYS pass on OS X, since it ships with readline.
+# <sigh> Once we support packages (like RPM), we won't need this test.
+# Note that this test should ALWAYS pass on OS X, since it ships with
+# readline.
 .PHONY: readlinetest
 readlinetest:
 	@(bash -c 'printf "#include <stdio.h>\n#include <readline/readline.h>\nint main() { }\n"' | \
-	           cc -std=gnu99 -lreadline -o /dev/null -xc -) && \
+	           $(CC) -std=gnu99 -lreadline -o /dev/null -xc -) && \
 	   echo 'READLINE TEST: libreadline and readline.h appear to be installed' || \
 	   (echo 'READLINE TEST: Missing readline library or readline.h' && /usr/bin/false)
 
@@ -186,21 +178,37 @@ core_objects := $(patsubst src/core/%.lua,lib/%.luac,$(wildcard src/core/*.lua))
 other_objects := lib/argparse.luac lib/list.luac lib/recordtype.luac lib/submodule.luac lib/strict.luac lib/thread.luac
 luaobjects := $(core_objects) $(other_objects)
 
-$(ROSIE_CLI_ABS) $(ROSIE_CLI_REL): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) $@ CC=$(CC) ROSIE_HOME=$(shell pwd)
-	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
+compile: binaries $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 
-$(LIBROSIE_A) $(LIBROSIE_DYLIB): $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) $@ CC=$(CC)
-	@$(BUILD_ROOT)/src/build_info.sh "librosie" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
+.PHONY:
+binaries: $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
+	cd $(LIBROSIE_DIR) && $(MAKE) $(LIBROSIE_TARGET) CC=$(CC)
+	@$(BUILD_ROOT)/src/build_info.sh "binaries" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
-compile: $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
+$(ROSIEBIN): compile binaries
+	cp $(LIBROSIE_DIR)/local/rosie "$(BUILD_ROOT)/bin/rosie"
 
-$(ROSIEBIN): compile $(ROSIE_CLI_ABS)
-	cp $(LIBROSIE_DIR)/$(ROSIE_CLI_ABS) "$(BUILD_ROOT)/bin/rosie"
+# -----------------------------------------------------------------------------
+# Install
+# -----------------------------------------------------------------------------
 
-$(INSTALL_ROSIEBIN): compile $(ROSIE_CLI_REL)
-	cp $(LIBROSIE_DIR)/$(ROSIE_CLI_REL) "$(INSTALL_ROSIEBIN)"
+# Main install rule
+.PHONY: install
+install: LIBROSIE_TARGET=system
+install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie
+
+# We use mv instead of cp for all the binaries, so that
+# ROSIE_CLI_SYSTEM will be rebuilt every time "make install" is run,
+# because DESTDIR may have changed.
+
+$(INSTALL_ROSIEBIN): compile binaries
+	mv $(LIBROSIE_DIR)/system/rosie "$(INSTALL_ROSIEBIN)"
+
+# Install librosie
+.PHONY: install_librosie
+install_librosie: compile binaries
+	mv "$(LIBROSIE_DIR)/system/$(LIBROSIE_DYLIB)" "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
+	mv "$(LIBROSIE_DIR)/system/$(LIBROSIE_A)" "$(LIBROSIED)/$(LIBROSIE_A)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
@@ -228,15 +236,9 @@ install_rpl:
 	mkdir -p "$(INSTALL_RPL_DIR)"/Unicode
 	cp rpl/Unicode/*.rpl "$(INSTALL_RPL_DIR)"/Unicode/
 
-# Install librosie
-.PHONY: install_librosie
-install_librosie: $(LIBROSIE_DYLIB) $(LIBROSIE_A)
-	cp "$(LIBROSIE_DIR)/$(LIBROSIE_DYLIB)" "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
-	cp "$(LIBROSIE_DIR)/$(LIBROSIE_A)" "$(LIBROSIED)/$(LIBROSIE_A)"
-
-# Main install rule
-.PHONY: install
-install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie
+# -----------------------------------------------------------------------------
+# Uninstall
+# -----------------------------------------------------------------------------
 
 .PHONY: uninstall
 uninstall:
@@ -244,7 +246,7 @@ uninstall:
 	@-rm -vf $(INSTALL_ROSIEBIN)
 	@echo "Removing $(ROSIED)"
 	@-rm -Rvf $(ROSIED)/
-	@echo "Removing librosie.a/.so from $(LIBROSIED)"
+	@echo "Removing librosie.a/.so/.dylib from $(LIBROSIED)"
 	@-rm -vf "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
 	@-rm -vf "$(LIBROSIED)/$(LIBROSIE_A)"
 
@@ -299,4 +301,13 @@ test:
 		echo "To enable, set CLIENTS=all or CLIENTS=\"C python\" or such (space separated list in quotes)."; \
 	fi
 
+.PHONY: clean
+clean:
+	rm -rf bin/* lib/* librosie.so librosie.dylib librosie.a
+	-cd $(LUA_DIR) && make clean
+	-cd $(LPEG_DIR)/src && make clean
+	-cd $(JSON_DIR) && make clean
+	-cd $(READLINE_DIR) && rm -f readline.so && rm -f src/lua_readline.o
+	-cd $(LIBROSIE_DIR) && make clean
+	rm -f build.log
 

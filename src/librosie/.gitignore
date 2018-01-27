@@ -1,5 +1,5 @@
-rosie_abs
-rosie_rel
+local
+system
 *.dylib
 *.so
 *.o

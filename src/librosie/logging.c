@@ -13,7 +13,7 @@
    to understand that something very strange and unrecoverable occurred. 
 */
 static void display (const char *msg) {
-  fprintf(stderr, "%s: %s\n", libname, msg);
+  fprintf(stderr, "librosie: %s\n", msg);
   fflush(NULL);
 }
 
