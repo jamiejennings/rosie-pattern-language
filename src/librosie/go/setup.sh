@@ -13,8 +13,8 @@ ln -fs $RPEGLIB/rpeg.h src/rosie/include/
 ln -fs $RPEGLIB/rbuf.h src/rosie/include/
 ln -fs $LUALIB/lauxlib.h src/rosie/include/
 
-echo "Linking librosie.a from librosie directory"
-ln -fs $LIB/librosie.a src/rosie/librosie.a
+echo "Linking librosie.a from librosie/local directory"
+ln -fs $LIB/local/librosie.a src/rosie/librosie.a
 
 if [ -z $ROSIE_HOME ]; then
     ROSIE_HOME=`cd ../../.. && pwd`
@@ -32,7 +32,7 @@ fi
 
 echo "--------------------------------------------------------"
 echo "Source the file 'setvars' to set GOPATH and ROSIE_HOME:"
-echo '. setvars'
+echo 'source setvars'
 echo "go build rtest"
 echo "./rtest"
 
