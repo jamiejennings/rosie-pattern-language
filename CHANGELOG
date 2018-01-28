@@ -2,6 +2,35 @@
 
 	* 1.0.0-alpha-9
 
+	FIXED a number of bugs.
+
+	CHANGED librosie functions to return a NULL pointer for "messages" when
+	there are none, instead of a string representation of an empty JSON
+	object.
+
+Updated sample docker files to force re-build when the branch has changed.  This
+	is a hack, and it relies on (1) the trivial docker/run script, and (2)
+	access by that script to the .git directory in the rosie build
+	directory. 
+
+	CHANGED CLI option "--version" to a command "version".
+
+	CHANGED the inclusion of a Lua repl for white-box testing and debugging
+	to be optional instead of always present.  Compile with "make
+	LUADEBUG=1" to get the Lua repl, and invoke rosie with "rosie -D".
+
+	CHANGE the visibility of symbols in librosie.  They are now hidden,
+	except of course for the functions rosie_* that the library exports.
+
+	REMOVED "make installtest".
+
+	CHANGED the rosie executable into a single statically linked binary,
+	instead of a script.
+
+	CHANGED the way we build librosie.[a|so|dylib] and the rosie
+	executable.
+	*** local v system
+	
 DRAFT
 Cleaned up some things in librosie.  CHANGED: alloc_limit, libpath APIs.
 
