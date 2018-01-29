@@ -21,7 +21,8 @@ PLATFORM=none
 endif
 
 rtest: src/rtest/rtest.go src/rosie/rosie.go
-	go build rtest
+	./setup.sh
+	source setvars && go build rtest
 
 clean:
 	$(RM) rosie.pyc 
