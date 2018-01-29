@@ -38,11 +38,12 @@ type Match struct {
 }
 
 type (
+	Trace map[string]interface{}
 	Configuration [] map[string] string
 	Messages [] interface{}
 	RosieString = C.struct_rosie_string
+	RosieStringPtr = *C.struct_rosie_string
 )
-
 
 func finalizeEngine(en *Engine) {
 	C.rosie_finalize(en.ptr)
@@ -173,7 +174,7 @@ func (pat *Pattern) MatchFrom(input []byte, start int) (match *Match, err error)
 	var newMatch Match
 	match = &newMatch
 	
-	ok, err := C.rosie_match(pat.engine.ptr, pat.id, C.int(1), Cencoder, &Cinput, &Cmatch)
+	ok, err := C.rosie_match(pat.engine.ptr, pat.id, C.int(start), Cencoder, &Cinput, &Cmatch)
 	if ok != 0 {
 		return nil, err
 	}
@@ -193,9 +194,57 @@ func (pat *Pattern) MatchFrom(input []byte, start int) (match *Match, err error)
 }
 
 // -----------------------------------------------------------------------------
-// TODO: Match with choice of output encoder, returning match data as byte slice
+// TODO: Match with choice of output encoder, returning match data as
+// byte slice or string
 
 
+
+// -----------------------------------------------------------------------------
+// TODO: Trace without choice of output encoder, returning a map of
+// the full trace
+
+
+// -----------------------------------------------------------------------------
+// Trace the matching process, given an input string or byte slice and
+// a compiled pattern
+
+func (pat *Pattern) StrTrace(input []byte, style string) (trace *string, err error) {
+	return pat.StrTraceFrom(input, 1, style)
+}
+	
+func (pat *Pattern) StrTraceString(input string, style string) (trace *string, err error) {
+	return pat.StrTraceStringFrom(input, 1, style)
+}
+	
+func (pat *Pattern) StrTraceStringFrom(input string, start int, style string) (trace *string, err error) {
+	return pat.StrTraceFrom([]byte(input), start, style)
+}
+
+func (pat *Pattern) StrTraceFrom(input []byte, start int, style string) (trace *string, err error) {
+	var Ctrace RosieString
+	var Cinput = rosieStringFromBytes(input)
+	defer C.rosie_free_string(Cinput)
+	var Cstyle = C.CString(style)
+	var Cmatch_flag = C.int(0)
+	
+	ok, err := C.rosie_trace(pat.engine.ptr, pat.id, C.int(start), Cstyle, &Cinput, &Cmatch_flag, &Ctrace)
+	if ok != 0 {
+		return nil, err
+	}
+
+	if Ctrace.ptr == nil {
+		// Error occurred (but not a bug)
+		switch Ctrace.len {
+		case 2: return nil, errors.New("invalid trace style")
+		case 1: return nil, errors.New("invalid compiled pattern (already freed?)")
+		default: return nil, errors.New("unknown error during trace")
+		}
+	}
+
+	answer := goString(Ctrace)
+	return &answer, nil
+
+}
 
 // -----------------------------------------------------------------------------
 // Load RPL code into a Rosie engine
@@ -238,14 +287,16 @@ func (en *Engine) ImportPkgAs(pkgname string, asname string) (ok bool, actualPkg
 	var Cok = C.int(0)
  	var Cpkgname = rosieString(pkgname)
 	var CactualPkgname = C.rosie_string_from(nil, 0)
- 	var Casname = C.rosie_string_from(nil, 0)
+ 	var Casname RosieString
+	var Casname_ptr RosieStringPtr = nil
 	if asname != "" {
 		Casname = rosieString(asname)
+		Casname_ptr = &Casname
 	}
 	var Cmessages RosieString
 	defer C.rosie_free_string(Cmessages)
 	
- 	loadOK, errLoad := C.rosie_import(en.ptr, &Cok, &Cpkgname, &Casname, &CactualPkgname, &Cmessages)
+ 	loadOK, errLoad := C.rosie_import(en.ptr, &Cok, &Cpkgname, Casname_ptr, &CactualPkgname, &Cmessages)
 	messages, err = mungeMessages(Cmessages)
 	actualPkgname = goString(CactualPkgname)
 	if loadOK != 0 {
@@ -253,6 +304,10 @@ func (en *Engine) ImportPkgAs(pkgname string, asname string) (ok bool, actualPkg
 	}
 	return (Cok==1), actualPkgname, messages, nil
 }
+
+// -----------------------------------------------------------------------------
+// Get, set the engine's search path (a colon-separated list of
+// directories to search for libraries loaded via 'import'.
 
 func (en *Engine) GetLibpath() (libpath string, err error) {
 	var Clibpath = C.rosie_string_from(nil, 0)
@@ -270,6 +325,34 @@ func (en *Engine) SetLibpath(libpath string) (err error) {
 	}
 	return nil
 }
+
+// -----------------------------------------------------------------------------
+// Get, set the engine's memory allocation limit, which is a number of
+// Kb above whatever is the current memory usage level.  When Rosie's
+// working memory (heap) exceeds the soft limit, it will force a GC in
+// a best effort to reduce memory consumption.
+
+func (en *Engine) GetAllocLimit() (softlimit int, current_usage int, err error) {
+	var Climit = C.int(-1)
+	var Cusage = C.int(0)
+ 	if ok, err := C.rosie_alloc_limit(en.ptr, &Climit, &Cusage); ok != 0 {
+		return 0, 0, err
+	}
+	return int(Climit), int(Cusage), nil
+}
+
+func (en *Engine) SetAllocLimit(softlimit int) (actual_limit int, current_usage int, err error) {
+	if (softlimit < 8192) && (softlimit != 0) {
+		return 0, 0, errors.New("limit must be 0 or higher than the Rosie minimum value")
+	}
+	var Climit = C.int(softlimit)
+	var Cusage = C.int(0)
+ 	if ok, err := C.rosie_alloc_limit(en.ptr, &Climit, &Cusage); ok != 0 {
+		return 0, 0, err
+	}
+	return int(Climit), int(Cusage), nil
+}
+
 
 
 

@@ -15,8 +15,11 @@ import "fmt"
 import "os"
 import "runtime"
 
+var errs = 0			// counter
+
 func assert(cond bool, msg string) {
 	if !cond {
+		errs++
 		fmt.Printf("* ASSERTION FAILED: %s\n", msg)
 	}
 }
@@ -61,6 +64,29 @@ func main() {
 		os.Exit(-1)
 	}
 
+
+	fmt.Println("About to try getting and setting the engine's soft memory allocation limit")
+	
+	limit, usage, err := engine.GetAllocLimit()
+	assert(err==nil, "err!!")
+	fmt.Printf("engine's initial alloc limit is %dKb (current usage is %dKb)\n", limit, usage)
+
+	limit, usage, err = engine.SetAllocLimit(-1)
+	assert(err!=nil, "should have received an err!!")
+
+	limit, usage, err = engine.SetAllocLimit(100)
+	assert(err!=nil, "should have received an err!!")
+
+	limit, usage, err = engine.SetAllocLimit(10240)
+	assert(err==nil, "err!!")
+	fmt.Printf("engine's new alloc limit is %dKb above the current usage of %dKb)\n", limit, usage)
+
+	limit, usage, err = engine.GetAllocLimit()
+	assert(err==nil, "err!!")
+	fmt.Printf("verified that engine's alloc limit is %dKb (and current usage is %dKb)\n", limit, usage)
+
+
+	fmt.Println("About to loop through some calls to match (some are designed to fail)")
 	for i:=0; i<4; i++ {
 
 		runtime.GC()
@@ -83,14 +109,21 @@ func main() {
 		}
 
 		var match *rosie.Match
+		var input string
 		if i%2 == 0 {
 			match, err = pat.MatchString("12345")
 		} else {
-			match, err = pat.MatchString("kjh12345")
+			input = "kjh12345"
+			match, err = pat.MatchString(input)
 		}
 		fmt.Println(match, err)
 		if match.Data == nil {
-			fmt.Println("Match FAILED")
+			fmt.Println("Match failed as expected.  Trace is:")
+			if trace, err := pat.StrTraceString(input, "full"); err != nil {
+				fmt.Printf("err!!  %s\n", err)
+			} else {
+				fmt.Println(*trace)
+			}
 		} else {
 			fmt.Println("Match succeeded")
 		}
@@ -168,9 +201,6 @@ func main() {
 	assert(len(msgs) != 0, "importing this file 'as' should have produced some messages")
 	assert(err==nil, "err!!")
 
-
-
-
 	fmt.Println("About to try getting and setting the engine's libpath")
 	
 	libpath, err := engine.GetLibpath()
@@ -185,7 +215,40 @@ func main() {
 	assert(libpath=="foo", "did not set libpath correctly")
 	fmt.Printf("engine libpath has been set to %s\n", libpath)
 
-	
-	fmt.Printf("Exiting...\n");
+	limit, usage, err = engine.GetAllocLimit()
+	assert(err==nil, "err!!")
+	fmt.Printf("checking engine's alloc limit: %dKb, and current usage is %dKb\n", limit, usage)
 
+
+	// Penultimate test is to import a package that is in the
+	// standard library, but which should FAIL TO LOAD because the
+	// libpath no longer includes the standard library, due to the
+	// call to SetLibpath() above.
+	fmt.Println("About to import the 'json' package, which should fail due to a bad loadpath")
+	ok, pkgname, msgs, err = engine.ImportPkg("json")
+	fmt.Println(ok, pkgname, msgs, err)
+	assert(!ok, "import succeeded???")
+	assert(len(msgs) != 0, "importing this file should have produced messages")
+	assert(err==nil, "err!!")
+
+	// Final test is to load a string that imports 'num', which
+	// should succeed because it has already been imported, and
+	// the RPL 'import' statement is idempotent.  Contrast to the
+	// rosie_import() API, which will re-import the library.
+	fmt.Println("About to load 'import num' as an RPL string")
+	ok, pkgname, msgs, err = engine.LoadString("import num")
+	fmt.Println(ok, pkgname, msgs, err)
+	assert(ok, "import failed")
+	assert(len(msgs) != 0,
+		"importing this file should have produced a message about no bindings in the loaded string")
+	assert(err==nil, "err!!")
+
+
+	// Exit
+
+	fmt.Printf("Exiting... %d errors occurred\n", errs)
+	if errs > 0 {
+		os.Exit(1)
+	}
+	os.Exit(0)
 }
