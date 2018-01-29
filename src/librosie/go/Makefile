@@ -22,7 +22,7 @@ endif
 
 rtest: src/rtest/rtest.go src/rosie/rosie.go
 	./setup.sh
-	source setvars && go build rtest
+	. setvars && go build rtest
 
 clean:
 	$(RM) rosie.pyc 
