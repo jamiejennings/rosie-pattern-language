@@ -20,8 +20,10 @@ else
 PLATFORM=none
 endif
 
+go_installed=$(shell command -v "go")
+
 rtest: src/rtest/rtest.go src/rosie/rosie.go setvars
-	. ./setvars && go build rtest
+	if [ -n $(go_installed) ]; then; . ./setvars && go build rtest; fi
 
 setvars:
 	./setup.sh
