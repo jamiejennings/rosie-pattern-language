@@ -54,8 +54,8 @@ void (*fp_rosie_free_string_ptr)(str *s);
 
 void *(*fp_rosie_new)(str *errors);
 void (*fp_rosie_finalize)(void *L);
-int (*fp_rosie_setlibpath_engine)(void *L, char *newpath);
-int (*fp_rosie_set_alloc_limit)(void *L, int newlimit);
+int (*fp_rosie_libpath)(void *L, char *newpath);
+int (*fp_rosie_alloc_limit)(void *L, int *newlimit, int *usage);
 int (*fp_rosie_config)(void *L, str *retvals);
 int (*fp_rosie_compile)(void *L, str *expression, int *pat, str *errors);
 int (*fp_rosie_free_rplx)(void *L, int pat);

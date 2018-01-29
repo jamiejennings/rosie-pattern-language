@@ -31,9 +31,21 @@
  *   global information about the libs, and reinitializes the
  *   ready_to_boot lock.
  * 
- * - Probably need a list of engines so we can destroy those before
- *   unloading and resetting?  This will be tricky to get right.
+ *   - Probably need a list of engines so we can destroy those before
+ *     unloading and resetting?  This could be tricky to get right,
+ *     since a client could hold an engine pointer.  However, if we
+ *     keep an array of extant engines, we can validate the engine
+ *     passed into librosie by the client on each call.  
+ *
+ *   - Maybe we give the client a small integer to identify an engine,
+ *     instead of a pointer.  The cost would be one array index
+ *     operation per call to librosie, to ensure the engine is live.
+ *     Yes, this is a good idea.
  */
+
+#ifndef ROSIE_HOME
+#error "ROSIE_HOME not defined"
+#endif
 
 #include <assert.h>
 #include <signal.h>
@@ -47,42 +59,60 @@
 #include <dlfcn.h>
 #include <libgen.h>
 
-typedef void *(*func_ptr_t)();
-int (*fp_r_match_C)();		/* defined in lptree.c */ 
-typedef rBuffer* (*foo_t)(lua_State *L, char *data, size_t len);
-foo_t fp_r_newbuffer_wrap;	/* defined in rbuf.c */ 
-
-
-/* ----------------------------------------------------------------------------------------
- * Paths relative to where librosie.so is found (for example):
- *  /usr/local/lib/librosie.so => 
- *    libname = librosie.so
- *    dirname = /usr/local/lib
- *    rosiehomedir = /usr/local/lib/rosie
- *    bootscript = /usr/local/lib/rosie/lib/boot.luac
- * ----------------------------------------------------------------------------------------
- */
-
-#define ROSIEHOME "/rosie"
+#define ROSIEDIRNAME "/rosie"
 #define BOOTSCRIPT "/lib/boot.luac"
-#define RPEG_LOCATION "/lib/lpeg.so"
 
-static char libname[MAXPATHLEN];
-static char libdir[MAXPATHLEN];
-static char rosiehomedir[MAXPATHLEN];
+static char rosiehome[MAXPATHLEN];
 static char bootscript[MAXPATHLEN];
-
-char rpeg_path[MAXPATHLEN];
-void *rpeg_lib;
 
 #include "logging.c"
 #include "registry.c"
 #include "rosiestring.c"
 
+/* Symbol visibility in the final library */
+#define EXPORT __attribute__ ((visibility("default")))
+
 /* ----------------------------------------------------------------------------------------
- * Utility functions
+ * Engine locks
  * ----------------------------------------------------------------------------------------
  */
+
+#define ACQUIRE_ENGINE_LOCK(e) do {				    \
+    int r = pthread_mutex_lock(&((e)->lock));			    \
+    if (r) {                                                        \
+        fprintf(stderr, "pthread_mutex_lock failed with %d\n", r);  \
+        abort();                                                    \
+    }                                                               \
+} while (0)
+
+#define RELEASE_ENGINE_LOCK(e) do {				    \
+    int r = pthread_mutex_unlock(&((e)->lock));			    \
+    if (r) {                                                        \
+        fprintf(stderr, "pthread_mutex_unlock failed with %d\n", r);\
+        abort();                                                    \
+    }                                                               \
+} while (0)
+
+/* ----------------------------------------------------------------------------------------
+ * Start-up / boot functions
+ * ----------------------------------------------------------------------------------------
+ */
+
+static void set_bootscript() {
+  size_t len;
+  static char *last;
+  /* set rosiehome to ROSIE_HOME */
+  len = strnlen(ROSIE_HOME, MAXPATHLEN);
+  last = stpncpy(rosiehome, ROSIE_HOME, (MAXPATHLEN - len - 1));
+  *last = '\0';
+  /* set absolute path to boot script */
+  len = strnlen(BOOTSCRIPT, MAXPATHLEN);
+  last = stpncpy(bootscript, rosiehome, (MAXPATHLEN - len - 1));
+  last = stpncpy(last, BOOTSCRIPT, len);
+  *last = '\0';
+  assert((last-bootscript) < MAXPATHLEN);
+  LOGf("Bootscript filename set to %s\n", bootscript);
+}
 
 static int encoder_name_to_code(const char *name) {
   const r_encoder_t *entry = r_encoders;
@@ -93,95 +123,34 @@ static int encoder_name_to_code(const char *name) {
   return 0;
 }
 
-static void set_libinfo() {
-  Dl_info dl;
-  char *base, *dir;
-  int ok = dladdr((void *)set_libinfo, &dl);
-  if (!ok) {
-    display("librosie: call to dladdr failed");
-    exit(ERR_SYSCALL_FAILED);
-  }
-  LOGf("dli_fname is %s\n", dl.dli_fname);
-  base = basename((char *)dl.dli_fname);
-  dir = dirname((char *)dl.dli_fname);
-  if (!base || !dir) {
-    display("librosie: call to basename/dirname failed");
-    exit(ERR_SYSCALL_FAILED);
-  }
-  strncpy(libname, base, MAXPATHLEN);
-  strncpy(libdir, dir, MAXPATHLEN);
-  LOGf("libdir is %s, and libname is %s\n", libdir, libname);
-}
+static pthread_once_t initialized = PTHREAD_ONCE_INIT;
+static int all_is_lost = TRUE;
 
-static void set_bootscript() {
-  size_t len;
-  static char *last;
-  if (!*libdir) set_libinfo();
-  /* set rosiehomedir */
-  len = strnlen(ROSIEHOME, MAXPATHLEN);
-  last = stpncpy(rosiehomedir, libdir, (MAXPATHLEN - len - 1));
-  last = stpncpy(last, ROSIEHOME, len);
-  *last = '\0';
-  /* set absolute path to boot script */
-  len = strnlen(BOOTSCRIPT, MAXPATHLEN);
-  last = stpncpy(bootscript, rosiehomedir, (MAXPATHLEN - len - 1));
-  last = stpncpy(last, BOOTSCRIPT, len);
-  *last = '\0';
-  assert((last-bootscript) < MAXPATHLEN);
-  LOGf("Bootscript filename set to %s\n", bootscript);
-}
-
-static void prepare_for_boot() {
-  /* boot incoming */
+static void initialize() {
+  LOG("INITIALIZE start\n");
   set_bootscript();
+  all_is_lost = FALSE;
+  LOG("INITIALIZE finish\n");
+  return;
+}
 
-  char *next = stpncpy(rpeg_path, rosiehomedir, MAXPATHLEN); 
-  if ((MAXPATHLEN - (unsigned int)(next - rpeg_path + 1)) < strlen(RPEG_LOCATION)) {
-    LOG("rpeg_path exceeds MAXPATHLEN\n");
-    return;
-  }
-  strncpy(next, RPEG_LOCATION, (MAXPATHLEN - (next - rpeg_path + 1)));
-  LOGf("rpeg path (calculated) is %s\n", rpeg_path);
-  
-  rpeg_lib = dlopen(rpeg_path, RTLD_NOW); /* reopen to get handle */
-  if (rpeg_lib == NULL) {
-    LOG("dlopen(rpeg) returned NULL: unable to reopen rpeg library\n");
-    return;
-  }
+#define NO_INSTALLATION_MSG "unable to find rosie installation files"
 
+static int boot(lua_State *L, str *messages) {
   char *msg = NULL;
-
-  fp_r_match_C = dlsym(rpeg_lib, "r_match_C");
-  if ((msg = dlerror()) != NULL) LOGf("r_match_C dlerror = %s\n", msg);
-
-  fp_r_newbuffer_wrap = (foo_t) dlsym(rpeg_lib, "r_newbuffer_wrap");
-  if ((msg = dlerror()) != NULL) LOGf("r_newbuffer_wrap dlerror = %s\n", msg);
-
-  if ((fp_r_match_C == NULL) || (fp_r_newbuffer_wrap == NULL)) {
-    LOG("Failed to find rpeg functions\n");
-    return;
-  }
-}  
-
-static pthread_once_t ready_to_boot = PTHREAD_ONCE_INIT;
-
-static int boot (lua_State *L, str *messages) {
-  char *msg = NULL;
-  pthread_once(&ready_to_boot, prepare_for_boot);
   if (!*bootscript) {
-    *messages = rosie_new_string_from_const("failed to set bootscript or libinfo");
+    *messages = rosie_new_string_from_const(NO_INSTALLATION_MSG);
     return FALSE;
   }
   LOGf("Booting rosie from %s\n", bootscript);
 
   int status = luaL_loadfile(L, bootscript);
   if (status != LUA_OK) {
-    LOG("Failed to read boot code (using loadfile)\n");
-    if (asprintf(&msg, "missing or corrupt rosie boot loader %s", bootscript)) {
+    LOG("Failed to read rosie boot code (using loadfile)\n");
+    if (asprintf(&msg, "no rosie installation at %s", rosiehome)) {
       *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
-    }
-    else {
-      *messages = rosie_new_string_from_const("cannot find rosie boot code");
+    } else {
+      *messages = rosie_new_string_from_const(NO_INSTALLATION_MSG);
     }
     return FALSE;
   }
@@ -189,59 +158,67 @@ static int boot (lua_State *L, str *messages) {
   status = lua_pcall(L, 0, LUA_MULTRET, 0);
   if (status != LUA_OK) {
     LOG("Loading of boot code failed\n");
-    if (asprintf(&msg, "loading failed for %s", bootscript)) {
+    if (asprintf(&msg, "failed to load %s -- corrupt installation?", bootscript)) {
       *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
-    }
-    else {
-      *messages = rosie_new_string_from_const("loading of boot code failed");
+    } else {
+      *messages = rosie_new_string_from_const("loading of rosie boot code failed");
     }
     return FALSE;
   }
   LOG("Loading of boot code succeeded\n");
-  lua_pushlstring(L, (const char *)rosiehomedir, strnlen(rosiehomedir, MAXPATHLEN));
+  lua_pushlstring(L, (const char *)rosiehome, strnlen(rosiehome, MAXPATHLEN));
   status = lua_pcall(L, 1, LUA_MULTRET, 0);
   if (status!=LUA_OK) {
     LOG("Boot function failed.  Lua stack is: \n");
     LOGstack(L);
-    *messages = rosie_new_string_from_const("execution of boot loader failed");
+    *messages = rosie_new_string_from_const("execution of rosie boot loader failed");
     return FALSE;
   }
   LOG("Boot function succeeded\n");
-
   return TRUE;
 }
 
-str to_json_string(lua_State *L, int pos) {
+/* FUTURE: Return any errors from the json encoder to the client? */
+static int to_json_string(lua_State *L, int pos, str *json_string) {
      size_t len;
      byte_ptr str;
      int t;
      int top = lua_gettop(L);
      get_registry(json_encoder_key);
      lua_pushvalue(L, pos-1);                /* offset because we pushed json_encoder */
+     *json_string = rosie_string_from(NULL, 0);
+     if (!lua_istable(L, pos)) return ERR_SYSCALL_FAILED;
+     /* When the messages table is empty, be sure to return a null rosie_string */
+     lua_pushnil(L);
+     if (!lua_next(L, pos-1)) {
+       return LUA_OK;
+     } else {
+       lua_pop(L, 2);
+     }
      t = lua_pcall(L, 1, LUA_MULTRET, 0);
      if (t != LUA_OK) {
        LOG("call to json encoder failed\n"); /* more detail may not be useful to the user */
        LOGstack(L);
-       return rosie_string_from(NULL, 0);
+       return ERR_SYSCALL_FAILED;
      }
      if ((lua_gettop(L) - top) > 1) {
        /* Top of stack is error msg */
        LOG("call to json encoder returned more than one value\n");
        if (lua_isstring(L, -1) && lua_isnil(L, -2)) {
-	 /* FUTURE: return the error from the json encoder to the client */
 	 LOGf("error message from json encoder: %s\n", lua_tolstring(L, -1, NULL));
 	 LOGstack(L);
-	 return rosie_string_from(NULL, 0);
+	 return ERR_SYSCALL_FAILED;
        }
        else {
 	 /* Something really strange happened!  Is there any useful info to return? */
 	 LOG("call to json encoder returned unexpected values\n");
 	 LOGstack(L);
-	 return rosie_string_from(NULL, 0);
+	 return ERR_SYSCALL_FAILED;
        }
      }
      str = (byte_ptr) lua_tolstring(L, -1, &len);
-     return rosie_new_string(str, len);
+     *json_string = rosie_new_string(str, len);
+     return LUA_OK;
 }
 
 static int strip_violation_messages(lua_State *L) {
@@ -263,24 +240,40 @@ static int strip_violation_messages(lua_State *L) {
 }
 
 
+int luaopen_lpeg (lua_State *L);
+int luaopen_cjson_safe(lua_State *l);
+
+static lua_State *newstate() {
+  lua_State *newL = luaL_newstate();
+  luaL_checkversion(newL); /* Ensures several critical things needed to use Lua */
+  luaL_openlibs(newL);     /* Open lua's standard libraries */
+  luaL_requiref(newL, "lpeg", luaopen_lpeg, 0);
+  luaL_requiref(newL, "cjson.safe", luaopen_cjson_safe, 0);
+  return newL;
+}
+  
+
 /* ----------------------------------------------------------------------------------------
  * Exported functions
  * ----------------------------------------------------------------------------------------
  */
 
+EXPORT
 Engine *rosie_new(str *messages) {
+
+  pthread_once(&initialized, initialize);
+  if (all_is_lost) {
+    *messages = rosie_new_string_from_const("initialization failed; enable DEBUG output for details");
+    return NULL;
+  }
+
   int t;
   Engine *e = malloc(sizeof(Engine));
-  pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-  e->lock = lock;
-  lua_State *L = luaL_newstate();
+  lua_State *L = newstate();
   if (L == NULL) {
     *messages = rosie_new_string_from_const("not enough memory to initialize");
     return NULL;
   }
-  e->L = L;
-  luaL_checkversion(L);		/* Ensures several critical things needed to use Lua */
-  luaL_openlibs(L);		/* Open lua's standard libraries */
 
   if (!boot(L, messages)) {
     return NULL;		/* messages already set by boot */
@@ -332,34 +325,59 @@ Engine *rosie_new(str *messages) {
   CHECK_TYPE("rosie.env.violation.strip_each", t, LUA_TFUNCTION);
   set_registry(violation_strip_key);
 
-  rosie_set_alloc_limit(e, INITIAL_ALLOC_LIMIT_MB);
+  lua_pushinteger(L, 0);
+  set_registry(alloc_set_limit_key);
+
+  pthread_mutex_init(&(e->lock), NULL);
+  e->L = L;
 
   lua_settop(L, 0);
   LOGf("Engine %p created\n", e);
   return e;
 }
      
-int rosie_set_alloc_limit (Engine *e, int newlimit) {
+/* newlimit of -1 means query for current limit */
+EXPORT
+int rosie_alloc_limit (Engine *e, int *newlimit, int *usage) {
   int memusg, actual_limit;
   lua_State *L = e->L;
+  LOGf("rosie_alloc_limit() called with int pointers %p, %p\n", newlimit, usage);
   ACQUIRE_ENGINE_LOCK(e);
-  if ((newlimit != 0) && (newlimit < MIN_ALLOC_LIMIT_MB)) return ERR_ENGINE_CALL_FAILED;
-  else {
-    lua_gc(L, LUA_GCCOLLECT, 0);
-    lua_gc(L, LUA_GCCOLLECT, 0);	/* second time to free resources marked for finalization */
-    memusg = lua_gc(L, LUA_GCCOUNT, 0); /* KB */
-    actual_limit = memusg + (newlimit * 1024);
-    lua_pushinteger(L, (newlimit == 0) ? 0 : actual_limit);
-    set_registry(alloc_limit_key);
-    lua_pop(L, 1);
-    if (newlimit == 0) LOGf("set alloc limit to UNLIMITED above current usage level of %0.1f MB\n", memusg/1024.0);
-    else LOGf("set alloc limit to %d MB above current usage level of %0.1f MB\n", newlimit, memusg/1024.0);
+  lua_gc(L, LUA_GCCOLLECT, 0);
+  lua_gc(L, LUA_GCCOLLECT, 0);        /* second time to free resources marked for finalization */
+  memusg = lua_gc(L, LUA_GCCOUNT, 0); /* KB */
+  if (usage) *usage = memusg;
+  if (newlimit) {
+    int limit = *newlimit;
+    if ((limit != -1) && (limit != 0) && (limit < MIN_ALLOC_LIMIT_MB)) {
+      RELEASE_ENGINE_LOCK(e);
+      return ERR_ENGINE_CALL_FAILED;
+    } 
+    if (limit == -1) {
+      /* query */
+      get_registry(alloc_set_limit_key);
+      *newlimit = lua_tointeger(L, -1);
+    } else {
+      /* set new limit */
+      lua_pushinteger(L, limit);
+      set_registry(alloc_set_limit_key);
+      actual_limit = memusg + limit;
+      lua_pushinteger(L, (limit == 0) ? 0 : actual_limit);
+      set_registry(alloc_actual_limit_key);
+      if (limit == 0) {
+	LOGf("set alloc limit to UNLIMITED above current usage level of %0.1f MB\n", memusg/1024.0);
+      } else {
+	LOGf("set alloc limit to %d MB above current usage level of %0.1f MB\n", *newlimit, memusg/1024.0);
+      }
+    }
   }
+  lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
 }
 
 /* N.B. Client must free retval */
+EXPORT
 int rosie_config(Engine *e, str *retval) {
   int t;
   str r;
@@ -368,41 +386,51 @@ int rosie_config(Engine *e, str *retval) {
   get_registry(rosie_key);
   t = lua_getfield(L, -1, "config");
   CHECK_TYPE("config", t, LUA_TFUNCTION);
-  t = lua_pcall(e->L, 0, 1, 0);
+  t = lua_pcall(L, 0, 1, 0);
   if (t != LUA_OK) {
     LOG("rosie.config() failed\n");
     *retval = rosie_new_string_from_const("rosie.config() failed");
-    lua_settop(e->L, 0);
+    lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
-  r = to_json_string(e->L, -1);
-  if (r.ptr == NULL) {
+  t = to_json_string(L, -1, &r);
+  if (t != LUA_OK) {
     LOG("in config(), could not convert config information to json\n");
     *retval = rosie_new_string_from_const("in config(), could not convert config information to json");
-    lua_settop(e->L, 0);
+    lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
   retval->len = r.len;
   retval->ptr = r.ptr;
-  lua_settop(e->L, 0);
+  lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
 }
 
-int rosie_setlibpath_engine(Engine *e, char *newpath) {
+EXPORT
+int rosie_libpath(Engine *e, str *newpath) {
   int t;
   lua_State *L = e->L;
   ACQUIRE_ENGINE_LOCK(e);
   get_registry(engine_key);
-  t = lua_getfield(L, -1, "set_libpath");
-  CHECK_TYPE("engine.set_libpath()", t, LUA_TFUNCTION);
+  if (newpath->ptr) {
+    t = lua_getfield(L, -1, "set_libpath");
+    CHECK_TYPE("engine.set_libpath()", t, LUA_TFUNCTION);
+  } else {
+    t = lua_getfield(L, -1, "get_libpath");
+    CHECK_TYPE("engine.get_libpath()", t, LUA_TFUNCTION);
+  }    
   lua_pushvalue(L, -2);
-  lua_pushstring(L, (const char *)newpath);
-  t = lua_pcall(L, 2, 0, 0);
+  if (newpath->ptr) lua_pushlstring(L, (const char *)newpath->ptr, newpath->len);
+  t = lua_pcall(L, (newpath->ptr) ? 2 : 1, (newpath->ptr) ? 0 : 1, 0);
   if (t != LUA_OK) {
-    LOG("engine.set_libpath() failed\n");
+    if (newpath) {
+	LOG("engine.set_libpath() failed\n");
+      } else {
+	LOG("engine.get_libpath() failed\n");
+    }      
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
@@ -411,14 +439,23 @@ int rosie_setlibpath_engine(Engine *e, char *newpath) {
   do {
     get_registry(engine_key);
     t = lua_getfield(L, -1, "searchpath");
-    LOGf("searchpath is now: %s\n", lua_tostring(L, -1));
+    LOGf("searchpath obtained directly from engine object is: %s\n", lua_tostring(L, -1));
+    lua_pop(L, 1);
   } while (0);
 #endif
+  if (!newpath->ptr) {
+    size_t tmplen;
+    const char *tmpptr = lua_tolstring(L, -1, &tmplen);
+    str tmpstr = rosie_new_string((byte_ptr)tmpptr, tmplen);
+    (*newpath).ptr = tmpstr.ptr;
+    (*newpath).len = tmpstr.len;
+  }
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
 }
 
+EXPORT
 int rosie_free_rplx (Engine *e, int pat) {
   lua_State *L = e->L;
   LOGf("freeing rplx object with index %d\n", pat);
@@ -430,19 +467,8 @@ int rosie_free_rplx (Engine *e, int pat) {
   return SUCCESS;
 }
 
-/* TODO!!!!
-
-   change set_alloc_limit to alloc_limit()
-   with arg, sets it
-   without arg, gets it
-
-   and libpath also
- */
-
-
-
-
 /* N.B. Client must free messages */
+EXPORT
 int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   int t;
   str temp_rs;
@@ -491,8 +517,8 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   if ( lua_isboolean(L, -2) ) {
     *pat = 0;
     CHECK_TYPE("compile messages", lua_type(L, -1), LUA_TTABLE);
-    temp_rs = to_json_string(L, -1);
-    if (temp_rs.ptr == NULL) {
+    t = to_json_string(L, -1, &temp_rs);
+    if (t != LUA_OK) {
       LOG("in compile() could not convert compile messages to json\n");
       lua_settop(L, 0);
       RELEASE_ENGINE_LOCK(e);
@@ -514,8 +540,8 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
 #endif
   LOGf("storing rplx object at index %d\n", *pat);
 
-  temp_rs = to_json_string(L, -1);
-  if (temp_rs.ptr == NULL) {
+  t = to_json_string(L, -1, &temp_rs);
+  if (t != LUA_OK) {
     LOG("in compile(), could not convert warning information to json\n");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
@@ -532,7 +558,7 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
 
 static inline void collect_if_needed(lua_State *L) {
   int limit, memusg;
-  get_registry(alloc_limit_key);
+  get_registry(alloc_actual_limit_key);
   limit = lua_tointeger(L, -1);	/* nil will convert to zero */
   lua_pop(L, 1);
   if (limit) {
@@ -553,13 +579,14 @@ static inline void collect_if_needed(lua_State *L) {
     (*(match)).data.len = (errno);    \
   } while (0);
 
-
+EXPORT
 int rosie_match(Engine *e, int pat, int start, char *encoder_name, str *input, match *match) {
   int t, encoder;
   size_t temp_len;
   unsigned char *temp_str;
   rBuffer *buf;
   lua_State *L = e->L;
+  LOG("rosie_match called\n");
   ACQUIRE_ENGINE_LOCK(e);
   collect_if_needed(L);
   if (!pat)
@@ -586,6 +613,7 @@ have_pattern:
    */
 
   encoder = encoder_name_to_code(encoder_name);
+  LOGf("in rosie_match, encoder value is %d\n", encoder);
   if (!encoder) {
     /* Path through Lua */
     t = lua_getfield(L, -1, "match");
@@ -594,7 +622,7 @@ have_pattern:
     lua_settop(L, 2);
     /* Don't make a copy of the input.  Wrap it in an rbuf, which will
        be gc'd later (but will not free the original source data). */
-    (*fp_r_newbuffer_wrap)(L, (char *)input->ptr, input->len); 
+    r_newbuffer_wrap(L, (char *)input->ptr, input->len); 
     lua_pushinteger(L, start);
     lua_pushstring(L, encoder_name);
     assert(lua_gettop(L) == 5);
@@ -605,7 +633,7 @@ have_pattern:
     CHECK_TYPE("rplx pattern slot", t, LUA_TTABLE);
     t = lua_getfield(L, -1, "peg");
     CHECK_TYPE("rplx pattern peg slot", t, LUA_TUSERDATA);
-    lua_pushcfunction(L, *fp_r_match_C);
+    lua_pushcfunction(L, r_match_C);
     lua_copy(L, -1, 1);
     lua_copy(L, -2, 2);
     lua_settop(L, 2);
@@ -631,11 +659,15 @@ have_pattern:
 
   buf = lua_touserdata(L, -1);
   if (buf) {
+    LOG("in rosie_match, match succeeded\n");
     (*match).data.ptr = (unsigned char *)buf->data;
     (*match).data.len = buf->n;
   }
   else if (lua_isboolean(L, -1)) {
+    LOG("in rosie_match, match failed\n");
     set_match_error(match, ERR_NO_MATCH);
+    (*match).data.ptr = NULL;
+    (*match).data.len = 0;
   }
   else if (lua_isstring(L, -1)) {
     if (encoder) {
@@ -680,6 +712,7 @@ have_pattern:
 }
 
 /* N.B. Client must free trace */
+EXPORT
 int rosie_trace(Engine *e, int pat, int start, char *trace_style, str *input, int *matched, str *trace) {
   int t;
   str rs;
@@ -737,7 +770,11 @@ have_pattern:
   (*matched) = lua_toboolean(L, -2);
 
   if (lua_istable(L, -1)) {
-    rs = to_json_string(L, -1);
+    t = to_json_string(L, -1, &rs);
+    if (t != LUA_OK) {
+      rs = rosie_new_string_from_const("error: could not convert trace data to json");      
+      goto fail_with_message;
+    }
   }
   else if (lua_isstring(L, -1)) {
     byte_ptr temp_str;
@@ -753,6 +790,8 @@ have_pattern:
     return ERR_ENGINE_CALL_FAILED;
   }
 
+ fail_with_message:
+  
   (*trace).ptr = rs.ptr;
   (*trace).len = rs.len;
 
@@ -762,6 +801,7 @@ have_pattern:
 }
 
 /* N.B. Client must free 'messages' */
+EXPORT
 int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
   int t;
   size_t temp_len;
@@ -798,14 +838,14 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
     pkgname->len = 0;
   }
   
-  temp_rs = to_json_string(L, -1);
-  if (temp_rs.ptr == NULL) {
+  t = to_json_string(L, -1, &temp_rs);
+  if (t != LUA_OK) {
     LOG("in load(), could not convert error information to json\n");
-    *messages = rosie_new_string_from_const("in load(), could not convert error information to json");
-    lua_settop(L, 0);
-    RELEASE_ENGINE_LOCK(e);
-    return ERR_ENGINE_CALL_FAILED;
+    temp_rs = rosie_new_string_from_const("in load(), could not convert error information to json");
+    goto fail_load_with_messages;
     }
+
+ fail_load_with_messages:
   (*messages).ptr = temp_rs.ptr;
   (*messages).len = temp_rs.len;
 
@@ -815,6 +855,7 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
 }
 
 /* N.B. Client must free 'messages' */
+EXPORT
 int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
   int t;
   size_t temp_len;
@@ -862,8 +903,8 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED; 
   } 
-  temp_rs = to_json_string(L, -1);
-  if (temp_rs.ptr == NULL) {
+  t = to_json_string(L, -1, &temp_rs);
+  if (t != LUA_OK) {
     LOG("in load(), could not convert error information to json\n");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
@@ -878,6 +919,7 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
 }
 
 /* N.B. Client must free 'messages' */
+EXPORT
 int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages) {
   int t;
   size_t temp_len;
@@ -929,8 +971,8 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname,
     return ERR_ENGINE_CALL_FAILED; 
   } 
 
-  temp_rs = to_json_string(L, -1);
-  if (temp_rs.ptr == NULL) {
+  t = to_json_string(L, -1, &temp_rs);
+  if (t != LUA_OK) {
     LOG("in import(), could not convert error information to json\n");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
@@ -944,9 +986,10 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname,
   return SUCCESS;
 }
 
-/* FUTURE: Expose engine_process_file() */
+/* FUTURE: Expose engine_process_file() ? */
 
 /* N.B. Client must free messages */
+EXPORT
 int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 		    char *infilename, char *outfilename, char *errfilename,
 		    int *cin, int *cout, int *cerr,
@@ -1028,6 +1071,7 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 }
 
 
+EXPORT
 void rosie_finalize(Engine *e) {
   lua_State *L = e->L;
   ACQUIRE_ENGINE_LOCK(e);

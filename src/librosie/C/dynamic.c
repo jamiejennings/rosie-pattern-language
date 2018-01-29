@@ -13,6 +13,7 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <stdlib.h>
+#include <libgen.h>		/* for basename, dirname (used for testing) */
 #include "dynamic.h"
 
 void *librosie;
@@ -44,9 +45,37 @@ void *librosie;
      } while (0)
 
 
-/* RTLD_GLOBAL needed on Ubuntu, but not Fedora/Centos/Arch family.  Why? */
+#define STR(literal) (*fp_rosie_new_string)((byte_ptr)(literal), strlen((literal)));
+
+static char *get_libdir(void *symbol) {
+  Dl_info dl;
+  char *base, *dir;
+  char buf[MAXPATHLEN];
+  int ok = dladdr(symbol, &dl);
+  if (!ok) {
+    LOG("call to dladdr failed");
+    return NULL;
+  }
+  LOGf("dli_fname is %s\n", dl.dli_fname);
+  /* basename and dirname may MODIFY the string you pass to them. arghh. */
+  strncpy(buf, dl.dli_fname, MAXPATHLEN);
+  base = basename(buf);
+  strncpy(buf, dl.dli_fname, MAXPATHLEN);
+  dir = dirname(buf);
+  if (!base || !dir) {
+    LOG("librosie: call to basename/dirname failed");
+    return NULL;
+  }
+  char *libdir = strndup(dir, MAXPATHLEN); /* heap allocated */
+  LOGf("libdir is %s, and libname is %s\n", libdir, base);
+  return libdir;
+}
+
+
+/* Note: RTLD_GLOBAL is not default on Ubuntu.  Must be explicit.*/
 static int init(const char *librosie_path){
-  librosie = dlopen(librosie_path, RTLD_NOW | RTLD_GLOBAL);
+
+  librosie = dlopen(librosie_path, RTLD_LAZY | RTLD_GLOBAL);
   if (librosie == NULL) {
     displayf("failed to dlopen %s\n", librosie_path);
     return FALSE;
@@ -84,8 +113,8 @@ static int bind(void *lib){
   bind_function(fp_rosie_new_string_ptr, "rosie_new_string_ptr");
   bind_function(fp_rosie_free_string_ptr, "rosie_free_string_ptr");
 
-  bind_function(fp_rosie_setlibpath_engine, "rosie_setlibpath_engine");
-  bind_function(fp_rosie_set_alloc_limit, "rosie_set_alloc_limit");
+  bind_function(fp_rosie_libpath, "rosie_libpath");
+  bind_function(fp_rosie_alloc_limit, "rosie_alloc_limit");
   bind_function(fp_rosie_config, "rosie_config");
 
   bind_function(fp_rosie_compile, "rosie_compile");
@@ -105,21 +134,43 @@ static int bind(void *lib){
   return FALSE;
 }
 
+static void print_usage(char *progname) {
+  printf("Usage: %s [system|local] <librosie_name>\n", progname);
+}
+
 /* Main */
 
 int main(int argc, char **argv) {
 
-  if (argc != 2) {
-    printf("Usage: %s <full_path_for_librosie>\n", argv[0]);
+  if (argc != 3) {
+    print_usage(argv[0]);
     exit(-1);
   }
-  char *librosie_path = argv[1];
+  char *test_type = argv[1];
+  char *librosie_path = argv[2];
 
   int exitStatus = 0;
 
-  init(librosie_path);
-
+  if (!init(librosie_path)) return -1;
   if (!bind(librosie)) return -1;
+  char *librosie_dir = get_libdir(fp_rosie_new);
+  printf("Found librosie in directory %s\n", librosie_dir); fflush(NULL);
+
+  if (strncmp(test_type, "local", 6)==0) {
+    if (strncmp(librosie_dir, "/usr/", 4)==0) {
+      printf("ERROR: librosie was found in the system location\n");
+      exit(-1);
+    }
+  } else if (strncmp(test_type, "system", 7)==0) {
+    if (strncmp(librosie_dir, "/usr/", 4)!=0) {
+      printf("ERROR: librosie was NOT found in the system location\n");
+      exit(-1);
+    }
+  } else {
+    printf("error: test type not system or local\n");
+    print_usage(argv[0]);
+  }
+
 
   str errors;
   void *engine = (*fp_rosie_new)(&errors);
@@ -136,7 +187,10 @@ int main(int argc, char **argv) {
   pkgname = (*fp_rosie_new_string)((byte_ptr)"all", 3);
   errors = (*fp_rosie_new_string)((byte_ptr)"", 0);
   as = (*fp_rosie_new_string)((byte_ptr)"", 0);
-  printf("pkgname = %s; as = %s; errors = %s\n", pkgname.ptr, as.ptr, errors.ptr);
+  printf("pkgname = %.*s; as = %.*s; errors = %.*s\n",
+	 pkgname.len, pkgname.ptr,
+	 as.len, as.ptr,
+	 errors.len, errors.ptr);
   LOG("allocated strs\n");
   err = (*fp_rosie_import)(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
   if (err) {
@@ -149,8 +203,6 @@ int main(int argc, char **argv) {
     exitStatus = -4;
     goto quit;
   }
-
-#define STR(literal) (*fp_rosie_new_string)((byte_ptr)(literal), strlen((literal)));
 
   int pat;
   str expression = STR("all.things");

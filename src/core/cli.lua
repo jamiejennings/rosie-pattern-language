@@ -1,71 +1,36 @@
 ---- -*- Mode: Lua; -*-
 ----
----- cli.lua
+---- cli.lua    A Rosie CLI made to be launched from librosie:rosie_luacli()
 ----
----- © Copyright IBM Corporation 2016, 2017.
+---- © Copyright IBM Corporation 2016, 2017, 2018.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
--- This code is fed to the lua interpreter by a shell script.  The script supplies the first two
--- args (ROSIE_HOME and ROSIE_DEV) before the user-supplied Rosie CLI args.  ROSIE_HOME is the
--- full path to a Rosie install directory, and ROSIE_DEV is the string "true" if the CLI was
--- launched in "development mode", which drops into a Lua repl after loading Rosie:
---     "-D" is an 'undocumented' command line switch which, when it appears as the first command
---     line argument to the Rosie run script, will launch Rosie in development mode.  The code
---     below does not need to process that switch.
+rosie_command = arg[0]
 
-rosie_command = arg[1]
-ROSIE_HOME = arg[2]
-ROSIE_DEV = (arg[3]=="true")
+ROSIE_HOME = rosie.env.ROSIE_HOME
+
+ERROR_USAGE = -1
+ERROR_INTERNAL = -2
+ERROR_CONFIG = -3
+ERROR_RESULT = -4
 
 if not ROSIE_HOME then
 	io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
-	os.exit(-2)
+	io.stderr:flush()
+	return ERROR_INTERNAL
 end
 
--- Reconstruct the command line using all the arg information available.  For readability, we
--- replace instances of ROSIE_HOME with the string "ROSIE_HOME" at the start of each arg.
--- local s=0; while arg[s] do s=s-1; end; s=s+1	                     -- Find first arg
--- local function munge_arg(a)                                          -- Replace
---    local s, e = a:find(ROSIE_HOME, 1, true)
---    if s then return "ROSIE_HOME" .. a:sub(e+1); else return a; end
--- end
--- local str=""; for i=s,#arg do str=str..munge_arg(arg[i]).." "; end   -- Assemble string
-
--- ROSIE_COMMAND = str:sub(1,-1)                                        -- Remove trailing space
-
--- Shift args, to remove n args: ROSIE_COMMAND, ROSIE_HOME and ROSIE_DEV
-local n = 3
-table.move(arg, n+1, #arg, 1); for i=#arg-n+1, #arg do arg[i]=nil; end
-
--- Load rosie
-package.path = ROSIE_HOME .. "/?.lua;" .. ROSIE_HOME .. "/lib/?.luac"
-
-local bootfn = loadfile(ROSIE_HOME .. "/lib/boot.luac") or loadfile(ROSIE_HOME .. "/src/core/boot.lua")
-if not bootfn then
-   io.write(stderr, "Failed to find boot code")
-   os.exit(-3)
-else
-   local boot = bootfn()
-   rosie = boot(ROSIE_HOME)
-end
-
-import = rosie.import
-mod = import "submodule"
+package.path = ROSIE_HOME .. "/lib/?.luac"
 
 ROSIE_VERSION = rosie.config().ROSIE_VERSION
 rosie.set_configuration("ROSIE_COMMAND", rosie_command)
 
-engine_module = assert(rosie.import("engine_module"), "failed to load engine_module package")
-common = assert(rosie.import("common"), "failed to open common package")
-lpeg = assert(rosie.import("lpeg"), "failed to open lpeg package")
-
+common = rosie.import("common")
 ui = assert(rosie.import("ui"), "failed to open ui package")
 argparser = assert(rosie.import("cli-parser"), "failed to load cli parser package")
 cli_match = assert(rosie.import("cli-match"), "failed to open cli match package")
-cli_test = assert(rosie.import("cli-test-command"), "failed to open cli test package")
 cli_common = assert(rosie.import("cli-common"), "failed to open cli common package")
-environment = assert(rosie.import("environment"), "failed to open environment package")
 
 parser = argparser.create(rosie)
 
@@ -131,31 +96,36 @@ local function make_help_epilog(args)
 end
 
 local function run(args)
+   en = assert(cli_engine)
+
    if args.verbose then ROSIE_VERBOSE = true; end
 
-   -- Do this BEFORE creating the CL_ENGINE
-   if args.libpath then rosie.set_libpath(args.libpath, "cli"); end
-
-   ok, msg = pcall(create_cl_engine, args)
-   if not ok then print("Error when creating cli engine: " .. msg); os.exit(-1); end
-
-   local en = CL_ENGINE
-   
-   if not args.command then
-      if ROSIE_DEV then greeting(); return
-      else
-	 print("Usage: rosie command [options] pattern file [...]")
-	 os.exit(-1)
-      end
+   if args.libpath then
+      en:set_libpath(args.libpath)
+      rosie.set_libpath(args.libpath, "cli")
    end
-   if (args.command=="config") then
+
+   if not args.command then
+      print("Usage: rosie command [options] pattern file [...]")
+      return ERROR_USAGE
+   end
+
+   if args.command=="version" then
+      io.write(ROSIE_VERSION, "\n")
+      return
+   end
+
+   if args.command=="config" then
       print_rosie_config()
-      os.exit()
-   elseif (args.command=="help") then
+      return
+   end
+   
+   if args.command=="help" then
       local text = make_help_epilog(args)
+      print("***", text)
       if text then parser:epilog(text); end
       print(parser:get_help())
-      os.exit()
+      return
    end
    
    if args.verbose then greeting(); end
@@ -175,7 +145,7 @@ local function run(args)
       local a = CL_ENGINE.compiler.parse_expression(common.source.new{text=args.expression}, errs)
       if not a then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
-	 os.exit(-1)
+	 return ERROR_RESULT
       end
       print("Parses as: ", ast.tostring(a, true))
       a = ast.ambient_cook_exp(a)
@@ -183,10 +153,10 @@ local function run(args)
       local aa = expand.expression(a, CL_ENGINE.env, errs)
       if not aa then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
-	 os.exit(-1)
+	 return ERROR_RESULT
       end
       print("Expands to: ", ast.tostring(aa, true))
-      os.exit()
+      return
    end
    
    if args.command == "test" then
@@ -195,6 +165,7 @@ local function run(args)
       --     get a fresh engine and load any rpl files or rpl strings
       --     load the file being tested
       --     call the test procedure
+      cli_test = assert(rosie.import("cli-test-command"), "failed to open cli test package")
       cli_test.setup(en)
       local total_failures, total_tests = 0, 0
       local total_files, total_compiled = 0, 0
@@ -206,7 +177,7 @@ local function run(args)
 	 total_tests = total_tests + total
       end
       if args.verbose and (#args.filenames > 1) then
-	 print("TOTALS:")
+	 print("\nTOTALS:")
 	 io.stdout:write(tostring(#args.filenames), " files, ")
 	 if total_files == total_compiled then
 	    io.stdout:write("all compiled successfully\n")
@@ -220,10 +191,10 @@ local function run(args)
 	    io.stdout:write("all " .. tostring(total_tests) .. " tests passed\n")
 	 end
       end
-      if ((total_files-total_compiled) > 0) or (total_failures > 0) then
-	 os.exit(-1)
+      if ((total_files - total_compiled) > 0) or (total_failures > 0) then
+	 return ERROR_RESULT
       else
-	 os.exit(0)
+	 return
       end
    end
    
@@ -234,16 +205,16 @@ local function run(args)
       local props_table, msg = ui.to_property_table(en.env, args.filter)
       if props_table then
 	 ui.print_props(props_table)
-	 os.exit(0)
+	 return
       else
 	 print(msg)
-	 os.exit(-1)
+	 return ERROR_RESULT
       end
    elseif args.command == "repl" then
-      local repl_mod = import("repl")
+      local repl_mod = assert(rosie.import("repl"), "failed to open the repl package")
       if not args.verbose then greeting(); end
       repl_mod.repl(en)
-      os.exit()
+      return
    else
       -- match, trace, grep
       for _,fn in ipairs(args.filename) do
@@ -252,5 +223,5 @@ local function run(args)
    end -- if command is list or repl or other
 end -- function run
 
-local args = parser:parse()
-run(args)
+local args = parser:parse(arg)
+return run(args)

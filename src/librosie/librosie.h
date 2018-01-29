@@ -7,8 +7,7 @@
 /*  AUTHOR: Jamie A. Jennings                                                */
 
 #define INITIAL_RPLX_SLOTS 32
-#define INITIAL_ALLOC_LIMIT_MB 0
-#define MIN_ALLOC_LIMIT_MB 10
+#define MIN_ALLOC_LIMIT_MB 8192	/* KB */
 
 #define TRUE 1
 #define FALSE 0
@@ -35,23 +34,6 @@
 
 #include "rpeg.h"
 
-#define ACQUIRE_ENGINE_LOCK(e) do {				    \
-    int r = pthread_mutex_lock(&((e)->lock));			    \
-    if (r) {                                                        \
-        fprintf(stderr, "pthread_mutex_lock failed with %d\n", r);  \
-        abort();                                                    \
-    }                                                               \
-} while (0)
-
-#define RELEASE_ENGINE_LOCK(e) do {				    \
-    int r = pthread_mutex_unlock(&((e)->lock));			    \
-    if (r) {                                                        \
-        fprintf(stderr, "pthread_mutex_unlock failed with %d\n", r);\
-        abort();                                                    \
-    }                                                               \
-} while (0)
-
-
 typedef struct rosie_engine {
      lua_State *L;
      pthread_mutex_t lock;
@@ -77,8 +59,8 @@ void rosie_free_string_ptr(str *s);
 
 Engine *rosie_new(str *messages);
 void rosie_finalize(Engine *e);
-int rosie_setlibpath_engine(Engine *e, char *newpath);
-int rosie_set_alloc_limit(Engine *e, int newlimit);
+int rosie_libpath(Engine *e, str *newpath);
+int rosie_alloc_limit(Engine *e, int *newlimit, int *usage);
 int rosie_config(Engine *e, str *retvals);
 int rosie_compile(Engine *e, str *expression, int *pat, str *messages);
 int rosie_free_rplx(Engine *e, int pat);

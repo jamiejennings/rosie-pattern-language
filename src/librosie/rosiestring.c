@@ -6,6 +6,8 @@
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
 /*  AUTHOR: Jamie A. Jennings                                                */
 
+/* Symbol visibility in the final library */
+#define EXPORT __attribute__ ((visibility("default")))
 
 /* Constant strings are statically allocated in C, so there is no need
  * to copy one in order to return a pointer to it.  However, our API
@@ -22,6 +24,7 @@ static str rosie_new_string_from_const(const char *msg) {
 /* Caller must ensure liveness of msg.  Typically, msg must be
  * allocated on the heap.
  */
+EXPORT
 str rosie_string_from(byte_ptr msg, size_t len) {
   str retval;
   retval.len = len;
@@ -33,6 +36,7 @@ str rosie_string_from(byte_ptr msg, size_t len) {
  * allocated on the heap.  Caller must free the str memory (though
  * not necessarily the msg memory).
  */
+EXPORT
 str *rosie_string_ptr_from(byte_ptr msg, size_t len) {
   str *retval = malloc(sizeof(str));
   if (!retval) {
@@ -45,6 +49,7 @@ str *rosie_string_ptr_from(byte_ptr msg, size_t len) {
 }     
 
 /* Copies msg into heap-allocated storage */
+EXPORT
 str rosie_new_string(byte_ptr msg, size_t len) {
   byte_ptr new = malloc(len);
   if (!new) {
@@ -55,17 +60,20 @@ str rosie_new_string(byte_ptr msg, size_t len) {
   return rosie_string_from(new, len);
 }
 
+EXPORT
 str *rosie_new_string_ptr(byte_ptr msg, size_t len) {
   str temp = rosie_new_string(msg, len);
   return rosie_string_ptr_from(temp.ptr, temp.len);
 }
 
+EXPORT
 void rosie_free_string_ptr(str *ref) {
-     free(ref->ptr);
-     free(ref);
+  if (ref->ptr) free(ref->ptr);
+  free(ref);
 }
 
+EXPORT
 void rosie_free_string(str s) {
-     free(s.ptr);
+  if (s.ptr) free(s.ptr);
 }
 

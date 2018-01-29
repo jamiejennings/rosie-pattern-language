@@ -1,8 +1,8 @@
 ## -*- Mode: Makefile; -*-                                             
 ##
-## Makefile for building librosie.so, on which Rosie's foreign function interface is based. 
+## Makefile for some sample C clients of librosie
 ##
-## © Copyright IBM Corporation 2016, 2017.
+## © Copyright IBM Corporation 2016, 2017, 2018.
 ## LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ## AUTHOR: Jamie A. Jennings
 
@@ -37,15 +37,12 @@ endif
 ifeq ($(PLATFORM),macosx)
 CFLAGS += -std=gnu99
 SYSCFLAGS=-DLUA_USE_MACOSX
-SYSLDFLAGS=-undefined dynamic_lookup -L. -l$(LUA_DYLIB_NAME)
-SYSLIBS=-lpthread
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).dylib
-ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).dylib
+SYSLIBS=-lreadline
+SYSLDFLAGS=-undefined error
 else 
 SYSCFLAGS=-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC
-SYSLIBS=-lpthread -ldl -lm -Wl,--no-undefined
-LUA_DYLIB=lib$(LUA_DYLIB_NAME).so
-ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
+SYSLDFLAGS=-Wl,--no-undefined
+SYSLIBS=-lpthread -lreadline -ldl -lm
 endif
 
 CFLAGS= -pthread -O2 -Wall -Wextra -DLUA_COMPAT_5_2 $(COPT) $(SYSCFLAGS) $(MYCFLAGS) 
@@ -61,39 +58,41 @@ MYLDFLAGS=
 MYLIBS= 
 MYOBJS=
 
-ROSIE_A=$(HOME)/src/librosie/librosie.a
-
-LUA_DYLIB_NAME=lua.5.3
+ROSIE_A=../local/librosie.a
 ROSIE_DYLIB_NAME=rosie
+
 ifeq ($(PLATFORM), macosx)
-LUA_DYLIB=../lib$(LUA_DYLIB_NAME).dylib
-ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).dylib
-DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=.. ./dynamic librosie.dylib
+ROSIE_DYLIB=../local/lib$(ROSIE_DYLIB_NAME).dylib
+SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic system librosie.dylib
+LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=../local ./dynamic local librosie.dylib
 else
-LUA_DYLIB=../lib$(LUA_DYLIB_NAME).so
-ROSIE_DYLIB=../lib$(ROSIE_DYLIB_NAME).so
-DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=.. ./dynamic librosie.so
+ROSIE_DYLIB=../local/lib$(ROSIE_DYLIB_NAME).so
+# Some linux distros may not have DESTDIR on their search path by
+# default, like when running as root in a docker image.  (This can be
+# checked with `/sbin/ldconfig -v`.) So we explicitly set
+# LD_LIBRARY_PATH in the SYSTEM test of the dynamically linked client.
+SYSTEM_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=$(DESTDIR)/lib ./dynamic system librosie.so
+LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=../local ./dynamic local librosie.so
 endif
 
 
 dynamic.o: dynamic.c dynamic.h
 	$(CC) -o $@ -c dynamic.c $(CFLAGS)
 
-# TODO: Should not have liblua.so dependency here!
-dynamic: dynamic.o $(LUA_DYLIB)
-	$(CC) -o $@ dynamic.o $(LUA_DYLIB) $(SYSLIBS)
+dynamic: dynamic.o 
+	$(CC) -o $@ dynamic.o $(SYSLIBS) $(SYSLDFLAGS)
 
 static.o: static.c static.h
 	$(CC) -o $@ -c static.c $(CFLAGS)
 
-static: static.o $(ROSIE_A) $(LUA_DYLIB)
-	$(CC) -o $@ static.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
+static: static.o $(ROSIE_A) 
+	$(CC) -o $@ static.o $(ROSIE_A) $(SYSLIBS) $(SYSLDFLAGS)
 
 mt.o: mt.c
 	$(CC) -o $@ -c mt.c $(CFLAGS)
 
-mt: mt.o $(ROSIE_A) $(LUA_DYLIB)
-	$(CC) -o $@ mt.o $(ROSIE_A) $(LUA_DYLIB) $(SYSLIBS)
+mt: mt.o $(ROSIE_A)
+	$(CC) -o $@ mt.o $(ROSIE_A) $(SYSLIBS) $(SYSLDFLAGS)
 
 clean:
 	$(RM) dynamic.o dynamic
@@ -103,20 +102,23 @@ clean:
 depend:
 	@$(CC) $(CFLAGS) -MM *.c
 
-test: static dynamic mt $(ROSIE_DYLIB)
+test: static dynamic mt
 	@echo Running C client tests on librosie
 	@echo
 	@echo Statically linked test program:
 	./static
 	@echo
 	@echo Dynamically linked test program:
-	$(DYNAMIC_TEST_COMMAND)
+	$(LOCAL_DYNAMIC_TEST_COMMAND)
 	@echo
 	@echo Multi-threaded, statically linked test program:
 	./mt 4 25 $(HOME)/test/logfile 
 
-installtest:
-	@echo No tests of C client configured to use system installation of librosie
+installtest: static dynamic mt
+	@echo Running dynamic C client tests on installed librosie
+	@echo
+	@echo Dynamically linked test program:
+	$(SYSTEM_DYNAMIC_TEST_COMMAND)
 
 echo:
 	@echo "HOME= $(HOME)"
@@ -126,21 +128,6 @@ echo:
 	@echo "LDFLAGS= $(LDFLAGS)"
 	@echo "LIBS= $(LIBS)"
 	@echo "RM= $(RM)"
-
-none:
-	@echo "Your platform was not recognized.  Please do 'make PLATFORM=x', where x is one of these: $(PLATFORMS)"
-
-# linux:
-# 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -std=gnu99 -D_GNU_SOURCE=1 -fPIC" SYSLIBS="-ldl -lm -lpthread" CC=$(CC)
-
-# macosx:
-# 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLDFLAGS="-bundle -undefined dynamic_lookup" SYSLIBS="-lpthread" CC=$(CC)
-
-# macosx: CFLAGS += -std=gnu99
-
-.PHONY: windows
-windows:
-	@echo Windows installation not yet supported.
 
 static.o: static.c static.h 
 dynamic.o: dynamic.c dynamic.h 

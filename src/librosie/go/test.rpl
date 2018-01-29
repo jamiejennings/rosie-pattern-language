@@ -1,0 +1,3 @@
+package test
+
+foo = "foo"

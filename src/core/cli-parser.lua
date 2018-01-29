@@ -18,11 +18,6 @@ function p.create(rosie)
    local parser = argparse("rosie", "Rosie " .. rosie.config().ROSIE_VERSION)
    parser:add_help(false)
    parser:require_command(false)
-   parser:flag("--version", "Print rosie version")
-   :action(function(args,_,exceptions)
-	      io.write(ROSIE_VERSION, "\n")
-	      os.exit()
-	   end)
    parser:flag("--verbose", "Output additional messages")
    :default(false)
    :action("store_true")
@@ -63,12 +58,17 @@ function p.create(rosie)
    
    -- target variable for commands
    parser:command_target("command")
+
+   -- version command
+   local cmd_version = parser:command("version")
+   :description("Print rosie version")
+   -- help command
    local cmd_help = parser:command("help")
    :description("Print this help message")
    -- config command
    local cmd_info = parser:command("config")
    :description("Print rosie configuration information")
-   -- patterns command
+   -- list command
    local cmd_patterns = parser:command("list")
    :description("List patterns, packages, and macros")
    cmd_patterns:argument("filter")

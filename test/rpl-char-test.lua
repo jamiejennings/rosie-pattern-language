@@ -2,7 +2,7 @@
 --
 -- rpl-char-test.lua
 --
--- © Copyright Jamie A. Jennings 2018.
+-- ©  Copyright IBM Corporation 2017, 2018.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
@@ -245,6 +245,7 @@ literals = {{"A", "A"},				   -- A quick sanity check first
 	    {"\\x41", "A"},
 	    {"\\u0041", "A"},
 	    {"\\U00000041", "A"},
+	    {"\\U0010FFFF", utf8.char(0x10FFFF)},
 	    {"\\u2323", "⌣"},
 	    {"\\U00002323", "⌣"},
 	    {"\\U00010175", "𐅵"},
@@ -296,8 +297,16 @@ check(not pat)
 msg = violation.tostring(err[1])
 check(msg:find('syntax error'))
 
-for _,thing in ipairs({'\\U', '\\U4', '\\U43', '\\U432', '\\U1234567',
-		       '\\U1234567 ', '\\U 0010FF80', '\\U0010FF8X'}) do
+for _,thing in ipairs({'\\U',
+		       '\\U4',
+		       '\\U43',
+		       '\\U432',
+		       '\\U1234567',
+		       '\\U1234567 ',
+		       '\\U 0010FF80',
+		       '\\U0010FF8X',
+		       "\\U00110000",		    -- out of range
+		    }) do
    pat, err = e:compile('"' .. thing .. '"')
    check(not pat)
    msg = violation.tostring(err[1])
@@ -360,24 +369,24 @@ check(not pat)
 msg = violation.tostring(err[1])
 
 pat, err = e:compile('[\\x44-\\x44]')
-check(pat)
+check(not pat)
 msg = violation.tostring(err[1])
-check(msg:find("Warning") and msg:find("contains only one character"))
+check(msg:find("error") and msg:find("contains only one character"))
 
 pat, err = e:compile('[\\x41-A]')
-check(pat)
+check(not pat)
 msg = violation.tostring(err[1])
-check(msg:find("Warning") and msg:find("contains only one character"))
+check(msg:find("error") and msg:find("contains only one character"))
 
 pat, err = e:compile('[A-\\x41]')
-check(pat)
+check(not pat)
 msg = violation.tostring(err[1])
-check(msg:find("Warning") and msg:find("contains only one character"))
+check(msg:find("error") and msg:find("contains only one character"))
 
 pat, err = e:compile('[\\u0044-\\x44]')
-check(pat)
+check(not pat)
 msg = violation.tostring(err[1])
-check(msg:find("Warning") and msg:find("contains only one character"))
+check(msg:find("error") and msg:find("contains only one character"))
 
 check_match('[^\x41-\x42]', "A", false)
 check_match('[^\x41-\x42]', "B", false)
@@ -614,6 +623,85 @@ check_match(global_rplx, "C", false)
 set_expression('"\\U000000e8\\U000000e9\\U000000ea\\U000000eb"')
 check_match(global_rplx, table.concat{"è", "é", "ê", "ë"}, true, 0)
 check_match(global_rplx, table.concat{"é", "ê", "ë"}, false, 6)
+
+
+----------------------------------------------------------------------------------------
+heading("Unicode character classes")
+----------------------------------------------------------------------------------------
+subheading("Scripts")
+
+ok, pkgname, errs = e:import('Unicode/Script')
+check(ok)
+text = "plus ça change, plus c'est la même chose"
+
+rplx, err = e:compile('[Script.Latin [:blank:] [:punct:]]+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+rplx, err = e:compile('[Script.Thai [:blank:] [:punct:]]+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(not m)
+
+-- Playing the violin for the buffalo to listen
+text = "สีซอให้ควายฟัง"
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+-- At entrance to Plato's Academy: Let no one untrained in geometry enter here
+text = "ἀγεωμέτρητος μηδεὶς εἰσίτω."
+m, leftover = rplx:match(text)
+check(not m)
+
+rplx, err = e:compile('[Script.Latin [:blank:] [:punct:]]+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(not m)
+
+rplx, err = e:compile('[Script.Greek [:blank:] [:punct:]]+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+-- In Japanese: 0 1 2 3 4
+text = "零 一 二 三 四"
+m, leftover = rplx:match(text)
+check(not m)
+
+ok, pkgname, errs = e:import('Unicode/NumericType')
+check(ok)
+
+rplx, err = e:compile('(NumericType.Numeric)+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+ok, pkgname, errs = e:import('Unicode/Category')
+check(ok)
+
+rplx, err = e:compile('(Category.Zs)+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(not m)
+
+rplx, err = e:compile('{. Category.Zs / $}+')
+check(rplx)
+m, leftover = rplx:match(text)
+check(m)
+check(leftover==0)
+
+
+
+----------------------------------------------------------------------------------------
+heading("Ascii character classes")
+----------------------------------------------------------------------------------------
+
+print("NEED TESTS HERE")
 
 
 -- return the test results in case this file is being called by another one which is collecting

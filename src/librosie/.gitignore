@@ -1,3 +1,5 @@
+local
+system
 *.dylib
 *.so
 *.o

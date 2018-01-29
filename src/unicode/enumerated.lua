@@ -16,6 +16,8 @@
 
 local enumerated = {}
 
+local list = import("list")
+local violation = import("violation")
 local util = dofile("util.lua")
 
 -- Note: When comparing block names, casing, whitespace, hyphens, and underbars
@@ -76,7 +78,7 @@ end
 local codepoint_min = 0x0
 local codepoint_max = 0x10FFFF
 
-local function test_all_codepoints_against_value(name, pattern, ranges)
+local function test_all_codepoints_against_value(name, pattern, ranges, match_fn)
    -- ranges is expected to be the ground truth.  we are testing the generated pattern.
    -- ranges is expected to be sorted, and non-overlapping.
    local count=0;				    -- number of characters tested
@@ -84,7 +86,7 @@ local function test_all_codepoints_against_value(name, pattern, ranges)
    local err=0;
    local range_index = 1
    for codepoint = codepoint_min, codepoint_max do
-      local match = pattern:match(utf8.char(codepoint))
+      local match = match_fn(pattern, utf8.char(codepoint))
       -- now compute the expected answer
       while ranges[range_index] and (codepoint > ranges[range_index][2]) do
 	 -- advance the range_index to one that includes codepoint
@@ -115,12 +117,15 @@ local function test_all_codepoints_against_value(name, pattern, ranges)
    return count, ok, err
 end
 
-local function test_all_codepoints_against_all_values(value_patterns, value_ranges)
+local function test_all_codepoints_against_all_values(value_patterns, value_ranges, match_fn)
    local j=0
    for prop_name, prop_pattern in pairs(value_patterns) do
       io.write("Testing value: " .. prop_name .. " ")
       local n_chars, n_ok, n_fail =
-	 test_all_codepoints_against_value(prop_name, prop_pattern, value_ranges[prop_name])
+	 test_all_codepoints_against_value(prop_name,
+					   prop_pattern,
+					   value_ranges[prop_name],
+					   match_fn)
       j = j+1
       assert(n_chars == (n_ok + n_fail), "totals don't add up")
       io.write(tostring(n_chars), " characters tested, ", tostring(n_fail), " failures\n")      
@@ -128,24 +133,42 @@ local function test_all_codepoints_against_all_values(value_patterns, value_rang
    io.write(tostring(j), " values tested\n")
 end
    
-local function test_property(property_name, patterns, ranges)
+local function test_property(property_name, patterns, ranges, match_fn)
    print("Testing property: " .. property_name)
-   test_all_codepoints_against_all_values(patterns[property_name], ranges[property_name])
+   test_all_codepoints_against_all_values(patterns[property_name],
+					  ranges[property_name],
+					  match_fn)
 end
 
 -- -----------------------------------------------------------------------------
 -- Top level
 -- -----------------------------------------------------------------------------
 
-function enumerated.processPropertyFile(engine, filename, property_name)
+function enumerated.processPropertyFile(engine, filename, property_name, as_peg)
    local ranges = loadPropertyFile(engine, filename)
    local i = 0;
    for _,_ in pairs(ranges) do i = i + 1; end
    print("Property", property_name, "has", i, "values")
    print("Compiling ranges")
-   local patterns = util.compile_all_ranges(ranges)
-   test_property(property_name, {[property_name]=patterns}, {[property_name]=ranges})
-   return patterns
+   local source_patterns = {}
+   local patterns = util.compile_all_ranges(ranges, as_peg)
+   if not as_peg then
+      source_patterns = patterns
+      patterns = {}
+      for name, source in pairs(source_patterns) do
+	 print("Compiling", name, source:sub(1,40).."...")
+	 local rplx, errs = engine:compile(source)
+	 if not rplx then
+	    error(table.concat(list.map(violation.tostring, errs), "\n"))
+	 end
+	 patterns[name] = assert(rplx.pattern.peg)
+      end
+   end -- if not as_peg
+   test_property(property_name,
+		 {[property_name]=patterns},
+		 {[property_name]=ranges},
+		 (as_peg and lpeg.match or lpeg.rmatch))
+   return source_patterns, patterns
 end
 
 

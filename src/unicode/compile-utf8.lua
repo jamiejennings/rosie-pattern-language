@@ -205,18 +205,59 @@ function compile_utf8.codepoint_range(n, m)
    return expand_full_ranges(R(utf8.char(n), utf8.char(m)));
 end
 
-function compile_utf8.compile_codepoint_range(range)
+function flatten_star(range)
+   local op = range[1]
+   if op ~= "*" then
+      return {range}
+   else
+      local firsts = flatten_star(range[2])
+      local seconds = flatten_star(range[3])
+      table.move(seconds, 1, #seconds, #firsts+1, firsts)
+      return firsts
+   end
+end
+      
+function compile_utf8.compile_codepoint_range(range, as_peg)
    assert(type(range)=="table", "range not a table: " .. tostring(range))
    local op = range[1]
    if op=="R" then
-      return lpeg.R(string.char(range[2], range[3]))
+      if as_peg then
+	 return lpeg.R(string.char(range[2], range[3]))
+      else
+	 if range[2] == range[3] then
+	    return string.format("[\\x%02x]", range[2])
+	 else
+	    return string.format("[\\x%02x-\\x%02x]", range[2], range[3])
+	 end
+      end
    elseif op=="*" then
-      return compile_utf8.compile_codepoint_range(range[2]) * compile_utf8.compile_codepoint_range(range[3])
+      local components = flatten_star(range)
+      local result = compile_utf8.compile_codepoint_range(components[1], as_peg)
+      for i=2,#components do
+	 local nextcomponent = compile_utf8.compile_codepoint_range(components[i], as_peg)
+	 if as_peg then
+	    result = result + nextcomponent	    -- lpeg +
+	 else
+	    result = result .. " " .. nextcomponent
+	 end
+      end
+      if #components > 1 then
+	 return "{" .. result .. "}"
+      else
+	 return result
+      end
    elseif op=="+" then
       -- "+" takes from 1..k args
       assert(range[2], 'no args supplied to "+"')
-      local result = compile_utf8.compile_codepoint_range(range[2])
-      for i=3,#range do result = result + compile_utf8.compile_codepoint_range(range[i]); end
+      local result = compile_utf8.compile_codepoint_range(range[2], as_peg)
+      for i=3,#range do
+	 local nextcomponent = compile_utf8.compile_codepoint_range(range[i], as_peg)
+	 if as_peg then
+	    result = result + nextcomponent	    -- lpeg +
+	 else
+	    result = result .. " / " .. nextcomponent
+	 end
+      end
       return result
    end
    error("unknown unicode range opcode: " .. tostring(range[1]))

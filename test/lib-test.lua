@@ -19,7 +19,7 @@ local try = io.open(rosie_cmd, "r")
 if try then
    try:close()					    -- found it.  will use it.
 else
-   local tbl, status, code = util.os_execute_capture("which rosie")
+   local tbl, status, code = util.os_execute_capture("command -v rosie")
    if code==0 and tbl and tbl[1] and type(tbl[1])=="string" then
       rosie_cmd = tbl[1]:sub(1,-2)			    -- remove lf at end
    else
@@ -31,11 +31,12 @@ print("Found rosie executable: " .. rosie_cmd)
 libdir = ROSIE_HOME .. "/rpl"
 
 test.heading("Running self-tests on standard library")
-cmd = rosie_cmd .. " test --verbose " .. libdir .. "/*.rpl 2>/dev/null"
+cmd = rosie_cmd .. " test --verbose " .. libdir .. "/*.rpl"-- 2>/dev/null"
 print()
 print(cmd)
 results, status, code = util.os_execute_capture(cmd)
 if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
+print(table.concat(results, '\n'))
 if code~=0 then print("Status code was: ", code); end
 check(code==0, "Self test failed on the standard library")
 

@@ -47,8 +47,31 @@
 
 local ast = require "ast"
 local environment = require "environment"
+local builtins = require "builtins"
 local common = require "common"
 local violation = require "violation"
+
+-- Here is the bare beginnings of some compiler profiling:
+local PROFILE = false
+local PROFILE_PREFIX = "*prof* "
+local function time(since)
+   return (math.floor((os.clock() - since)*100000 + 0.5))/100 -- ms, rounded to nearest 1/100
+end
+local profile_print =
+   function(...)
+      io.stderr:write(PROFILE_PREFIX)
+      for _,item in ipairs({...}) do
+	 io.stderr:write(tostring(item))
+      end
+      io.stderr:flush()
+   end
+local profile_println =
+   function(...)
+      profile_print(...)
+      io.stderr:write('\n')
+      io.stderr:flush()
+   end
+
 
 local loadpkg = {}
 
@@ -136,9 +159,21 @@ end
 local load_dependencies;
 
 local function parse_block(compiler, source_record, messages)
+
+   local t0
+   if PROFILE then
+      t0 = os.clock()
+      profile_println("importing (parsing / parse_block) ", tostring(source_record.origin and source_record.origin.filename))
+   end
    local a = compiler.parse_block(source_record, messages)
    if not a then return false; end		    -- errors will be in messages table
+   if PROFILE then
+      profile_println("parsing / parse_block time = ", time(t0), "ms")
+      t0 = os.clock()
+      profile_println("importing (parsing / validate_block) ", tostring(source_record.origin and source_record.origin.filename))
+   end
    if not validate_block(a, messages) then return false; end
+   if PROFILE then profile_println("parsing / validate_block time = ", time(t0), "ms"); end
    -- Via side effects, a.block_pdecl and a.block_ideclists are now filled in.
    return a
 end
@@ -155,7 +190,7 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    assert(type(source)=="string")
    assert(origin==nil or common.loadrequest.is(origin))
    assert(type(messages)=="table")
-   -- load.source() is used to:
+   -- loadpkg.source() is used to:
    -- (1) load user input, in which case the origin argument is nil, or
    -- (2) load code from a file named by the user, in which case:
    --     (a) origin.importpath == nil, and
@@ -169,7 +204,9 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    local env
    if a.block_pdecl then
       assert(a.block_pdecl.name)
-      env = environment.new()
+      local _, prelude = common.pkgtableref(pkgtable, environment.PRELUDE_IMPORTPATH, nil)
+      assert(prelude)
+      env = environment.new(prelude)
       env.origin = origin
    else
       env = environment.extend(top_level_env)
@@ -192,9 +229,19 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
 end
 
 local function import_from_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
+   local t0
+   if PROFILE then
+      profile_println("importing (parsing) ", tostring(source_record.origin and source_record.origin.filename))
+      t0 = os.clock()
+   end
    local src = source_record.text
    local origin = source_record.origin
    local a = parse_block(compiler, source_record, messages)
+   if PROFILE then
+      profile_println("time = ", time(t0), "ms")
+      profile_println("importing (dependencies) ", tostring(source_record.origin and source_record.origin.filename))
+      t0 = os.clock()
+   end
    if not a then return false; end		    -- errors will be in messages table
    if not a.block_pdecl then
       local msg = "imported code is not a module"
@@ -202,13 +249,23 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
       return false
    end
    origin.packagename = a.block_pdecl.name
-   local env = environment.new()
+   local _, prelude = common.pkgtableref(pkgtable, environment.PRELUDE_IMPORTPATH, nil)
+   assert(prelude)
+   local env = environment.new(prelude)
    env.origin = origin
    if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, loadinglist, messages) then
       return false
    end
+   if PROFILE then
+      profile_println("time = ", time(t0), "ms")
+      profile_println("importing (compiling) ", tostring(source_record.origin and source_record.origin.filename))
+      t0 = os.clock()
+   end
    if not compile(compiler, a, env, source_record, messages) then
       return false
+   end
+   if PROFILE then
+      profile_println("time = ", time(t0), "ms")
    end
    common.pkgtableset(pkgtable, origin.importpath, origin.prefix, origin.packagename, env)
    return true, origin.packagename, env
@@ -258,6 +315,14 @@ local function create_package_bindings(prefix, pkgenv, target_env)
    end
 end
 
+local function import_builtin(importpath)
+   local pkgname, env = builtins.get_package(importpath)
+   if pkgname then 
+      return true, pkgname, env
+   end
+   return false
+end
+
 local function import_one_force(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    local origin = assert(source_record.origin)
    common.note("load: looking for ", origin.importpath)
@@ -265,6 +330,10 @@ local function import_one_force(compiler, pkgtable, searchpath, source_record, l
    -- Finally, look for a source file to compile and load
    local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    if not src then return false; end 		    -- message already in 'messages'
+   if builtins.is_builtin_package(origin.importpath, fullpath) then
+      common.note("load: loading ", origin.importpath, ", a built-in package")
+      return import_builtin(origin.importpath)
+   end
    common.note("load: loading ", origin.importpath, " from ", fullpath)
    local sref = common.source.new{text=src,
 				  origin=common.loadrequest.new{importpath=origin.importpath,

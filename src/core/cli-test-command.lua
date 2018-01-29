@@ -13,6 +13,8 @@ local common = import("common")
 local ustring = import("ustring")
 local violation = import("violation")
 
+local write_error = function(...) io.stderr:write(...) end
+
 local function startswith(str,sub)
   return string.sub(str,1,string.len(sub))==sub
 end
@@ -49,7 +51,7 @@ function p.setup(en)
    local ok, errs = en:import("rosie/rpl_1_1", ".")
    if not ok then
       for _,v in ipairs(errs or {}) do
-	 print(violation.tostring(v))
+	 write_error(violation.tostring(v))
       end
       error("Internal error!  (See above.)")
    end
@@ -69,13 +71,12 @@ local function indent(str, col)
 end
 
 function p.run(rosie, en, args, filename)
-   local right_column = 28
+   local right_column = 4
    -- fresh engine for testing this file
    local test_engine = rosie.engine.new()
    -- set it up using whatever rpl strings or files were given on the command line
    cli_common.setup_engine(test_engine, args)
-   local shortfilename = shorten(filename, right_column-3)
-   io.stdout:write(shortfilename, string.rep(".", right_column-#shortfilename))
+   io.stdout:write(filename, '\n')
    -- load the rpl code we are going to test (second arg true means "do not search")
    local ok, pkgname, errs, actual_path = test_engine:loadfile(filename, true)
    if not ok then
@@ -84,18 +85,13 @@ function p.run(rosie, en, args, filename)
       io.write(indent(msg, right_column), "\n")
       return false, 0, 0
    end
-   local first_error = true
-   local function write_error(...)
-      if not first_error then
-	 io.write(string.rep(" ", right_column))
-      else
-	 first_error = false;
-      end
+   local function write_test_result(...)
+      io.write(string.rep(" ", right_column))
       for _,item in ipairs{...} do io.write(item); end
       io.write("\n")
    end
    if args.verbose then
-      write_error("File compiled successfully")
+      write_test_result("File compiled successfully")
    end
    -- read the tests out of the file and run each one
    local f, msg = io.open(filename, 'r')
@@ -103,11 +99,11 @@ function p.run(rosie, en, args, filename)
    local num_patterns, test_lines = find_test_lines(f:read('*a'))
    f:close()
    if num_patterns == 0 then
-      write_error("no tests found")
+      write_test_result("no tests found")
       return true, 0, 0
    end
    local function write_compilation_error(exp)
-      write_error("ERROR: test expression did not compile: ", tostring(exp))
+      write_test_result("ERROR: test expression did not compile: ", tostring(exp))
    end
    local function test_accepts_exp(exp, q)
       if pkgname then exp = common.compose_id({pkgname, exp}); end
@@ -159,10 +155,10 @@ function p.run(rosie, en, args, filename)
       local m, left = test_rplx:match(p)
       local literals = 3 -- literals will start at subs offset 3
       if not m then
-	 write_error("FAIL: invalid test syntax: ", p)
+	 write_test_result("FAIL: invalid test syntax: ", p)
 	 failures = failures + 1
       elseif #m.subs < literals then
-	 write_error("FAIL: invalid test syntax (missing quoted input strings): ", p)
+	 write_test_result("FAIL: invalid test syntax (missing quoted input strings): ", p)
 	 failures = failures + 1
       else
 	 local testIdentifier = m.subs[1].data
@@ -193,7 +189,7 @@ function p.run(rosie, en, args, filename)
 		     " with input " .. teststr
 	       end
 	       if msg then
-		  write_error(includes==nil and "BLOCKED: " or "FAIL: ", msg)
+		  write_test_result(includes==nil and "BLOCKED: " or "FAIL: ", msg)
 		  failures = failures + 1
 	       end
 	    end
@@ -205,7 +201,7 @@ function p.run(rosie, en, args, filename)
 	       teststr = ustring.unescape_string(teststr) -- allow, e.g. \" inside the test string
 	       if not test_funcs[m.subs[2].data](testIdentifier, teststr) then
 		  if #teststr==0 then teststr = "the empty string"; end -- for display purposes
-		  write_error("FAIL: ", testIdentifier, " did not ", m.subs[2].data:sub(1,-2), " ", teststr)
+		  write_test_result("FAIL: ", testIdentifier, " did not ", m.subs[2].data:sub(1,-2), " ", teststr)
 		  failures = failures + 1
 	       end
 	    end
@@ -215,9 +211,9 @@ function p.run(rosie, en, args, filename)
       end -- for each test line
    end
    if failures == 0 then
-      write_error("all ", tostring(total), " tests passed")
+      write_test_result("all ", tostring(total), " tests passed")
    else
-      write_error(tostring(failures), " tests failed out of ", tostring(total), " attempted")
+      write_test_result(tostring(failures), " tests failed out of ", tostring(total), " attempted")
    end
    return true, failures, total
 end

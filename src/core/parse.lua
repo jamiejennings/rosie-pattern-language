@@ -87,25 +87,31 @@ end -- make_preparser
 -- Parse block
 ---------------------------------------------------------------------------------------------------
 
-local function collect_syntax_error_nodes(pt, syntax_errors)
-   -- Find all the syntax error nodes in the parse tree, and make a list of their parents.  The
-   -- root is handled by the caller.
-   for _,a in ipairs(pt.subs or {}) do
-      if common.type_is_syntax_error(a.type) then
-	 table.insert(syntax_errors, pt)
-      else
-	 collect_syntax_error_nodes(a, syntax_errors)
-      end
-   end
-   return syntax_errors
-end
-
+-- Make a list of the nodes N that have a sub that is a syntax error.  The odd case is when pt is
+-- a syntax error, in which case we just return pt.
 local function find_syntax_errors(pt, source)
    if common.type_is_syntax_error(pt.type) then
-      return {pt}
-   else
-      return collect_syntax_error_nodes(pt, {})
+      return {pt}, 1
    end
+   local syntax_errors = {}
+   local stack = {}
+   local top = 0
+   local count = 1				    -- instrumentation
+   local node = pt
+   while node do
+      for _, a in ipairs(node.subs or {}) do
+	 count = count + 1
+	 if common.type_is_syntax_error(a.type) then
+	    table.insert(syntax_errors, node)
+	 elseif a.subs then
+	    top = top + 1
+	    stack[top] = a
+	 end
+      end -- for each sub of node
+      node = stack[top]
+      top = top - 1
+   end
+   return syntax_errors, count
 end
 
 -- 'parse_block' returns: parse tree, syntax error list, leftover chars
@@ -116,14 +122,22 @@ function p2.make_parse_block(rplx_preparse, rplx_statements, supported_version)
    -- and, if found, ensures that it is compatible with supported_version.
    local preparser = p2.make_preparser(rplx_preparse, supported_version)
    return function(src)
-	     assert(type(src)=="string",
-		    "Error: source argument is not a string: "..tostring(src) ..
-		    "\n" .. debug.traceback())
+	     if type(src)~="string" then
+		error("Error: source argument is not a string: " .. tostring(src) .. "\n"
+		   .. debug.traceback())
+		end
 	     local maj, min, start, err = preparser(src)
 	     if not maj then return nil, {err}, 0; end
 	     -- Input is compatible with what is supported, so we continue parsing
-	     local pt, leftover = rplx_statements:match(src, start)
-	     local syntax_errors = find_syntax_errors(pt, src)
+
+--local t0=os.clock()	     
+	     local pt, leftover, abend, ttotal, tmatch = rplx_statements:match(src, start)
+--print("*** rplx_statements clock time =  ", (os.clock()-t0)*1000)
+--print("*** total time returned by match: ", ttotal/1000)
+--t0=os.clock()
+	     local syntax_errors, n = find_syntax_errors(pt, src)
+--print("*** find_syntax_errors clock time = ", (os.clock()-t0)*1000)
+--print("*** find_syntax_errors reports #nodes = ", n)
 	     -- FUTURE: If successful, we could do a 'lint' pass to produce warnings, and return
 	     -- them in place of the empty error list in the return values.
 	     return pt, syntax_errors, leftover

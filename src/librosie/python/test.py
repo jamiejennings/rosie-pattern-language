@@ -38,6 +38,7 @@ class RosieLoadTest(unittest.TestCase):
 
     def test(self):
         ok, pkgname, errs = self.engine.load('package x; foo = "foo"')
+
         self.assertTrue(ok)
         self.assertTrue(pkgname == "x")
         self.assertTrue(errs == None)
@@ -103,6 +104,107 @@ class RosieConfigTest(unittest.TestCase):
             self.assertTrue(entry['desc'])
             if not entry['value']: print "NOTE: no value for config key", entry['name']
                 
+class RosieLibpathTest(unittest.TestCase):
+
+    engine = None
+
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        path = self.engine.libpath()
+        self.assertIsInstance(path, basestring)
+        newpath = "foo bar baz"
+        self.engine.libpath(newpath)
+        testpath = self.engine.libpath()
+        self.assertIsInstance(testpath, basestring)
+        self.assertTrue(testpath == newpath)
+                
+class RosieAlloclimitTest(unittest.TestCase):
+
+    engine = None
+
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        limit, usage = self.engine.alloc_limit()
+        self.assertIsInstance(limit, int)
+        self.assertTrue(limit == 0)
+        limit, usage = self.engine.alloc_limit(0)
+        limit, usage = self.engine.alloc_limit()
+        self.assertTrue(limit == 0)
+        limit, usage = self.engine.alloc_limit(8199)
+        self.assertTrue(limit == 8199)
+        with self.assertRaises(ValueError):
+            limit, usage = self.engine.alloc_limit(8191) # too low
+        limit, usage = self.engine.alloc_limit()
+        self.assertTrue(limit == 8199)
+
+class RosieImportTest(unittest.TestCase):
+
+    engine = None
+    
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+        self.assertTrue(self.engine)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        ok, pkgname, errs = self.engine.import_pkg('net')
+        self.assertTrue(ok)
+        self.assertTrue(pkgname == 'net')
+        self.assertTrue(errs == None)
+
+        ok, pkgname, errs = self.engine.import_pkg('net', 'foobar')
+        self.assertTrue(ok)
+        self.assertTrue(pkgname == 'net') # actual name inside the package
+        self.assertTrue(errs == None)
+
+        net_any, errs = self.engine.compile("net.any")
+        self.assertTrue(net_any)
+        self.assertTrue(errs == None)
+
+        foobar_any, errs = self.engine.compile("foobar.any")
+        self.assertTrue(foobar_any)
+        self.assertTrue(errs == None)
+        
+        m, left, abend, tt, tm = self.engine.match(net_any, "1.2.3.4", 1, "color")
+        self.assertTrue(m)
+        m, left, abend, tt, tm = self.engine.match(net_any, "Hello, world!", 1, "color")
+        self.assertTrue(not m)
+
+        ok, pkgname, errs = self.engine.import_pkg('THISPACKAGEDOESNOTEXIST')
+        self.assertTrue(not ok)
+        self.assertTrue(errs != None)
+
+
+class RosieLoadfileTest(unittest.TestCase):
+
+    engine = None
+    
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+        self.assertTrue(self.engine)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        ok, pkgname, errs = self.engine.loadfile('test.rpl')
+        self.assertTrue(ok)
+        self.assertTrue(pkgname == 'test')
+        self.assertTrue(errs == None)
+
+
 class RosieMatchTest(unittest.TestCase):
 
     engine = None
@@ -183,65 +285,7 @@ class RosieMatchTest(unittest.TestCase):
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)
         self.assertTrue(tm >= 0)
-
-class RosieImportTest(unittest.TestCase):
-
-    engine = None
-    
-    def setUp(self):
-        self.engine = rosie.engine(librosiedir)
-        self.assertTrue(self.engine)
-
-    def tearDown(self):
-        pass
-
-    def test(self):
-        ok, pkgname, errs = self.engine.import_pkg('net')
-        self.assertTrue(ok)
-        self.assertTrue(pkgname == 'net')
-        self.assertTrue(errs == None)
-
-        ok, pkgname, errs = self.engine.import_pkg('net', 'foobar')
-        self.assertTrue(ok)
-        self.assertTrue(pkgname == 'net') # actual name inside the package
-        self.assertTrue(errs == None)
-
-        net_any, errs = self.engine.compile("net.any")
-        self.assertTrue(net_any)
-        self.assertTrue(errs == None)
-
-        foobar_any, errs = self.engine.compile("foobar.any")
-        self.assertTrue(foobar_any)
-        self.assertTrue(errs == None)
         
-        m, left, abend, tt, tm = self.engine.match(net_any, "1.2.3.4", 1, "color")
-        self.assertTrue(m)
-        m, left, abend, tt, tm = self.engine.match(net_any, "Hello, world!", 1, "color")
-        self.assertTrue(not m)
-
-        ok, pkgname, errs = self.engine.import_pkg('THISPACKAGEDOESNOTEXIST')
-        self.assertTrue(not ok)
-        self.assertTrue(errs != None)
-
-
-class RosieLoadfileTest(unittest.TestCase):
-
-    engine = None
-    
-    def setUp(self):
-        self.engine = rosie.engine(librosiedir)
-        self.assertTrue(self.engine)
-
-    def tearDown(self):
-        pass
-
-    def test(self):
-        ok, pkgname, errs = self.engine.loadfile('test.rpl')
-        self.assertTrue(ok)
-        self.assertTrue(pkgname == 'test')
-        self.assertTrue(errs == None)
-        
-
 class RosieTraceTest(unittest.TestCase):
 
     engine = None
@@ -322,7 +366,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
-        librosiedir = ".."
+        librosiedir = "../local"
         print "Loading librosie from", librosiedir
     elif sys.argv[1]=='system':
         librosiedir = None

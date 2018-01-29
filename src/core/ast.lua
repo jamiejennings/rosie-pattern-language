@@ -310,6 +310,33 @@ local function process_raw_charlist(char_exps)
    return set
 end
    
+local function process_raw_char_range(first, last, sref)
+   sref = common.source.new{s=sref.s, e=sref.e,
+			    origin=sref.origin,
+			    text=sref.text,
+			    parent=sref.parent}
+   local c1, offense = ustring.unescape_charlist(first.data)
+   if (not c1) then
+      sref.s = first.s; sref.e = first.e
+      raise_error(offense, sref, first)
+   end
+   local c2, offense = ustring.unescape_charlist(last.data)
+   if (not c2) then
+      sref.s = last.s; sref.e = last.e
+      raise_error(offense, sref, last)
+   end
+   local invalid_length_msg =
+      "invalid character range edge (not a single character): "
+   if (ustring.len(c1) ~= 1) then
+      sref.s = first.s; sref.e = first.e
+      raise_error(invalid_length_msg .. c1, sref, first)
+   elseif (ustring.len(c2) ~= 1) then
+      sref.s = last.s; sref.e = last.e
+      raise_error(invalid_length_msg .. c2, sref, last)
+   end
+   return c1, c2
+end
+
 function convert_simple_charset(pt, sref)
    assert(sref)
    local exps = list.from(pt.subs or {})
@@ -330,18 +357,7 @@ function convert_simple_charset(pt, sref)
       -- will produce sub-expressions of type 'character'.
       assert(exps[1].type=="range_first" or exps[1].type=="character")
       assert(exps[2].type=="range_last" or exps[2].type=="character")
-      local c1, offense1 = ustring.unescape_charlist(exps[1].data)
-      local c2, offense2 = ustring.unescape_charlist(exps[2].data)
-      if (not c1) or (not c2) then
-	 raise_error(tostring((c1 and offense2) or offense1), sref, pt)
-      end
-      local invalid_length_msg =
-	 "invalid character range edge (not a single character): "
-      if (ustring.len(c1) ~= 1) then
-	 raise_error(invalid_length_msg .. c1, sref)
-      elseif (ustring.len(c2) ~= 1) then
-	 raise_error(invalid_length_msg .. c2, sref)
-      end
+      local c1, c2 = process_raw_char_range(exps[1], exps[2], sref)
       return ast.cs_range.new{first = c1,
 			      last = c2,
 			      complement = compflag,
@@ -908,7 +924,7 @@ function ast.tostring(a, already_grouped)
    elseif ast.hashtag.is(a) then
       return '#' .. a.value
    elseif ast.string.is(a) then
-      return common.requote(a.value)
+      return ustring.requote(a.value)
    elseif ast.int.is(a) then
       return tostring(a.value)
    elseif ast.ldecl.is(a) then
@@ -923,7 +939,7 @@ function ast.tostring(a, already_grouped)
 	    a_string = a_string .. tostring(k) .. ": " .. tostring(v) .. "\n"
 	 end
       end
-      error("do not know how to print this ast: " .. a_string)
+      error("Interal error: do not know how to print this ast: " .. a_string)
    end
 end
 

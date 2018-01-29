@@ -20,7 +20,7 @@ local lpeg = require "lpeg"
 local P, V, C, S, R = lpeg.P, lpeg.V, lpeg.C, lpeg.S, lpeg.R
 local rC = lpeg.rcap
 
-local locale = lpeg.locale()
+local locale = common.locale
 
 local function token_capture(id, lpeg_pattern)
    return common.match_node_wrap(lpeg_pattern, id)

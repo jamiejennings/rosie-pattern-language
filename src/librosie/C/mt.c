@@ -26,24 +26,23 @@
 #define E_ENGINE_CREATE -3
 #define E_ENGINE_IMPORT -4
 
-void *make_engine() {
+static void *make_engine() {
   int ok;
   str errors;
-  str pkgname = STR("all");
-  str actual_pkgname;
   void *engine = rosie_new(&errors);
   if (!engine) {
     printf("Call to rosie_new failed.\n");
-    if (errors.ptr) printf("%s", errors.ptr);
-    if (engine == NULL) {
-      printf("Creation of engine failed.\n");
-      printf("Important note: This sample program will only work if it can find\n\
+    if (errors.ptr) printf("%.*s", errors.len, errors.ptr);
+    printf("Creation of engine failed.\n");
+    printf("Important note: This sample program will only work if it can find\n\
 the rosie installation in the same directory as this executable,\n	\
 under the name 'rosie'.\n\
 ");
+    fflush(NULL);
     exit(E_ENGINE_CREATE);
-    }
   }
+  str pkgname = STR("all");
+  str actual_pkgname;
   int err = rosie_import(engine, &ok, &pkgname, NULL, &actual_pkgname, &errors);
   rosie_free_string(pkgname);
   if (actual_pkgname.ptr != NULL) rosie_free_string(actual_pkgname);
@@ -72,7 +71,7 @@ under the name 'rosie'.\n\
   return engine;
 }  
 
-int compile(void *engine, str expression) {
+static int compile(void *engine, str expression) {
   int pat;
   str errors;
   int err = rosie_compile(engine, &expression, &pat, &errors);
@@ -99,10 +98,10 @@ int compile(void *engine, str expression) {
 
 
 /* Globals because we can. */
-int r=0;
-char *infile;
+static int r=0;
+static char *infile;
 
-void *do_work(void *engine) {
+static void *do_work(void *engine) {
   printf("Thread running with engine %p\n", engine); fflush(NULL);
   int cin, cout, cerr;
   int pat;
@@ -112,8 +111,8 @@ void *do_work(void *engine) {
   pat = compile(engine, exp);
   rosie_free_string(exp);
 
-  char outfile[20];
-  sprintf(&outfile[0], "%p.out", engine);
+  char outfile[40];
+  sprintf(&outfile[0], "/tmp/%p.out", engine);
   for (int i=0; i<r; i++) {
     printf("Engine %p iteration %d writing file %s\n", engine, i, outfile);
     int err = rosie_matchfile(engine,
@@ -165,10 +164,10 @@ int main(int argc, char **argv) {
   void **engine = calloc(n, sizeof(void *));
   pthread_t *thread = calloc(n, sizeof(pthread_t));
 
-  printf("Making engines for %d threads\n", n);
+  printf("Making engines for %d threads\n", n); fflush(NULL);
   for (int i=0; i<n; i++) engine[i] = make_engine();
 
-  printf("Creating %d threads\n", n);
+  printf("Creating %d threads\n", n); fflush(NULL);
   for (int i=0; i<n; i++) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -178,7 +177,7 @@ int main(int argc, char **argv) {
     if (err) {
       printf("Error in pthread_create(), thread #%d\n", i);
       fflush(NULL);
-      thread[i] = NULL;
+      thread[i] = (pthread_t)NULL;
     }
   }
   

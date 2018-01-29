@@ -17,7 +17,8 @@ enum KEYS {
   rosie_key,
   rplx_table_key,
   json_encoder_key,
-  alloc_limit_key,
+  alloc_set_limit_key,
+  alloc_actual_limit_key,
   prev_string_result_key,
   violation_strip_key,
   KEY_ARRAY_SIZE

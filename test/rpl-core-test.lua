@@ -1142,6 +1142,8 @@ for _, exp in ipairs{"[]]",			    -- open brack in middle needs escape
 		     "[[a-z] [def]",		    -- no final closing bracket
 		     "[aa]",			    -- duplicate chars
 		     "[[aa]]",			    -- "
+		     "[a-a]",
+		     "[\\--\\-]",
 		  } do
    pat, msg = e:compile(exp)
    check(not pat, "this expression was expected to fail: " .. exp)
@@ -1189,7 +1191,6 @@ subheading("Character ranges")
 -- Remember that this is Lua code, so backslashes need to be escaped once for Lua!
 test_charsets("[[a-z]]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
 test_charsets("[a-z]", {"a", "b", "y", "z"}, {" ", "X", "0", "!"})
-test_charsets("[[a-a]]", {"a"}, {"b", "y", "z", " ", "X", "0", "!"})
 test_charsets("[[$-&]]", {"$", "%", "&"}, {"^", "-", "z", " ", "X", "0", "!"})
 test_charsets("[[\\--.]]", {"-", "."}, {"+", "/", "z", " ", "X", "0", "!"})
 test_charsets("[[\\[\\-\\]]]", {"]", "["}, {"+", "/", "z", " ", "X", "0", "!"})

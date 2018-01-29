@@ -3,7 +3,7 @@
 # 
 #  rosie.py     An interface to librosie from Python
 # 
-#  © Copyright IBM Corporation 2016, 2017.
+#  © Copyright IBM Corporation 2016, 2017, 2018.
 #  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 #  AUTHOR: Jamie A. Jennings
 
@@ -49,8 +49,8 @@ void rosie_free_string(str s);
 
 void *rosie_new(str *errors);
 void rosie_finalize(void *L);
-int rosie_setlibpath_engine(void *L, char *newpath);
-int rosie_set_alloc_limit(void *L, int newlimit);
+int rosie_libpath(void *L, str *newpath);
+int rosie_alloc_limit(void *L, int *newlimit, int *usage);
 int rosie_config(void *L, str *retvals);
 int rosie_compile(void *L, str *expression, int *pat, str *errors);
 int rosie_free_rplx(void *L, int pat);
@@ -91,7 +91,10 @@ def new_cstr(py_string=None):
         return ffi.gc(obj, free_cstr_ptr)
 
 def read_cstr(cstr_ptr):
-    return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
+    if cstr_ptr.ptr == ffi.NULL:
+        return None
+    else:
+        return ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:]
 
 # -----------------------------------------------------------------------------
 
@@ -139,7 +142,7 @@ class engine ():
                    raise RuntimeError("Cannot find librosie at " + libpath)
             else:
                 libpath = libname
-            lib = ffi.dlopen(libpath, ffi.RTLD_GLOBAL)
+            lib = ffi.dlopen(libpath, ffi.RTLD_LAZY | ffi.RTLD_GLOBAL)
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)
         if self.engine == ffi.NULL:
@@ -162,12 +165,8 @@ class engine ():
         if ok != 0:
             raise RuntimeError("compile() failed (please report this as a bug)")
         if Cpat[0] == 0:
-            pat = None
-            errs = read_cstr(Cerrs)
-        else:
-            pat = Cpat
-            errs = None
-        return pat, errs
+            Cpat = None
+        return Cpat, read_cstr(Cerrs)
 
     def load(self, src):
         Cerrs = new_cstr()
@@ -178,7 +177,6 @@ class engine ():
         if ok != 0:
             raise RuntimeError("load() failed (please report this as a bug)")
         errs = read_cstr(Cerrs)
-        if errs == '{}': errs = None
         pkgname = read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
@@ -191,7 +189,6 @@ class engine ():
         if ok != 0:
             raise RuntimeError("loadfile() failed (please report this as a bug)")
         errs = read_cstr(Cerrs)
-        if errs == '{}': errs = None
         pkgname = read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
@@ -204,9 +201,8 @@ class engine ():
         ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cactual_pkgname, Cerrs)
         if ok != 0:
             raise RuntimeError("import() failed (please report this as a bug)")
-        actual_pkgname = read_cstr(Cactual_pkgname) if Cactual_pkgname.ptr != ffi.NULL else None
+        actual_pkgname = read_cstr(Cactual_pkgname) #if Cactual_pkgname.ptr != ffi.NULL else None
         errs = read_cstr(Cerrs)
-        if errs == '{}': errs = None
         return Csuccess[0], actual_pkgname, errs
 
     def match(self, Cpat, input, start, encoder):
@@ -276,17 +272,30 @@ class engine ():
                 raise ValueError("unknown error caused matchfile to fail")
         return Ccin[0], Ccout[0], Ccerr[0]
 
-    def setlibpath(self, libpath):
-        ok = lib.rosie_setlibpath_engine(self.engine, libpath)
+    def libpath(self, libpath=None):
+        if libpath is None:
+            libpath_arg = new_cstr()
+        else:
+            libpath_arg = new_cstr(libpath)
+        ok = lib.rosie_libpath(self.engine, libpath_arg)
         if ok != 0:
-            raise RuntimeError("setpath() failed (please report this as a bug)")
+            raise RuntimeError("libpath() failed (please report this as a bug)")
+        return read_cstr(libpath_arg) if libpath is None else None
 
-    def set_alloc_limit(self, newlimit):
-        if (newlimit != 0) and (newlimit < 10):
-            raise ValueError("new allocation limit must be 10 MB or higher (or zero for unlimited)")
-        ok = lib.rosie_set_alloc_limit(self.engine, newlimit)
+    def alloc_limit(self, newlimit=None):
+        limit_arg = ffi.new("int *")
+        usage_arg = ffi.new("int *")
+        if newlimit is None:
+            limit_arg[0] = -1   # query
+        else:
+            if (newlimit != 0) and (newlimit < 8192):
+                raise ValueError("new allocation limit must be 8192 KB or higher (or zero for unlimited)")
+            limit_arg = ffi.new("int *")
+            limit_arg[0] = newlimit
+        ok = lib.rosie_alloc_limit(self.engine, limit_arg, usage_arg)
         if ok != 0:
-            raise RuntimeError("set_alloc_limit() failed (please report this as a bug)")
+            raise RuntimeError("alloc_limit() failed (please report this as a bug)")
+        return limit_arg[0], usage_arg[0]
 
     def __del__(self):
         if hasattr(self, 'engine') and (self.engine != ffi.NULL):

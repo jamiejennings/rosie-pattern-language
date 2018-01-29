@@ -20,31 +20,34 @@ function ui.properties(name, obj)
       local binding = obj.ast and ast.tostring(obj.ast) or tostring(obj)
       local color, reason = co.query(name)
       local color_explanation = color
-      if reason=="default" then color_explanation = color_explanation .. " (default)"; end
       local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
-      local source = origin and origin.filename
       return {name=name,
 	      type=kind,
 	      capture=capture,
 	      color=color_explanation,
 	      binding=binding,
-	      source=source}
+	      source=origin and (origin.importpath or origin.filename)}
    elseif environment.is(obj) then
+      local origin = obj.origin
       return {name=name,
 	      type="package",
 	      color="",
 	      binding=tostring(obj),
-	      source=(obj.origin and obj.origin.filename)}
+	      source=origin and origin.filename}
    elseif common.pfunction.is(obj) then
+      local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
       return {name=name,
 	      type="function",
 	      color="",
-	      binding=tostring(obj)}
+	      binding=tostring(obj),
+	      source=origin and (origin.importpath or origin.filename)}
    elseif common.macro.is(obj) then
+      local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
       return {name=name,
 	      type="macro",
 	      color="",
-	      binding=tostring(obj)}
+	      binding=tostring(obj),
+	      source=origin and (origin.importpath or origin.filename)}
    else
       error("Internal error: unknown object, stored at " ..
 	    tostring(name) .. ": " .. tostring(obj))
@@ -112,11 +115,11 @@ end
 
 function ui.print_props(tbl, skip_header)
    local count, total = tbl[1], tbl[2]		    -- ugh.
-   local fmt = "%-30s %-4s %-10s %-15s %s"
+   local fmt = "%-24s %-4s %-8s %-15s %s"
    if not skip_header then
       print();
       print(string.format(fmt, "Name", "Cap?", "Type", "Color", "Source"))
-      print("------------------------------ ---- ---------- --------------- ------------------------------")
+      print("------------------------ ---- -------- --------------- -------------------------")
    end
    local kind, color, cap
    local s, e
@@ -128,7 +131,8 @@ function ui.print_props(tbl, skip_header)
    for _,v in ipairs(names) do
       local color = tbl[v].color
       local cap = (tbl[v].capture and "Yes" or "")
-      local source = shorten(tbl[v].source or "", 30)
+--      local source = shorten(tbl[v].source or "", 36)
+      local source = tbl[v].source or ""
       print(string.format(fmt, v, cap, tbl[v].type, color, source))
    end
    if not skip_header then

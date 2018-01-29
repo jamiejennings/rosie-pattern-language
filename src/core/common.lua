@@ -7,6 +7,7 @@
 ---- AUTHOR: Jamie A. Jennings
 
 local lpeg = import "lpeg"
+local R, P, S = lpeg.R, lpeg.P, lpeg.S
 local util = import "util"
 local recordtype = import "recordtype"
 local NIL = recordtype.NIL
@@ -91,8 +92,6 @@ local b1_lead = lpeg.R(string.char(0x00)..string.char(0x7F))   -- ASCII (1 byte)
 local b2_lead = lpeg.R(string.char(0xC0)..string.char(0xDF))
 local b3_lead = lpeg.R(string.char(0xE0)..string.char(0xEF))
 local b4_lead = lpeg.R(string.char(0xF0)..string.char(0xF7))
-local b5_lead = lpeg.R(string.char(0xF8)..string.char(0xFB))
-local b6_lead = lpeg.R(string.char(0xFC)..string.char(0xFD))
 local c_byte = lpeg.R(string.char(0x80)..string.char(0xBF)) -- continuation byte
 
 -- This is denoted \X in Perl, PCRE and some other regex
@@ -100,8 +99,6 @@ common.utf8_char_peg = b1_lead +
                (b2_lead * c_byte) +
 	       (b3_lead * c_byte * c_byte) +
 	       (b4_lead * c_byte * c_byte * c_byte) +
-	       (b5_lead * c_byte * c_byte * c_byte * c_byte) +
-	       (b6_lead * c_byte * c_byte * c_byte * c_byte * c_byte) +
 	       lpeg.P(1)			    -- fallback to any single byte
 
 -- Examples:
@@ -246,6 +243,11 @@ end
 function common.rmatch(peg, input, start, rmatch_encoder, fn_encoder, total_time, lpegvm_time)
    local m, leftover, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
    if not m then return false, start, abend, t1, t2; end
+   -- local t0
+   -- t0 = os.clock()
+   -- results = {fn_encoder(m, input, start), leftover, abend, t1, t2}
+   -- print("*** fn_encoder time = ", (os.clock()-t0)*1000)
+   -- return table.unpack(results)
    return fn_encoder(m, input, start), leftover, abend, t1, t2
 end
 
@@ -343,14 +345,16 @@ common.taggedvalue =
 
 common.pfunction =
    recordtype.new("pfunction",
-		  { primop=NIL;	    -- if primitive, holds a lua function
+		  { primop=NIL;			    -- if primitive, holds a lua function
 		    exported=true;
+		    ast=NIL;			    -- for origin
 		  })
 
 common.macro =
    recordtype.new("macro",
-		  { primop=NIL;	    -- if primitive, holds a lua function
+		  { primop=NIL;			    -- if primitive, holds a lua function
 		    exported=true;
+		    ast=NIL;			    -- for origin
 		  })
 
 common.pattern = 
@@ -420,6 +424,24 @@ function common.lookup_encoder(name)
    return entry[1], entry[2]
 end
 
+-- Do not want to depend at all on the process or thread's locale setting.  This
+-- is the C/Posix locale for the ascii character set.
+common.locale = {
+   alnum = R("09") + R("AZ") + R("az"),
+   alpha = R("AZ") + R("az"),
+   ascii = R(string.char(0x0, 0x7f)),
+   blank = S(" \t"),
+   cntrl = R(string.char(0x00, 0x1f)) + P(string.char(0x7f)),
+   digit = R("09"),
+   graph = R(string.char(0x21, 0x7e)),
+   lower = R("az"),
+   print = R(" ~"),
+   punct = R("!/") + R(":@") + R("[`") + R("{~"),
+   space = R("\t\r") + P(" "),
+   upper = R("AZ"),
+   word = R("09") + R("AZ") + R("az") + S("_"),
+   xdigit = R("09") + R("AF") + R("af"),
+}
 
 
 return common

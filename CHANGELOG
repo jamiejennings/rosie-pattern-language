@@ -1,3 +1,98 @@
+2018-01-20  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-9
+
+	NEW: Unicode patterns in rpl/Unicode for each Unicode script, block,
+	general category, word|line|sentence|grapheme break, numeric type, and
+	(binary) property.
+	  * Limitation: Unicode aliases are not yet supported, so you cannot
+	    write, e.g. "Category.Uppercase_Letter".  You have to use the
+	    official short name, "Category.Lu".
+	  * Limitation: The RPL compiler is slow, particularly on long
+	    (automatically generated) patterns like the ones in
+	    rpl/Unicode/Category.rpl.  Some planned refactoring will result in
+	    all the Unicode patterns being pre-compiled, meaning that they can
+	    be loaded in binary form from disk when needed.
+	  * Future: A user should be able to download any Unicode Character
+	    Database from http://unicode.org and run a rosie utility to generate
+	    patterns.  Today, we support only Unicode 10.0.0.
+
+	NEW: A working Go client of librosie, in src/librosie/go/rosie/rosie.go
+
+	BREAKING CHANGE: CLI option "--version" to a command "version".
+
+	BREAKING CHANGE: The librosie functions now return a NULL pointer for
+	"messages" when there are none, instead of a string representation of an
+	empty JSON object.
+
+	BREAKING CHANGE: The librosie APIs for alloc_limit and libpath changed.
+
+	BREAKING CHANGE (in theory): Rosie is now completely independent of the
+	operating system's locale system.  If you ever wrote patterns using,
+	e.g. [:alpha:] and counted on the meaning to change when you changed
+	your OS locale setting, then please OPEN AN ISSUE.  Rosie can certainly
+	support this capability (in a portable way), but doing so is not a known
+	requirement at this time.
+
+	CHANGED: CLI now prints error messages to stderr, not stdout.
+
+	CHANGED: Packages "list"ed now show the file from which they were loaded.
+
+	CHANGED: The output of the test command now includes the *full* filename.
+
+	CHANGED: Sample docker files now force re-build when the branch has
+	changed.  This is a hack, and it relies on (1) the extra/docker/run
+	script, and (2) access by that script to the .git directory in the rosie
+	build directory.
+
+	CHANGED: The Lua repl, which is used for white-box testing and
+	debugging, is now optional instead of always present.  Compile with
+	"make LUADEBUG=1" to get the Lua repl, and to use it, invoke rosie with
+	"rosie -D".
+
+	CHANGED: The symbols in librosie.[so|dylib] are now hidden, except of
+	course for the functions rosie_* that the library exports.
+
+	REMOVED: "make installtest" (until we decide on a good way to implement
+	tests of the system installation of rosie).
+
+	CHANGED: the rosie executable into a single statically linked binary,
+	instead of a script.
+
+	CHANGED: Now, librosie.a|so|dylib will look for the rosie files
+	(lib/*.luac, rpl/*) in one fixed location in the file system, and that
+	location is compiled in.  Any location could be specified, but the
+	Makefile knows how to generate two versions:
+	  * local, which looks for rosie in the root of the build directory
+	  * system, which looks for rosie in DESTDIR (defaults to /usr/local)
+	This affects anything built with librosie, which now includes the rosie
+	CLI.
+
+	CHANGED: librosie is itself now statically linked.  It no longer loads
+	any dynamic libraries.  As a result, there are no longer any so|dylib
+	files in the lib directory, and the only libraries that are installed
+	via "make install" are librosie.a and librosie.so|dylib.
+
+	FIXED: a subtle bug which revealed that, on some linux variants, dlopen
+	caches (at least the) dli.fname value.  Discovered this after learning
+	that basename/dirname may change their (char *) argument.  This seems
+	like a security hole, and we should dig into it.  Fortunately, it no
+	longer affects Rosie, since we no longer utilize dli.fname.
+
+	NEW: rpl/builtin/prelude.rpl and the rpl/builtin dir.
+
+	CHANGED: Removed support for 5,6-byte UTF-8 since those are deprecated.
+
+	CHANGED: Removed "halt" (which was undocumented) from standard prelude.
+
+	CHANGED: The multi-threaded test program now writes output files to /tmp.
+
+	FIXED: Tracing now works on built-in definitions.
+
+	FIXED: When the CLI auto-import fails, it now does so silently, because
+	the user may have used other means to ensure that packages are loaded,
+	such as an import statement on the command line.
+
 2018-01-05  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-8

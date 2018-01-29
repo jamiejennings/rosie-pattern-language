@@ -14,9 +14,13 @@ RUN yum install -y \
 RUN pip install --upgrade pip
 RUN pip install cffi
 
+# This COPY is designed to trigger re-running the git clone when the repo changes.
+COPY githead-$branch /opt/githead-$branch
 RUN git clone --recursive --branch $branch https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
 
 WORKDIR /opt/rosie
-RUN make && make install
+RUN make LUADEBUG=1
 RUN make test CLIENTS=all
+RUN make install
+
 
