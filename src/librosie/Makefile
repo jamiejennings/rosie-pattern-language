@@ -22,7 +22,7 @@
 ##
 ## -----------------------------------------------------------------------------
 
-ALLCLIENTS= python C
+ALLCLIENTS= python C go
 
 ifeq ($(CLIENTS),all)
   clients=$(ALLCLIENTS)
