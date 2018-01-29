@@ -22,16 +22,17 @@ endif
 
 go_installed=$(shell command -v "go")
 
+.PHONY:
 rtest: src/rtest/rtest.go src/rosie/rosie.go setvars
 	if [ -n "$(go_installed)" ]; then \
-	  . ./setvars && go build rtest; \
+	./setup.sh; \
+	. ./setvars && go build rtest; \
 	fi
 
-setvars:
-	./setup.sh
-
 clean:
-	$(RM) rosie.pyc 
+	$(RM) rtest setvars
+	$(RM) src/rosie/librosie.a
+	$(RM) -rf src/rosie/include
 
 test: rtest
 	if [ -n "$(go_installed)" ]; then \
