@@ -20,9 +20,11 @@ else
 PLATFORM=none
 endif
 
-rtest: src/rtest/rtest.go src/rosie/rosie.go
+rtest: src/rtest/rtest.go src/rosie/rosie.go setvars
+	. ./setvars && go build rtest
+
+setvars:
 	./setup.sh
-	. setvars && go build rtest
 
 clean:
 	$(RM) rosie.pyc 
