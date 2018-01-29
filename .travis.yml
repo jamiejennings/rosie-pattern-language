@@ -12,6 +12,6 @@ before_install:
 language: C
 compiler: gcc
 
-install: make
+install: make LUADEBUG=1
 script: make test
 
