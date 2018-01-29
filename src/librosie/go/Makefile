@@ -35,7 +35,7 @@ clean:
 
 test: rtest
 	if [ -n "$(go_installed)" ]; then \
-	  ./rtest
+	  ./rtest; \
 	else \
 	  echo "Go installation not found, skipping test of go client"; \
 	fi
