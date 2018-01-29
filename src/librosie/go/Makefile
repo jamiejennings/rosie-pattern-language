@@ -25,8 +25,6 @@ go_installed=$(shell command -v "go")
 rtest: src/rtest/rtest.go src/rosie/rosie.go setvars
 	if [ -n "$(go_installed)" ]; then \
 	  . ./setvars && go build rtest; \
-	else \
-	  echo "Go installation not found, skipping test of go client"; \
 	fi
 
 setvars:
@@ -36,7 +34,12 @@ clean:
 	$(RM) rosie.pyc 
 
 test: rtest
-	./rtest
+	if [ -n "$(go_installed)" ]; then \
+	  ./rtest
+	else \
+	  echo "Go installation not found, skipping test of go client"; \
+	fi
+
 
 echo:
 	@echo "HOME= $(HOME)"
