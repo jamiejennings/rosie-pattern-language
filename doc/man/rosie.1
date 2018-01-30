@@ -1,5 +1,5 @@
 .mso www.tmac
-.TH ROSIE 1 "$Date: 2017/09/20 09:00:00 $"
+.TH ROSIE 1 "$Date: 2018/01/30 09:00:00 $"
 .SH NAME
 rosie \- Rosie Pattern Engine (Rosie Pattern Language)
 .SH SYNOPSIS
@@ -45,6 +45,9 @@ Help for a command is obtained using the
 .B \-h
 option (see below).
 .TP
+.I config
+Print the configuration of the Rosie installation, including build information if available.
+.TP
 .I grep
 In the style of grep, match the given
 .I pattern
@@ -55,9 +58,6 @@ lines that match.
 .TP
 .I help
 Print help text.
-.TP
-.I config
-Print the configuration of the Rosie installation, including build information if available.
 .TP
 .IR list " [filter]"
 List the available patterns from the library whose name contains the optional
@@ -81,6 +81,10 @@ Execute the pattern tests embedded within the listed rpl files.
 .I trace
 Perform a match, but generate a trace listing of all the steps performed in
 the matching process.  This can be quite a lot of output.
+.TP
+.I version
+Print the Rosie version and exit.
+
 .SH GLOBAL OPTIONS
 .TP
 .BI "\-f, \--file" " file"
@@ -92,24 +96,21 @@ Output match data according to
 .IR style ,
 which may be
 .IR color ,
-.IR nocolor ,
+.IR subs ,
+.IR matches ,
 .IR json ,
 .IR line ,
 and possibly other (installation-dependent) values.  Use
 .B rosie help
 to discover what is available in your installation.  Note the default output
-style is
+style for the
+.I match
+command is
 .IR color ,
-except for the
+and for the
 .I grep
-command, which uses
-.I line
-as its default.
-\" For compatibility with grep,
-\" .B \-o
-\" without a style specifier is equivalent to
-\" .B \-o nocolor
-\" \.
+command, is
+.IR line .
 .TP
 .BI "\--rpl" " source"
 Define additional patterns, import additional packages.  The argument passed to
@@ -119,9 +120,6 @@ string with no shell expansions performed.
 .TP
 .B \--verbose
 When appropriate, output additional information.
-.TP
-.B \--version
-Print the Rosie version and exit.
 
 .SH COMMAND OPTIONS
 .TP
@@ -147,13 +145,13 @@ Stop reading from the given input files, if any, and start reading from the stan
 
 .SH ENVIRONMENT
 .TP
-.B ROSIE_PATH
+.B ROSIE_LIBPATH
 A list of directories that Rosie will search when looking for a package of
 patterns to import.  The value is a colon-separated string on Unix, and a
-semi-colon separated string on Windows.  When ROSIE_PATH is not set, Rosie looks
+semi-colon separated string on Windows.  When ROSIE_LIBPATH is not set, Rosie looks
 for imported packages in the standard library within the installation directory.
 .B Important note:
-If you set ROSIE_PATH, you must explicitly include the standard library if you
+If you set ROSIE_LIBPATH, you must explicitly include the standard library if you
 want Rosie to include the standard library in its search.
 
 \" .TP
@@ -177,11 +175,11 @@ want Rosie to include the standard library in its search.
 
 .SH BUGS
 .B Rosie
-does not automatically normalize Unicode input.  If a pattern contains composed
+does not normalize Unicode input.  If a pattern contains composed
 characters, for example, these will not match their decomposed equivalents in
 the input (and vice versa).
 .PP
-Bugs and requests for enhancement may be found on 
+Issues (bugs and enhancement requests) may be found on 
 .URL https://github.com/jamiejennings/rosie-pattern-language/issues "Rosie's issue page."
 .SH "SEE ALSO"
 .URL http://rosie-lang.org "Rosie's home (news, docs, etc.)"

@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Sun Sep 17 09:06:44 2017 -->
+<!-- CreationDate: Tue Jan 30 09:51:17 2018 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -96,6 +96,19 @@ below).</p>
 <td width="9%">
 
 
+<p style="margin-top: 1em" valign="top"><i>config</i></p></td>
+<td width="2%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Print the
+configuration of the Rosie installation, including build
+information if available.</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="9%">
+
+
 <p style="margin-top: 1em" valign="top"><i>grep</i></p></td>
 <td width="2%"></td>
 <td width="78%">
@@ -120,19 +133,6 @@ match.</p> </td>
 
 <p style="margin-top: 1em" valign="top">Print help
 text.</p> </td>
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="9%">
-
-
-<p style="margin-top: 1em" valign="top"><i>config</i></p></td>
-<td width="2%"></td>
-<td width="78%">
-
-
-<p style="margin-top: 1em" valign="top">Print the
-configuration of the Rosie installation, including build
-information if available.</p></td>
 </table>
 
 <p style="margin-left:11%;"><i>list</i> [filter]</p>
@@ -198,6 +198,11 @@ but generate a trace listing of all the steps performed in
 the matching process. This can be quite a lot of output.</p></td>
 </table>
 
+<p style="margin-left:11%;"><i>version</i></p>
+
+<p style="margin-left:22%;">Print the Rosie version and
+exit.</p>
+
 <a name="GLOBAL OPTIONS"></a>
 <h2>GLOBAL OPTIONS</h2>
 
@@ -212,13 +217,13 @@ option may be repeated.</p>
 --output</b> <i>style</i></p>
 
 <p style="margin-left:22%;">Output match data according to
-<i>style</i>, which may be <i>color</i>, <i>nocolor</i>,
-<i>json</i>, <i>line</i>, and possibly other
+<i>style</i>, which may be <i>color</i>, <i>subs</i>,
+<i>matches</i>, <i>json</i>, <i>line</i>, and possibly other
 (installation-dependent) values. Use <b>rosie help</b> to
 discover what is available in your installation. Note the
-default output style is <i>color</i>, except for the
-<i>grep</i> command, which uses <i>line</i> as its
-default.</p>
+default output style for the <i>match</i> command is
+<i>color</i>, and for the <i>grep</i> command, is
+<i>line</i>.</p>
 
 <p style="margin-left:11%;"><b>&minus;-rpl</b>
 <i>source</i></p>
@@ -233,11 +238,6 @@ expansions performed.</p>
 
 <p style="margin-left:22%;">When appropriate, output
 additional information.</p>
-
-<p style="margin-left:11%;"><b>&minus;-version</b></p>
-
-<p style="margin-left:22%;">Print the Rosie version and
-exit.</p>
 
 <a name="COMMAND OPTIONS"></a>
 <h2>COMMAND OPTIONS</h2>
@@ -292,17 +292,17 @@ standard input.</p></td>
 
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>ROSIE_PATH</b></p>
+<p style="margin-left:11%; margin-top: 1em"><b>ROSIE_LIBPATH</b></p>
 
 <p style="margin-left:22%;">A list of directories that
 Rosie will search when looking for a package of patterns to
 import. The value is a colon-separated string on Unix, and a
-semi-colon separated string on Windows. When ROSIE_PATH is
-not set, Rosie looks for imported packages in the standard
-library within the installation directory. <b>Important
-note:</b> If you set ROSIE_PATH, you must explicitly include
-the standard library if you want Rosie to include the
-standard library in its search.</p>
+semi-colon separated string on Windows. When ROSIE_LIBPATH
+is not set, Rosie looks for imported packages in the
+standard library within the installation directory.
+<b>Important note:</b> If you set ROSIE_LIBPATH, you must
+explicitly include the standard library if you want Rosie to
+include the standard library in its search.</p>
 
 <a name="FILES"></a>
 <h2>FILES</h2>
@@ -325,13 +325,12 @@ standard library in its search.</p>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>Rosie</b>
-does not automatically normalize Unicode input. If a pattern
-contains composed characters, for example, these will not
-match their decomposed equivalents in the input (and vice
-versa).</p>
+does not normalize Unicode input. If a pattern contains
+composed characters, for example, these will not match their
+decomposed equivalents in the input (and vice versa).</p>
 
-<p style="margin-left:11%; margin-top: 1em">Bugs and
-requests for enhancement may be found on
+<p style="margin-left:11%; margin-top: 1em">Issues (bugs
+and enhancement requests) may be found on
 <a href="https://github.com/jamiejennings/rosie-pattern-language/issues">Rosie's issue page.</a></p>
 
 <a name="SEE ALSO"></a>
