@@ -35,73 +35,67 @@ $ rosie repl
 Rosie 1.0.0-alpha
 Rosie> .list
 
-Name                           Cap? Type       Color           Source
------------------------------- ---- ---------- --------------- ------------------------------
-$                                   pattern    black (default) 
-.                                   pattern    black (default) 
-^                                   pattern    black (default) 
-ci                                  macro                      
-error                               function                   
-find                                macro                      
-find1                               macro                      
-first                               macro                      
-halt                                pattern    black (default) 
-keepto                              macro                      
-last                                macro                      
-message                             function                   
-~                                   pattern    black (default) 
 
-13/13 names shown
+Name                     Cap? Type     Color           Source
+------------------------ ---- -------- --------------- -------------------------
+$                             pattern  default;bold    builtin/prelude
+.                             pattern  default;bold    builtin/prelude
+^                             pattern  default;bold    builtin/prelude
+ci                            macro                    builtin/prelude
+error                         function                 builtin/prelude
+find                          macro                    builtin/prelude
+findall                       macro                    builtin/prelude
+keepto                        macro                    builtin/prelude
+message                       function                 builtin/prelude
+~                             pattern  default;bold    builtin/prelude
+
+10/10 names shown
 Rosie> import os
 Rosie> .list
 
-Name                           Cap? Type       Color           Source
------------------------------- ---- ---------- --------------- ------------------------------
-$                                   pattern    black (default) 
-.                                   pattern    black (default) 
-^                                   pattern    black (default) 
-ci                                  macro                      
-error                               function                   
-find                                macro                      
-find1                               macro                      
-first                               macro                      
-halt                                pattern    black (default) 
-keepto                              macro                      
-last                                macro                      
-message                             function                   
-os                                  package                    ...pattern-language/rpl/os.rpl
-~                                   pattern    black (default) 
+Name                     Cap? Type     Color           Source
+------------------------ ---- -------- --------------- -------------------------
+$                             pattern  default;bold    builtin/prelude
+.                             pattern  default;bold    builtin/prelude
+^                             pattern  default;bold    builtin/prelude
+ci                            macro                    builtin/prelude
+error                         function                 builtin/prelude
+find                          macro                    builtin/prelude
+findall                       macro                    builtin/prelude
+keepto                        macro                    builtin/prelude
+message                       function                 builtin/prelude
+os                            package                  /usr/local/lib/rosie/rpl/os.rpl
+~                             pattern  default;bold    builtin/prelude
 
-14/14 names shown
+11/11 names shown
 Rosie> .list os
 
-Name                           Cap? Type       Color           Source
------------------------------- ---- ---------- --------------- ------------------------------
-os                                  package                    ...pattern-language/rpl/os.rpl
 
-1/14 names shown
+Name                     Cap? Type     Color           Source
+------------------------ ---- -------- --------------- -------------------------
+os                            package                  /usr/local/lib/rosie/rpl/os.rpl
+
+1/11 names shown
 Rosie> .list os.*
 
-Name                           Cap? Type       Color           Source
------------------------------- ---- ---------- --------------- ------------------------------
-$                                   pattern    black (default) 
-.                                   pattern    black (default) 
-^                                   pattern    black (default) 
-ci                                  macro                      
-error                               function                   
-find                                macro                      
-find1                               macro                      
-first                               macro                      
-halt                                pattern    black (default) 
-keepto                              macro                      
-last                                macro                      
-message                             function                   
-path                           Yes  pattern    black (default) ...pattern-language/rpl/os.rpl
-path_unix                           pattern    black (default) ...pattern-language/rpl/os.rpl
-path_windows                        pattern    black (default) ...pattern-language/rpl/os.rpl
-~                                   pattern    black (default) 
 
-16/16 names shown
+Name                     Cap? Type     Color           Source
+------------------------ ---- -------- --------------- -------------------------
+$                             pattern  default;bold    builtin/prelude
+.                             pattern  default;bold    builtin/prelude
+^                             pattern  default;bold    builtin/prelude
+ci                            macro                    builtin/prelude
+error                         function                 builtin/prelude
+find                          macro                    builtin/prelude
+findall                       macro                    builtin/prelude
+keepto                        macro                    builtin/prelude
+message                       function                 builtin/prelude
+path                     Yes  pattern  green           os
+path_unix                     pattern  default;bold    os
+path_windows                  pattern  default;bold    os
+~                             pattern  default;bold    builtin/prelude
+
+13/13 names shown
 Rosie> 
 ``` 
 

@@ -1,6 +1,6 @@
 <!--  -*- Mode: GFM; -*-  -->
 <!--
-  -- (c) 2015, Jamie A. Jennings
+  -- (c) 2015,2016,2017,2018, Jamie A. Jennings
   --
 -->
 
@@ -45,15 +45,13 @@ Rosie and RPL are being used in IBM in several projects to parse, annotate, norm
 [6] Lua (http://www.lua.org)
 
 
-<!--     ### Notes for future topics                            -->
+<!--     What makes RPL a good language for industrial use?     -->
 <!--                                                            -->
-<!--     What makes RPL a language?                             -->
-<!--                                                            -->
-<!--     *   More words, less syntax                            -->
-<!--     *   Composability                                      -->
-<!--     *   Packages, namespaces                               -->
-<!--     *   Aliases                                            -->
-<!--     *   Statements that instruct Rosie on what to do       -->
+<!--     *   More words, less syntax (==> readability)          -->
+<!--     *   Composable expressions (==> expressiveness)        -->
+<!--     *   Packages, namespaces (==> modularity)              -->
+<!--     *   Unit tests (==> maintainability)                   -->
+
 
 # Overview of Rosie Pattern Language
 
@@ -214,21 +212,29 @@ Rosie's pattern language, RPL, inverts the usual regex concept that characters m
 
 A string of characters outside of quotes, like `word` or `syslog` is an identifier that refers to a previously defined pattern.  In this way, RPL is like a programming language: you can give names to patterns, and build new patterns out of old ones.
 
-Outside of a quoted string, there are familiar operators that have the same meanings as they do in regex, such as ".", "*", "?", etc.  There's never any confusion about when these characters are operators and when they are literal characters to be matched.  If a character appears in a character set `[...]` or a literal string `"..."`, then it's a literal character to be matched.
+Outside of a quoted string, there are familiar operators that have the same meanings as they do in regex, such as ".", "*", "?", etc.  There's never any confusion about when these characters are operators and when they are literal characters to be matched.  If a character appears in a character set `[...]` or a literal string `"..."`, then it's a literal character to be matched (or an escape sequence denoting a literal character, such as `\n` for newline).
 
 ### More on character set syntax
 
-**Future:** Describe how we made the character set syntax more sane than in regex.  At the cost of being slightly more verbose, we have made character sets less open to mis-reading.
+See
+[the Rosie blog post on RPL Character Sets](http://rosie-lang.org/blog/2018/01/08/RPL-Character-Sets)
+to understand how we made the character set syntax more sane than in regex.  At
+the cost of being slightly more verbose, we have made character sets much less open
+to mistakes that occur when writing them and when reading them as well.
 
 ### Grouping
 
-In regex syntax, parentheses create both a group and a capture, except when they don't.  (There are many rules and many cryptic syntaxes to remember when writing regex.)  In RPL, parentheses `(...)` and curly braces `{...}` are always used for grouping, just like parentheses are used in mathematical and other expressions in most programming languages.  Parentheses group expressions in _normal mode_, and curly braces group expressions in _raw mode_.
+In regex syntax, parentheses create both a group and a capture, except when they don't.  (There are many rules and many cryptic syntaxes to remember when writing regex.)  In RPL, parentheses `(...)` and curly braces `{...}` are always used for grouping, just like parentheses are used in mathematical and other expressions in most programming languages.  Parentheses group expressions in _tokenized mode_, and curly braces group expressions in _raw (untokenized) mode_.
 
-In the normal mode, Rosie tokenizes the input, using punctuation and (any amount or kind of) whitespace as token boundaries.  This is kind of like the "word boundary" `\b` concept from regex.  Normally, Rosie behaves as if there is a regex word boundary between each element in a pattern.
+In the tokenized mode, Rosie tokenizes the input, using punctuation and (any amount or kind of) whitespace as token boundaries.  This is kind of like the "word boundary" `\b` concept from regex.  In this way, Rosie behaves as if there is a regex word boundary between each element in a pattern.
 
 In raw mode, Rosie does no tokenizing.  Patterns are matched character by character, as is common for regex matching.
 
 Having both modes makes it easy to switch back and forth between low-level syntax specifications (in raw mode) and higher level patterns composed of other patterns.
+
+Extending beyond the conventions of regex, _bracket expressions_ (using square brackets `[` and `]`) are also a grouping construct.  A bracket expression is a disjunction of the expressions it contains.  E.g. `[[:digit:] [Z]]` matches a single digit or the letter `Z`.
+
+### Captures
 
 We don't worry about captures when writing RPL expressions.  Everything that has a name (an identifier) is captured automatically.  And there are ways to instruct Rosie definition which parts of a pattern to keep and which to discard, _outside of the pattern definition_.  This makes it possible to write a pattern once, and use it in multiple ways, sometimes keeping most or all of the captures (which we call matches) and other times keeping very little.  Sharing patterns and maintaining patterns are both easier when you can declare outside of the pattern definition itself how you want the matches handled.  Read on for more about how RPL is a small language in ways that regex are not.
 
@@ -273,9 +279,9 @@ Some examples comparing regex-based tools like Grok to Rosie are in the table be
 
 | Grok and other regex tools        | Rosie Pattern Language | Comment       |
 | --------------------------------- | ---------------------- | --------       |
-| `INT = (?:[+-]?(?:[0-9]+))`       | `int = { [+-]? d+ }` | These are comparable in readability.  Here, `d` is an alias for `[0-9]`.        |
+| `INT = (?:[+-]?(?:[0-9]+))`       | `int = { [+\-]? d+ }` | These are comparable in readability.  Here, `d` is an alias for `[0-9]`.        |
 | <code>PATH (?:%{UNIXPATH}&#124;%{WINPATH})</code> |  `path = unix_path / windows_path` | RPL is a bit cleaner, and uses `/` to mean "ordered choice". |
-| <code>UNIXPATH (?>/(?>[\w_%!$@:.,~-]+&#124;\\.)&#42;)+</code> | `unix_path = {"/" {[:alnum:]/[_%!$@:.,~-]}+ }+`| What is `(?>` in regex? Should look that up. |
+| <code>UNIXPATH (?>/(?>[\w_%!$@:.,~-]+&#124;\\.)&#42;)+</code> | `unix_path = {"/" {[:alnum:]/[_%!$@:.,~\-]}+ }+`| What is `(?>` in regex? Should look that up. |
 | <code>WINPATH (?>[A-Za-z]+:&#124;\\)(?:\\[&#94;\\?&#42;]&#42;)+</code> | `windows_path = { {[:alpha:]+ ":"}? {"\\" {![\\?*] any}* }+ }` | The RPL `!` means "not looking at" |
 | <code>/&#94;\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{2,}</code><br><code>\\+\\d{4}[\\s]+\\[([\\w]+)\\/([\\d]+)\\][\\s]+(OUT&#124;ERR)</code><br><code>[\\s]+.&#42;\\[(\\d{4}-\\d{2}-\\d{2}\\d{2}:\\d{2}:\\d{2}\\.\\d{2,})\\]</code><br><code>[\\s]+\\[(.&#42;)\\][\\s]+(.&#42;)[\\s]+-[\\s]+.&#42;\\[\\d{2}m(.&#42;)\\]</code> | | This regex was written by an expert programmer.  Any regex of more than about 12 characters becomes impenetrable due to the dense syntax. |
 
@@ -351,14 +357,14 @@ In RPL, patterns are often built from other patterns.  But sometimes you know th
 
 ``` 
 d = [:digit:]
-int = { [+-]? d+ }
+int = { [+\-]? d+ }
 ``` 
 
 The curly braces that surround the expression on the right hand side of `int` make a _raw group_, which Rosie will process character by character instead of separating the input into tokens.  The definition of `int` reads this way: an optional sign, followed by one or more digits. In this example, `d` is simply a shorthand to avoid writing `[:digit:]`.  In this transcript, we use the Rosie REPL to match `int` against "421":
 
 ``` 
 Rosie> d = [:digit:]
-Rosie> int = { [+-]? d+ }
+Rosie> int = { [+\-]? d+ }
 Rosie> .match int "421"
 {"data": "421", 
  "e": 4, 
@@ -384,7 +390,7 @@ Assuming we don’t need the individual digits of "421" in subsequent processing
 
 ```
 Rosie> alias d = [:digit:]
-Rosie> int = { [+-]? d+ }
+Rosie> int = { [+\-]? d+ }
 Rosie> .match int "421"
 {"data": "421", 
  "e": 4, 
@@ -399,7 +405,7 @@ Rosie> .match int "421"
 ## If you know regex, this is Rosie
 <a name="regex_and_rpl"></a>
 
-Check out the blog post [here on Rosie's home page](https://rosie-lang.github.io/preview/2017/08/30/Rosie-v1.0-preview-6.html)!
+Check out the blog post [here on Rosie's home page](http://rosie-lang.org/blog/2017/08/30/Rosie-v1.0-preview-6)!
 
 ---
 *Disclaimer:* In these notes, as in other posted material, I speak for myself, and not on behalf of IBM.
