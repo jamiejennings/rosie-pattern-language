@@ -23,7 +23,7 @@ endif
 go_installed=$(shell command -v "go")
 
 .PHONY:
-rtest: src/rtest/rtest.go src/rosie/rosie.go setvars
+rtest: src/rtest/rtest.go src/rosie/rosie.go
 	if [ -n "$(go_installed)" ]; then \
 	./setup.sh; \
 	. ./setvars && go build rtest; \
