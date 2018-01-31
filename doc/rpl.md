@@ -1,6 +1,6 @@
-<!--  -*- Mode: GFM; -*-  -->
-<!--
-<!--  © Copyright IBM Corporation 2016, 2017.                                -->
+<!--  -*- Mode: GFM; -*-                                                       -->
+<!--                                                                           -->
+<!--  © Copyright IBM Corporation 2016, 2017, 2018                             -->
 <!--  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  -->
 <!--  AUTHOR: Jamie A. Jennings                                                -->
 
@@ -9,44 +9,140 @@
 Notes:
 1. The RPL language is versioned independently of Rosie itself.
 2. See also the [Command Line Interface manual](man/rosie.html) and the interactive [read-eval-print loop (repl)](repl.md) documentation.
+3. See also the [Standard Library documentation](standardlib.md).  The RPL
+"standard library" is bundled with Rosie and contains many pre-defined patterns.
 
-## Contents
+## Overview
 
-- [RPL reference](#rpl-reference)
-- [Pattern libraries](#pattern-libraries)
+RPL is a compiled, block-structured, lexically scoped, declarative pattern
+expression language with a module system.  Names are bound to values of type
+_pattern_, _macro_, _function_, and _environment_ (module), although only
+patterns are first-class.
+
+### What does this mean?
+
+#### Properties of the language proper
+
+RPL is **compiled** to a form of byte code that is specific to a _matching virtual
+machine_ (mvm).  The mvm executes a small instruction set, taking input from a
+byte array and produces either a _match_ or an indication that there is no
+match.
+
+The compilation process is essential to the design of RPL because it ensures
+that many classes of errors can be found at compile time, i.e. in advance of the
+deployment of an application that uses Rosie.
+
+**Block structure** means there are lexical units (imaginatively called
+"blocks") of code that we can talk about.  In RPL 1.1, there are two kinds of
+blocks:
+* Files of RPL code
+* Grammars
+
+Both kinds of blocks contain bindings, in which names are bound to pattern
+expressions.  A file may also contain declarations like `import`.  RPL blocks do
+not contain any control flow operators, because there are none.  RPL is a
+**declarative expression language** for syntactic patterns, as are regular
+expressions and context free grammars.  RPL is based on Parsing Expression
+Grammars.
+
+Blocks in RPL have **lexical scope**.  Within a file, all of the names being
+bound are visible.  (The order of bindings does not matter.)  In RPL 1.1, file
+scope does not, however, allow mutually recursive pattern definitions.
+
+Inside a grammar block, all of the outer (file scope) names are visible, unless
+they are shadowed by a local binding (in the grammar) of the same name.
+Grammars allow mutually recursive pattern definitions, making them useful for
+expressing patterns to match recursively defined syntax like JSON, XML, and
+s-expressions.
+
+The first binding in a grammar block is visible in its containing scope, i.e. in
+the file scope (because grammars cannot be nested in RPL 1.1).  Any additional
+bindings are visible only within the grammar block.
+
+#### Properties of the module system
+
+RPL has a **module system** in which a "file block" of code may define a
+package, and another "file block" may use that package.  A file defines an RPL
+package when it contains a _package declaration_.
+
+Names in RPL may be _qualified_ or _unqualified_.  Qualified names have a
+package prefix and a local name, e.g. `net.ip`.  A qualified name has a binding
+when the package prefix is bound to a visible package and the local name is
+exported from that package.  Unqualified names are just local names, with no
+package prefix.
+
+An **import declaration** instructs the compiler to bind a local name to a
+package.  Typically this involves loading the package from a file.  In addition,
+a (possibly empty) set of names become visible as qualified names using that
+local name as a prefix.  So, the `import net` declaration gives us a local
+binding for `net` (which is bound to a module) and makes visible names like
+`net.ip`, `net.fqdn`, and others.
+
+The module system is an important design point of RPL because it encourages
+principled re-use of patterns through the construction and sharing of modules.
+The Rosie "Standard Library" is a lofty name for a set of modules that are part
+of the Rosie distribution.
+
+
+### What is outside the language specification
+
+Rosie implements an RPL compiler which is used to compile RPL pattern
+expressions entered on the command line.  For convenience, the Rosie CLI
+automatically imports packages referenced in such expressions.
+
+Rosie also implements a read-eval-print loop (REPL) to support interactive
+pattern debugging, including a trace facility that shows visually each step of
+the matching process.
+
+Neither the CLI nor the REPL are part of the RPL Language.
+
+
+## Comments and white space
+
+Comments begin with two dashes and end at the next newline character.  White space is not significant.
 
 ## Blocks
 
-The only aggregation of RPL statements is the _block_, which is defined as follows in [the RPL code for Rosie](../rpl/rosie/rpl_1_1.rpl): 
+RPL 1.1 has two kinds of blocks: grammars and files.  Here we describe file blocks.
+
+A file block is defined as follows in [the RPL code for Rosie](../rpl/rosie/rpl_1_1.rpl): 
 
 ```
 rpl_statements = { {atmos ";" / package_decl / import_decl / language_decl / stmnt / syntax_error}* atmos $}
 ```
 
-Knowing that the pattern `atmos` captures whitespace and comments, you can see that a block can contain empty statements (`;`), package declarations, import declarations, language declarations, and statements.  They are the elements of a block.
+The pattern `atmos` captures whitespace and comments (the "atmosphere" in which
+code lives).  A file block can contain empty statements (`;`), package
+declarations, import declarations, language declarations, and things called
+`stmnt` that should really be called _bindings_.  
 
 | Item                 | Meaning                                                          | Example  |
 | ---------------------|------------------------------------------------------------------|----------|
 | language declaration | Declares the minimum RPL version required                        | `rpl 1.1` |
 | package declaration  | The statements that follow define a package with the given name  | `package net` |
 | import declaration   | Load the named package(s) by searching the library path          | `import word, num, net` |
-| statement            | Assign a name to a value (e.g. a pattern)                        | `d = [:digit:]` |
+| binding/statement    | Bind a name to a value (e.g. a pattern)                          | `d = [:digit:]` |
 
-Each block element is explained in its own section, below.  The compiler enforces the following constraints on blocks:
+Each block element is explained in its own section, below.  No element is
+required.  (A block may be empty.)  The compiler enforces the following
+constraints on blocks:
 
-* None of the block elements are required.  Indeed, a block may be empty.
 * If the language declaration is present, it must be the first non-comment, non-whitespace item in the block.
 * If the package declaration is present, it must come before any import declarations.
-* Any import declarations must come before the first statement.  There can be many import declarations.
-* There can be many statements.
+* Import declarations, if any, must come before the first binding.  There can be many import declarations.
+* There can be many bindings.
 * A given name may only be assigned once.
 
-**Note: An RPL file may contain only one block.**
-
+In RPL 1.1, a file may contain only one file block.
 
 ### Language declaration
 
 This optional element declares that the block requires the given RPL major version, and at least the given minor version.  Major versions are assumed to be incompatible, and minor versions are assumed to be backwards compatible.
+
+Example:
+```
+rpl 1.1
+```
 
 ### Package declaration
 
@@ -60,23 +156,31 @@ From [the RPL code for Rosie](../rpl/rosie/rpl_1_1.rpl):
 ``` 
 alias id_char = [[:alnum:]] / [[_]]
 alias id = { [[:alpha:]] id_char* }
-``` 
+```
 
-The package name is used as a prefix by RPL code that imports a package.  The identifier `net.ipv4` has the prefix `net`, so it is a reference to a package imported under the name `net`.
+Example:
+```
+package num
+```
 
-**Note: While packages are typically stored in files, there is no requirement that the declared package name matches the file name.**
+The package name is used as a prefix by RPL code that imports a package.  The identifier `net.ipv4` has the prefix `net`, so it is a reference to a package imported under the name `net`.  Packages are typically stored in files, but the name of the file does not have to match the name of the package declared inside that file.  However, it is strongly recommended that a file called `x.rpl` will declare `package x` and not some other package name.
 
 
 ### Import declaration
 
 There can be many import declarations (or none).  An import declaration tells the RPL compiler to load the specified package and to make its exported identifiers available for use.
 
-Rosie uses a package _search path_ (a list of file system directories) to find a package:
-* The _search path_ can be set using the environment variable `$ROSIE_LIBPATH` to a colon-separated list, e.g. `"~/rosie-pattern-language/rpl:/usr/local/share/rpl"`. 
-* If `$ROSIE_LIBPATH` is not set, Rosie will search only the `rpl` directory of the Rosie installation.  (This directory is labeled `ROSIE_LIBDIR` in the output of the `rosie config` command.)
-* The _search path_ can also be set on the command line, which takes precedence over the environment variable.
-* If you set the _search path_ yourself, via the environment or the command line, you must include the directory of the Rosie standard library if you want Rosie to search there.
-* The file extension must be `.rpl`.
+Rosie uses a package "search path" (a list of file system directories) to find a package.  We will call it the _libpath_.  Its value should be a colon-separated list, e.g. `"~/rosie-pattern-language/rpl:/usr/local/share/rpl"`.  There are several ways to customize the _libpath_:
+
+* When using the Rosie CLI, the _libpath_ can be set on the command line, and this is the value that will be used.
+* When calling the Rosie API via librosie, any value you set for _libpath_ will be used.
+* If not set using the above methods, then Rosie looks for the value of the environment variable `$ROSIE_LIBPATH`.
+* If none of the above, then Rosie will search the `rpl` directory of the Rosie installation.  (This directory is labeled `ROSIE_LIBDIR` in the output of the `rosie config` command.)
+* If you set the _libpath_ yourself, you must include the directory of the Rosie standard library if you want Rosie to search there.
+
+The file extension must be `.rpl` for Rosie to find it when searching the directories on _libpath_.
+
+See the documentation for the Rosie CLI, REPL, or API (librosie) for more details.
 
 Variations of the import declaration:
 
@@ -84,16 +188,16 @@ Variations of the import declaration:
 | `import word, num, net`           | Import several packages  |
 | `import num as n`                 | Import the `num` package, but call it `n` |
 | `import word, num as n, net`      | These forms can be combined |
-| `import rosie/rpl_1_0`            | A package reference can specify a subdirectory of a _search path_ directory |
+| `import rosie/rpl_1_0`            | A package reference can specify a subdirectory of a directory on the _libpath_ |
 | `import a/b/c`                    | Or a chain of subdirectories |
 | `import a/b/c as d`               | Import `a/b/c` as `d` instead of the default name, `c` |
 | `import "a a/b/c"`                | If the package's path name contains non-identifier characters, it must be quoted |
 | `import "a a/b/cde-f" as c`       | If the package file name contains non-identifier characters, it must be quoted and imported `as` a valid identifier |
 
 
-### Statements
+### Bindings (also called statements)
 
-RPL patterns can contain whitespace and comments.  Statements can be optionally separated with semi-colons (`;`), such as when combining multiple statements on a single line.
+Statements can be optionally separated with semi-colons (`;`), such as when combining multiple statements on a single line.
 
 |  RPL statement              | Meaning   |
 |  -------------------------- | ----------|
@@ -110,14 +214,14 @@ A statement may have modifiers, which are [explained below](#statement-modifiers
 | `local alias`  | The `local` keword must come first | `local alias h = [:xdigit:]` |
 
 
-#### Assignment statements 
+#### Simple bindings
 
-As assignment like `d = [:digit:]` binds the name `d` to the expression on the right hand side of the `=` sign.  On the right hand side may be any [pattern expression](#pattern-expressions).  An assignment achieves two things:
+A binding like `d = [:digit:]` binds the name `d` to the expression on the right hand side of the `=` sign.  On the right hand side may be any [pattern expression](#pattern-expressions).
 
 * By binding a name, you can use the name in other expressions (in RPL code, on the command line, at the REPL).
-* When Rosie matches this named pattern, the input that matched will be included in the output.
+* When Rosie matches this named pattern, it captures the input that matched, and tags that input with the pattern name.
 
-When the output is JSON, you can see that the matching text is labeled with the name of the pattern, e.g.
+When the output is JSON, you can see that the matching text is labeled with the name of the pattern.  The pattern name appears in the "type" field: 
 
 ``` 
 $ rosie --rpl 'd = [:digit:]' -o json match d
@@ -128,16 +232,14 @@ $ rosie --rpl 'ds = [:digit:]+' -o json match ds
 {"type":"ds","s":1,"e":4,"data":"123"}
 ``` 
 
-For more information on the JSON output format, see [this section](#output-json) below.
+For more information on the JSON output format, see [this section](#output-json) below.  You can read more about [RPL expressions](#expressions) below.
 
-You can read more about [RPL expressions](#expressions) below.
-
-Note: The `alias` [statement modifier](#statement-modifiers) will make the name an _alias_ (substitution) for the expression on the right hand side.  That way, the name will not appear in the output.  
+The `alias` [statement modifier](#statement-modifiers) will make the name an _alias_ (substitution) for the expression on the right hand side.  That way, the name will not appear in the output.
 
 
-#### Grammar statements
+#### Grammars
 
-In general, RPL assignments cannot be mutually recursive.  (The compiler will complain.)  To enable mutual recursion, place the relevant statements inside a _grammar_.  
+In the scope of a file, RPL bindings cannot be mutually recursive.  (The compiler will complain.)  To enable mutual recursion, place the relevant statements inside a _grammar_.  
 
 Mutually recursive patterns can recognize recursive structures like nested lists (e.g. JSON, XML, s-expressions) or things like "strings that have an equal number of a's and b's".  Grammars are defined by putting a set of assignment/alias statements inside a `grammar`...`end` block, e.g.:
 
@@ -150,12 +252,12 @@ grammar
 end
 ``` 
 Scope:
-* A grammar introduces a new (nested) scope, i.e. the outer scope is visible. 
-* The grammar binds a new name in the outer scope.  This is the name of its first rule.  In the example above, only `S` is visible outside the grammar.
+* A grammar introduces a new scope.  Bindings from the outer scope are visible, but new bindings in the grammar shadow outer bindings for the same name.  This is the usual lexical scope rule.
+* The grammar binds one new name in the outer scope, the name of its first rule.  In the example above, only `S` is visible outside the grammar block.
 
 Notes:
-* A grammar may be `local`, but not any of its statements.
-* Any statement in a grammar may be an `alias`, but not the grammar itself.
+* The `local` keyword is not allowed inside a grammar.  To make the grammar's one visible binding local to the file scope, put `local` before the `grammar` keyword.
+* Any binding in a grammar may be an `alias`, including the first bound name.
 
 If the example above were saved to the file `g.rpl`, we could load that file into Rosie and match either `same` or `S`.  The only difference is that `same` ensures that the entire input is matched.  The grammar `S` matches strings that contain the same number of a's as b's (and no other characters).  The second example below does match, because the input `baabb` has 3 b's and only 2 a's.
 
@@ -167,7 +269,16 @@ $ echo "" | rosie -o json -f g.rpl match same
 {"type":"same","s":1,"e":1,"data":""}
 ``` 
 
-#### Statement modifiers
+
+
+
+
+
+
+
+
+
+#### Binding modifiers
 
 **Alias**
 
@@ -442,19 +553,4 @@ Rosie> .match ~ num.int "    321"
  "type": "*"}
 Rosie> 
 ```
-
-## Pattern libraries
-
-The only patterns that are truly built-in are:
-
-`.` (dot)
-`$` (dollar sign)
-`^` (caret)
-`~` (boundary)
-
-Often, you'll want to build your patterns by starting with some of the ones in Rosie's standard library (found in the `rpl` directory where Rosie is installed).
-
-
-** More documentation of the pattern library is coming. **
-
 
