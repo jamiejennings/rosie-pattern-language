@@ -12,6 +12,12 @@ local violation = require "violation"
 local list = require "list"
 map = list.map
 
+-- These MUST all be numbers so we can easily distinguish error results
+p.ERROR_USAGE = -1
+p.ERROR_INTERNAL = -2
+p.ERROR_CONFIG = -3
+p.ERROR_RESULT = -4
+
 local write_error = function(...) io.stderr:write(...) end
 
 function p.load_string(en, input)
@@ -19,7 +25,7 @@ function p.load_string(en, input)
    if not ok then
       local err_string = table.concat(map(violation.tostring, messages), "\n") .. "\n"
       write_error("Cannot load rpl: \n", err_string)
-      return ERROR_CONFIG
+      return p.ERROR_CONFIG
    end
    return ok, messages
 end
@@ -28,7 +34,7 @@ function p.load_file(en, filename)
    local ok, pkgname, messages, actual_path = en:loadfile(filename)
    if not ok then
       write_error("Cannot load file: \n", messages)
-      return ERROR_CONFIG
+      return p.ERROR_CONFIG
    end
    return ok, messages
 end
@@ -63,7 +69,7 @@ function p.setup_engine(en, args)
 	 if not success then
 	    io.stdout:write("Error loading " .. tostring(filename) .. ":\n")
 	    io.stdout:write(table.concat(map(violation.tostring, errs), "\n"), "\n")
-	    return ERROR_RESULT
+	    return p.ERROR_RESULT
 	 end
       end
    end
@@ -79,7 +85,7 @@ function p.setup_engine(en, args)
 	 local AST = en.compiler.parse_block(common.source.new{text=stm}, errs)
 	 if not AST then
 	    write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
-	    return ERROR_RESULT
+	    return p.ERROR_RESULT
 	 end
 	 
 	 local ok = import_dependencies(en, AST, errs)
@@ -89,7 +95,7 @@ function p.setup_engine(en, args)
 	 local success, msg = p.load_string(en, stm)
 	 if not success then
 	    write_error(msg, "\n")
-	    return ERROR_RESULT
+	    return p.ERROR_RESULT
 	 end
       end
    end
@@ -108,7 +114,7 @@ function p.setup_engine(en, args)
       local AST = en.compiler.parse_expression(common.source.new{text=expression}, errs)
       if not AST then
 	 write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
-	 return ERROR_RESULT
+	 return p.ERROR_RESULT
       end
 
       if (args.command=="grep") then
@@ -126,7 +132,7 @@ function p.setup_engine(en, args)
       compiled_pattern, errs = en:compile(AST)
       if not compiled_pattern then
 	 write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
-	 return ERROR_RESULT
+	 return p.ERROR_RESULT
       end
    end
    return compiled_pattern

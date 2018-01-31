@@ -10,11 +10,6 @@ rosie_command = arg[0]
 
 ROSIE_HOME = rosie.env.ROSIE_HOME
 
-ERROR_USAGE = -1
-ERROR_INTERNAL = -2
-ERROR_CONFIG = -3
-ERROR_RESULT = -4
-
 if not ROSIE_HOME then
 	io.stderr:write("Installation error: Lua variable ROSIE_HOME is not defined\n")
 	io.stderr:flush()
@@ -107,7 +102,7 @@ local function run(args)
 
    if not args.command then
       print("Usage: rosie command [options] pattern file [...]")
-      return ERROR_USAGE
+      return cli_common.ERROR_USAGE
    end
 
    if args.command=="version" then
@@ -145,7 +140,7 @@ local function run(args)
       local a = CL_ENGINE.compiler.parse_expression(common.source.new{text=args.expression}, errs)
       if not a then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
-	 return ERROR_RESULT
+	 return cli_common.ERROR_RESULT
       end
       print("Parses as: ", ast.tostring(a, true))
       a = ast.ambient_cook_exp(a)
@@ -153,7 +148,7 @@ local function run(args)
       local aa = expand.expression(a, CL_ENGINE.env, errs)
       if not aa then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
-	 return ERROR_RESULT
+	 return cli_common.ERROR_RESULT
       end
       print("Expands to: ", ast.tostring(aa, true))
       return
@@ -192,13 +187,16 @@ local function run(args)
 	 end
       end
       if ((total_files - total_compiled) > 0) or (total_failures > 0) then
-	 return ERROR_RESULT
+	 return cli_common.ERROR_RESULT
       else
 	 return
       end
    end
    
    local compiled_pattern = cli_common.setup_engine(en, args);
+   if type(compiled_pattern)=="number" then -- return the error
+      return compiled_pattern
+   end
 
    if args.command == "list" then
       if not args.verbose then greeting(); end
@@ -208,7 +206,7 @@ local function run(args)
 	 return
       else
 	 print(msg)
-	 return ERROR_RESULT
+	 return cli_common.ERROR_RESULT
       end
    elseif args.command == "repl" then
       local repl_mod = assert(rosie.import("repl"), "failed to open the repl package")

@@ -382,5 +382,12 @@ while line do
 end -- while
 check(done1 and done2 and done3)
 
+-- This command should fail gracefully
+cmd = rosie_cmd .. " match -o json 'csv.XXXXXX' test/resolv.conf 2>&1"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have failed with output")
+check(code ~= 0, "return code should NOT be zero")
+results_txt = table.concat(results, '\n')
+check(not results_txt:find("traceback"))
 
 return test.finish()
