@@ -313,6 +313,13 @@ common.add_encoder("subs", 3,
 			 return nil
 		      end
 		   end)
+common.add_encoder("jsonpp", 3,
+		   function(m, input, start)
+		      local max_length = false
+		      local json_style = true
+		      m = common.byte_to_lua(m, input)
+		      return util.table_to_pretty_string(m, max_length, json_style)
+		   end)
 
 rosie_package.set_configuration = set_configuration
 rosie_package.config = function(...) return ROSIE_INFO; end
