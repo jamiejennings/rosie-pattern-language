@@ -140,6 +140,7 @@ In RPL 1.1, a file may contain only one file block.
 This optional element declares that the block requires the given RPL major version, and at least the given minor version.  Major versions are assumed to be incompatible, and minor versions are assumed to be backwards compatible.
 
 Example:
+
 ```
 rpl 1.1
 ```
@@ -159,6 +160,7 @@ alias id = { [[:alpha:]] id_char* }
 ```
 
 Example:
+
 ```
 package num
 ```
@@ -520,27 +522,36 @@ where
 </blockquote>
 
 
+Example:
 
-
-
-
-Rosie's match output is structured in a way that mirrors the pattern that was matched.  You can see the structure if you look at the JSON output from Rosie.  (On a terminal, the default is for Rosie to print the matched pieces of input in color.  Use the `-o json` option to get JSON instead.)  There will be one JSON structure for each line in the input, and each structure is called a *match*.  A match contains the name of the pattern that generated it, the starting position in the input of the matched text, the matched text itself, and any *sub-matches*.  Sub-matches have the same structure as matches; i.e. matches have a tree structure.
-
-A match output by Rosie is kind of like a capture in regex.  Except way cooler, because a match has the recursive structure of a parse tree. (In the language of compilers, Rosie's output is a *parse tree*.)
-
-There are a few really important things you need to know about Rosie's matches:
-
-1. Sub-matches are captured only for the identifiers in a pattern.  And only when those identifiers are *not* aliases.  Sub-matches are indexed by the identifier name that generated them.
-2. Literal strings in patterns are not returned as sub-matches.  This is a special case of the previous rule.  
-3. If you *want* a literal string or some other primitive expression (e.g. `[:digit:]{3}`) to appear as a sub-match, assign it a name.  Here's an example where a literal string is assigned the name `down_message`.  The pattern `alert` contains the identifier `down_message`, and so there will be a sub-match of `alert` called `down_message`:
-
-``` 
-down_message = "The system will go down in"
-delay = num.int "seconds"
-alert = down_message delay
+```shell 
+$ rosie -o jsonpp match '"nameserver" net.ipv6' test/resolv.conf
+{"data": "nameserver fde9:4789:96dd:03bd::1", 
+ "type": "*", 
+ "e": 34, 
+ "subs": 
+   [{"data": "fde9:4789:96dd:03bd::1", 
+     "type": "net.ipv6", 
+     "e": 34, 
+     "s": 12}], 
+ "s": 1}
+$ 
 ``` 
 
-Remember, aliases are substitutions, like macros in some programming languages.  They do not create a new named capture like ordinary (non-alias) named patterns do.  (Rationale:  Aliases let you give names to patterns, so that you can refer to them by name, without declaring that you want this name to appear as a separate capture/match in Rosie's output.)  The choice between assigning a name to a pattern and creating an alias for the same pattern gives you some control over what appears in the output.
+In the example above, you can observe the following:
+1. an anonymous expression was entered on the command line (`"nameserver" net.ipv6`);
+2. Rosie produced one _match_ (encoded as a json object), so we know that one line of the file `test/resolv.conf` matched the pattern;
+3. the type of the match is `*` because the expression to match was anonymous;
+4. the data field contains the capture (`nameserver fde9:4789:96dd:03bd::1`);
+5. the match started at the first character of the input (`"s": 1`);
+6. the match extended through character 34 (`"e": 34`);
+7. there is one sub-match in the `subs` list, corresponding to the one named term in the anonymous expression, `net.ipv6`.
+
+
+Note that Rosie accepts the `-o jsonpp` option for JSON pretty-printed output.
+The `-o json` option generates more compact JSON (and is much faster).  JSON
+output is a Rosie feature; the RPL language specification says nothing about how
+a _match_ is represented.
 
 
 ## Macros and functions <a name="macros"></a> 
