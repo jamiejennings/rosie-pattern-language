@@ -269,74 +269,260 @@ $ echo "" | rosie -o json -f g.rpl match same
 {"type":"same","s":1,"e":1,"data":""}
 ``` 
 
-
-
-
-
-
-
-
-
-
-#### Binding modifiers
+#### Modifiers
 
 **Alias**
 
-Use `alias` to create a new name that is an alias (substitute) for the expression on the right hand side.  Using an alias is equivalent to inserting the expression itself.  In the statement `alias foo = bar+ baz`, the name `foo` is defined.  When it is used in an expression, it is as if `bar+ baz` were used instead.
+Use `alias` to bind a name that is an alias (substitute) for the expression on the right hand side.  Using an alias is equivalent to inserting the expression itself.  In the statement `alias foo = bar+ baz`, the name `foo` is defined.  When it is used in an expression, it is as if `bar+ baz` were used instead.
 
 **Local**
 
-When writing a package of RPL patterns, there are names you want to be visible when someone imports your package.  The `local` modifier hides a definition so that it is not visible.  The scope of a `local` name is the block in which it is declared.
+When writing a package of RPL patterns, there are names you want to be visible when someone imports your package.  The `local` modifier hides a definition so that it is not visible.  The scope of a `local` name is the block in which it is declared.  In RPL 1.1, the only place `local` has any meaning (and therefore, the only place it can be used) is in the file scope.
 
 
 ## Expressions
 
+Most of RPL consists of pattern expressions.  Simple expressions compose into
+larger expressions.  When a concept in RPL is aligned with regex, it generally
+has the same syntax.
+
 Here are some key things to remember:
 
-* To match a literal string, enclose it in double quotes.  Outside of quotes you can use identifiers to which you have already assigned patterns, aliases, or grammars.
-* Normally, Rosie looks for word boundaries automatically. In other words, Rosie tokenizes automatically. To prevent automatic tokenization, put curly braces `{...}` around your expression.  This is called an _untokenized_ or _raw_ expression.
-* Alternatives are indicated by the forward slash `/` operator, not a vertical bar, because Rosie uses _ordered choice_.  See [below](#regex-vs-rpl) for more.
+* To match a literal string, enclose it in double quotes.  Outside of quotes you can use identifiers (names) which are bound to other patterns, aliases, etc.
+* Several kinds of character escape sequences can be used in literals and character sets.
+* There are 3 grouping mechanisms:
+  * `{...}` Curly braces enclose an _untokenized_ expression.
+  * `(...)` Parentheses enclose a _tokenized_ expression, in which there is an implicit token boundary between each element of a sequence.
+  * `[...]` Square brackets enclose a _bracket_ expression, which is usually used to construct character sets, but can be used more generally as a _disjunction_ of the patterns it contains.
+  
+### Table of RPL expression types
 
-Rosie's pattern expressions are as follows:
+| Name    | Example                   | Meaning |
+| ------- | -------                   | ------- |
+| Literal            | `"abcdef"`     | Matches the string `abcdef`.  E.g. `"Hello, world"` matches only the input "Hello, world", with exactly one space after the comma |
+| Star (untokenized) | `pat*`         | Zero or more instances of `pat` |
+| Star (tokenized)  | `(pat)*`       | Zero or more instances of `pat` with a token boundary between occurrences |
+| Plus (untokenized) | `pat+`         | One or more instances of `pat` |
+| Plus (tokenized)   | `(pat)+`       | One or more instances of `pat` with a token boundary between occurrences |
+| Question           | `pat?`         | Zero or one instance of `pat` |
+| Bounded repetition (untokenized) | `pat{n,m}`     | At least n instances, and matching at most m instances of `pat` |
+| Bounded repetition (tokenized)   | `(pat){n,m}`   | At least n instances, and matching at most m instances of `pat`, with a token boundary between occurrences |
+|                    | `pat{,m}`         | `n` defaults to 0. Analogously, `(pat){,m}` for a tokenized repetition. |
+|                    | `pat{n,}`         | `m` defaults to infinity. Analogously, `(pat){n,}` for a tokenized repetition. |
+|                    |  `pat{n}`         | Equivalent to `pat{n,n}`.  Analogously, `(pat){n}` for a tokenized repetition. |
+| Look ahead         | `>pat`         | Looking at `pat` (predicate: consumes no input)                       |
+| Negative look ahead | `!pat`         | Not looking at `pat` (predicate: consumes no input)                      |
+|                    | `!>pat`         | Equivalent to `!pat` |
+| Look behind        | `<pat`         | Looking backwards at `pat` (predicate: consumes no input)                       |
+| Negative look behind | `!<pat`         | Not looking backwards at `pat`.  Equivalent to `<!pat` |
+| Ordered choice/alternative | `p / q`        | Ordered choice between `p` and `q` |
+| Sequence           | `p q`          | Sequence of `p` followed by `q`     |
+| Tokenized sequence | `(...)`         | _Tokenized sequence_, in which Rosie automatically looks for token boundaries between pattern elements |
+| Untokenized sequence | `{...}`       | _Untokenized (or "raw") sequence)_ |
+|  Named character set | `[:name:]`    | From the POSIX standard:  alpha, xdigit, digit, print, cntrl, lower, space, alnum, upper, punct, graph  |
+|                      | `[:^name:]`| Complement. Matches a single character not in the named set. |
+| Character range | `[x-y]`         | Matches a single character from the Unicode codepoint of x to the Unicode codepoint of y, inclusive |
+|                 | `[^x-y]`        | Complement. Matches a single character not in the given range. |
+| Character list  | `[...]`         | Matches any of the characters listed (in place of `...`) |
+|                 | `[^...]`        | Complement. Matches a single character not listed in `...`. |
+| Union (Disjunction) | `[cs1 cs2 ...]` | Union of one or more character sets `cs1`, `cs2`, etc. (E.g. `[[a-f][0-9]]`) |
+|                     | `[^ cs1 cs2 ...]` | Complement. Matches a single character not in the given union. |
+| Application         | `fn:pat`     | Apply the macro/function `fn` to `pat`.  See [Macros and Functions](#macros) below. |
 
-|  RPL expression | Meaning                      |
-|  -------------- | -------                      |
-|  `"abcdef"`     | (String literal) Matches the string `abcdef`.  E.g. `"Hello, world"` matches only the input "Hello, world", with exactly one space after the comma |
-|  `pat*`         | Zero or more instances of `pat`                                    |
-|  `(pat)*`       | Zero or more instances of `pat` with a token boundary between occurrences |
-|  `pat+`         | One or more instances of `pat`; use `(pat)+` if you want token boundaries between occurrences |
-|  `pat?`         | Zero or one instances of `pat`
-|  `pat{n,m}`         | Bounded repetition of `pat`; use `(pat){n,m}` if you want token boundaries between occurrences |
-|  `pat{,m}`         | `n` defaults to 0 |
-|  `pat{n,}`         | `m` defaults to infinity |
-|  `pat{n}`         | Equivalent to `pat{n,n}`; use `(pat){n}` if you want token boundaries between occurrences |
-|  `!pat`         | Not looking at `pat` (predicate: consumes no input)                      |
-|  `>pat`         | Looking at `pat` (predicate: consumes no input)                       |
-|  `!>pat`         | Equivalent to `!pat` |
-|  `<pat`         | Looking backwards at `pat` (predicate: consumes no input)                       |
-|  `!<pat`         | Equivalent to `<!pat` |
-|  `p / q`        | Ordered choice between `p` and `q`     |
-|  `p q`          | Sequence of `p` followed by `q`     |
-|  `(...)`         | _Tokenized (or "cooked") sequence_, in which Rosie automatically looks for token boundaries between pattern elements |
-|  `{...}`         | _Untokenized (or "raw" sequence)_, which tells Rosie to match the pattern exactly as written, inhibiting tokenization |
-|  `[:name:]`      | _Named character class_, from the POSIX standard:  alpha, xdigit, digit, print, cntrl, lower, space, alnum, upper, punct, graph  |
-|  `[x-y]`         | _Range character class_, from character x to character y  |
-|  `[...]`         | _List character class_, which matches any of the characters listed (in place of `...`) |
-|  `[:^name:]`     | Complement of a named character class |
-|  `[^x-y]`        | Complement of a range character class |
-|  `[^...]`        | Complement of a list character class, matching any character that is NOT one of the ones listed in place of `...` |
-|  `[cs1 cs2 ...]` | Union of one or more character sets `cs1`, `cs2`, etc. (E.g. `[[a-f][0-9]]`) |
-|  `[^ cs1 cs2 ...]` | Complement of a union of character sets |
-|  `fn:pat`     | Apply the macro/function `fn` to `pat`, resulting in a new pattern expression |
+### Pre-defined patterns
 
-**NOTES:**
-1. The "quantified expressions" (`pat?`, `pat*`, `pat+`, `pat?`, and `pat{n,m}`) are _greedy_.  They will consume as many repetitions as possible, always.
-2. The "quantified expressions" are also _possessive_.  Once they consume their input, they are never re-evaluated.  I.e. they are not subject to backtracking.
-3. The two grouping constructs (raw and cooked) are used in the way that parentheses are usually used in programming: to force the order of operations that you want.  So if you want "a or b, followed by c", write `(a / b) c` or `{ {a / b} c }`.
+| Symbol | Name     | Meaning |
+| ------ | -------- | ------- | 
+| `.`    | dot      | Matches a single Unicode character encoded in UTF-8, or (failing that) a single byte |
+| `~`    | boundary | Matches a word boundary, similar to "\\b" in regex.  See below for details. |
+| `$`    | dollar   | Matches at the end of the input.  Consumes no input. |
+| `^`    | caret    | Matches at the start of the input.  Consumes no input. |
+| `ci`   | _macro_  | `ci:pat` matches a case-insensitive version of `pat` |
+| `find` | _macro_  | `find:pat` consumes input until `pat` matches; `pat` is a sub-match |
+| `findall` | _macro_ | `findall:pat` consumes all input, returning all occurrences of `pat` as sub-matches |
+| `keepto`  | _macro_ | `keepto:pat` consumes all input until `pat` matches, returns the data prior to `pat` as a sub-match, in addition to `pat` as a sub-match |
+| `message` | _function_      | `message:Str` consumes no input; it inserts a node into the output with type `message` and data `Str`. (See note on strings, below.) |
+| `error`   | _function_      |	`error:Str` consumes no input; it inserts a node into the output with type `error` and data `Str`, and then aborts the matching process. (See note on strings, below.) |
 
-Inside of quotation marks, the only special character is `\` (backslash), which is the escape character.  Inside of a character set (in square brackets `[]`), the special characters are `-` (which is only special when it is the middle of three characters, specifying a character range) and square brackets `[` `]` and caret `^`.  These characters must be escaped to use them literally within a character set, e.g. a class containing a single right bracket and a caret is `[\]\^]`.
+
+### The boundary pattern
+
+The boundary symbol, `~`, is an ordered choice of:
+| `[:space:]+`                 | consume all (ASCII) whitespace
+| `{ >word_char !<word_char }` | looking at a word character, and back at non-word character
+| `>[:punct:] / <[:punct:]`    | looking at punctuation, or back at punctuation
+| `{ <[:space:] ![:space:] }`  | looking back at whitespace, but not ahead at whitespace
+| `$`                          | looking at end of input
+| `^`                          | looking back at start of input
+ 
+**Important note:** `word_char` is the ASCII-only pattern `[[A-Z][a-z][0-9]]`.
+
+While the default boundary pattern is defined as shown, you may redefine it
+within an RPL file.  The new definition will be used throughout the RPL file
+that contains it.
+
+One reason to customize the boundary is to make it simpler, so that it matches
+faster.  Another reason may be to replace the ASCII definitions of whitespace
+and word constituents with more rich definitions, e.g. using Unicode predicates.
+
+### A note on strings in RPL
+
+The functions `message` and `error` each take a string argument.  Strings in RPL are marked with a hash symbol (`#`) to distinguish them from pattern literals, and come in two forms:
+
+* `#tag` is the string "tag".  This short syntax is convenient for single words that have the same syntax as RPL identifiers.
+* `#"long string"` is the long form syntax.  The "long string" part has the same syntax as RPL pattern literals.  It can contain white space and use escape sequences to denote non-ASCII characters.
+
+### Escape sequences
+
+With any language, there are two things you need to know about escape
+sequences.  Which escape sequences _can_ I use, and which _must_ I use?
+
+#### What can I escape in RPL?
+
+In RPL, you can use the any of the following escape sequences when writing
+string or character literals:
+
+| RPL syntax | Name | Meaning |
+| -----------| -----| --------|
+| `\xHH`       | Hex escape | A single byte; where HH is in 00-FF |
+| `\uHHHH`     | Unicode escape | The UTF-8 encoding of a Unicode codepoint; HHHH in 0000-FFFF |
+| `\UHHHHHHHH` | Long Unicode escape | The UTF-8 encoding of a Unicode codepoint; HHHHHHHH in 00000000-10FFFFFF |
+| `\a`, `\b`, `\t`, `\n`, `\f`, `\r` | Subset of [ANSI C escape sequences](https://en.wikipedia.org/wiki/Escape_sequences_in_C) | Codepoints 07 (bell), 08 (backspace), 09 (tab), 0A (newline), 0C (formfeed), 0D (return) |
+
+Rationale: 
+1. The RPL hex escape is a variant of the same in ANSI C, except that the RPL
+syntax requires exactly two hex digits.  We expect the hex escape to be used
+for parsing binary data and for specifying non-characters, such as single bytes
+in the range 80-FF.
+2. Both Unicode escapes, `\u` and `\U`, are also part of ANSI C, and have been
+adopted by other languages as well.  The long form is expected to be needed
+rarely, because of the paucity of defined codepoints above FFFF.
+3. Several of the ANSI C escape sequences are used much too often to ignore,
+particularly tab, newline, and carriage return.  We dropped the vertical tab,
+which has fallen into disuse, but kept the bell, backspace, and formfeed
+sequences.
+
+#### What escape sequences are mandatory in RPL?
+
+There are only a handful of cases in which an escape sequence _must be used_ in
+order to refer to the character itself.
+
+**Rule:** | _Always escape the magic characters_
+          | The escape character, backslash, is always magic; to get a literal backslash, write `\\`
+		  | In a string, the double quote is magic (signaling the end of the string); to put a double quote in a string, write `\"`
+		  | In a character set, the magic characters are `[`, `]`, `^`, and `-`; to put any of these into a character range or list, write `\[`, `\]`, `\^`, and `\-`
+
+Rationale:
+1. To reduce cognitive load, we try to reduce the number of rules.  Here, there
+is essentially one rule, with variants applying to strings and character sets.
+2. Importantly, there are no exceptions to the rule.  The position of a
+character in a character set or string is irrelevant to the rule.
+
+
+### Repetitions are greedy and possessive
+
+Repetitions are expressions like `pat*`, `pat+`, `pat{n,m}`, and all of their
+variations.  In RPL, they are _greedy_: They will consume as many repetitions as
+possible, always.
+
+Repetitions are also _possessive_: Once they match, they are never re-evaluated.
+I.e. later match failures can not cause backtracking (in which an earlier
+repetition would be revisited).
+
+### Precedence and association rules
+
+The sequence operator in Rosie is simply adjacency: there is only whitespace between two or more expressions in a sequence.  When adjacency is viewed as an operator, it has equal precedence in RPL with the ordered choice operator.
+
+RPL expressions are left associative.  For example:
+
+* `a b c / d` is equivalent to `(a b c) / d`
+* `a b c / d / e f` is equivalent to `(a b c) / d / (e f)`
+* `a b c / d e / f g` is equivalent to `(a b c) / (d (e / (f g)))`
+
+The tokenized and untokenized grouping constructs (`()` and `{}`, respectively)
+are used in the way that parentheses are usually used in programming: to force
+a particular order of operations.  E.g. if you want "a or b, followed by c", write:
+
+* `(a / b) c` for a tokenized sequence that is equivalent to `{{a / b} ~ c}`; or
+* `{ {a / b} c }` for an untokenized sequence with no boundary patterns.
+
 
 ## Matches/Captures
+
+Pattern matching technologies like regex are, in their bare form, predicates.
+They return a boolean, indicating whether the pattern matched the input.  Of
+course, there is a lot of utility to be gained from also returning the part of
+the input that matched.  This is why regex introduced the concept of a _capture_.
+
+In regex, you tell the matching engine what to capture by inserting parentheses
+into your expression.  In RPL, we took a different approach.
+
+Every named pattern in RPL is (conceptually, at least) captured.  In order to
+reduce the size of the match data returned by an RPL matcher (like Rosie), an
+implementation may provide directives that indicate which captures may be
+omitted from the output.
+
+It is important to understand that the concept of captures is orthogonal to the
+semantics of matching.  A goal of RPL is to be able to define patterns based
+solely on their ability to match the desired input, and _subsequently_ decide
+which captured elements should be present in the output.
+
+Indeed, different users should be able to use the same pattern, with each user
+deciding at match time which captured elements they want included in the output.
+
+To obtain this separation of capture semantics from match semantics, we first
+imagine that there exists a _complete_ set of captures from which we could, in
+theory, select any subset.  In RPL, the complete set of captures includes a
+capture for every pattern that has a name.
+
+The rationale for this decision is that the pattern name has the role of a type,
+and therefore can be used to tag a capture in a meaningful way.  Another way to
+think about it is: if something is important enough that you want to see it
+captured in the output, then it deserves a name.
+
+<blockquote>
+<small>
+Note: <br>
+When a Rosie matching engine is given an anonymous
+expression to match against some input, the engine assigns the anonymous
+expression the name `*`, which was chosen in part because it is not a valid RPL
+identifier, so it cannot be confused with an actual pattern.  This is an
+implementation detail, and not part of the RPL language definition.
+</small>
+</blockquote>
+
+An RPL matching engine (like Rosie) takes an RPL pattern and an input, and
+returns some output.  The main piece of output is called (imaginatively) a
+_match_.  A second essential piece of output is the amount of unmatched ("left
+over") input data.  Recall that RPL is based on Parsing Expression Grammars, and
+the convention there is to match as much of the input as possible, and then stop
+if the end of the pattern is reached.
+
+(You can always add `$` to the end of a pattern to ensure that a successful
+match is one that consumes the entire input.)
+
+Let's assume for now that a _match_ contains a complete set of captures.  There
+is a "natural" structure to such a match, and it is a tree.  A node in the tree
+is a _match_ record:
+
+<blockquote>
+<em>match</em> := { type, s, e, data, subs}
+<br>
+where
+<br>
+<blockquote>
+<em>type</em> is an RPL pattern name; <br>
+<em>s</em> is the start position of the match in the input (1-based); <br>
+<em>e</em> is the end position of the match in the input (1-based); <br>
+<em>data</em> is the actual text that matched, i.e. the "capture"; <br>
+<em>subs</em> is a list of sub-matches (children in the tree);
+</blockquote>
+</blockquote>
+
+
+
+
+
 
 Rosie's match output is structured in a way that mirrors the pattern that was matched.  You can see the structure if you look at the JSON output from Rosie.  (On a terminal, the default is for Rosie to print the matched pieces of input in color.  Use the `-o json` option to get JSON instead.)  There will be one JSON structure for each line in the input, and each structure is called a *match*.  A match contains the name of the pattern that generated it, the starting position in the input of the matched text, the matched text itself, and any *sub-matches*.  Sub-matches have the same structure as matches; i.e. matches have a tree structure.
 
@@ -355,6 +541,20 @@ alert = down_message delay
 ``` 
 
 Remember, aliases are substitutions, like macros in some programming languages.  They do not create a new named capture like ordinary (non-alias) named patterns do.  (Rationale:  Aliases let you give names to patterns, so that you can refer to them by name, without declaring that you want this name to appear as a separate capture/match in Rosie's output.)  The choice between assigning a name to a pattern and creating an alias for the same pattern gives you some control over what appears in the output.
+
+
+## Macros and functions <a name="macros"></a> 
+
+
+
+
+akdla
+
+asdkl
+aasd
+
+
+
 
 
 ## If you know regex already, this is RPL <a name="regex-vs-rpl"></a> 
