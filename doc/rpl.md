@@ -307,8 +307,8 @@ Here are some key things to remember:
 | Plus (untokenized) | `pat+`         | One or more instances of `pat` |
 | Plus (tokenized)   | `(pat)+`       | One or more instances of `pat` with a token boundary between occurrences |
 | Question           | `pat?`         | Zero or one instance of `pat` |
-| Bounded repetition (untokenized) | `pat{n,m}`     | At least n instances, and matching at most m instances of `pat` |
 | Bounded repetition (tokenized)   | `(pat){n,m}`   | At least n instances, and matching at most m instances of `pat`, with a token boundary between occurrences |
+| Bounded repetition (untokenized) | `pat{n,m}`     | At least n instances, and matching at most m instances of `pat` |
 |                    | `pat{,m}`         | `n` defaults to 0. Analogously, `(pat){,m}` for a tokenized repetition. |
 |                    | `pat{n,}`         | `m` defaults to infinity. Analogously, `(pat){n,}` for a tokenized repetition. |
 |                    |  `pat{n}`         | Equivalent to `pat{n,n}`.  Analogously, `(pat){n}` for a tokenized repetition. |
@@ -319,6 +319,7 @@ Here are some key things to remember:
 | Negative look behind | `!<pat`         | Not looking backwards at `pat`.  Equivalent to `<!pat` |
 | Ordered choice/alternative | `p / q`        | Ordered choice between `p` and `q` |
 | Sequence           | `p q`          | Sequence of `p` followed by `q`     |
+| Conjunction        | `p & q`        | Equivalent to `{>p q}` (looking at `p`, matching `q`) |
 | Tokenized sequence | `(...)`         | _Tokenized sequence_, in which Rosie automatically looks for token boundaries between pattern elements |
 | Untokenized sequence | `{...}`       | _Untokenized (or "raw") sequence)_ |
 |  Named character set | `[:name:]`    | From the POSIX standard:  alpha, xdigit, digit, print, cntrl, lower, space, alnum, upper, punct, graph  |
@@ -556,16 +557,71 @@ a _match_ is represented.
 
 ## Macros and functions <a name="macros"></a> 
 
+Rosie has a very small set of macros and functions that will expand over time.
+Currently, as of Rosie v1.0.0, there is no way for users to define their own
+macros or functions.  This is an area that is ready for future development, and
+we welcome contributions of macros and functions themselves, as well as
+proposals for how to allow users to dynamically add their own macros and functions.
+
+### Semantics
+
+Macros and functions are part of the RPL language syntax (see next section),
+though we have only a few things to say at this point in time about their
+semantics.
+
+* Functions and macros live in the same namespace as other symbols, such as
+  pattern names and package names.  (If RPL were a Lisp, it would be a
+  [Lisp-1](https://en.wikipedia.org/wiki/Common_Lisp#The_function_namespace).) 
+* A macro transforms its argument(s), producing a pattern.  The macro expansion
+  process is left unspecified for now, except to say that it takes place during
+  a syntax expansion phase prior to compilation.
+* The implementation of a macro receives its pattern arguments unevaluated.
+  String arguments are interpolated (to process escape sequences) and numeric
+  arguments are evaluated prior to macro expansion.  But the point of the macro
+  is that it receives pattern arguments as syntax objects, which it can then
+  transform. 
+* A function is essentially magic.  Its arguments are evaluated during
+  compilation, but the function call becomes part of the pattern, to be executed
+  by the matching engine during execution (i.e. when matching a pattern against
+  input data).  To add a function to Rosie, the matching engine must be extended
+  to include the code for the new function.
+
+### Syntax
+
+Macro and functions share a common syntax of in RPL, which we call (naturally) _application_:
+
+```
+fn:arg                   fn applied to a single argument
+fn:(arg1, ..., argN)     fn applied to N args, N >= 0, in a tokenized context
+fn:{arg1, ..., argN)     fn applied to N args, N >= 0, in an untokenized context
+ 
+where arg is a pattern expression, a string or tag (with a # prefix), or an integer.
+```
+
+The tokenized and untokenized RPL grouping constructs are both allowed as
+delimeters around an argument list.  They are equivalent except when one or more
+argument is a pattern expression containing a bare sequence.  (A bare sequence
+is one, like `p q r`, which is not enclosed by parentheses or braces.)  Such
+sequences are evaluated as tokenized when the argument list is enclosed with
+parentheses: 
+
+  ```fn:(p q, 34, s t u)``` is equivalent to ```fn:{ (p q), 34, (s t u) }```
+
+Note that when a sequence is the only argument, it cannot be a bare sequence,
+due to the RPL syntax:
+
+``` 
+fn:(p q)     fn applied to one argument: (p q)
+fn:{p q}     fn applied to one argument: {p q}
+fn:p q       sequence of fn applied to p, followed by q
+``` 
+
+### Exanples
 
 
 
-akdla
 
-asdkl
-aasd
-
-
-
+<!-- TODO: separate the stuff below into its own document -->
 
 
 ## If you know regex already, this is RPL <a name="regex-vs-rpl"></a> 
