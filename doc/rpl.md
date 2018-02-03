@@ -12,6 +12,8 @@ Notes:
 3. See also the [Standard Library documentation](standardlib.md).  The RPL
 "standard library" is bundled with Rosie and contains many pre-defined patterns.
 
+There is also an [overview of RPL for people who know regex](i-know-regex.md).
+
 ## Overview
 
 RPL is a compiled, block-structured, lexically scoped, declarative pattern
@@ -616,208 +618,61 @@ fn:{p q}     fn applied to one argument: {p q}
 fn:p q       sequence of fn applied to p, followed by q
 ``` 
 
-### Exanples
+### Examples
 
+In the first example, we want to search for "IBM" in a case-insensitive way.
+Because we are searching, as opposed to matching starting at the beginning of
+the input, we use the Rosie command `grep`.
 
+The Rosie `grep` command will output, by default, each line that contains a
+match, like the Unix grep utility does.  Here, we want Rosie to highlight the
+part of the line that matched, so we set the output format to `color`.
 
+The first command searches for `"IBM"`, which does not match.  The second command
+searches for `ci:"IBM"`, which succeeds, matching "ibm", which is highlighted in
+bold face.  The third command is equivalent to the second, because Rosie's
+`grep` simply applies the `findall` macro to the given pattern.
 
-<!-- TODO: separate the stuff below into its own document -->
-
-
-## If you know regex already, this is RPL <a name="regex-vs-rpl"></a> 
-
-### Anchors
-
-* A Rosie pattern begins matching at the start of the input line, so the `^` (caret) anchor is rarely needed in RPL.  To skip over characters, you have to be explicit in your pattern about what to skip.  See [below](#find_patterns) for more.
-* A Rosie pattern will match successfully even if the entire input is not consumed.  To force a match of the complete input line, use the `$` anchor at the end of your pattern to force a match to the end of the input.
-* Rosie automatically tokenizes the input in a way similar to the "word boundary" (`\b`) anchor in regex.  There is a Rosie identifier `~` that refers to the boundary definition used by Rosie.  You can use it explictly as needed, e.g. `~date.any~` matches the pattern `date.any` (from [rpl/date.rpl](../rpl/date.rpl)) only when there is a token boundary before and after it.
-
-### Ordered choice
-
-The "alternation" operator in a Rosie pattern is an _ordered choice_.  Instead of using the pipe symbol `|`, which represents equal alternatives in regex, Rosie uses a forward slash `/` to denote an ordered choice between two alternatives.  The pattern `(a / b) c` is read as "a or b, followed by c" and is processed this way:
-
-1. If `a` matches the start of the input, then the choice is satisfied, so go on to match `c`
-2. Else if `b` matches the start of the input, then the choice is satisfied, so go on to match `c`
-3. Otherwise, the entire pattern fails because `(a / b)` could not be matched
-
-Once a choice is made, Rosie will never backtrack and try another alternative.  Let's make that clear with a different example.  The RPL pattern `a / (a b)` will not match the input "a b" because the pattern will never look for b.  This pattern is processed as follows:
-
-1. If `a` matches the start of the input, then the ordered choice is satisfied, and the overall pattern succeeds
-2. Else try the next alternative, `(a b)`.  The sequence `(a b)` will always fail because we arrived here due to the fact that we could not match `a`.  If we cannot match `a`, then we cannot match the sequence `(a b)`.
-
-The order of the alternatives matters in Rosie.  The pattern `(a b) / a` will match input "a b", because this pattern looks for the sequence "a b" first.
-
-When writing RPL patterns, then, we must pay attention to the order of choices in an alternation expression.  Ordered choices are part of Parse Expression Grammars, and while they place constraints on pattern writers, they help guarantee linear-time execution.
-
-### "Tokenized or "cooked" mode
-
-Normally, Rosie tokenizes the input, using whitespace and punctuation to separate the tokens.  Most of the time, this just _does the right thing_, such as when you're trying to match a noun followed by a verb, or a timestamp followed by an ip address.  As a trivial example, consider:
-
-```
-a = "a"
-b = "b"
-``` 
-
-The expression `a b` will match the input "a b" (and "a \t \n  b", etc.) and produce this output:
-
-``` 
-$ rosie repl
-Rosie> a="a"; b="b"
-Rosie> .match a b "a b"
-{"data": "a b", 
- "e": 4, 
- "s": 1, 
- "subs": 
-   [{"data": "a", 
-     "e": 2, 
-     "s": 1, 
-     "type": "a"}, 
-    {"data": "b", 
-     "e": 4, 
-     "s": 3, 
-     "type": "b"}], 
- "type": "*"}
-Rosie> .match a b "a     b"
-{"data": "a     b", 
- "e": 8, 
- "s": 1, 
- "subs": 
-   [{"data": "a", 
-     "e": 2, 
-     "s": 1, 
-     "type": "a"}, 
-    {"data": "b", 
-     "e": 8, 
-     "s": 7, 
-     "type": "b"}], 
- "type": "*"}
-Rosie> 
-``` 
-
-But `a b` will **not** match the input "ab".  Neither will `(a b)`.  An expression like `a b` or `(a b)` should be read as "a, then a token boundary, then b".   
-
-If you wanted to match "ab", then you do not want to match `a` and `b` as separate tokens, but instead as raw characters.  You need the untokenized (or "raw") sequence `{a b}` to match "ab", which will produce this output:
-
-``` 
-Rosie> .match {a b} "a b"
-No match  [Turn debug on to show the trace output]
-Rosie> .match {a b} "ab"
-{"data": "ab", 
- "e": 3, 
- "s": 1, 
- "subs": 
-   [{"data": "a", 
-     "e": 2, 
-     "s": 1, 
-     "type": "a"}, 
-    {"data": "b", 
-     "e": 3, 
-     "s": 2, 
-     "type": "b"}], 
- "type": "*"}
-Rosie> 
-``` 
-
-**NOTE:** The name of the matched pattern is "*" in the examples above because the pattern `a b` was entered on the command line.  I.e. it does not have a name.
-
-When you quantify a simple expression using `*`, `+`, `?`, or `{n,m}`, Rosie will treat the expression as if it were raw.  So `"foo"+` will match "foofoofoo" and not "foo foo foo".  You can force a tokenized match using a cooked group: `("foo")+` will match "foo foo foo".  Most of the time, quantified expressions are used in character-oriented syntactic patterns, so the default usually _does the right thing_.
-
-But for that occasion when you want to match exactly two ip addresses separated by whitespace, be sure to write `(net.ip){2}`.  The right way to read this expression is to remember that the repetition operator (`{2}` in this example) causes Rosie to look for a sequence.  Since the pattern `(net.ip)` is inside parentheses, the sequence `(net.ip){2}` is equivalent to `(net.ip net.ip)`, which in turn expands into `net.ip ~ net.ip`.
-
-### Greedy quantifiers
-
-There is one way in which regex are particularly concise, which is when you want to match a pattern that _ends_ in a recognizable way.  For example, words from `/usr/share/dict/words` that end in "ear" can be found with the expression `.*ear$` as an argument to `grep`:
-
-```sh
-$ grep .*ear$ /usr/share/dict/words | head -5
-abear
-afear
-anear
-appear
-arear
-```
-
-<a name="find_patterns"></a>
-In RPL patterns, quantifiers like `*` are greedy and will eat up as much input as possible.  The pattern `.*ear` will never match anything in RPL, because the `.*` will consume all the input, leaving nothing to match "ear".  You have to tell Rosie when to _stop_ consuming input.  (This is one reason that RPL grammars are efficient.)
-
-To write an RPL pattern that consumes characters (`.` consumes 1 character) until the string "ear" is found, and then match "ear", you could write:
-
-```
-{ !"ear" . }* "ear"
-```
-
-The part of the pattern inside the braces reads as "while not looking at _ear_, match any character".  The star `*` says to repeat this zero or more times.
-
-Because this is a frequent idiom, Rosie provides a macro called `find1` that searches for a pattern, and then consumes it.  For example, let's look for words that end in "ear":
-
-``` 
-$ rosie match -o line '{ {!"ear" .}* "ear" $}' /usr/share/dict/words | head -5
-abear
-afear
-anear
-appear
-arear
-$ rosie match -o line '{ find1:"ear" $}' /usr/share/dict/words | head -5
-abear
-afear
-anear
-appear
-arear
+<pre>
+$ rosie grep -o color '"IBM"' test/resolv.conf
+$ rosie grep -o color 'ci:"IBM"' test/resolv.conf
+search <b>ibm</b>.com mylocaldomain.myisp.net example.com
+$ rosie match 'findall:ci:"IBM"' test/resolv.conf 
+search <b>ibm</b>.com mylocaldomain.myisp.net example.com
 $ 
-```
+</pre>
 
-Another common use of Unix grep is to find all occurrences of a pattern.  (The `grep -o` option will print all of the matches.)  The Rosie macro `find` provides a shorthand for grep's behavior.
+The next example shows the difference between `findall` and `find`.  While
+`findall` works like Unix grep, searching for every occurrence of the pattern,
+`find` stops searching after the first match.
 
-``` 
-$ cat test/resolv.conf
-#
-# This is an example file, hand-generated for testing rosie.
-# Last update: Wed Jun 28 16:58:22 EDT 2017
-# 
-domain abc.aus.example.com
-search ibm.com mylocaldomain.myisp.net example.com
-nameserver 192.9.201.1
-nameserver 192.9.201.2
-nameserver fde9:4789:96dd:03bd::1
+Because the default output format for Rosie's `match` command is `color`, we
+should see the matching parts of the input highlighted in bold face.
 
-$ grep '.com' test/resolv.conf
-domain abc.aus.example.com
-search ibm.com mylocaldomain.myisp.net example.com
-$ grep -o '.com' test/resolv.conf
-.com
-.com
-.com
+<pre>
 $ rosie match 'find:".com"' test/resolv.conf
-.com
-.com .com
-``` 
+domain abc.aus.example<b>.com</b>
+search ibm<b>.com</b> mylocaldomain.myisp.net example.com
+$ rosie match 'findall:".com"' test/resolv.conf
+domain abc.aus.example<b>.com</b>
+search ibm<b>.com</b> mylocaldomain.myisp.net example<b>.com</b>
+$ 
+</pre>
 
+In the next example, we apply the `findall` macro to a more complex expression.
+The expression `net.any` (from the Rosie Standard Library) matches network
+addresses of various kinds, and `<".com"` matches when looking backwards at
+".com".  Putting these together in sequence gives a pattern that matches a
+network address ending in ".com".
 
-### Matching the entire input line with nothing left over
+Because the default highlighting for network addresses is a red font, we can see
+which parts of the output were matched by `findall` by looking for the red text:
 
-Rosie is happy to match the first part of a line and ignore the rest.  Often, this is a good thing, but not always.  If you want to be sure that the entire input matches your pattern with no input left over, use the "end of input" pattern, `$`.
+<pre>
+$ rosie match 'findall:{net.any &lt;".com"}' test/resolv.conf
+domain <font color="red">abc.aus.example.com</font>
+search <font color="red">ibm.com</font> mylocaldomain.myisp.net <font color="red">example.com</font>
+$ 
+</pre>
 
-### Matching starts at the first character of the line
-
-The Rosie Pattern Engine begins matching with the first character of the input.  This is why the `find1` macro is so useful.  Also, remember that the token boundary `~` can be used to skip over whitespace, e.g.
-
-``` 
-$ rosie repl
-Rosie> import num
-Rosie> .debug off
-Debug is off
-Rosie> .match num.int "    321"
-No match  [Turn debug on to show the trace output]
-Rosie> .match ~ num.int "    321"
-{"data": "    321", 
- "e": 8, 
- "s": 1, 
- "subs": 
-   [{"data": "321", 
-     "e": 8, 
-     "s": 5, 
-     "type": "num.int"}], 
- "type": "*"}
-Rosie> 
-```
 
