@@ -12,6 +12,9 @@ ln -fs $LIB/librosie.h src/rosie/include/
 ln -fs $RPEGLIB/rpeg.h src/rosie/include/
 ln -fs $RPEGLIB/rbuf.h src/rosie/include/
 ln -fs $LUALIB/lauxlib.h src/rosie/include/
+ln -fs $LUALIB/lua.h src/rosie/include/
+ln -fs $LUALIB/luaconf.h src/rosie/include/
+ln -fs $LUALIB/lualib.h src/rosie/include/
 
 echo "Linking librosie.a from librosie/local directory"
 ln -fs $LIB/local/librosie.a src/rosie/librosie.a
