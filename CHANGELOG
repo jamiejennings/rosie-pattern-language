@@ -4,6 +4,9 @@
 
 	NEW: output encoder 'jsonpp' (json pretty printing)
 
+	NEW: additional sample docker file 'ubuntu-go', which installs golang,
+	and then builds and tests the go client of librosie.
+
 	UPDATED: Most of the docs are now up to date.  Please open an issue if
 	you find an error.
 
