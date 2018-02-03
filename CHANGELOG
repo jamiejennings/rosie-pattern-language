@@ -1,3 +1,14 @@
+2018-02-03  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-10
+
+	NEW: output encoder 'jsonpp' (json pretty printing)
+
+	UPDATED: Most of the docs are now up to date.  Please open an issue if
+	you find an error.
+
+	FIXED: a bug in error printing at the command line.
+
 2018-01-20  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-9
