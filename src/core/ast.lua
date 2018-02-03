@@ -781,7 +781,7 @@ function ast.dependencies_of(a)
       else
 	 return {}
       end
-   elseif ast.sequence.is(a) or ast.choice.is(a) then
+   elseif ast.sequence.is(a) or ast.choice.is(a) or ast.and_exp.is(a) then
       return apply(append, map(ast.dependencies_of, a.exps))
    elseif ast.application.is(a) then
       return apply(append, map(ast.dependencies_of, a.arglist))
