@@ -615,7 +615,7 @@ Macro and functions share a common syntax of in RPL, which we call (naturally) _
 ```
 fn:arg                   fn applied to a single argument
 fn:(arg1, ..., argN)     fn applied to N args, N >= 0, in a tokenized context
-fn:{arg1, ..., argN)     fn applied to N args, N >= 0, in an untokenized context
+fn:{arg1, ..., argN}     fn applied to N args, N >= 0, in an untokenized context
  
 where arg is a pattern expression, a string or tag (with a # prefix), or an integer.
 ```
@@ -688,11 +688,8 @@ network address ending in ".com".
 Because the default highlighting for network addresses is a red font, we can see
 which parts of the output were matched by `findall` by looking for the red text:
 
-<pre>
-$ rosie match 'findall:{net.any &lt;".com"}' test/resolv.conf
-domain <font color="red">abc.aus.example.com</font>
-search <font color="red">ibm.com</font> mylocaldomain.myisp.net <font color="red">example.com</font>
-$ 
-</pre>
+(Github markdown does not allow color text, so we have a screen capture here...)
 
+[[images/net-dot-com-red-text.png]]
 
+## End
