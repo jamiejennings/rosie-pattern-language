@@ -140,7 +140,7 @@ it easy to upload/download those dependencies.
 - [ ] Log file parsing patterns (based on published examples and new contributions)
 
 ### Features forthcoming
-- [ ] Unicode character classes
+- [x] Unicode character predicates
 - [ ] Support JSON output for trace, config, list, and other commands
 - [ ] Customize color assignments
 - [ ] Customize initial environment
