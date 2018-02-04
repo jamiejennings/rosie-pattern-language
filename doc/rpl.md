@@ -690,6 +690,6 @@ which parts of the output were matched by `findall` by looking for the red text:
 
 (Github markdown does not allow color text, so we have a screen capture here...)
 
-[[images/net-dot-com-red-text.png]]
+~[](images/net-dot-com-red-text.png)
 
 ## End
