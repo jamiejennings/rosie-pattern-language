@@ -130,7 +130,7 @@ high-level notes [in this section](#api-help) below.
 - [x] Python module (`rosie.py`)
 - [x] C client of `librosie.so` (dynamic library)
 - [x] C client of `librosie.o` (static linking)
-- [ ] Go module
+- [x] Go module
 - [ ] Ruby, node.js modules
 
 ### Packages
