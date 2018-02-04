@@ -188,18 +188,20 @@ See the documentation for the Rosie CLI, REPL, or API (librosie) for more detail
 
 Variations of the import declaration:
 
-| `import word`                     | Import the `word` package |
-| `import word, num, net`           | Import several packages  |
-| `import num as n`                 | Import the `num` package, but call it `n` |
-| `import word, num as n, net`      | These forms can be combined |
-| `import rosie/rpl_1_0`            | A package reference can specify a subdirectory of a directory on the _libpath_ |
-| `import a/b/c`                    | Or a chain of subdirectories |
-| `import a/b/c as d`               | Import `a/b/c` as `d` instead of the default name, `c` |
-| `import "a a/b/c"`                | If the package's path name contains non-identifier characters, it must be quoted |
-| `import "a a/b/cde-f" as c`       | If the package file name contains non-identifier characters, it must be quoted and imported `as` a valid identifier |
+| Example                         | Explanation |
+| ------------------------------- | ----------- |
+| `import word`                   | Import the `word` package |
+| `import word, num, net`         | Import several packages  |
+| `import num as n`               | Import the `num` package, but call it `n` |
+| `import word, num as n, net`    | These forms can be combined |
+| `import rosie/rpl_1_0`          | A package reference can specify a subdirectory of a directory on the _libpath_ |
+| `import a/b/c`                  | Or a chain of subdirectories |
+| `import a/b/c as d`             | Import `a/b/c` as `d` instead of the default name, `c` |
+| `import "a a/b/c"`              | If the package's path name contains non-identifier characters, it must be quoted |
+| `import "a a/b/cde-f" as c`     | If the package file name contains non-identifier characters, it must be quoted and imported `as` a valid identifier |
 
 
-### Bindings (also called statements)
+### Bindings (statements)
 
 Statements can be optionally separated with semi-colons (`;`), such as when combining multiple statements on a single line.
 
@@ -209,18 +211,18 @@ Statements can be optionally separated with semi-colons (`;`), such as when comb
 |  `grammar ... end`          | Define a proper grammar; assignments and aliases appear in place of `...` |
 
 
-A statement may have modifiers, which are [explained below](#statement-modifiers).  Briefly, they are:
+A statement may have modifiers, which are [explained below](#modifiers).  Briefly, they are:
 
 | Modifier | Meaning                                  | Example                          |
 |----------|------------------------------------------|----------------------------------|
 | `alias`  | Create an alias for a pattern expression | `alias d = [:digit:]`            |
-| `local`  | Declares an name to be local to the block where it is defined | `local number = num.signed_number` |
-| `local alias`  | The `local` keword must come first | `local alias h = [:xdigit:]` |
+| `local`  | Declares a name to be local to the block where it is defined | `local number = num.signed_number` |
+| `local alias`  | The `local` keyword must come first | `local alias h = [:xdigit:]` |
 
 
 #### Simple bindings
 
-A binding like `d = [:digit:]` binds the name `d` to the expression on the right hand side of the `=` sign.  On the right hand side may be any [pattern expression](#pattern-expressions).
+A binding like `d = [:digit:]` binds the name `d` to the expression on the right hand side of the `=` sign.  On the right hand side may be any [pattern expression](#expressions).
 
 * By binding a name, you can use the name in other expressions (in RPL code, on the command line, at the REPL).
 * When Rosie matches this named pattern, it captures the input that matched, and tags that input with the pattern name.
@@ -236,14 +238,16 @@ $ rosie --rpl 'ds = [:digit:]+' -o json match ds
 {"type":"ds","s":1,"e":4,"data":"123"}
 ``` 
 
-For more information on the JSON output format, see [this section](#output-json) below.  You can read more about [RPL expressions](#expressions) below.
+For more information on the JSON output format, see [the section on Matches and Captures](#matches-captures).  You can read more about [RPL expressions](#expressions) below.
 
-The `alias` [statement modifier](#statement-modifiers) will make the name an _alias_ (substitution) for the expression on the right hand side.  That way, the name will not appear in the output.
+The `alias` [statement modifier](#modifiers) will make the name an _alias_ (substitution) for the expression on the right hand side.  That way, the name will not appear in the output.
 
 
 #### Grammars
 
-In the scope of a file, RPL bindings cannot be mutually recursive.  (The compiler will complain.)  To enable mutual recursion, place the relevant statements inside a _grammar_.  
+In the scope of a file, RPL bindings cannot be mutually recursive.  (The
+compiler will complain.)  To bind a mutually recursive set of patterns, or a single
+recursive pattern, place the statements inside a _grammar_.  
 
 Mutually recursive patterns can recognize recursive structures like nested lists (e.g. JSON, XML, s-expressions) or things like "strings that have an equal number of a's and b's".  Grammars are defined by putting a set of assignment/alias statements inside a `grammar`...`end` block, e.g.:
 
@@ -277,7 +281,7 @@ $ echo "" | rosie -o json -f g.rpl match same
 
 **Alias**
 
-Use `alias` to bind a name that is an alias (substitute) for the expression on the right hand side.  Using an alias is equivalent to inserting the expression itself.  In the statement `alias foo = bar+ baz`, the name `foo` is defined.  When it is used in an expression, it is as if `bar+ baz` were used instead.
+Use `alias` to bind a name that is an alias (substitute) for the expression on the right hand side.  Using an alias is equivalent to inserting the expression itself.  In the statement `alias foo = bar+ baz`, the name `foo` is bound.  When `foo` is used in an expression, it is as if `bar+ baz` were used instead.
 
 **Local**
 
@@ -347,18 +351,23 @@ Here are some key things to remember:
 | `findall` | _macro_ | `findall:pat` consumes all input, returning all occurrences of `pat` as sub-matches |
 | `keepto`  | _macro_ | `keepto:pat` consumes all input until `pat` matches, returns the data prior to `pat` as a sub-match, in addition to `pat` as a sub-match |
 | `message` | _function_      | `message:Str` consumes no input; it inserts a node into the output with type `message` and data `Str`. (See note on strings, below.) |
+|           |                 | `message:(Str, Type)` consumes no input; it inserts a node into the output with type `Type` and data `Str`. (See note on strings, below.) |
 | `error`   | _function_      |	`error:Str` consumes no input; it inserts a node into the output with type `error` and data `Str`, and then aborts the matching process. (See note on strings, below.) |
+|           |                 |	`error:(Str, Type)` consumes no input; it inserts a node into the output with type `Type` and data `Str`, and then **aborts** the matching process. (See note on strings, below.) |
 
 
 ### The boundary pattern
 
 The boundary symbol, `~`, is an ordered choice of:
-| `[:space:]+`                 | consume all (ASCII) whitespace
-| `{ >word_char !<word_char }` | looking at a word character, and back at non-word character
-| `>[:punct:] / <[:punct:]`    | looking at punctuation, or back at punctuation
-| `{ <[:space:] ![:space:] }`  | looking back at whitespace, but not ahead at whitespace
-| `$`                          | looking at end of input
-| `^`                          | looking back at start of input
+
+| Constituent                  | Meaning |
+| ---------------------------- | ------- |
+| `[:space:]+`                 | consume all (ASCII) whitespace |
+| `{ >word_char !<word_char }` | looking at a word character, and back at non-word character |
+| `>[:punct:] / <[:punct:]`    | looking at punctuation, or back at punctuation |
+| `{ <[:space:] ![:space:] }`  | looking back at whitespace, but not ahead at whitespace |
+| `$`                          | looking at end of input |
+| `^`                          | looking back at start of input |
  
 **Important note:** `word_char` is the ASCII-only pattern `[[A-Z][a-z][0-9]]`.
 
@@ -372,7 +381,9 @@ and word constituents with more rich definitions, e.g. using Unicode predicates.
 
 ### A note on strings in RPL
 
-The functions `message` and `error` each take a string argument.  Strings in RPL are marked with a hash symbol (`#`) to distinguish them from pattern literals, and come in two forms:
+The functions `message` and `error` take string arguments.  Strings in RPL are
+marked with a hash symbol (`#`) to distinguish them from pattern literals, and
+come in two forms:
 
 * `#tag` is the string "tag".  This short syntax is convenient for single words that have the same syntax as RPL identifiers.
 * `#"long string"` is the long form syntax.  The "long string" part has the same syntax as RPL pattern literals.  It can contain white space and use escape sequences to denote non-ASCII characters.
@@ -392,7 +403,7 @@ string or character literals:
 | `\xHH`       | Hex escape | A single byte; where HH is in 00-FF |
 | `\uHHHH`     | Unicode escape | The UTF-8 encoding of a Unicode codepoint; HHHH in 0000-FFFF |
 | `\UHHHHHHHH` | Long Unicode escape | The UTF-8 encoding of a Unicode codepoint; HHHHHHHH in 00000000-10FFFFFF |
-| `\a`, `\b`, `\t`, `\n`, `\f`, `\r` | Subset of [ANSI C escape sequences](https://en.wikipedia.org/wiki/Escape_sequences_in_C) | Codepoints 07 (bell), 08 (backspace), 09 (tab), 0A (newline), 0C (formfeed), 0D (return) |
+| `\a`, `\b`, `\t`, `\n`, `\f`, `\r` | Subset of the [ANSI C escape sequences](https://en.wikipedia.org/wiki/Escape_sequences_in_C) | Codepoints 07 (bell), 08 (backspace), 09 (tab), 0A (newline), 0C (formfeed), 0D (return) |
 
 Rationale: 
 1. The RPL hex escape is a variant of the same in ANSI C, except that the RPL
@@ -410,12 +421,15 @@ sequences.
 #### What escape sequences are mandatory in RPL?
 
 There are only a handful of cases in which an escape sequence _must be used_ in
-order to refer to the character itself.
+order to refer to the character itself.  The rule is to _always escape the magic
+characters_.  Luckily, there are few magic characters, and whether they are
+magic depends only on their context, not on their position.
 
-**Rule:** | _Always escape the magic characters_
-          | The escape character, backslash, is always magic; to get a literal backslash, write `\\`
-		  | In a string, the double quote is magic (signaling the end of the string); to put a double quote in a string, write `\"`
-		  | In a character set, the magic characters are `[`, `]`, `^`, and `-`; to put any of these into a character range or list, write `\[`, `\]`, `\^`, and `\-`
+| Char | Context | Explanation |
+| ---- | ------- | ----------- |
+| `\`  | Everywhere | The escape character, backslash, is always magic; to get a literal backslash, write `\\` |
+| `"`  | Strings, Literals | In a string, the double quote is magic (signaling the end of the string); to put a double quote in a string, write `\"` |
+| `[ ] ^ -` | Character lists | In a character list or range, the magic characters are `[`, `]`, `^`, and `-`; in those contexts, write `\[`, `\]`, `\^`, and `\-` |
 
 Rationale:
 1. To reduce cognitive load, we try to reduce the number of rules.  Here, there
@@ -438,15 +452,21 @@ repetition would be revisited).
 
 The sequence operator in Rosie is simply adjacency: there is only whitespace between two or more expressions in a sequence.  When adjacency is viewed as an operator, it has equal precedence in RPL with the ordered choice operator.
 
-RPL expressions are left associative.  For example:
+RPL expressions are right associative.  Such expressions are easy to read if you
+think of the phrase "and/or the rest".  A sequence like `x ...` can be read as
+"a sequence of `x` and then the rest".  A choice like `a / ...` can be read as
+"either `a` or the rest".  So, `a / x y` reads as "`a` or the rest", and "the
+rest" is "the sequence of `x` then `y`".
 
-* `a b c / d` is equivalent to `(a b c) / d`
-* `a b c / d / e f` is equivalent to `(a b c) / d / (e f)`
-* `a b c / d e / f g` is equivalent to `(a b c) / (d (e / (f g)))`
+For example:
+
+* `a b c / d` is equivalent to `a (b (c / d))`
+* `a b c / d / e f` is equivalent to `a (b (c / (d / (e f))))`
+* `a b c / d e / f g` is equivalent to `a (b (c / (d (e / (f g)))))`
 
 The tokenized and untokenized grouping constructs (`()` and `{}`, respectively)
 are used in the way that parentheses are usually used in programming: to force
-a particular order of operations.  E.g. if you want "a or b, followed by c", write:
+a particular order of operations.  E.g. if you want "`a` or `b`, followed by `c`", write:
 
 * `(a / b) c` for a tokenized sequence that is equivalent to `{{a / b} ~ c}`; or
 * `{ {a / b} c }` for an untokenized sequence with no boundary patterns.
