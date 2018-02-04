@@ -30,6 +30,7 @@ identifier; Yellow: word
 
 - [Features](#features)
 - [Building](#building)
+- [Rosie Pattern Language Reference](doc/rpl.md)
 - [Using Rosie's CLI](#using-the-cli)
 - [Using Rosie's REPL](#using-the-repl)
 - [Using Rosie API](#using-the-api)
