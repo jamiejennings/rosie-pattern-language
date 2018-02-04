@@ -412,6 +412,14 @@ results_txt = table.concat(results, '\n')
 check(not results_txt:find("traceback"))
 check(results_txt:find("can match the empty string"))
 
+cmd = rosie_cmd .. " expand 'a b' 2>&1"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+check(code == 0, "return should have been zero")
+results_txt = table.concat(results, '\n')
+check(not results_txt:find("traceback"))
+check(results_txt:find("a ~ b"))
+
 
 
 return test.finish()

@@ -30,9 +30,10 @@ cli_common = assert(rosie.import("cli-common"), "failed to open cli common packa
 parser = argparser.create(rosie)
 
 function create_cl_engine(args)
-   CL_ENGINE = rosie.engine.new("command line engine")
-   if (not CL_ENGINE) then error("Internal error: could not obtain new engine: " .. msg); end
-   CL_ENGINE.searchpath = rosie.config().ROSIE_LIBPATH
+   local cl_engine = rosie.engine.new("command line engine")
+   if (not cl_engine) then error("Internal error: could not obtain new engine: " .. msg); end
+   cl_engine:set_libpath(rosie.config().ROSIE_LIBPATH)
+   return cl_engine
 end
 
 local multi_sourced = {ROSIE_LIBPATH = "ROSIE_LIBPATH_SOURCE"}
@@ -137,7 +138,8 @@ local function run(args)
       local expand = assert(rosie.env.expand)			    -- TODO: MOVE THIS!
       local violation = assert(rosie.env.violation)		    -- TODO: MOVE THIS!
       local errs = {}
-      local a = CL_ENGINE.compiler.parse_expression(common.source.new{text=args.expression}, errs)
+      local cl_engine = create_cl_engine()
+      local a = cl_engine.compiler.parse_expression(common.source.new{text=args.expression}, errs)
       if not a then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
 	 return cli_common.ERROR_RESULT
@@ -145,7 +147,7 @@ local function run(args)
       print("Parses as: ", ast.tostring(a, true))
       a = ast.ambient_cook_exp(a)
       print("At top level: ", ast.tostring(a, true))
-      local aa = expand.expression(a, CL_ENGINE.env, errs)
+      local aa = expand.expression(a, cl_engine.env, errs)
       if not aa then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
 	 return cli_common.ERROR_RESULT
