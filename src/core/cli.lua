@@ -152,7 +152,12 @@ local function run(args)
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
 	 return cli_common.ERROR_RESULT
       end
-      print("Expands to: ", ast.tostring(aa, true))
+      local representation = ast.tostring(aa, true)
+      if ast.sequence.is(aa) then
+	 print(string.format("Expands to:     {%s}", representation))
+      else
+	 print(string.format("Expands to:     %s", representation))
+      end
       return
    end
    

@@ -847,7 +847,11 @@ function ast.tostring(a, already_grouped)
 	    return ast.tostring(a.exps[1])
 	 end
       end
-      return pre .. table.concat(map(ast.tostring, a.exps), " ") .. post
+      return pre .. table.concat(map(function(exp)
+					return ast.tostring(exp, already_grouped)
+				     end,
+				     a.exps),
+				 " ") .. post
    elseif ast.choice.is(a) then
       local pre = already_grouped and "" or "{"
       local post = already_grouped and "" or "}"
