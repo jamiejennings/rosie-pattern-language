@@ -21,12 +21,6 @@
 --              ROSIE_HOME/man man pages (documentation in the unix style)
 --            The value of ROSIE_HOME is set in the script that launches the rosie CLI.
 --
--- ROSIE_DEV will be true iff rosie is running in "development mode".  Certain errors that are
---            normally fatal will instead return control to the Lua interpreter (after being
---            signaled) when in development mode.  The value of ROSIE_DEV is set by the script
---            that launches the rosie CLI.
---            FUTURE: Rename this to ROSIE_CLI and reverse its sense?
---
 -- ROSIE_LIBDIR is the variable that the rosie code uses to find the standard RPL library.  Its
 --           value is ROSIE_HOME/rpl.  Currently, there is no way to change it externally.  If
 --           needed, a ROSIE_LIBDIR environment variable could be introduced in future.
@@ -51,8 +45,7 @@ local io = require "io"
 local os = require "os"
 
 local function init_error(msg)
-   if ROSIE_DEV then error(msg, 3)
-   else io.stderr:write(msg); os.exit(-3); end
+   error(msg, 3)
 end
    
 local function read_version_or_die(home)
@@ -68,10 +61,6 @@ local function read_version_or_die(home)
 end
 
 if not ROSIE_HOME then error("Error while initializing: internal variable ROSIE_HOME not set"); end
--- When init is loaded from run-rosie, ROSIE_DEV will be a boolean (as set by cli.lua)
--- When init is loaded from rosie.lua, ROSIE_DEV will be unset.  In this case, it should be set to
--- true so that rosie errors do not invoke os.exit().
-ROSIE_DEV = ROSIE_DEV or (ROSIE_DEV==nil)
 ROSIE_VERBOSE = false
 ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
 
@@ -156,9 +145,6 @@ end
 
 local function announce(name, engine)
 -- FUTURE: Create a way to check if logging is enabled, and announce engine creation only then.
-   -- if ROSIE_DEV then
-   --    print(name .. " created, accepting ".. tostring(engine.compiler.version))
-   -- end
 end
 
 function create_core_engine()
@@ -247,7 +233,6 @@ local function populate_info()
    ROSIE_INFO = {
       {name="ROSIE_VERSION", value=tostring(ROSIE_VERSION),             desc="version of rosie cli/api"},
       {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
-      {name="ROSIE_DEV",     value=tostring(ROSIE_DEV),                 desc="true if rosie was started in development mode"},
       {name="ROSIE_LIBDIR",  value=tostring(ROSIE_LIBDIR),              desc="location of the standard rpl library"},
       {name="ROSIE_LIBPATH", value=tostring(ROSIE_LIBPATH),             desc="directories to search for modules"},
       {name="ROSIE_LIBPATH_SOURCE", value=tostring(ROSIE_LIBPATH_SOURCE), desc="how ROSIE_LIBPATH was set: lib/env/cli/api"},

@@ -377,8 +377,7 @@ local function create_engine(name, compiler, searchpath)
 end
 
 function engine_error(e, msg)
-   error(string.format("Engine %s: %s\n%s", tostring(e), tostring(msg),
-   		       ROSIE_DEV and (debug.traceback().."\n") or "" ), 0)
+   error(string.format("Engine %s: %s\n", tostring(e), tostring(msg)), 0)
 end
 
 engine = 
