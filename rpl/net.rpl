@@ -93,8 +93,8 @@ ip = ipv4 / ipv6
 
 port = [0-9]+
 local alias port_spec = { ":" port }
-local alias let = [[A-Z][a-z]]
-local alias let_dig = let / [0-9]
+local alias letter = [[A-Z][a-z]]
+local alias let_dig = letter / [0-9]
 local alias let_dig_hyp = let_dig / {"-" let_dig}
 local alias subdomain = { let_dig let_dig_hyp* }		    -- Per RFC1123, can start with digit now
 
