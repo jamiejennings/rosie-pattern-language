@@ -56,8 +56,8 @@ star =     [[*]]
 question = [[?]]
 plus =     [[+]]
 alias end_token = { "end" !id_char }
-alias keyword_list = "local" / "alias" / "grammar" / "in" / "end"
-keyword = { keyword_list >[ \t\r\n] }
+alias keyword_list = "local" / "alias" / "let" / "grammar" / "in" / "end"
+keyword = { keyword_list >[[ \t\r\n]] }
 
 -- Two rules are enforced for all character sets during parsing: ESC must be
 -- followed by another character; an open or close bracket (inside the character
@@ -104,13 +104,27 @@ lookbehind = [[<]]
 alias predicate_symbol = negation / lookahead / lookbehind
 	    
 grammar
-   alias exp = {atmos { syntax_error /
-	                 choice /
-	                 sequence /
-	                 and_exp /
-	                 term
+   alias stmnt = atmos grammar_block / let_block / binding / empty
+   empty = [[;]]
+   alias_ = "alias"
+   local_ = "local"
+   binding = local_? alias_? identifier ws? "=" exp
+   private = stmnt+
+   top_level =  stmnt+
+   grammar_block = "grammar" atmos (private atmos "in")? top_level atmos end_token
+   let_block = "let" atmos (private atmos "in")? top_level atmos end_token
+
+   alias exp = {atmos { grammar_exp /
+	                let_exp /
+	                choice /
+	                and_exp /
+	                sequence /
+	                term /
+	                syntax_error 
 	              }
 	       }
+   grammar_exp = "grammar" identifier atmos (private "in")? exp
+   let_exp = "let" atmos (private "in")? exp
    syntax_error = { stmnt_prefix rest_of_line }
    application = { identifier ":" } atmos (arg / arglist / rawarglist )
    arglist = { atmos open int_or_exp { atmos "," int_or_exp }* close }
@@ -135,18 +149,6 @@ grammar
    predicate = { predicate_symbol ws? term }
 end
 
-grammar
-   alias stmnt = atmos grammar_block / local_block / binding / empty
-   empty = [;]
-   local_ = "local"
-   alias_ = "alias"
-   binding = local_? alias_? identifier ws? "=" exp
-   bindings = stmnt+
-   alias exposed =  "in" bindings end_token
-   grammar_block = "grammar" atmos bindings exposed
-   local_block = "local" atmos bindings exposed
-end
-
 major = [[0-9]]{1,2}
 minor = major
 version_spec = { major "." minor }
@@ -164,7 +166,7 @@ package_decl = { "package" ws packagename {ws? ";"}? }
 import_decl = { "import" import_spec } ("," atmos import_spec)* ws? ";"?
 
 rpl_statements = { {atmos ";" / package_decl / import_decl / language_decl / stmnt / syntax_error}* atmos $}
-rpl_expression = {exp atmos} / syntax_error
+--rpl_expression = {exp atmos} / syntax_error
 
 preparse = atmos language_decl
 
