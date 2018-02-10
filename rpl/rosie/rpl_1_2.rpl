@@ -55,9 +55,10 @@ hash_exp = {hash_mark {tag / quoted_string}}
 star =     [[*]]
 question = [[?]]
 plus =     [[+]]
-alias end_token = { "end" !id_char }
+alias end_token = { "end" eot }
 alias keyword_list = "local" / "alias" / "let" / "grammar" / "in" / "end"
-keyword = { keyword_list >[[ \t\r\n]] }
+eot =  >{ [[ \t\r\n]] / $ }				    -- end_of_token
+keyword = { keyword_list eot }
 
 -- Two rules are enforced for all character sets during parsing: ESC must be
 -- followed by another character; an open or close bracket (inside the character
@@ -87,7 +88,7 @@ int = atmos [[0-9]]+
 alias quantifier = star / question / plus / repetition
 
 assignment_prefix = identifier atmos "="
-stmnt_prefix = {keyword / assignment_prefix}
+binding_prefix = keyword / assignment_prefix
 
 alias slash =         [[/]]
 alias and =           [[&]]
@@ -104,28 +105,21 @@ lookbehind = [[<]]
 alias predicate_symbol = negation / lookahead / lookbehind
 	    
 grammar
-   alias stmnt = atmos grammar_block / let_block / binding / empty
-   empty = [[;]]
-   alias_ = "alias"
-   local_ = "local"
-   binding = local_? alias_? identifier ws? "=" exp
-   private = stmnt+
-   top_level =  stmnt+
-   grammar_block = "grammar" atmos (private atmos "in")? top_level atmos end_token
-   let_block = "let" atmos (private atmos "in")? top_level atmos end_token
-
-   alias exp = {atmos { grammar_exp /
-	                let_exp /
-	                choice /
-	                and_exp /
-	                sequence /
-	                term /
-	                syntax_error 
-	              }
-	       }
-   grammar_exp = "grammar" identifier atmos (private "in")? exp
-   let_exp = "let" atmos (private "in")? exp
-   syntax_error = { stmnt_prefix rest_of_line }
+   alias form = binding / exp
+   -- expression forms
+   exp = {atmos { grammar_exp /
+                  let_exp /
+                  choice /
+                  and_exp /
+                  sequence /
+                  term
+--	 /
+--                  syntax_error 
+                }
+	 }
+   grammar_exp = "grammar" identifier atmos (bindings "in")? exp
+   let_exp = "let" atmos (bindings "in")? exp
+   syntax_error = { binding_prefix rest_of_line }
    application = { identifier ":" } atmos (arg / arglist / rawarglist )
    arglist = { atmos open int_or_exp { atmos "," int_or_exp }* close }
    rawarglist = { atmos openraw int_or_exp { atmos "," int_or_exp }* closeraw }
@@ -133,7 +127,7 @@ grammar
    alias int_or_exp = atmos int / exp
    choice = { term atmos slash exp }
    and_exp = { term atmos and exp }
-   sequence = { term {atmos !stmnt_prefix exp}+ }
+   sequence = { term {atmos !binding_prefix exp}+ }
    term = { atmos {application /
 	           identifier /
 	           quoted_string /
@@ -147,6 +141,16 @@ grammar
    cooked = { open exp atmos close }
    raw = { openraw exp atmos closeraw }
    predicate = { predicate_symbol ws? term }
+
+   -- binding forms
+   binding = { atmos grammar_block / let_block / simple / empty }
+   empty = [[;]]
+   alias_ = { "alias" eot }
+   local_ = { "local" eot }
+   simple = {local_? atmos alias_? atmos identifier atmos "=" atmos exp}
+   bindings = binding+
+   grammar_block = {"grammar" eot bindings atmos {"in" eot bindings atmos}? end_token}
+   let_block = {"let" eot bindings atmos {"in" eot bindings atmos}? end_token}
 end
 
 major = [[0-9]]{1,2}
@@ -165,8 +169,8 @@ language_decl = { "rpl" ws version_spec ws? ";"? atmos }
 package_decl = { "package" ws packagename {ws? ";"}? }
 import_decl = { "import" import_spec } ("," atmos import_spec)* ws? ";"?
 
-rpl_statements = { {atmos ";" / package_decl / import_decl / language_decl / stmnt / syntax_error}* atmos $}
---rpl_expression = {exp atmos} / syntax_error
+rpl_statements = { {atmos package_decl / import_decl / language_decl / form / syntax_error}* atmos $}
+rpl_expression = {form atmos} / syntax_error
 
 preparse = atmos language_decl
 
@@ -209,11 +213,11 @@ preparse = atmos language_decl
 -- test rpl_expression accepts "f:(x, y)", "foo:{a, b}"
 -- test rpl_expression accepts "f:(a, 55)", "foo.bar:(1, 2, 3, a b c, d / e, {f}*)", "f:{a / b, 3}+"
 -- test rpl_expression rejects "f:", "pkg.f:"
--- test rpl_expression includes exp.arglist "f:(x, y)", "f:(3)"
--- test rpl_expression excludes exp.arglist "f:(x y)"
--- test rpl_expression includes exp.arg "f:(x)", f:(x y)", "f:x", "f:5", "f:{x y}", "f:{x}",
--- test rpl_expression includes exp.arg "f:{a / b}+", "f:{(a)}", "f:{[:set:]}"
--- test rpl_expression includes exp.rawarglist "f:{5}", "f:{7, x, a / b / c+}", "f:{(a),b}", "f:{[:set:]{1,2},\"hi\"}"
+-- test rpl_expression includes form.arglist "f:(x, y)", "f:(3)"
+-- test rpl_expression excludes form.arglist "f:(x y)"
+-- test rpl_expression includes form.arg "f:(x)", f:(x y)", "f:x", "f:5", "f:{x y}", "f:{x}",
+-- test rpl_expression includes form.arg "f:{a / b}+", "f:{(a)}", "f:{[:set:]}"
+-- test rpl_expression includes form.rawarglist "f:{5}", "f:{7, x, a / b / c+}", "f:{(a),b}", "f:{[:set:]{1,2},\"hi\"}"
 
 
 
