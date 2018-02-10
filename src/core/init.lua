@@ -211,6 +211,42 @@ function create_rpl_1_1_engine(e)
 
 end
 
+function create_rpl_1_2_engine(e)
+--   common.notes = true
+
+   local ok, pkg, messages = e:import("rosie/rpl_1_2", ".")
+   assert(ok, util.table_to_pretty_string(messages, false))
+
+   local version = common.rpl_version.new(1, 2)
+   local rplx_preparse, errs = e:compile("preparse")
+   assert(rplx_preparse, errs and util.table_to_pretty_string(errs) or "no err info")
+   local rplx_statements = e:compile("rpl_statements")
+   assert(rplx_statements)
+   local rplx_expression = e:compile("rpl_expression")
+   assert(rplx_expression)
+
+   compiler3 = { version = version,
+		 parse_block = compile.make_parse_block(rplx_preparse, rplx_statements, version),
+	         expand_block = compile.expand_block,
+	         compile_block = compile.compile_block,
+	         dependencies_of = compile.dependencies_of,
+	         parse_expression = compile.make_parse_expression(rplx_expression),
+	         expand_expression = compile.expand_expression,
+	         compile_expression = compile.compile_expression,
+	   }
+
+   local c3engine = engine.new("NEW RPL 1.2 engine (c3)", compiler3, ROSIE_LIBDIR)
+
+   -- Make the c3 compiler the default for new engines
+--    engine_module.set_default_compiler(compiler3)
+    engine_module.set_default_searchpath(ROSIE_LIBPATH)
+   
+   announce("c3 engine", c3engine)
+
+   return c3engine
+
+end
+
 ----------------------------------------------------------------------------------------
 -- INFO for debugging
 ----------------------------------------------------------------------------------------
@@ -327,6 +363,9 @@ rosie_package.import = import
 -- The magic number for setpause was determined experimentally.  The key property is that it is
 -- just less than 200, which is the default value, making the collector more aggressive.
 collectgarbage("setpause", 194)
+
+NEW_ENGINE = create_rpl_1_2_engine(create_core_engine())
+assert(NEW_ENGINE)
 
 return rosie_package
 
