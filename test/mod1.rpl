@@ -1,7 +1,7 @@
 package mod1
 
-local grammar
-   A = {"a" A} / "a"
+grammar
+   local A = {"a" A} / "a"
 end
 -- test A accepts "a", "aaaaaa"
 -- test A rejects "", "b"
