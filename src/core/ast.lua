@@ -243,8 +243,14 @@ function ast.simple_charset_p(a)
 	   ast.cs_range.is(a))
 end
 
-local function flatten(pt, pt_type)
+local function flatten_exp(pt, pt_type)
    local function flatten(pt)
+      if pt.type == "form.exp" then
+	 assert(pt.subs)
+	 local subs = filter(not_atmosphere, pt.subs)
+	 assert(#subs==1)
+	 pt = subs[1]
+      end
       if pt.type == pt_type then
 	 return apply(append, map(flatten, list.from(pt.subs)))
       else
@@ -285,7 +291,7 @@ function convert_bracket(pt, sref)
    assert(exps[1] and (not exps[2]))
    local cexp
    if exps[1].type=="form.sequence" then
-      local explist = filter(not_atmosphere, flatten(exps[1], "form.sequence"))
+      local explist = filter(not_atmosphere, flatten_exp(exps[1], "form.sequence"))
       cexp = ast.choice.new{exps = map(function(exp) return convert_exp(exp, sref) end,
 				       explist),
 			    sourceref=sref}
@@ -463,14 +469,14 @@ function convert_exp(pt, sref)
       return ast.raw.new{exp = convert_exp(subs[1], sref), 
 		      sourceref=sref}
    elseif pt.type=="form.choice" then
-      return ast.choice.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "form.choice"))),
+      return ast.choice.new{exps = map(convert1, filter(not_atmosphere, flatten_exp(pt, "form.choice"))),
 			    sourceref=sref}
    elseif pt.type=="form.and_exp" then
-      return ast.and_exp.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "form.and_exp"))),
+      return ast.and_exp.new{exps = map(convert1, filter(not_atmosphere, flatten_exp(pt, "form.and_exp"))),
 			     sourceref=sref}
    elseif pt.type=="form.sequence" then
       return ast.sequence.new{exps = map(convert1,
-					 filter(not_atmosphere, flatten(pt, "form.sequence"))),
+					 filter(not_atmosphere, flatten_exp(pt, "form.sequence"))),
 			      sourceref=sref}
    elseif pt.type=="identifier" then
       return convert_identifier(pt, sref)
@@ -689,9 +695,9 @@ function convert_core_exp(pt, sref)
    elseif pt.type=="raw" then
       return ast.raw.new{exp = convert1(pt.subs[1]), sourceref=sref}
    elseif pt.type=="choice" then
-      return ast.choice.new{exps = map(convert1, flatten(pt, "choice")), sourceref=sref}
+      return ast.choice.new{exps = map(convert1, flatten_exp(pt, "choice")), sourceref=sref}
    elseif pt.type=="sequence" then
-      return ast.sequence.new{exps = map(convert1, flatten(pt, "sequence")), sourceref=sref}
+      return ast.sequence.new{exps = map(convert1, flatten_exp(pt, "sequence")), sourceref=sref}
    elseif pt.type=="identifier" then
       return ast.ref.new{localname=pt.data, sourceref=sref}
    elseif pt.type=="literal0" then

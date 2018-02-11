@@ -481,7 +481,6 @@ local function grammar(a, env, prefix, messages)
    -- each one.  Also do some error checking.
    for _, rule in ipairs(a.rules) do
       assert(ast.binding.is(rule))
-      assert(not rule.is_local)
       assert(not rule.ref.packagename)
       assert(type(rule.ref.localname)=="string")
       local id = rule.ref.localname
@@ -491,10 +490,13 @@ local function grammar(a, env, prefix, messages)
    end
    -- Second pass: compile right hand sides in gtable environment
    local pats = {}
-   local start
+   local start, grammar_is_local
    for _, rule in ipairs(a.rules) do
       local id = rule.ref.localname
-      if not start then start=id; end		    -- first rule is start rule
+      if not start then
+	 start=id				    -- first rule is start rule
+	 grammar_is_local = rule.is_local
+      end
       common.note("grammar: compiling " .. tostring(rule.exp))
       pats[id] = expression(rule.exp, gtable, prefix, messages)
       if (not rule.is_alias) then wrap_pattern(pats[id], labels[id]); end
@@ -513,7 +515,8 @@ local function grammar(a, env, prefix, messages)
 		      peg=peg_or_msg,
 		      uncap=nil,		    -- Even if this grammar is an alias.
 		      ast=a,
-		      alias=aliasflag}
+		      alias=aliasflag,
+		      exported=(not grammar_is_local)}
    return a.pat
 end
 
