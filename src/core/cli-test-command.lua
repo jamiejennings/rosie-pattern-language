@@ -48,7 +48,7 @@ function p.setup(en)
 	 testKeyword = "accepts" / "rejects"
 	 test_line = ("--test"/"-- test") identifier (testKeyword / includesClause) (quoted_string ("," quoted_string)*)?
    ]==]
-   local ok, errs = en:import("rosie/rpl_1_1", ".")
+   local ok, errs = en:import("rosie/rpl_1_2", ".")
    if not ok then
       for _,v in ipairs(errs or {}) do
 	 write_error(violation.tostring(v))

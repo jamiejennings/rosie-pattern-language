@@ -57,7 +57,7 @@ question = [[?]]
 plus =     [[+]]
 alias end_token = { "end" eot }
 alias keyword_list = "local" / "alias" / "let" / "grammar" / "in" / "end"
-eot =  >{ [[ \t\r\n]] / $ }				    -- end_of_token
+alias eot =  >{ [[ \t\r\n]] / $ }	 -- end_of_token
 keyword = { keyword_list eot }
 
 -- Two rules are enforced for all character sets during parsing: ESC must be
@@ -105,7 +105,8 @@ lookbehind = [[<]]
 alias predicate_symbol = negation / lookahead / lookbehind
 	    
 grammar
-   alias form = binding / exp
+   alias form = binding / exp / syntax_error
+   syntax_error = { rest_of_line }
    -- expression forms
    exp = {atmos { grammar_exp /
                   let_exp /
@@ -113,13 +114,10 @@ grammar
                   and_exp /
                   sequence /
                   term
---	 /
---                  syntax_error 
                 }
 	 }
    grammar_exp = "grammar" identifier atmos (bindings "in")? exp
    let_exp = "let" atmos (bindings "in")? exp
-   syntax_error = { binding_prefix rest_of_line }
    application = { identifier ":" } atmos (arg / arglist / rawarglist )
    arglist = { atmos open int_or_exp { atmos "," int_or_exp }* close }
    rawarglist = { atmos openraw int_or_exp { atmos "," int_or_exp }* closeraw }

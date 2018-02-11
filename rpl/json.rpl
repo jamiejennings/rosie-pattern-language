@@ -32,10 +32,11 @@ local false = "false"
 local null = "null"
 
 grammar
-   value = ~ string / number / object / array / true / false / null
    member = key ":" value
    object = "{" (member ("," member)*)? "}"
    array = "[" (value ("," value)*)? "]"
+in
+   value = ~ string / number / object / array / true / false / null
 end
 
 -- test value accepts "true", "false", "null"

@@ -19,7 +19,7 @@ local map = list.map; apply = list.apply; append = list.append; foreach = list.f
 
 local ustring = require "ustring"
 
-local not_atmosphere = common.not_atmosphere		    -- Predicate on ast type
+local not_atmosphere = common.not_atmosphere	    -- Predicate on ast type
 
 local ast = {}
 
@@ -271,19 +271,21 @@ end
 
 function convert_bracket(pt, sref)
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
-   assert(pt.type=="exp.bracket")
+   assert(pt.type=="form.bracket")
    local exps, compflag
 
    exps = filter(not_atmosphere, pt.subs)
    assert(exps[1])
    compflag = (exps[1].type=="complement")
    if compflag then
-      exps = list.cdr(exps)
+      table.remove(exps, 1)
    end
+   assert(exps[1] and (not exps[2]) and (exps[1].type=="form.exp"))
+   exps = exps[1].subs
    assert(exps[1] and (not exps[2]))
    local cexp
-   if exps[1].type=="exp.sequence" then
-      local explist = filter(not_atmosphere, flatten(exps[1], "exp.sequence"))
+   if exps[1].type=="form.sequence" then
+      local explist = filter(not_atmosphere, flatten(exps[1], "form.sequence"))
       cexp = ast.choice.new{exps = map(function(exp) return convert_exp(exp, sref) end,
 				       explist),
 			    sourceref=sref}
@@ -368,8 +370,8 @@ function convert_simple_charset(pt, sref)
    end
 end
 
-local function convert_quantified_exp(pt, exp_converter, sref)
-   local exp, q = pt.subs[1], pt.subs[2]
+local function convert_quantified_exp(pt, subs, exp_converter, sref)
+   local exp, q = subs[1], subs[2]
    local qname = q.type
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    assert(qname=="question" or qname=="star" or qname=="plus" or qname=="repetition")
@@ -440,32 +442,35 @@ function convert_exp(pt, sref)
    local function convert1(pt)
       return convert_exp(pt, sref)
    end
-   if pt.type=="exp.term" then
-      assert(pt.subs and pt.subs[1])
-      if pt.subs[2] then
-	 return convert_quantified_exp(pt, convert_exp, sref)
+   if pt.type=="form.exp" then
+      assert(subs and subs[1])
+      return convert_exp(subs[1], sref)
+   elseif pt.type=="form.term" then
+      assert(subs and subs[1])
+      if subs[2] then
+	 return convert_quantified_exp(pt, subs, convert_exp, sref)
       else
-	 return convert_exp(pt.subs[1], sref)
+	 return convert_exp(subs[1], sref)
       end
-   elseif pt.type=="exp.predicate" then
+   elseif pt.type=="form.predicate" then
       return ast.predicate.new{type = subs[1].type,
 			       exp = convert_exp(subs[2], sref),
 			       sourceref=sref}
-   elseif pt.type=="exp.cooked" then
+   elseif pt.type=="form.cooked" then
       return ast.cooked.new{exp = convert_exp(subs[1], sref),
 			    sourceref=sref}
-   elseif pt.type=="exp.raw" then
+   elseif pt.type=="form.raw" then
       return ast.raw.new{exp = convert_exp(subs[1], sref), 
 		      sourceref=sref}
-   elseif pt.type=="exp.choice" then
-      return ast.choice.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "exp.choice"))),
+   elseif pt.type=="form.choice" then
+      return ast.choice.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "form.choice"))),
 			    sourceref=sref}
-   elseif pt.type=="exp.and_exp" then
-      return ast.and_exp.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "exp.and_exp"))),
+   elseif pt.type=="form.and_exp" then
+      return ast.and_exp.new{exps = map(convert1, filter(not_atmosphere, flatten(pt, "form.and_exp"))),
 			     sourceref=sref}
-   elseif pt.type=="exp.sequence" then
+   elseif pt.type=="form.sequence" then
       return ast.sequence.new{exps = map(convert1,
-					 filter(not_atmosphere, flatten(pt, "exp.sequence"))),
+					 filter(not_atmosphere, flatten(pt, "form.sequence"))),
 			      sourceref=sref}
    elseif pt.type=="identifier" then
       return convert_identifier(pt, sref)
@@ -482,21 +487,21 @@ function convert_exp(pt, sref)
       end
    elseif pt.type=="named_charset" or pt.type=="charlist" or pt.type=="range" then
       return convert_simple_charset(pt, sref)
-   elseif pt.type=="exp.bracket" then
+   elseif pt.type=="form.bracket" then
       return convert_bracket(pt, sref)
-   elseif pt.type=="exp.quantified_exp" then
-      return convert_quantified_exp(pt, convert_exp, sref)
-   elseif pt.type=="exp.application" then
+   elseif pt.type=="form.quantified_exp" then
+      return convert_quantified_exp(pt, subs, convert_exp, sref)
+   elseif pt.type=="form.application" then
       local id = subs[1]
       assert(id.type=="identifier")
       local arglist = subs[2]
       local operands = map(convert1, arglist.subs)
-      if (arglist.type=="exp.arglist") then
+      if (arglist.type=="form.arglist") then
 	 operands = map(ast.ambient_cook_exp, operands)
-      elseif (arglist.type=="exp.rawarglist") then
+      elseif (arglist.type=="form.rawarglist") then
 	 operands = map(ast.ambient_raw_exp, operands)
       else
-	 assert(arglist.type=="exp.arg")
+	 assert(arglist.type=="form.arg")
 	 assert(#arglist.subs==1)
       end
       return ast.application.new{ref=convert_identifier(id, sref),
@@ -543,24 +548,55 @@ end
 local function convert_stmt(pt, sref)
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local subs = pt.subs and filter(not_atmosphere, pt.subs)
-   if pt.type=="stmnt.assignment_" then
+   if pt.type=="form.binding" then
+      assert(subs and subs[1])
+      return convert_stmt(subs[1], sref)
+   elseif pt.type=="form.empty" then
+      return false
+   elseif pt.type=="form.simple" then
       assert(subs and subs[1] and subs[2])
+      local alias_flag = false
+      local local_flag = false
+      if subs[1].type=="form.local_" then
+	 local_flag = true
+	 table.remove(subs, 1)
+      end
+      if subs[1].type=="form.alias_" then
+	 alias_flag = true
+	 table.remove(subs, 1)
+      end
       return ast.binding.new{ref = convert_exp(subs[1], sref),
-			  exp = convert_exp(subs[2], sref),
-			  is_alias = false,
-			  is_local = false,
-		          sourceref = sref}
-   elseif pt.type=="stmnt.alias_" then
-      return ast.binding.new{ref = convert_exp(subs[1], sref),
-			  exp = convert_exp(subs[2], sref),
-			  is_alias = true,
-			  is_local = false,
-		          sourceref = sref}
-   elseif pt.type=="stmnt.grammar_" then
+			     exp = convert_exp(subs[2], sref),
+			     is_alias = alias_flag,
+			     is_local = local_flag,
+			     sourceref = sref}
+   elseif pt.type=="form.grammar_block" then
+      assert(subs and subs[1])
+      assert(subs[1].type=="form.bindings")
+      local private_bindings = subs[1].subs
+      local public_bindings
+      if subs[2] then
+	 assert(subs[2].type=="form.bindings")
+	 public_bindings = subs[2].subs
+      else
+	 public_bindings = subs[1].subs
+	 private_bindings = {}
+      end
+      if #private_bindings == 0 then
+	 if #public_bindings == 1 then
+	    print("******************************************************************")
+	    print("* Found an old-style grammar that will still work (1 binding)    *")
+	    print("******************************************************************")
+	 else
+	    print("******************************************************************")
+	    print("* More than one public binding... this will become an error      *")
+	    print("******************************************************************")
+	 end
+      end
       local rules = map(function(sub)
 			   return convert_stmt(sub, sref)
 			end,
-			subs)
+			list.append(public_bindings, private_bindings))
       assert(rules and rules[1])
       local aliasflag = rules[1].is_alias
       local boundref = rules[1].ref
@@ -569,10 +605,6 @@ local function convert_stmt(pt, sref)
 			     exp = gexp,
 			     is_alias = aliasflag,
 			     is_local = false}
-   elseif pt.type=="stmnt.local_" then
-      local b = convert_stmt(subs[1], sref)
-      b.is_local = true
-      return b
    elseif pt.type=="package_decl" then
       assert(subs and subs[1])
       local pname = subs[1].data
@@ -607,10 +639,12 @@ local function convert(pt, source_record)
       assert(subs and subs[1] and (not subs[2]))
       return convert_exp(subs[1], source_record)
    elseif pt.type=="rpl_statements" or pt.type=="rpl_core" then
-      return ast.block.new{stmts = map(function(sub)
-					  return convert_stmt(sub, source_record)
-				       end,
-				       subs or {}),
+	 local stmts = map(function(sub)
+			      return convert_stmt(sub, source_record)
+			   end,
+			   subs or {})
+	 stmts = filter(function(obj) return obj end, stmts)
+      return ast.block.new{stmts = stmts;
 			   sourceref = source_record}
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
@@ -675,7 +709,8 @@ function convert_core_exp(pt, sref)
       end
       return ast.cs_named.new{name = text, complement = false, sourceref=sref}      
    elseif pt.type=="quantified_exp" then
-      return convert_quantified_exp(pt, convert_core_exp, sref)
+      local subs = pt.subs and filter(not_atmosphere, pt.subs)
+      return convert_quantified_exp(pt, subs, convert_core_exp, sref)
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end

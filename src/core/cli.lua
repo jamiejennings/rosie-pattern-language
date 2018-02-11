@@ -92,7 +92,7 @@ local function make_help_epilog(args)
 end
 
 local function run(args)
-   en = assert(cli_engine)
+   en = assert(cli_engine)			    -- created by rosie.c
 
    if args.verbose then ROSIE_VERBOSE = true; end
 

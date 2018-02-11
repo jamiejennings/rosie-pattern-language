@@ -238,7 +238,7 @@ function create_rpl_1_2_engine(e)
    local c3engine = engine.new("NEW RPL 1.2 engine (c3)", compiler3, ROSIE_LIBDIR)
 
    -- Make the c3 compiler the default for new engines
---    engine_module.set_default_compiler(compiler3)
+    engine_module.set_default_compiler(compiler3)
     engine_module.set_default_searchpath(ROSIE_LIBPATH)
    
    announce("c3 engine", c3engine)
@@ -306,11 +306,6 @@ local rosie_package = {}
 rosie_package.env = _ENV
 load_all()
 setup_paths()
-CORE_ENGINE = create_core_engine()
-
-ROSIE_ENGINE = create_rpl_1_1_engine(CORE_ENGINE)
-assert(ROSIE_ENGINE)
-populate_info()
 
 common.add_encoder("color", 3,
 		   function(m, input, start)
@@ -364,8 +359,17 @@ rosie_package.import = import
 -- just less than 200, which is the default value, making the collector more aggressive.
 collectgarbage("setpause", 194)
 
-NEW_ENGINE = create_rpl_1_2_engine(create_core_engine())
-assert(NEW_ENGINE)
+CORE_ENGINE = create_core_engine()
+
+ROSIE_ENGINE = create_rpl_1_2_engine(CORE_ENGINE)
+assert(ROSIE_ENGINE)
+
+--NEW_ENGINE = create_rpl_1_2_engine(create_core_engine())
+--assert(NEW_ENGINE)
+
+-- Call populate_info() after building up a default compiler and setting that
+-- default in the engine module.
+populate_info()
 
 return rosie_package
 
