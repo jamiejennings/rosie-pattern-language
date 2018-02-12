@@ -35,7 +35,7 @@ clean:
 	$(RM) -rf src/rosie/include
 
 test: rtest
-	if [ -n "$(go_installed)" ]; then \
+	@if [ -n "$(go_installed)" ]; then \
 	  ./rtest; \
 	else \
 	  echo "Go installation not found, skipping test of go client"; \
