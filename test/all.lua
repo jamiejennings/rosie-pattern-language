@@ -24,6 +24,7 @@ test.dofile(TEST_HOME .. "/lib-test.lua")
 test.dofile(TEST_HOME .. "/rpl-core-test.lua")
 test.dofile(TEST_HOME .. "/rpl-mod-test.lua")
 test.dofile(TEST_HOME .. "/rpl-appl-test.lua")
+test.dofile(TEST_HOME .. "/rpl-future-test.lua")
 
 test.dofile(TEST_HOME .. "/trace-test.lua")
 
