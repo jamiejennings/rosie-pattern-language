@@ -112,7 +112,13 @@ local statement = P{"start";
 	      start = ignore * (V"alias" + V"grammar" + V"assignment");
 	      alias = token("alias_", (alias_prefix * ignore * expression));
 	      assignment = token("assignment_", (assignment_prefix * ignore * expression));
-	      grammar = token("grammar_", P"grammar" * ignore * ((V"alias" + V"assignment") * ignore)^1 * end_token);
+--	      grammar = token("grammar_", P"grammar" * ignore * ((V"alias" + V"assignment") * ignore)^1 * end_token);
+	      grammar = token("grammar_",
+			      (P"grammar" * ignore *
+			       ((V"alias" + V"assignment") * ignore)^1 *
+			       P";in" * ignore *
+			       (V"alias" + V"assignment") * ignore *
+			       end_token));
 	      }
 
 -- here we fake-parse a package declaration, which is not part of the core language
@@ -219,7 +225,7 @@ function parse.rpl(source_record, errs)
       return common.create_match("rpl_core", 1, source, table.unpack(ptlist)), leftover
    else
       assert(false, "Core parser reports syntax errors:\n" ..
-	     util.table_to_pretty_string(errs or {}) .. "\n")
+	     util.table_to_pretty_string(errs or {}, false) .. "\n")
    end
 end
 

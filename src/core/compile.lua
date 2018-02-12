@@ -463,10 +463,11 @@ end
 
 local function grammar(a, env, prefix, messages)
    local gtable = environment.extend(env)
+   assert(a.public_rules and a.public_rules[1] and a.private_rules)
+   local rules = append(list.from(a.public_rules), list.from(a.private_rules))
    do
-      assert(a.rules and a.rules[1])
       local names = {}
-      for _, rule in pairs(a.rules) do
+      for _, rule in pairs(rules) do
 	 local id = rule.ref.localname
 	 if names[id] then
 	    raise_error("grammar has more than one rule named '" .. id .. "'", a)
@@ -475,11 +476,11 @@ local function grammar(a, env, prefix, messages)
 	 end
       end
    end
-   local grammar_id = a.rules[1].ref.localname
+   local grammar_id = rules[1].ref.localname
    local labels = {}
    -- First pass: Collect rule names as V() refs into a new env, and create a capture label for
    -- each one.  Also do some error checking.
-   for _, rule in ipairs(a.rules) do
+   for _, rule in ipairs(rules) do
       assert(ast.binding.is(rule))
       assert(not rule.ref.packagename)
       assert(type(rule.ref.localname)=="string")
@@ -491,7 +492,7 @@ local function grammar(a, env, prefix, messages)
    -- Second pass: compile right hand sides in gtable environment
    local pats = {}
    local start, grammar_is_local
-   for _, rule in ipairs(a.rules) do
+   for _, rule in ipairs(rules) do
       local id = rule.ref.localname
       if not start then
 	 start=id				    -- first rule is start rule

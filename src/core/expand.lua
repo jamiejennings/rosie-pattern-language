@@ -83,7 +83,8 @@ local function remove_raw_exp(ex)
       -- An explicit 'raw' syntax cannot appear around a grammar in the current syntax.  But a
       -- macro can create a grammar expression.  Note that ambience has no effect on a grammar
       -- expression.
-      remove_cooked_raw_from_stmts(ex.rules) 
+      remove_cooked_raw_from_stmts(ex.public_rules) 
+      remove_cooked_raw_from_stmts(ex.private_rules) 
       return ex
    elseif ast.application.is(ex) then
       ex.arglist = map(remove_raw_exp, ex.arglist)
@@ -123,7 +124,8 @@ function remove_cooked_exp(ex)
       return ast.sequence.new{exps=new, sourceref=ex.sourceref}
    elseif ast.grammar.is(ex) then
       -- ambience has no effect on a grammar expression
-      remove_cooked_raw_from_stmts(ex.rules) 
+      remove_cooked_raw_from_stmts(ex.private_rules) 
+      remove_cooked_raw_from_stmts(ex.public_rules) 
       return ex
    elseif ast.repetition.is(ex) then 
       -- ambience has no effect on a repetition, but the expression being repeated must be
@@ -271,7 +273,8 @@ function remove_repetition(ex)
       ex.exps = map(remove_repetition, ex.exps)
       return ex
    elseif ast.grammar.is(ex) then
-      remove_repetition_from_stmts(ex.rules) 
+      remove_repetition_from_stmts(ex.private_rules) 
+      remove_repetition_from_stmts(ex.public_rules) 
       return ex
    elseif ast.repetition.is(ex) then
       return xrepetition(ex)
@@ -343,6 +346,28 @@ local function apply_macro(ex, env, messages)
    return new
 end
    
+function apply_macros_to_rules(rules, env, messages)
+   local newrules = {}
+   local new
+   for i, rule in ipairs(rules) do
+      -- N.B. If in future we ever allow macro DEFINITIONS within a grammar, then the 'env'
+      -- passed to apply_macros below will have to be the grammar environment.  Currently,
+      -- macro definitions are written in Lua and loaded separately from RPL code, so this is
+      -- not an issue.
+      if ast.binding.is(rule) then
+	 new = ast.binding.new{ref=rule.ref,
+			       exp=apply_macros(rule.exp, env, messages),
+			       is_alias=rule.is_alias,
+			       is_local=rule.is_local,
+			       sourceref=rule.sourceref}
+	 table.insert(newrules, new)
+      else
+      	 assert(false, "in apply_macros_to_rules, found a rule that is not a binding")
+      end
+   end -- for
+   return newrules
+end
+
 function apply_macros(ex, env, messages)
    assert(ex and ex.sourceref)
    local map_apply_macros = function(exp)
@@ -369,22 +394,11 @@ function apply_macros(ex, env, messages)
       return ast.repetition.new{exp=apply_macros(ex.exp, env, messages),
 			        cooked=ex.cooked, max=ex.max, min=ex.min, sourceref=ex.sourceref}
    elseif ast.grammar.is(ex) then
-      local newrules = {}
-      local new
-      for _, rule in ipairs(ex.rules) do
-	 assert(ast.binding.is(rule))
-	 -- N.B. If in future we ever allow macro DEFINITIONS within a grammar, then the 'env'
-	 -- passed to apply_macros below will have to be the grammar environment.  Currently,
-	 -- macro definitions are written in Lua and loaded separately from RPL code, so this is
-	 -- not an issue.
-	 new = ast.binding.new{ref=rule.ref,
-			       exp=apply_macros(rule.exp, env, messages),
-			       is_alias=rule.is_alias,
-			       is_local=rule.is_local,
-			       sourceref=rule.sourceref}
-	 table.insert(newrules, new)
-      end -- for
-      return ast.grammar.new{rules=newrules, sourceref=ex.sourceref}
+      local new_private_rules = apply_macros_to_rules(ex.private_rules, env, messages)
+      local new_public_rules = apply_macros_to_rules(ex.public_rules, env, messages)
+      return ast.grammar.new{private_rules=new_private_rules,
+			     public_rules=new_public_rules,
+			     sourceref=ex.sourceref}
    else
       -- finally, return expressions that do not have sub-expressions to process
       return ex

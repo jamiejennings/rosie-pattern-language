@@ -76,14 +76,15 @@ local function internal_macro_find1(capture_flag, ...)
 				      sourceref=sref},
 		      is_alias=true,
 		      sourceref=sref}
-   -- By putting capture_rule last, it will be omitted if nil
-   local rules = {start_rule, search_rule, capture_rule}
    -- Wrapping result in a sequence because currently (commit ed9524) grammars are not being
    -- labeled in the way that other constructs are.  This is due to the fact that grammars are
    -- wrapped, i.e. labeled, during the grammar EXPRESSION compilation, whereas every other
    -- binding is wrapped in the compile_block that calls compile_expression.
    -- FUTURE: Change this (above).
-   return ast.sequence.new{exps={ast.grammar.new{rules=rules, sourceref=sref}}, sourceref=sref}
+   return ast.sequence.new{exps={ast.grammar.new{public_rules={start_rule},
+						 private_rules={search_rule, capture_rule},
+						 sourceref=sref}},
+			   sourceref=sref}
 end
 
 local function macro_find(...)

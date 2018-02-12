@@ -38,18 +38,20 @@ ast.binding = recordtype.new("binding",
 			   pat = NIL;
 			   sourceref = NIL;})
 
--- An rpl grammar is an *expression* in the ast, despite the fact that the rpl 1.1 syntax allows
--- only grammar statements.  This unusual situation is due to the fact that we *want* grammars to
--- be expressions so that:
--- (1) they can be bound to identifiers different from the name of the start rule
--- (2) they can be embedded (as literal expressions) in other expressions without first having to
---     be bound to an identifier
--- (3) and that includes being embedded into other grammars
--- BUT, because the need for (2) and (3) are not obvious, we don't want to design their solutions
--- or implement them now (in RPL 1.1).  We note that (2) will need a good concrete syntax, and (3)
--- may require some lpeg gymnastics.  Clearly, more investigation is needed.
+-- Update on the comment below: This is addressed in rpl_1_2.
+  -- An rpl grammar is an *expression* in the ast, despite the fact that the rpl 1.1 syntax allows
+  -- only grammar statements.  This unusual situation is due to the fact that we *want* grammars to
+  -- be expressions so that:
+  -- (1) they can be bound to identifiers different from the name of the start rule
+  -- (2) they can be embedded (as literal expressions) in other expressions without first having to
+  --     be bound to an identifier
+  -- (3) and that includes being embedded into other grammars
+  -- BUT, because the need for (2) and (3) are not obvious, we don't want to design their solutions
+  -- or implement them now (in RPL 1.1).  We note that (2) will need a good concrete syntax, and (3)
+  -- may require some lpeg gymnastics.  Clearly, more investigation is needed.
 ast.grammar = recordtype.new("grammar",
-			     {rules = {};
+			     {private_rules = {};
+			      public_rules = {};
 			      pat = NIL;
 			      sourceref = NIL;})
 
@@ -215,7 +217,11 @@ function ast.visit_expressions(ex, predicate, fn)
       foreach(function(rule)
 		 rule.exp = ast.visit_expressions(rule.exp, predicate, fn)
 	      end,
-	      ex.rules)
+	      ex.private_rules)
+      foreach(function(rule)
+		 rule.exp = ast.visit_expressions(rule.exp, predicate, fn)
+	      end,
+	      ex.public_rules)
    elseif ast.application.is(ex) then
       ex.arglist.args = map(function(ex) return ast.visit_expressions(ex, predicate, fn); end,
 			 ex.arglist.args)
@@ -588,25 +594,32 @@ local function convert_stmt(pt, sref)
 	 public_bindings = subs[1].subs
 	 private_bindings = {}
       end
-      if #private_bindings == 0 then
-	 if #public_bindings == 1 then
-	    print("******************************************************************")
-	    print("* Found an old-style grammar that will still work (1 binding)    *")
-	    print("******************************************************************")
-	 else
-	    print("******************************************************************")
-	    print("* More than one public binding... this will become an error      *")
-	    print("******************************************************************")
-	 end
+--       if #private_bindings == 0 then
+-- 	 if #public_bindings == 1 then
+-- 	    print("******************************************************************")
+-- 	    print("* Found an old-style grammar that will still work (1 binding)    *")
+-- 	    print("******************************************************************")
+-- 	 else
+-- 	    print("******************************************************************")
+-- 	    print("* More than one public binding... this will become an error      *")
+-- 	    print("******************************************************************")
+-- 	 end
+--       end
+      local function convert_rules(rules)
+	 return filter(function(obj) return obj; end,	 
+		       map(function(sub)
+			      return convert_stmt(sub, sref)
+			   end,
+			   rules))
       end
-      local rules = map(function(sub)
-			   return convert_stmt(sub, sref)
-			end,
-			list.append(public_bindings, private_bindings))
-      assert(rules and rules[1])
-      local aliasflag = rules[1].is_alias
-      local boundref = rules[1].ref
-      local gexp = ast.grammar.new{rules = rules, sourceref = sref}
+      local private_rules = convert_rules(private_bindings)
+      local public_rules = convert_rules(public_bindings)
+      assert(public_rules and public_rules[1])
+      local aliasflag = public_rules[1].is_alias
+      local boundref = public_rules[1].ref
+      local gexp = ast.grammar.new{private_rules = private_rules,
+				   public_rules = public_rules,
+				   sourceref = sref}
       return ast.binding.new{ref = boundref,
 			     exp = gexp,
 			     is_alias = aliasflag,
@@ -645,11 +658,11 @@ local function convert(pt, source_record)
       assert(subs and subs[1] and (not subs[2]))
       return convert_exp(subs[1], source_record)
    elseif pt.type=="rpl_statements" or pt.type=="rpl_core" then
-	 local stmts = map(function(sub)
-			      return convert_stmt(sub, source_record)
-			   end,
-			   subs or {})
-	 stmts = filter(function(obj) return obj end, stmts)
+      local stmts = map(function(sub)
+			   return convert_stmt(sub, source_record)
+			end,
+			subs or {})
+      stmts = filter(function(obj) return obj end, stmts)
       return ast.block.new{stmts = stmts;
 			   sourceref = source_record}
    else
@@ -744,9 +757,12 @@ local function convert_core_stmt(pt, sref)
 			end,
 			subs)
       assert(rules and rules[1])
-      local aliasflag = rules[1].is_alias
-      local boundref = rules[1].ref
-      local gexp = ast.grammar.new{rules = rules,
+      local lastrule = rules[#rules]
+      table.remove(rules, #rules)
+      local aliasflag = lastrule.is_alias
+      local boundref = lastrule.ref
+      local gexp = ast.grammar.new{public_rules = {lastrule},
+				   private_rules = rules,
 				   sourceref=sref}
       return ast.binding.new{ref = boundref,
 			     exp = gexp,
@@ -811,7 +827,8 @@ function ast.dependencies_of(a)
 	 return apply(append, map(ast.dependencies_of, a.stmts))
       end
    elseif ast.grammar.is(a) then
-      return apply(append, map(ast.dependencies_of, a.rules))
+      return apply(append, append(map(ast.dependencies_of, a.private_rules),
+				  map(ast.dependencies_of, a.public_rules)))
    elseif ast.binding.is(a) then
       return ast.dependencies_of(a.exp)
    elseif ast.ideclist.is(a) then
@@ -875,7 +892,10 @@ function ast.tostring(a, already_grouped)
 	       ast.tostring(a.ref) .. " = " .. ast.tostring(a.exp) )
    elseif ast.grammar.is(a) then
       return ( "\ngrammar\n\t" ..
-	       table.concat(map(ast.tostring, a.rules), "\n\t") ..
+	       ((#private_rules > 0) and
+	        table.concat(map(ast.tostring, a.private_rules), "\n\t") .. "\nin\n"
+	        or "") ..
+	       table.concat(map(ast.tostring, a.public_rules), "\n\t") ..
 	       "\nend\n" )
    elseif ast.ref.is(a) then
       local lname = (a.localname ~= "*" and a.localname) or "<anonymous>"

@@ -171,7 +171,13 @@ static int boot(lua_State *L, str *messages) {
   if (status!=LUA_OK) {
     LOG("Boot function failed.  Lua stack is: \n");
     LOGstack(L);
-    *messages = rosie_new_string_from_const("execution of rosie boot loader failed");
+    size_t len;
+    const char *lua_msg = lua_tolstring(L, -1, &len);
+    const char *intro = "execution of rosie boot loader failed:\n";
+    char *msg = malloc(strlen(intro) + strnlen(lua_msg, 1000) + 1);
+    char *last = stpcpy(msg, intro);
+    stpncpy(last, lua_msg, 1000-strlen(intro));
+    *messages = rosie_string_from((unsigned char *)msg, len+strlen(intro));
     return FALSE;
   }
   LOG("Boot function succeeded\n");

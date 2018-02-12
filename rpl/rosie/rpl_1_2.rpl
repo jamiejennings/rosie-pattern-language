@@ -105,7 +105,6 @@ lookbehind = [[<]]
 alias predicate_symbol = negation / lookahead / lookbehind
 	    
 grammar
-   alias form = binding / exp / syntax_error
    syntax_error = { rest_of_line }
    -- expression forms
    exp = {atmos { grammar_exp /
@@ -149,6 +148,10 @@ grammar
    bindings = binding+
    grammar_block = {"grammar" eot bindings atmos {"in" eot bindings atmos}? end_token}
    let_block = {"let" eot bindings atmos {"in" eot bindings atmos}? end_token}
+-- The semicolon below MUST be there in order for this grammar to be understood by both the
+-- (primitive) core rpl parser AND the rpl_1_2 parser itself.
+;in
+   alias form = binding / exp / syntax_error
 end
 
 major = [[0-9]]{1,2}
