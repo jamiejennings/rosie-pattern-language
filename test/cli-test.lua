@@ -312,7 +312,7 @@ end
 msg = results[1]
 check(msg:find("Syntax error"))
 check(msg:find("parser"))
-check(msg:find("test/mod4.rpl:2:1:", 1, true))
+check(msg:find("test/mod4.rpl:2:9:", 1, true))
 check(msg:find("in test/nested-test2.rpl:6:3:", 1, true))
 
 cmd = rosie_cmd .. " -f test/mod1.rpl grep foonet.any /etc/resolv.conf 2>&1"
@@ -338,7 +338,7 @@ end
 msg = results[1]
 check(msg:find("error"))
 check(msg:find("parser"))
-check(msg:find("in test/mod4.rpl:2:1"))
+check(msg:find("in test/mod4.rpl:2:9"))
 check(msg:find("package !@#"))
 
 cmd = rosie_cmd .. " --libpath test -f test/nested-test3.rpl grep foo test/resolv.conf 2>&1"
