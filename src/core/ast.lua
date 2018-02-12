@@ -532,6 +532,18 @@ function convert_exp(pt, sref)
 	 assert(false, "parser allowed invalid integer: " .. tostring(pt.data))
       end
       return ast.int.new{value=i, sourceref=sref}
+   elseif pt.type=="form.grammar_exp" then
+      raise(violation.syntax.new{who="parser",
+				 message="grammar expressions are not supported",
+				 sourceref=sref,
+				 ast=pt})
+				 
+   elseif pt.type=="form.let_exp" then
+      raise(violation.syntax.new{who="parser",
+				 message="let expressions are not supported",
+				 sourceref=sref,
+				 ast=pt})
+				 
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end
@@ -604,6 +616,7 @@ local function convert_stmt(pt, sref)
 	 public_bindings = subs[1].subs
 	 private_bindings = {}
       end
+
 --       if #private_bindings == 0 then
 -- 	 if #public_bindings == 1 then
 -- 	    print("******************************************************************")
@@ -651,6 +664,12 @@ local function convert_stmt(pt, sref)
       assert(subs[1].type=="version_spec")
       local version_spec = subs[1].data
       return ast.ldecl.new{version_spec=version_spec, sourceref=sref}
+   elseif pt.type=="form.let_block" then
+      raise(violation.syntax.new{who="parser",
+				 message="let statements are not supported",
+				 sourceref=sref,
+				 ast=pt})
+				 
    else
       error("Internal error: do not know how to convert " .. tostring(pt.type))
    end

@@ -464,6 +464,9 @@ end
 local function grammar(a, env, prefix, messages)
    local gtable = environment.extend(env)
    assert(a.public_rules and a.public_rules[1] and a.private_rules)
+   if a.public_rules[2] then
+      raise_error("exactly one rule allowed in public section of grammar", a)
+   end
    local rules = append(list.from(a.public_rules), list.from(a.private_rules))
    do
       local names = {}
