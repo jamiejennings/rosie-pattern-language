@@ -454,7 +454,12 @@ function convert_exp(pt, sref)
    local function convert1(pt)
       return convert_exp(pt, sref)
    end
-   if pt.type=="form.exp" then
+   if pt.type=="form.binding" then
+      raise(violation.syntax.new{who="parser",
+				 message="found statement where expression was expected",
+				 sourceref=sref,
+				 ast=pt})
+   elseif pt.type=="form.exp" then
       assert(subs and subs[1])
       return convert_exp(subs[1], sref)
    elseif pt.type=="form.term" then
@@ -560,7 +565,12 @@ end
 local function convert_stmt(pt, sref)
    sref = common.source.new{s=pt.s, e=pt.e, origin=sref.origin, text=sref.text, parent=sref.parent}
    local subs = pt.subs and filter(not_atmosphere, pt.subs)
-   if pt.type=="form.binding" then
+   if pt.type=="form.exp" then
+      raise(violation.syntax.new{who="parser",
+				 message="found expression where statement was expected",
+				 sourceref=sref,
+				 ast=pt})
+   elseif pt.type=="form.binding" then
       assert(subs and subs[1])
       return convert_stmt(subs[1], sref)
    elseif pt.type=="form.empty" then
