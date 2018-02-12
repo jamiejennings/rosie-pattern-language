@@ -338,9 +338,10 @@ heading("Eval grammar")
 
 -- balanced strings of a's and b's
 g = [[grammar
-  S = {"a" B} / {"b" A} / "" 
   A = {"a" S} / {"b" A A}
   B = {"b" S} / {"a" B B}
+in
+  S = {"a" B} / {"b" A} / "" 
 end]]
 
 ok, msg = e:load(g)

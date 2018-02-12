@@ -1260,10 +1260,11 @@ subheading("Correct")
 
 -- Grammar matches balanced numbers of a's and b's
 g1_defn = [[grammar
-  g1 = S ~
   S = { {"a" B} / {"b" A} / "" }
   alias A = { {"a" S} / {"b" A A} }
   B = { {"b" S} / {"a" B B} }
+in
+  g1 = S ~
 end]]
 
 ok, msg = pcall(e.load, e, g1_defn)
@@ -1320,10 +1321,11 @@ check_match('{g1 [[:digit:]]}', "ab4", false)
 
 -- This grammar captures nothing!
 g2_defn = [[grammar
-  alias g2 = S ~
   alias S = { {"a" B} / {"b" A} / "" }
   alias A = { {"a" S} / {"b" A A} }
   alias B = { {"b" S} / {"a" B B} }
+in
+  alias g2 = S ~
 end]]
 
 ok, msg = pcall(e.load, e, g2_defn)
@@ -1384,10 +1386,11 @@ check(type(msg)=="table" and msg[1])
 check(violation.compile.is(msg[1])) --.message:find("can match the empty string"))
 
 g_dup_rules = [[grammar
-  S = { {"a" B} / {"b" A} / "" }
   A = { {"a" S} / {"b" A A} }
   B = { {"b" S} / {"a" B B} }
   A = "this won't work"
+in
+  S = { {"a" B} / {"b" A} / "" }
 end]]
 ok, pkgname, errs = e:load(g_dup_rules)
 check(not ok)
@@ -1397,8 +1400,9 @@ msg = table.concat(map(violation.tostring, errs), "\n")
 check(msg:find("more than one rule named 'A'"))
 
 g_missing_rule = [[grammar
-  S = { {"a" B} / {"b" A} / "" }
   A = { {"a" S} / {"b" A A} }
+in
+  S = { {"a" B} / {"b" A} / "" }
 end]]
 ok, pkgname, errs = e:load(g_missing_rule)
 check(not ok)
