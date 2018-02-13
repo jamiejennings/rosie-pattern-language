@@ -307,16 +307,16 @@ rosie_package.env = _ENV
 load_all()
 setup_paths()
 
-common.add_encoder("color", 3,
+common.add_encoder("color", common.BYTE_ENCODER,
 		   function(m, input, start)
 		      return color.match(common.byte_to_lua(m, input), input, color.colormap)
 		   end)
-common.add_encoder("matches", 3,
+common.add_encoder("matches", common.BYTE_ENCODER,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      return m.data
 		   end)
-common.add_encoder("subs", 3,
+common.add_encoder("subs", common.BYTE_ENCODER,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      if m.subs then
@@ -329,7 +329,7 @@ common.add_encoder("subs", 3,
 			 return nil
 		      end
 		   end)
-common.add_encoder("jsonpp", 3,
+common.add_encoder("jsonpp", common.BYTE_ENCODER,
 		   function(m, input, start)
 		      local max_length = false
 		      local json_style = true

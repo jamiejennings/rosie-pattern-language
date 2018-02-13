@@ -399,14 +399,17 @@ end
 
 local identity_fn = function(...) return ... end
 
+-- These constants are interpreted in the rpeg C code:
+common.BYTE_ENCODING = 3
+common.LINE_ENCODING = 2
+common.JSON_ENCODING = 1
+
 common.encoder_table = 
-   setmetatable({ line = {2, identity_fn},
-		  json = {1, identity_fn},
-		  byte = {3, identity_fn},
-		  none = {3, function(...)
-				return nil
-			     end},
-		  default = {3, common.byte_to_lua},
+   setmetatable({ line = {common.LINE_ENCODING, identity_fn},
+		  json = {common.JSON_ENCODING, identity_fn},
+		  byte = {common.BYTE_ENCODING, identity_fn},
+		  none = {common.BYTE_ENCODING, function(...) return nil end},
+		  default = {common.BYTE_ENCODING, common.byte_to_lua},
 	       },
 		{__index = function(...) return {} end})
 
