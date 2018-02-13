@@ -58,18 +58,20 @@ rcfile = {}
 import "list"
 filter = list.filter
 
-test = [[
+--[[ Example of init file contents:
+
       -- comment
       libpath = "foo"
       libpath = "bar:baz"  -- line comment
       file = "~/file-to-load.rpl"
       colors = "word.any=green;bold:num.*=red"
       colors = "num.int=red;bold;underline"
-      file = "another-file"
-      file = "a-third-file"
+      loadfile = "another-file"
+      loadfile = "a-third-file"
       other="some other key that could be anything"
       -- final comment
-]]
+
+--]]
 
 -- rcfile.parse() parses the rcfile contents and returns the raw parse.
 function rcfile.parse(input)
