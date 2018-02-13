@@ -404,6 +404,10 @@ engine =
 		     matchfile = process_input_file.match,
 		     tracefile = process_input_file.trace,
 
+		     set_colors = function(self, newcolors) self.colors = newcolors; end,
+		     get_colors = function(self) return self.colors; end,
+		     colors=recordtype.NIL,
+
 		  },
 		  create_engine
 	       )
