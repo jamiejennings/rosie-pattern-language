@@ -217,6 +217,23 @@ function trace.path_tostring(p)
    return table.concat(lines, "\n")
 end
 
+
+-- Utility
+
+local function protected_rmatch(peg, input, start)
+   local ok, m, leftover = pcall(rmatch, peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
+   if not ok then
+      print("\n\n\nTrace failed while working on: ", a)
+      if a.exps then print("a.exps: " .. tostring(list.from(a.exps))); end
+      print("ast.tostring(a) is: " .. ast.tostring(a))
+      print("start is: " .. tostring(start) .. " and input is: |" ..  input .. "|")
+      error("rmatch failed: " .. m)		    -- m is error message from pcall
+   end
+   assert(type(m)=="userdata" or m==false)
+   assert(type(leftover)=="number")
+   return m, leftover
+end
+
 ---------------------------------------------------------------------------------------------------
 -- Trace functions for each expression type
 ---------------------------------------------------------------------------------------------------
@@ -351,7 +368,7 @@ local function cs_simple(e, a, input, start, expected, nextpos)
    local simple = a.pat
    assert(pattern.is(simple))
    local wrapped_peg = common.match_node_wrap(simple.peg, "*")
-   local m, leftover = rmatch(wrapped_peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
+   local m, leftover = protected_rmatch(wrapped_peg, input, start)
    local nextstart = #input - leftover + 1
    if expected ~= nil then
       if (m and (not complement)) then
@@ -433,16 +450,7 @@ function expression(e, a, input, start)
 	 .. " (found " .. tostring(pat) .. ")")
    end
    local peg = common.match_node_wrap(pat.peg, "*")
-   local ok, m, leftover = pcall(rmatch, peg, input, start, BYTE_ENCODING, fn_BYTE_ENCODING)
-   if not ok then
-      print("\n\n\nTrace failed while working on: ", a)
-      if a.exps then print("a.exps: " .. tostring(list.from(a.exps))); end
-      print("ast.tostring(a) is: " .. ast.tostring(a))
-      print("start is: " .. tostring(start) .. " and input is: |" ..  input .. "|")
-      error("rmatch failed: " .. m)
-   end
-   assert(type(m)=="userdata" or m==false)
-   assert(type(leftover)=="number")
+   local m, leftover = protected_rmatch(peg, input, start)
    local nextpos = #input-leftover+1
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}
