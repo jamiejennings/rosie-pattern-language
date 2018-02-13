@@ -32,6 +32,7 @@ options = rpl.atmos (option)* rpl.atmos $
 -- test options accepts "--"
 -- test options accepts "-- line1\n-- line2"
 -- test options accepts "-- Comment\ncolors = \"word.any=green\" -- comment on colors line\ncolors = \"num.int=red\""
+-- test options includes option "-- Comment\ncolors = \"word.any=green\""
 
 
 
