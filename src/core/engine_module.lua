@@ -364,19 +364,40 @@ end
 
 ----------------------------------------------------------------------------------------
 
-local function execute_rcfile(e, filename)
+local function execute_rcfile(e, filename, engine_maker)
+   common.note("Processing rcfile ", filename)
    local contents, err = util.readfile(common.tilde_expand(filename))
-   if not contents then return false, err; end
-   assert(type(contents)=="string")
-   local options = rcfile.process(contents)
+   if type(contents)~="string" then
+      common.warn("Could not open rcfile ", filename)
+      return false
+   end
+   local all_ok = true
+   local options, err = rcfile.process(contents, engine_maker)
+   if not options then
+      common.warn("Could not parse rcfile ", filename)
+      return false
+   end
    for _, key_value in ipairs(options) do
       local k, v = next(key_value)
-      if k=="loadfile" then e:loadfile(v)
-      elseif k=="libpath" then e:set_libpath(v)
-      elseif k=="colors" then e:set_encoder_parm("colors", v)
+      if k=="libpath" then
+	 e:set_libpath(v)
+	 common.note("[rcfile ", filename, "] set libpath to ", v)
+      elseif k=="colors" then
+	 e:set_encoder_parm("colors", v)
+	 common.note("[rcfile ", filename, "] set colors parm to ", v)
+      elseif k=="loadfile" then
+	 local ok, pkgname, errs = e:loadfile(common.tilde_expand(v))
+	 if not ok then
+	    local msg = table.concat(map(violation.tostring, errs), '\n')
+	    common.warn("[rcfile ", filename, "] Failed to load ", v, ":\n", msg)
+	    all_ok = false
+	 else
+	    common.note("[rcfile ", filename, "] Loaded ", v)
+	 end
       end
    end -- for
-   return true
+   common.note("Finished processing rcfile ", filename)
+   return all_ok
 end
 
 ----------------------------------------------------------------------------------------

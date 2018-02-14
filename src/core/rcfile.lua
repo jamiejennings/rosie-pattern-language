@@ -55,7 +55,7 @@
 
 rcfile = {}
 
-import "list"
+list = import "list"
 filter = list.filter
 
 --[[ Example of init file contents:
@@ -74,8 +74,8 @@ filter = list.filter
 --]]
 
 -- rcfile.parse() parses the rcfile contents and returns the raw parse.
-function rcfile.parse(input)
-   local e = rosie.engine.new("rcfile parser")
+function rcfile.parse(input, engine_maker)
+   local e = engine_maker()
    local ok, _, errs = e:import("rosie/rcfile")
    assert(ok)
    local p = e:compile("rcfile.options")
@@ -144,8 +144,8 @@ function rcfile.coalesce(option_array)
    return new
 end
 
-function rcfile.process(input)
-   local parsetree, err = rcfile.parse(input)
+function rcfile.process(input, engine_maker)
+   local parsetree, err = rcfile.parse(input, engine_maker)
    if not parsetree then return nil, err; end
    local options, err = rcfile.to_options(parsetree)
    if not options then return nil, err; end

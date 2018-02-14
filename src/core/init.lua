@@ -372,6 +372,8 @@ assert(ROSIE_ENGINE)
 -- default in the engine module.
 populate_info()
 
+--common.notes = true
+
 return rosie_package
 
 
