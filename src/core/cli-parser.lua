@@ -39,9 +39,23 @@ function p.create(rosie)
       output_choices_string = output_choices_string .. ", " .. output_choices[i]
    end
 
+   parser:option("--norcfile", "Skip initialization file")
+   :args(0)
+   :target("norcfile")				    -- args.norcfile
+   :default(false)
+   
+   parser:option("--rcfile", "Initialization file to read")
+   :args(1)
+   :target("rcfile")				    -- args.rcfile
+   :default(assert(rosie.config().ROSIE_RCFILE))
+   
    parser:option("--libpath", "Directories to search for rpl modules")
    :args(1)
    :target("libpath")				    -- args.libpath
+
+   parser:option("--colors", "Color/pattern assignments for color output")
+   :args(1)
+   :target("colors")				    -- args.colors
 
    parser:option("-o --output", "Output style, one of: " .. output_choices_string)
    :convert(function(a)

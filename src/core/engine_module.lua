@@ -364,19 +364,26 @@ end
 
 ----------------------------------------------------------------------------------------
 
-local function execute_rcfile(e, filename, engine_maker)
-   common.note("Processing rcfile ", filename)
+local function read_rcfile(e, filename, engine_maker, is_default_rcfilename)
    local contents, err = util.readfile(common.tilde_expand(filename))
    if type(contents)~="string" then
-      common.warn("Could not open rcfile ", filename)
+      return false, (not is_default_rcfilename) and ("Could not open rcfile " .. filename)
+   end
+   local options, err = rcfile.process(contents, engine_maker)
+   if not options then
+      return false, "Could not parse rcfile " .. filename
+   end
+   return options
+end
+
+local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename)
+   common.note("Processing rcfile ", filename)
+   local options, err = read_rcfile(e, filename, engine_maker, is_default_rcfilename)
+   if not options then
+      if err then common.warn(err); end
       return false
    end
    local all_ok = true
-   local options, err = rcfile.process(contents, engine_maker)
-   if not options then
-      common.warn("Could not parse rcfile ", filename)
-      return false
-   end
    for _, key_value in ipairs(options) do
       local k, v = next(key_value)
       if k=="libpath" then
@@ -493,6 +500,7 @@ engine_module.get_default_compiler = get_default_compiler
 engine_module.get_default_searchpath = get_default_searchpath
 engine_module.rplx = rplx
 
+engine_module.read_rcfile = read_rcfile
 engine_module.execute_rcfile = execute_rcfile
 
 return engine_module

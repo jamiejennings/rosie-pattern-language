@@ -63,6 +63,7 @@ end
 if not ROSIE_HOME then error("Error while initializing: internal variable ROSIE_HOME not set"); end
 ROSIE_VERBOSE = false
 ROSIE_VERSION = read_version_or_die(ROSIE_HOME)
+ROSIE_RCFILE = "~/.rosierc"
 
 import('strict')(_G)				    -- do this AFTER checking the ROSIE_* globals
 
@@ -273,6 +274,7 @@ local function populate_info()
       {name="ROSIE_LIBDIR",  value=tostring(ROSIE_LIBDIR),              desc="location of the standard rpl library"},
       {name="ROSIE_LIBPATH", value=tostring(ROSIE_LIBPATH),             desc="directories to search for modules"},
       {name="ROSIE_LIBPATH_SOURCE", value=tostring(ROSIE_LIBPATH_SOURCE), desc="how ROSIE_LIBPATH was set: lib/env/cli/api"},
+      {name="ROSIE_RCFILE",  value=tostring(ROSIE_RCFILE),              desc="initialization file"},
       {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
       {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},
       {name="OSTYPE",        value=os.getenv("OSTYPE") or "",           desc="type of OS on which rosie is running"},

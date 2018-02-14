@@ -421,5 +421,63 @@ check(not results_txt:find("traceback"))
 check(results_txt:find("a ~ b"))
 
 
+---------------------------------------------------------------------------------------------------
+test.heading("Colors")
+
+function colortest(colors, expected_results)
+   cmd = rosie_cmd ..
+      " --colors '" .. colors .. 
+      "' --rpl 'foo=\"nameserver\"' match 'foo net.any' test/resolv.conf 2>&1"
+   local results, status, code = util.os_execute_capture(cmd, nil)
+   check(#results>0, "command should have produced output", 1)
+   check(code == 0, "return should have been zero", 1)
+   results_txt = table.concat(results, '\n')
+   check(not results_txt:find("traceback"), "lua error???", 1)
+   check(results_txt:find(expected_results, 1, true), "results did not match expectations", 1)
+   return results_txt
+end
+
+colortest("foo=cyan", [==[[36mnameserver[0m [m192.9.201.1[0m
+[36mnameserver[0m [m192.9.201.2[0m
+[36mnameserver[0m [mfde9:4789:96dd:03bd::1[0m
+]==])
+
+colortest("foo=cyan:*=green", [==[
+[36mnameserver[0m [32m192.9.201.1[0m
+[36mnameserver[0m [32m192.9.201.2[0m
+[36mnameserver[0m [32mfde9:4789:96dd:03bd::1[0m
+]==])
+
+colortest("foo=cyan:*=ZZZ", "Warning: ignoring invalid color/attribute: ZZZ")
+
+---------------------------------------------------------------------------------------------------
+test.heading("Libpath")
+
+--bin/rosie --libpath "test" --rpl 'import mod1' match 'mod1.S $' test/resolv.conf
+
+function libpath_test(libpath, exit_status, expected_results)
+   cmd = rosie_cmd ..
+      " --libpath '" .. libpath .. 
+      "' --rpl 'import mod1' match 'mod1.S $' test/resolv.conf 2>&1"
+   local results, status, code = util.os_execute_capture(cmd, nil)
+   check(#results>0, "command should have produced output", 1)
+   check(code == exit_status, "exit status differs from expected", 1)
+   results_txt = table.concat(results, '\n')
+   check(not results_txt:find("traceback"), "lua error???", 1)
+   for _, expectation in ipairs(expected_results) do
+      check(results_txt:find(expectation, 1, true),
+	    "results did not match expectations", 1)
+   end
+   return results_txt
+end
+
+libpath_test("x", 252, {"cannot open file x/mod1.rpl"})
+libpath_test("x:y:::", 252, {"cannot open file x/mod1.rpl",
+			     "cannot open file y/mod1.rpl",
+			     "cannot open file /mod1.rpl"})
+libpath_test("x:test", 0, {"\n"})
+libpath_test("test", 0, {"\n"})
+
+
 
 return test.finish()

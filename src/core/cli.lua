@@ -26,15 +26,20 @@ ui = assert(rosie.import("ui"), "failed to open ui package")
 argparser = assert(rosie.import("cli-parser"), "failed to load cli parser package")
 cli_match = assert(rosie.import("cli-match"), "failed to open cli match package")
 cli_common = assert(rosie.import("cli-common"), "failed to open cli common package")
+engine_module = assert(rosie.import("engine_module"), "failed to open engine_module")
 
 parser = argparser.create(rosie)
 
-function create_cl_engine(args)
-   local cl_engine = rosie.engine.new("command line engine")
-   if (not cl_engine) then error("Internal error: could not obtain new engine: " .. msg); end
-   cl_engine:set_libpath(rosie.config().ROSIE_LIBPATH)
-   return cl_engine
-end
+-- function create_cl_engine(args)
+--    local cl_engine = rosie.engine.new("command line engine")
+--    if (not cl_engine) then error("Internal error: could not obtain new engine: " .. msg); end
+--    cl_engine:set_libpath(rosie.config().ROSIE_LIBPATH)
+--    if args.colors then
+--       print("*** Setting colors to: ", args.colors)
+--       cl_engine:set_encoder_parm("colors", args.colors)
+--    end
+--    return cl_engine
+-- end
 
 local multi_sourced = {ROSIE_LIBPATH = "ROSIE_LIBPATH_SOURCE"}
 
@@ -96,9 +101,21 @@ local function run(args)
 
    if args.verbose then ROSIE_VERBOSE = true; end
 
+   if (not args.norcfile) then
+      engine_module.execute_rcfile(en,
+				   args.rcfile,
+				   rosie.engine.new,
+				   (args.rcfile==rosie.config().ROSIE_RCFILE))
+      rosie.set_configuration("ROSIE_RCFILE", args.rcfile)
+   end
+
    if args.libpath then
       en:set_libpath(args.libpath)
       rosie.set_libpath(args.libpath, "cli")
+   end
+
+   if args.colors then
+      en:set_encoder_parm("colors", args.colors)
    end
 
    if not args.command then
@@ -118,7 +135,6 @@ local function run(args)
    
    if args.command=="help" then
       local text = make_help_epilog(args)
-      print("***", text)
       if text then parser:epilog(text); end
       print(parser:get_help())
       return
@@ -126,7 +142,7 @@ local function run(args)
    
    if args.verbose then greeting(); end
 
-   -- TODO:
+   -- FUTURE:
    -- (1) expose plain parser (with/without ambient cooking) at engine/compiler level
    -- (2) expose macro expander at engine/comiler level
    -- (3) expose a print routine for violations
@@ -138,7 +154,7 @@ local function run(args)
       local expand = assert(rosie.env.expand)			    -- TODO: MOVE THIS!
       local violation = assert(rosie.env.violation)		    -- TODO: MOVE THIS!
       local errs = {}
-      local cl_engine = create_cl_engine()
+      local cl_engine = assert(cli_engine) --create_cl_engine()
       local a = cl_engine.compiler.parse_expression(common.source.new{text=args.expression}, errs)
       if not a then
 	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
