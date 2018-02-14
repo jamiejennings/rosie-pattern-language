@@ -126,6 +126,7 @@ local function load_all()
    compile = import("compile")
    loadpkg = import("loadpkg")
    trace = import("trace")
+   rcfile = import("rcfile")
    engine_module = import("engine_module")
    engine = engine_module.engine
    ui = import("ui")

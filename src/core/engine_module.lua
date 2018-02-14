@@ -91,6 +91,7 @@ local writer = require "writer"
 local loadpkg = require "loadpkg"
 local co = require "color"
 local trace = require "trace"
+local rcfile = require "rcfile"
 
 local engine, rplx				    -- forward reference
 local engine_error				    -- forward reference
@@ -361,7 +362,24 @@ function process_input_file.trace(e, expression, infilename, outfilename, errfil
    return engine_process_file(e, expression, "trace", infilename, outfilename, errfilename, trace_style, wholefileflag)
 end
 
----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+
+local function execute_rcfile(e, filename)
+   local contents, err = util.readfile(common.tilde_expand(filename))
+   if not contents then return false, err; end
+   assert(type(contents)=="string")
+   local options = rcfile.process(contents)
+   for _, key_value in ipairs(options) do
+      local k, v = next(key_value)
+      if k=="loadfile" then e:loadfile(v)
+      elseif k=="libpath" then e:set_libpath(v)
+      elseif k=="colors" then e:set_encoder_parm("colors", v)
+      end
+   end -- for
+   return true
+end
+
+----------------------------------------------------------------------------------------
 
 local function create_engine(name, compiler, searchpath)
    compiler = compiler or default_compiler
@@ -421,10 +439,9 @@ engine =
 		  create_engine
 	       )
 
-----------------------------------------------------------------------------------------
-
--- TODO: Since rplx is already compiled, arrange for rplx.match to call a streamlined version of
--- engine_match that does not need to check to see if the expression is a string and compile it.
+-- FUTURE: Since rplx is already compiled, arrange for rplx.match to call a
+-- streamlined version of engine_match that does not need to check to see if the
+-- expression is a string and compile it.
 local create_rplx = function(en, pattern)			    
 		       return rplx.factory{ engine=en,
 					    pattern=pattern,
@@ -454,5 +471,7 @@ engine_module.set_default_searchpath = set_default_searchpath
 engine_module.get_default_compiler = get_default_compiler
 engine_module.get_default_searchpath = get_default_searchpath
 engine_module.rplx = rplx
+
+engine_module.execute_rcfile = execute_rcfile
 
 return engine_module
