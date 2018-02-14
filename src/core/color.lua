@@ -83,9 +83,9 @@ local co = {}
 
 local list = require "list"
 local violation = require "violation"
-local throw = violation.raise
-local catch = violation.catch
-local is_exception = violation.is_exception
+--local throw = violation.raise
+--local catch = violation.catch
+--local is_exception = violation.is_exception
 
 local map = list.map; apply = list.apply; append = list.append;
 
@@ -113,12 +113,12 @@ co.colormap = {["*"] = "default;bold";		    -- global default
 local function query(db, key, query_type)
    if query_type=="exact" then return db[key]; end
    if query_type=="default" then return db[key..".*"]; end
-   if query_type=="global_default" then return db["*"]; end
+   if query_type=="global_default" then return db["*"] or ""; end
    error("Internal error: invalid query type: " .. tostring(query_type))
 end
 
 if not query(co.colormap, nil, "global_default") then
-   common.warn("No default color specified")
+   common.warn("No default color specified (using 'default', i.e. ANSI SGR 39)")
    co.colormap["*"] = "default"
 end
 
@@ -169,14 +169,28 @@ local ansi_color_table =
      ["bg_default"] = "49";
   }
 
-local function to_ansi_code(color_spec)
+local function memoize(fn)
+   local answers = {}
+   return function(arg)
+	     local memo = answers[arg]
+	     if memo then return memo; end
+	     memo = fn(arg)
+	     answers[arg] = memo
+	     return memo
+	  end
+end
+
+local function to_ansi_code1(color_spec)
    local number = ansi_color_table[color_spec] or color_spec
    if number:match("%d+$") then
       return number
    else
-      throw("invalid color specification: " .. tostring(color_spec))
+      common.warn("ignoring invalid color/attribute: " .. tostring(color_spec))
+      return ""
    end
 end
+
+local to_ansi_code = memoize(to_ansi_code1)
 
 local function split_color_spec(color_spec)
    local specs = {}
@@ -188,15 +202,16 @@ local function split_color_spec(color_spec)
    return specs
 end
 
+local function color_spec_to_numbers1(color_spec)
+   local specs = split_color_spec(color_spec)
+   return map(to_ansi_code, specs)
+end
+
+local color_spec_to_numbers = memoize(color_spec_to_numbers1)
+
 function co.color_string(color_spec, str)
    if not color_spec then return str; end	    -- in case default is nil/false
-   local specs = split_color_spec(color_spec)
-   local ok, numbers = catch(map, to_ansi_code, specs)
-   if not ok then error(numbers); end
-   if is_exception(numbers) then
-      local bad_spec_msg = numbers[1]
-      return false, bad_spec_msg
-   end
+   local numbers = color_spec_to_numbers(color_spec)
    return "\027[" .. table.concat(numbers, ";") .. "m" .. str .. "\027[0m"
 end
 
@@ -259,12 +274,29 @@ local function map_apply(fn, list_of_arglists)
 	      list_of_arglists)
 end
 
-function co.match(match, input, db)
-   if not db then db = co.colormap; end
+local function db_from_colors1(colors)
+   local entries = util.split(colors, ":")
+   local db = {}
+   for _, entry in ipairs(entries) do
+      local key_value = util.split(entry, '=')
+      -- Cases: empty entry; invalid entry; valid entry
+      if key_value[1] and (key_value[1]~="") then
+	 -- Entry is not empty
+	 if (not key_value[2]) then
+	    common.warn("ignoring invalid color assignment: ", entry)
+	 else
+	    db[key_value[1]] = key_value[2]
+	 end
+      end
+   end -- for
+   return db
+end
+
+local db_from_colors = memoize(db_from_colors1)
+
+function co.match(match, input, colors)
+   local db = (colors and db_from_colors(colors)) or co.colormap
    local global_default = query(db, nil, "global_default")
-   if not global_default then
-      common.note("no global default color value in color db")
-   end
    if #input==0 then return ""; end
    local last = 0
    local function color_span(color_spec, s, e)

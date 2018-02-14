@@ -308,8 +308,8 @@ load_all()
 setup_paths()
 
 common.add_encoder("color", common.BYTE_ENCODER,
-		   function(m, input, start)
-		      return color.match(common.byte_to_lua(m, input), input, color.colormap)
+		   function(m, input, start, parms)
+		      return color.match(common.byte_to_lua(m, input), input, parms.colors)
 		   end)
 common.add_encoder("matches", common.BYTE_ENCODER,
 		   function(m, input, start)

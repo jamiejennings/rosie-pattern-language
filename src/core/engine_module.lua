@@ -82,7 +82,7 @@ local io = require "io"
 local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local common = require "common"
-local rmatch = common.rmatch
+local match = common.match
 local pfunction = common.pfunction
 local macro = common.macro
 local environment = require "environment"
@@ -192,13 +192,14 @@ end
 local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
    encoder = encoder or "default"
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
-   return rmatch(rplx_exp.pattern.peg,
-		 input,
-		 start,
-		 rmatch_encoder,
-		 fn_encoder,
-		 total_time_accum,
-		 lpegvm_time_accum)
+   return match(rplx_exp.pattern.peg,
+		input,
+		start,
+		rmatch_encoder,
+		fn_encoder,
+		rplx_exp.engine.encoder_parms,
+		total_time_accum,
+		lpegvm_time_accum)
 end
 
 local function _trace(r, input, start, style)
@@ -298,9 +299,10 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    -- This set of simple optimizations almost doubles performance of the loop through the file
    -- (below) in cases where there are many lines to process.
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
+   local parms = e.encoder_parms
    local peg = r.pattern.peg			    -- optimization
    local matcher = function(input)
-		      return rmatch(peg, input, 1, rmatch_encoder, fn_encoder)
+		      return match(peg, input, 1, rmatch_encoder, fn_encoder, parms)
 		   end                              -- FUTURE: inline this for performance
 
    local infile, outfile, errfile = open3(e, infilename, outfilename, errfilename);
@@ -404,9 +406,16 @@ engine =
 		     matchfile = process_input_file.match,
 		     tracefile = process_input_file.trace,
 
-		     set_colors = function(self, newcolors) self.colors = newcolors; end,
-		     get_colors = function(self) return self.colors; end,
-		     colors=recordtype.NIL,
+		     set_encoder_parm = function(self, parm_name, parm_value)
+					   if type(parm_name)~="string" then
+					      return false, "encoder parameter name not a string: "
+						 .. tostring(parm_name)
+					   end
+					   self.encoder_parms[parm_name] = parm_value
+					   return true
+					end,
+		     get_encoder_parms = function(self) return self.encoder_parms; end,
+		     encoder_parms = {},
 
 		  },
 		  create_engine

@@ -10,7 +10,7 @@
 local string = require "string"
 local table = require "table"
 local common = require "common"
-local rmatch = common.rmatch
+local match = common.match
 
 local util = require "util"
 
@@ -138,7 +138,7 @@ function parse_without_error_check(str, pos, tokens)
    local rmatch_encoder, fn_encoder = common.lookup_encoder("default")
    assert(type(rmatch_encoder)=="number")
    assert(type(fn_encoder)=="function")
-   local nt, leftover = rmatch(any_token, str, pos, rmatch_encoder, fn_encoder)
+   local nt, leftover = match(any_token, str, pos, rmatch_encoder, fn_encoder, {})
    if (not nt) then return tokens, leftover; end  -- return ASTlist and leftover
    table.insert(tokens, nt)
    return parse_without_error_check(str, #str-leftover+1, tokens)

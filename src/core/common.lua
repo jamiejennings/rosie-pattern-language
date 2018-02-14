@@ -144,7 +144,14 @@ function common.note(...)
    io.stderr:write("\n")
 end
 
-function common.warn(str, ...) common.note("Warning: ", str, ..., "\n"); end
+function common.warn(str, ...)
+   local items = {...}
+   table.insert(items, 1, "Warning: ")
+   table.insert(items, 2, str)
+   table.insert(items, "\n")
+   for _, item in ipairs(items) do io.stderr:write(item); end
+   io.stderr:flush()
+end
 
 
 ----------------------------------------------------------------------------------------
@@ -240,15 +247,10 @@ local function insert_input_text(m, input)
    return m
 end
 
-function common.rmatch(peg, input, start, rmatch_encoder, fn_encoder, total_time, lpegvm_time)
+function common.match(peg, input, start, rmatch_encoder, fn_encoder, parms, total_time, lpegvm_time)
    local m, leftover, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
    if not m then return false, start, abend, t1, t2; end
-   -- local t0
-   -- t0 = os.clock()
-   -- results = {fn_encoder(m, input, start), leftover, abend, t1, t2}
-   -- print("*** fn_encoder time = ", (os.clock()-t0)*1000)
-   -- return table.unpack(results)
-   return fn_encoder(m, input, start), leftover, abend, t1, t2
+   return fn_encoder(m, input, start, parms), leftover, abend, t1, t2
 end
 
 -- return the match name, source position, match text, and (if there are subs), the table with the
