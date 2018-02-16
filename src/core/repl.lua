@@ -184,7 +184,7 @@ function repl.repl(en)
 		  if (not m) or (not msubs) or (not msubs[1]) then
 		     io.write("Expected a match expression followed by a quoted input string\n")
 		  elseif (not msubs[2]) or (not msubs[2].type=="literal") then
-		     io.write("Missing quoted string (after the match expression)\n")
+		     io.write("Missing input data (a quoted string after the match expression)\n")
 		  else
 		     local mname, mpos, mtext, msubs = common.decode_match(m)
 		     local ename, epos, exp_string = common.decode_match(msubs[1])
@@ -208,8 +208,7 @@ function repl.repl(en)
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			assert(tname=="word.dq")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
-			--input_text = ustring.unescape(input_text:sub(2, -2))
-			input_text = input_text:sub(2, -2)
+			input_text = ustring.dequote(input_text)
 			-- Compile the expression given in the command
 			local rplx, errs = en:compile(str)
 			if not rplx then
