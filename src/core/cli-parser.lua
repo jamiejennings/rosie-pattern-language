@@ -15,7 +15,7 @@ local p = {}
 -- create Parser
 function p.create(rosie)
    local argparse = assert(rosie.import("argparse"), "failed to load argparse package")
-   local parser = argparse("rosie", "Rosie " .. rosie.config().ROSIE_VERSION)
+   local parser = argparse("rosie", "Rosie " .. rosie.attributes.ROSIE_VERSION)
    parser:add_help(false)
    parser:require_command(false)
    parser:flag("--verbose", "Output additional messages")
@@ -47,7 +47,7 @@ function p.create(rosie)
    parser:option("--rcfile", "Initialization file to read")
    :args(1)
    :target("rcfile")				    -- args.rcfile
-   :default(assert(rosie.config().ROSIE_RCFILE))
+   :default(assert(rosie.config.default_rcfile))
    
    parser:option("--libpath", "Directories to search for rpl modules")
    :args(1)

@@ -18,8 +18,8 @@ end
 
 package.path = ROSIE_HOME .. "/lib/?.luac"
 
-ROSIE_VERSION = rosie.config().ROSIE_VERSION
-rosie.set_configuration("ROSIE_COMMAND", rosie_command)
+ROSIE_VERSION = rosie.attributes.ROSIE_VERSION
+rosie.set_attribute("ROSIE_COMMAND", rosie_command, "CLI")
 
 common = rosie.import("common")
 ui = assert(rosie.import("ui"), "failed to open ui package")
@@ -30,47 +30,14 @@ engine_module = assert(rosie.import("engine_module"), "failed to open engine_mod
 
 parser = argparser.create(rosie)
 
--- function create_cl_engine(args)
---    local cl_engine = rosie.engine.new("command line engine")
---    if (not cl_engine) then error("Internal error: could not obtain new engine: " .. msg); end
---    cl_engine:set_libpath(rosie.config().ROSIE_LIBPATH)
---    if args.colors then
---       print("*** Setting colors to: ", args.colors)
---       cl_engine:set_encoder_parm("colors", args.colors)
---    end
---    return cl_engine
--- end
-
-local multi_sourced = {ROSIE_LIBPATH = "ROSIE_LIBPATH_SOURCE"}
-
 local function print_rosie_config()
    local function printf(fmt, ...)
       print(string.format(fmt, ...))
    end
    local fmt1 = "%20s"
-   local fmt = fmt1 .. " = %s"
-   local config = rosie.config()
-   local function print_if_source(sourcetype)
-      local any = false
-      for name, sourcename in pairs(multi_sourced) do
-	 if config[sourcename] == sourcetype then
-	    if not any then
-	       print()
-	       any = true
-	    end
-	    printf(fmt, name, config[name])
-	 end
-      end -- for
-      if not any then print("  None"); end
-   end
-   io.write("Configured from environment variable: ")
-   print_if_source("env")
-   print()
-   io.write("Configured on command line: ")
-   print_if_source("cli")
-   print()
-   print("Internal configuration:")
-   for _, info in ipairs(config) do printf(fmt, info.name, info.value); end
+   local fmt = fmt1 .. " = %s (set by %s)"
+   for _, attr in ipairs(rosie.attributes) do
+      printf(fmt, attr.name, attr.value, attr.set_by); end
    print()
    io.write("Build log: ")
    local buildlogfile = ROSIE_HOME .. "/build.log"
@@ -88,13 +55,15 @@ local function greeting()
 end
 
 local function make_help_epilog(args)
-   local config = rosie.config()
-   local libpath = config.ROSIE_LIBPATH
-   local dirs = common.parse_pathlist(libpath or "")
-   local msg = {"The RPL 'import' statement will search these directories in order (this is the libpath):"}
-   for _, dir in ipairs(dirs) do table.insert(msg, "\t" .. dir); end
-   return table.concat(msg, '\n')
+   return false
 end
+--    local config = rosie.attributes
+--    local libpath = config.ROSIE_LIBPATH
+--    local dirs = common.parse_pathlist(libpath or "")
+--    local msg = {"The RPL 'import' statement will search these directories in order (this is the libpath):"}
+--    for _, dir in ipairs(dirs) do table.insert(msg, "\t" .. dir); end
+--    return table.concat(msg, '\n')
+
 
 local function run(args)
    en = assert(cli_engine)			    -- created by rosie.c
@@ -105,8 +74,8 @@ local function run(args)
       engine_module.execute_rcfile(en,
 				   args.rcfile,
 				   rosie.engine.new,
-				   (args.rcfile==rosie.config().ROSIE_RCFILE))
-      rosie.set_configuration("ROSIE_RCFILE", args.rcfile)
+				   (args.rcfile==rosie.config.default_rcfile))
+      --rosie.set_configuration("ROSIE_RCFILE", args.rcfile)
    end
 
    if args.libpath then

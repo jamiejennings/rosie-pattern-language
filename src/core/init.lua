@@ -258,47 +258,67 @@ end
 -- (1) Iterate over the numeric entries with ipairs to access an organized (well, ordered) list of
 --     important parameters, with their values and descriptions.
 -- (2) Index the table by a parameter key to obtain its value.
+-- 
+-- The attribute table is a list ordered for presentation clarity.  Access to a
+-- value using its name is not an expected use case, and is a linear time
+-- operation.
 
-ROSIE_INFO = {}
+function create_attribute_table()
+   local attribute =
+      recordtype.new("attribute",
+		     {name=false;
+		      value=false;
+		      set_by=false;
+		      description=false;
+		   })
 
--- FUTURE: Re-do this data structure?
-
--- ROSIE_INFO is a list ordered for presentation clarity.  Access to a value using its name is a
--- linear time operation, although the table size is small.
-
-local function populate_info()
-   local rpl_version = engine_module.get_default_compiler().version
-   ROSIE_INFO = {
-      {name="ROSIE_VERSION", value=tostring(ROSIE_VERSION),             desc="version of rosie cli/api"},
-      {name="ROSIE_HOME",    value=ROSIE_HOME,                          desc="location of the rosie installation directory"},
-      {name="ROSIE_LIBDIR",  value=tostring(ROSIE_LIBDIR),              desc="location of the standard rpl library"},
-      {name="ROSIE_LIBPATH", value=tostring(ROSIE_LIBPATH),             desc="directories to search for modules"},
-      {name="ROSIE_LIBPATH_SOURCE", value=tostring(ROSIE_LIBPATH_SOURCE), desc="how ROSIE_LIBPATH was set: lib/env/cli/api"},
-      {name="ROSIE_RCFILE",  value=tostring(ROSIE_RCFILE),              desc="initialization file"},
-      {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
-      {name="HOSTTYPE",      value=os.getenv("HOSTTYPE") or "",         desc="type of host on which rosie is running"},
-      {name="OSTYPE",        value=os.getenv("OSTYPE") or "",           desc="type of OS on which rosie is running"},
-      {name="ROSIE_COMMAND", value=ROSIE_COMMAND or "",                 desc="invocation command, if rosie invoked through the CLI"}
+   local function new_attribute(name, value, set_by, description)
+      return attribute.factory{ name=tostring(name),
+				value=(value and tostring(value)) or "",
+				set_by=(set_by and tostring(set_by)) or "",
+				description=(description and tostring(description)) or ""}
+   end
+   local ROSIE_INFO = {
+      new_attribute("ROSIE_VERSION", ROSIE_VERSION, "distribution", "version of rosie API / CLI"),
+      new_attribute("ROSIE_HOME", ROSIE_HOME, "build", "location of the rosie installation directory"),
+      new_attribute("ROSIE_LIBDIR", ROSIE_LIBDIR, "build", "location of the standard rpl library"),
+      new_attribute("HOSTTYPE", os.getenv("HOSTTYPE"), "environment", "type of host on which rosie is running"),
+      new_attribute("OSTYPE", os.getenv("OSTYPE"), "environment", "type of OS on which rosie is running"),
+      new_attribute("ROSIE_COMMAND", "", "", "invocation command, if rosie invoked through the CLI"),
    }
    local function search_by_name(self, name)
       if type(name) ~= "string" then return nil; end
       for _, entry in ipairs(self) do
 	 if rawget(entry, "name") == name then return rawget(entry, "value"); end
       end
-      error("Internal error: configuration key not found: " .. tostring(name))
+      error("Internal error: attribute not found: " .. tostring(name))
    end
    setmetatable(ROSIE_INFO, {__index = search_by_name})
+   return ROSIE_INFO
 end
 
-local function set_configuration(key, value)
-   for _,entry in ipairs(ROSIE_INFO) do
+local ROSIE_ATTRIBUTES
+
+local function set_attribute(key, value, set_by)
+   assert(type(value)=="string")
+   assert(type(set_by)=="string")
+   for _,entry in ipairs(ROSIE_ATTRIBUTES) do
       if entry.name == key then
 	 entry.value = value
+	 entry.set_by = set_by
 	 return 
       end
    end -- for
-   error("Internal error: configuration key not found: " .. tostring(key))
+   error("Internal error: attribute not found: " .. tostring(key))
 end
+
+-- Per engine:
+--   local rpl_version = engine_module.get_default_compiler().version
+--      {name="ROSIE_LIBPATH", value=tostring(ROSIE_LIBPATH),             desc="directories to search for modules"},
+--      {name="ROSIE_LIBPATH_SOURCE", value=tostring(ROSIE_LIBPATH_SOURCE), desc="how ROSIE_LIBPATH was set: lib/env/cli/api"},
+--      {name="ROSIE_RCFILE",  value=tostring(ROSIE_RCFILE),              desc="initialization file"},
+--      {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
+
 
 ----------------------------------------------------------------------------------------
 -- Build the rosie module as seen by the Lua client
@@ -340,23 +360,25 @@ common.add_encoder("jsonpp", common.BYTE_ENCODER,
 		      return util.table_to_pretty_string(m, max_length, json_style)
 		   end)
 
-rosie_package.set_configuration = set_configuration
-rosie_package.config = function(...) return ROSIE_INFO; end
+ROSIE_ATTRIBUTES = create_attribute_table()
+
+rosie_package.set_attribute = set_attribute
+rosie_package.attributes = ROSIE_ATTRIBUTES
+
+rosie_package.config = { default_rcfile = "~/.rosierc" }
+
 
 -- Set the default libpath for any engines created later
 rosie_package.set_libpath =
    function(newlibpath, bywhom)
-      set_configuration("ROSIE_LIBPATH", tostring(newlibpath))
-      set_configuration("ROSIE_LIBPATH_SOURCE", tostring(bywhom or "unknown"))
+--      set_configuration("ROSIE_LIBPATH", tostring(newlibpath))
+--      set_configuration("ROSIE_LIBPATH_SOURCE", tostring(bywhom or "unknown"))
       engine_module.set_default_searchpath(newlibpath)
    end
 
 rosie_package.encoders = common.encoder_table
 rosie_package.engine = engine
 rosie_package.import = import
-
--- rosie_package.setmode = setmode
--- rosie_package.mode = mode
 
 -- The magic number for setpause was determined experimentally.  The key property is that it is
 -- just less than 200, which is the default value, making the collector more aggressive.
@@ -366,13 +388,6 @@ CORE_ENGINE = create_core_engine()
 
 ROSIE_ENGINE = create_rpl_1_2_engine(CORE_ENGINE)
 assert(ROSIE_ENGINE)
-
---NEW_ENGINE = create_rpl_1_2_engine(create_core_engine())
---assert(NEW_ENGINE)
-
--- Call populate_info() after building up a default compiler and setting that
--- default in the engine module.
-populate_info()
 
 --common.notes = true
 
