@@ -30,8 +30,8 @@ print("Found rosie executable: " .. rosie_cmd)
 
 function run(cmd, expectations)
    test.heading(cmd)
-   local cmd = "echo '" .. cmd .. "' | " .. rosie_cmd .. " --rpl 'import num' repl 2>/dev/null"
-   print(); print("Command is:", cmd)
+   local cmd = "echo '" .. cmd .. "' | " .. rosie_cmd .. " --rpl 'import num,all' repl 2>&1"
+   print(); print("Command:", cmd)
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then error("Run failed: " .. tostring(status) .. ", " .. tostring(code)); end
    local mismatch_flag = false;
@@ -53,20 +53,21 @@ function run(cmd, expectations)
 	 end -- if there was an expectation
       end -- for
       if mismatch_flag then
-	 print("MISMATCHED OUTPUT WAS FOUND");
+	 print("Result: MISMATCHED OUTPUT WAS FOUND");
       else
-	 print("All output matched expectations.");
+	 print("Result: ok");
       end
       if (not ((#results+offset)==#expectations)) then
 	 print(string.format("********** Mismatched number of results (%d) versus expectations (%d) **********", (#results+offset), #expectations))
       end
       check((not mismatch_flag), "Mismatched output compared to expectations", 1)
       check(((#results+offset)==#expectations), "Mismatched number of results compared to expectations", 1)
-   else
-      -- no expectations, so just print the results
-      for _,v in ipairs(results) do print(v); end
    end -- if expectations
-   return results
+   output = table.concat(results, '\n')
+   local lua_error = output:find("traceback")
+   check(not lua_error)
+   if lua_error then print(output); end
+   return output
 end
 
 results_num_any =
@@ -90,41 +91,38 @@ results_num_any =
 
 run('.match num.any "0x123"', results_num_any)
 
-results = run('rpl 1.0')
-check(results)
-output = table.concat(results, '\n')
+output = run('rpl 1.0')
+check(output)
 check(output:find('Empty input'))
-results = run('rpl 1.1')
-check(results)
-output = table.concat(results, '\n')
+output = run('rpl 1.1')
+check(output)
 check(output:find('Empty input'))
 
-results = run('rpl 1.99')
-check(results)
-output = table.concat(results, '\n')
+output = run('rpl 1.99')
+check(output)
 check(output:find('rpl declaration requires version 1.99'))
 
-results = run('rpl 2.0')
-check(results)
-output = table.concat(results, '\n')
+output = run('rpl 2.0')
+check(output)
 check(output:find('rpl declaration requires version 2.0'))
 
-results = run('rpl 1.')
-check(results)
-output = table.concat(results, '\n')
+output = run('rpl 1.')
+check(output)
 check(output:find('syntax error while reading statement'))
 
-
-results = run('.load test/ok.rpl')
-check(results)
-output = table.concat(results, '\n')
+output = run('.load test/ok.rpl')
+check(output)
 check(output:find('Loaded test/ok.rpl'))
 
-results = run('.load test/synerr.rpl')
-check(results)
-output = table.concat(results, '\n')
+output = run('.load test/synerr.rpl')
+check(output)
 check(output:find('syntax error'))
 check(output:find('synerr.rpl'))
+
+output = run('all.things')
+check(output)
+check(output:find("grammar"))
+check(output:find("in\nalias find"))
 
 
 return test.finish()

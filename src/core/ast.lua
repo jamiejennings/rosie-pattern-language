@@ -921,7 +921,7 @@ function ast.tostring(a, already_grouped)
 	       ast.tostring(a.ref) .. " = " .. ast.tostring(a.exp) )
    elseif ast.grammar.is(a) then
       return ( "\ngrammar\n\t" ..
-	       ((#private_rules > 0) and
+	       ((#a.private_rules > 0) and
 	        table.concat(map(ast.tostring, a.private_rules), "\n\t") .. "\nin\n"
 	        or "") ..
 	       table.concat(map(ast.tostring, a.public_rules), "\n\t") ..

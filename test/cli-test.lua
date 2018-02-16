@@ -420,6 +420,51 @@ results_txt = table.concat(results, '\n')
 check(not results_txt:find("traceback"))
 check(results_txt:find("a ~ b"))
 
+cmd = rosie_cmd .. " expand 'grammar foo=\"foo\" in foo' 2>&1"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+check(code ~= 0, "return should NOT have been zero")
+results_txt = table.concat(results, '\n')
+check(not results_txt:find("traceback"))
+check(results_txt:find("[parser]"))
+check(results_txt:find("syntax error while reading expression"))
+
+cmd = rosie_cmd .. " expand 'grammar foo=\"foo\" in bar=foo end' 2>&1"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+check(code ~= 0, "return should NOT have been zero")
+results_txt = table.concat(results, '\n')
+check(not results_txt:find("traceback"))
+check(results_txt:find("[parser]"))
+check(results_txt:find("found statement where expression was expected"))
+
+cmd = rosie_cmd .. " expand 'let foo=\"foo\" in bar=foo end' 2>&1"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+check(code ~= 0, "return should NOT have been zero")
+results_txt = table.concat(results, '\n')
+check(not results_txt:find("traceback"))
+check(results_txt:find("[parser]"))
+check(results_txt:find("found statement where expression was expected"))
+
+cmd = rosie_cmd .. " expand 'let foo=\"foo\" in foo' 2>&1"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+check(code ~= 0, "return should NOT have been zero")
+results_txt = table.concat(results, '\n')
+check(not results_txt:find("traceback"))
+check(results_txt:find("[parser]"))
+check(results_txt:find("let expressions are not supported"))
+
+cmd = rosie_cmd .. " expand 'grammar X foo=\"foo\" in foo' 2>&1"
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+check(code ~= 0, "return should NOT have been zero")
+results_txt = table.concat(results, '\n')
+check(not results_txt:find("traceback"))
+check(results_txt:find("[parser]"))
+check(results_txt:find("grammar expressions are not supported"))
+
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Colors")
