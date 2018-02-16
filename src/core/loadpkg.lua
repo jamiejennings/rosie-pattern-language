@@ -63,9 +63,9 @@ local function validate_block(a, messages)
       table.insert(a.block_ideclists, table.remove(stmts, 1))
    end
    if not stmts[1] then
-      table.insert(messages, violation.info.new{who='loader',
-						message="Module consists only of declarations (no bindings)",
-						ast=a})
+--       table.insert(messages, violation.info.new{who='loader',
+-- 						message="Module consists only of declarations (no bindings)",
+-- 						ast=a})
       return true
    end
    for _, s in ipairs(stmts) do
@@ -293,7 +293,7 @@ local function import_one_force(compiler, pkgtable, searchpath, source_record, l
    local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    if not src then return false; end 		    -- message already in 'messages'
    if builtins.is_builtin_package(origin.importpath, fullpath) then
-      common.warn("load: loading ", origin.importpath, ", a built-in package")
+      common.note("load: loading ", origin.importpath, ", a built-in package")
       return import_builtin(origin.importpath, pkgtable, source_record, messages)
    end
    common.note("load: loading ", origin.importpath, " from ", fullpath)
