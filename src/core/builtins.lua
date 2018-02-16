@@ -205,7 +205,8 @@ end
 -- -----------------------------------------------------------------------------
 
 local DIRECTORY = "builtin/"
-builtins.PRELUDE_IMPORTPATH = DIRECTORY .. "prelude"
+local PRELUDE_NAME = "prelude"
+builtins.PRELUDE_IMPORTPATH = DIRECTORY .. PRELUDE_NAME
 
 local builtin_loadrequest = common.loadrequest.new{importpath=builtins.PRELUDE_IMPORTPATH}
 
@@ -214,15 +215,11 @@ builtins.sourceref = common.source.new{s=0, e=0,
 				       text="",
 				       parent=nil}
 
--- ENV is the standard prelude.  The actual structure is read-only so that it can be shared
--- between environments (within an engine and across engines in the same Lua state).
-local ENV = {}
 local prelude_entries = {
    {dot_id, pattern, utf8_char_peg, true},
    {eol_id, pattern, lpeg.P(-1), true},
    {sol_id, pattern, -lpeg.B(1), true},		    -- start of input
    {b_id, pattern, boundary, true},		    -- token boundary
---   {halt_id, pattern, lpeg.Halt(), true},
    {"message", pfunction, message_peg},
    {"error", pfunction, error_peg},
    {"keepto", macro, macro_keepto},
@@ -231,39 +228,42 @@ local prelude_entries = {
    {"ci", macro, macro_case_insensitive},
 }
 
-for _, e in ipairs(prelude_entries) do
-   if e[2]==pattern then
-      pat = e[2].new{name=e[1]; peg=e[3]; alias=e[4]}
-   elseif e[2]==pfunction then
-      pat = e[2].new{primop=e[3]}
-   elseif e[2]==macro then
-      pat = e[2].new{primop=e[3]}
-   else
-      error("error initializing standard prelude")
-   end
-   local a = ast.ref.new{localname=e[1],
-			 sourceref=builtins.sourceref,
-			 pat=pat}
-   pat.ast = a
-   ENV[e[1]] = pat
-end
-      
-setmetatable(ENV, {__tostring = function(env)
-				   return "<standard prelude environment>"
-				end;
-		   __newindex = function(env, key, value)
-				   error('Compiler: prelude environment is read-only, '
-					 .. 'cannot assign "' .. key .. '"')
-				end;
-		})
+local prelude_metatable =
+   {__tostring = function(env)
+		    return "<standard prelude environment>"
+		 end;
+    __newindex = function(env, key, value)
+		    error('Compiler: prelude environment is read-only, '
+			  .. 'cannot assign "' .. key .. '"')
+		 end;
+ }
 
-local BUILTINS = {
-   {pkgname="prelude", env=ENV},
-}
-
-function builtins.get_prelude()
+function builtins.make_standard_prelude_store()
+   local ENV = {}
+   for _, e in ipairs(prelude_entries) do
+      if e[2]==pattern then
+	 pat = e[2].new{name=e[1]; peg=e[3]; alias=e[4]}
+      elseif e[2]==pfunction then
+	 pat = e[2].new{primop=e[3]}
+      elseif e[2]==macro then
+	 pat = e[2].new{primop=e[3]}
+      else
+	 error("error initializing standard prelude")
+      end
+      local a = ast.ref.new{localname=e[1],
+			    sourceref=builtins.sourceref,
+			    pat=pat}
+      pat.ast = a
+      ENV[e[1]] = pat
+   end -- for
+   setmetatable(ENV, prelude_metatable)
    return ENV
 end
+      
+-- All the builtin packages:
+local BUILTINS = {
+   [builtins.PRELUDE_IMPORTPATH] = {pkgname=PRELUDE_NAME, store=builtins.make_standard_prelude_store()},
+}
 
 -- -----------------------------------------------------------------------------
 -- Utilities
@@ -281,10 +281,13 @@ function builtins.is_builtin_package(importpath, fullpath)
    return true
 end
 
-function builtins.get_package(importpath)
+function builtins.get_package_store(importpath)
    local probe = BUILTINS[importpath]
    if probe then
-      return probe.pkgname, probe.env
+      assert(type(probe.pkgname)=="string", "built-in package name not a string?")
+      assert(type(probe.store)=="table", "built-in package store not a table?")
+      assert(next(probe.store), "built-in package store is empty!")
+      return probe.pkgname, probe.store
    end
    return false
 end

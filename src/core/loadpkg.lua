@@ -165,9 +165,7 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    local env
    if a.block_pdecl then
       assert(a.block_pdecl.name)
-      local _, prelude = common.pkgtableref(pkgtable, environment.PRELUDE_IMPORTPATH, nil)
-      assert(prelude)
-      env = environment.new(prelude)
+      env = environment.new(environment.make_standard_prelude())
       env.origin = origin
    else
       env = environment.extend(top_level_env)
@@ -210,9 +208,7 @@ local function import_from_source(compiler, pkgtable, searchpath, source_record,
       return false
    end
    origin.packagename = a.block_pdecl.name
-   local _, prelude = common.pkgtableref(pkgtable, environment.PRELUDE_IMPORTPATH, nil)
-   assert(prelude)
-   local env = environment.new(prelude)
+   local env = environment.new(environment.make_standard_prelude())
    env.origin = origin
    if not load_dependencies(compiler, pkgtable, searchpath, source_record, a, env, loadinglist, messages) then
       return false
@@ -276,11 +272,16 @@ local function create_package_bindings(prefix, pkgenv, target_env)
    end
 end
 
-local function import_builtin(importpath)
-   local pkgname, env = builtins.get_package(importpath)
+local function import_builtin(importpath, pkgtable, source_record, messages)
+   local origin = assert(source_record.origin)
+   local pkgname, env = environment.get_builtin_package(importpath)
    if pkgname then 
+      assert(environment.is(env))
+      common.pkgtableset(pkgtable, importpath, origin.prefix, pkgname, env)
       return true, pkgname, env
    end
+   local msg = "built-in package not found: " .. importpath
+   table.insert(messages, violation.compile.new{who='loader', message=msg, ast=source_record})
    return false
 end
 
@@ -292,8 +293,8 @@ local function import_one_force(compiler, pkgtable, searchpath, source_record, l
    local src, fullpath = find_module_source(compiler, pkgtable, searchpath, source_record, loadinglist, messages)
    if not src then return false; end 		    -- message already in 'messages'
    if builtins.is_builtin_package(origin.importpath, fullpath) then
-      common.note("load: loading ", origin.importpath, ", a built-in package")
-      return import_builtin(origin.importpath)
+      common.warn("load: loading ", origin.importpath, ", a built-in package")
+      return import_builtin(origin.importpath, pkgtable, source_record, messages)
    end
    common.note("load: loading ", origin.importpath, " from ", fullpath)
    local sref = common.source.new{text=src,

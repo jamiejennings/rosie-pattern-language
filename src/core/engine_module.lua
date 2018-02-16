@@ -414,12 +414,12 @@ local function create_engine(name, compiler, searchpath)
    searchpath = searchpath or default_searchpath
    if not compiler then error("no default compiler set"); end
    local new_package_table = environment.new_package_table()
-   local _, prelude = common.pkgtableref(new_package_table, environment.PRELUDE_IMPORTPATH, nil)
-   assert(prelude)
+--    local _, prelude = common.pkgtableref(new_package_table, environment.PRELUDE_IMPORTPATH, nil)
+--    assert(prelude)
    return engine.factory { name=function() return name; end,
 			   compiler=compiler,
 			   searchpath=searchpath,
-			   env=environment.new(prelude),
+			   env=environment.new(environment.make_standard_prelude()),
 			   pkgtable=new_package_table,
 		        }
 end

@@ -2,7 +2,7 @@
 --
 -- environment.lua    Rosie environments
 --
--- © Copyright IBM Corporation 2017.
+-- © Copyright IBM Corporation 2017, 2018.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
@@ -102,10 +102,21 @@ env = recordtype.new("environment",
 		     function(parent)
 			return env.factory{store={}, parent=parent}; end)
 
-local base_environment = env.new()
-base_environment.store = builtins.get_prelude()
-
 environment.PRELUDE_IMPORTPATH = assert(builtins.PRELUDE_IMPORTPATH)
+
+function environment.make_standard_prelude()
+   local e = env.new()
+   e.store = builtins.make_standard_prelude_store()
+   return e
+end
+
+function environment.get_builtin_package(importpath)
+   local pkgname, store = builtins.get_package_store(importpath)
+   if not pkgname then return false; end
+   local e= env.new()
+   e.store = store
+   return pkgname, e
+end
 
 environment.is = env.is
 
@@ -147,7 +158,6 @@ end
 -- where env is the environment for the module, containing both local and exported bindings. 
 function environment.new_package_table()
    local pkgtable = setmetatable({}, {__tostring = function(env) return "<package_table>"; end;})
-   common.pkgtableset(pkgtable, environment.PRELUDE_IMPORTPATH, nil, "prelude", base_environment)
    return pkgtable
 end
 
