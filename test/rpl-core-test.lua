@@ -2155,7 +2155,7 @@ check_dup_id("dup-id1.rpl")
 check_dup_id("dup-id2.rpl")
 check_dup_id("dup-id3.rpl")
 
-e.searchpath = TEST_HOME .. ":" .. e.searchpath
+e:set_libpath(TEST_HOME .. ":" .. e:get_libpath())
 ok, pkgname, errs = e:import("dup-id4")
 check(not ok)
 check(not pkgname, "pkgname is: " .. tostring(pkgname))

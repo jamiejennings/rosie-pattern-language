@@ -369,7 +369,10 @@ local function cs_simple(e, a, input, start, expected, nextpos)
    local simple = a.pat
    assert(pattern.is(simple))
    local wrapped_peg = common.match_node_wrap(simple.peg, "*")
-   local m, leftover = protected_match(wrapped_peg, input, start, e.encoder_parms)
+   local m, leftover = protected_match(wrapped_peg,
+				       input,
+				       start,
+				       common.attribute_table_to_table(e.encoder_parms))
    local nextstart = #input - leftover + 1
    if expected ~= nil then
       if (m and (not complement)) then
@@ -451,7 +454,10 @@ function expression(e, a, input, start)
 	 .. " (found " .. tostring(pat) .. ")")
    end
    local peg = common.match_node_wrap(pat.peg, "*")
-   local m, leftover = protected_match(peg, input, start, e.encoder_parms)
+   local m, leftover = protected_match(peg,
+				       input,
+				       start,
+				       common.attribute_table_to_table(e.encoder_parms))
    local nextpos = #input-leftover+1
    if ast.literal.is(a) then
       return {match=m, nextpos=nextpos, ast=a, input=input, start=start}

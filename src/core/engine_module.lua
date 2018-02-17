@@ -122,7 +122,7 @@ local function really_load(e, source, origin)
    local ok, pkgname, env = loadpkg.source(e.compiler,
 					   e.pkgtable,
 					   e.env,
-					   e.searchpath,
+					   e.libpath.value,
 					   source,
 					   origin,
 					   messages)
@@ -150,7 +150,7 @@ local function import(e, packagename, as_name)
    local messages = {}
    local ok, pkgname = loadpkg.import(e.compiler,
 			     e.pkgtable,
-			     e.searchpath,
+			     e.libpath.value,
 			     packagename,	    -- requested importpath
 			     as_name,		    -- requested prefix
 			     e.env,
@@ -163,7 +163,7 @@ local function get_file_contents(e, filename, nosearch)
      local data, msg = util.readfile(filename)
      return filename, data, msg		    -- data could be nil
   else
-     return common.get_file(filename, e.searchpath, "")
+     return common.get_file(filename, e.libpath.value, "")
   end
 end
 
@@ -238,30 +238,6 @@ end
 
 ----------------------------------------------------------------------------------------
 
-local default_compiler = false
-
-local function set_default_compiler(compiler)
-   default_compiler = compiler
-end
-
-local function get_default_compiler()
-   return default_compiler
-end
-
-local default_searchpath = false
-
-local function set_default_searchpath(str)
-   default_searchpath = str
-end
-
-local function get_default_searchpath()
-   return default_searchpath
-end
-
-engine_module.post_create_hook = function(e, ...) end
-
----------------------------------------------------------------------------------------------------
-
 local process_input_file = {}
 
 local function open3(e, infilename, outfilename, errfilename)
@@ -300,7 +276,7 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    -- This set of simple optimizations almost doubles performance of the loop through the file
    -- (below) in cases where there are many lines to process.
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
-   local parms = e.encoder_parms
+   local parms = common.attribute_table_to_table(e.encoder_parms)
    local peg = r.pattern.peg			    -- optimization
    local matcher = function(input)
 		      return match(peg, input, 1, rmatch_encoder, fn_encoder, parms)
@@ -376,21 +352,26 @@ local function read_rcfile(e, filename, engine_maker, is_default_rcfilename)
    return options
 end
 
-local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename)
+local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, set_by)
    common.note("Processing rcfile ", filename)
+   assert(type(set_by)=="string")
    local options, err = read_rcfile(e, filename, engine_maker, is_default_rcfilename)
    if not options then
       if err then common.warn(err); end
       return false
    end
+   e.rcfile = common.new_attribute("ROSIE_RCFILE",
+				   filename,
+				   set_by,
+				   "initialization file processed by this engine")
    local all_ok = true
    for _, key_value in ipairs(options) do
       local k, v = next(key_value)
       if k=="libpath" then
-	 e:set_libpath(v)
+	 e:set_libpath(v, "rcfile")
 	 common.note("[rcfile ", filename, "] set libpath to ", v)
       elseif k=="colors" then
-	 e:set_encoder_parm("colors", v)
+	 e:set_encoder_parm("colors", v, "rcfile")
 	 common.note("[rcfile ", filename, "] set colors parm to ", v)
       elseif k=="loadfile" then
 	 local ok, pkgname, errs = e:loadfile(common.tilde_expand(v))
@@ -408,18 +389,69 @@ local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename)
 end
 
 ----------------------------------------------------------------------------------------
+-- API to read an engine's configuration all at once
+-- 
+-- Per engine:
+--   local rpl_version = engine_module.get_default_compiler().version
+--      {name="ROSIE_LIBPATH", value=tostring(ROSIE_LIBPATH),             desc="directories to search for modules"},
+--      {name="ROSIE_LIBPATH_SOURCE", value=tostring(ROSIE_LIBPATH_SOURCE), desc="how ROSIE_LIBPATH was set: lib/env/cli/api"},
+--      {name="ROSIE_RCFILE",  value=tostring(ROSIE_RCFILE),              desc="initialization file"},
+--      {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
 
+-- Gather and return an attribute table containing the engine's configuration.
+-- Other relevant information about the engine is in rosie.attributes (another
+-- attribute table).
+local function config(en)
+   local config = {}
+   table.insert(config,
+		common.new_attribute("RPL_VERSION",
+				     en.compiler.version,
+				     "distribution",
+				     "version of rpl (language) accepted by this engine"))
+   table.insert(config, en.libpath)
+   if #en.encoder_parms > 0 then
+      table.insert(config, en.encoder_parms)
+   end
+   return config
+end
+
+local function set_encoder_parm(self, parm_name, parm_value, set_by)
+   if type(parm_name)~="string" then
+      return false, "encoder parameter name not a string: " .. tostring(parm_name)
+   elseif type(parm_value)~="string" then
+      return false, "encoder parameter value not a string: " .. tostring(parm_value)
+   elseif type(set_by)~="string" then
+      return false, "encoder parameter 'set_by' field not a string: " .. tostring(set_by)
+   end
+   local probe = self.encoder_parms[parm_name]
+   if probe then
+      common.set_attribute(self.encoder_parms, parm_name, parm_value, set_by)
+   else
+      table.insert(self.encoder_parms,
+		   common.new_attribute(parm_name,
+					parm_value,
+					set_by,
+					"parameter that is passed to an output encoder"))
+   end
+   return true
+end
+
+----------------------------------------------------------------------------------------
 local function create_engine(name, compiler, searchpath)
-   compiler = compiler or default_compiler
-   searchpath = searchpath or default_searchpath
-   if not compiler then error("no default compiler set"); end
+   assert(compiler)
+   assert(type(searchpath)=="string")
    local new_package_table = environment.new_package_table()
-   return engine.factory { name=function() return name; end,
-			   compiler=compiler,
-			   searchpath=searchpath,
-			   env=environment.new(environment.make_standard_prelude()),
-			   pkgtable=new_package_table,
-		        }
+   return engine.factory {
+      name=function() return name; end,
+      compiler=compiler,
+      libpath=common.new_attribute("ROSIE_LIBPATH",
+				   searchpath,
+				   "default",
+				   "directories to search when importing packages"),
+      env=environment.new(environment.make_standard_prelude()),
+      pkgtable=new_package_table,
+      encoder_parms = common.create_attribute_table(),
+   }
 end
 
 function engine_error(e, msg)
@@ -439,9 +471,14 @@ engine =
 		     load=load,
 		     loadfile=loadfile,
 		     import=import,
-		     set_libpath = function(self, newlibpath) self.searchpath = newlibpath; end,
-		     get_libpath = function(self) return self.searchpath; end,
-		     searchpath="",
+		     set_libpath = function(self, newlibpath, set_by)
+				      self.libpath.value = newlibpath;
+				      self.libpath.set_by = set_by;
+				   end,
+		     get_libpath = function(self)
+				      return self.libpath.value, self.libpath.set_by
+				   end,
+		     libpath=false,
 
 		     compile=compile_expression,
 		     match=engine_match,
@@ -450,17 +487,13 @@ engine =
 		     matchfile = process_input_file.match,
 		     tracefile = process_input_file.trace,
 
-		     set_encoder_parm = function(self, parm_name, parm_value)
-					   if type(parm_name)~="string" then
-					      return false, "encoder parameter name not a string: "
-						 .. tostring(parm_name)
-					   end
-					   self.encoder_parms[parm_name] = parm_value
-					   return true
-					end,
+		     set_encoder_parm = set_encoder_parm,
 		     get_encoder_parms = function(self) return self.encoder_parms; end,
-		     encoder_parms = {},
+		     encoder_parms = false,
 
+		     rcfile = false, -- set to an attribute if an rcfile was processed
+
+		     config = config, -- return an attribute table for this engine
 		  },
 		  create_engine
 	       )
@@ -492,10 +525,6 @@ rplx = recordtype.new("rplx",
 ---------------------------------------------------------------------------------------------------
 
 engine_module.engine = engine
-engine_module.set_default_compiler = set_default_compiler
-engine_module.set_default_searchpath = set_default_searchpath
-engine_module.get_default_compiler = get_default_compiler
-engine_module.get_default_searchpath = get_default_searchpath
 engine_module.rplx = rplx
 
 engine_module.read_rcfile = read_rcfile

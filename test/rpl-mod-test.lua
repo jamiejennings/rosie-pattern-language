@@ -25,7 +25,7 @@ heading("Import")
 ----------------------------------------------------------------------------------------
 
 e = rosie.engine.new()
-e.searchpath = TEST_HOME
+e:set_libpath(TEST_HOME)
 
 ok, _, msgs = e:load("import mod1")
 check(ok)

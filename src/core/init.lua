@@ -203,13 +203,9 @@ function create_rpl_1_1_engine(e)
 
    local c2engine = engine.new("NEW RPL 1.1 engine (c2)", compiler2, ROSIE_LIBDIR)
 
-   -- Make the c2 compiler the default for new engines
-   engine_module.set_default_compiler(compiler2)
-   engine_module.set_default_searchpath(ROSIE_LIBPATH)
-   
    announce("c2 engine", c2engine)
 
-   return c2engine
+   return c2engine, compiler2
 
 end
 
@@ -227,25 +223,22 @@ function create_rpl_1_2_engine(e)
    local rplx_expression = e:compile("rpl_expression")
    assert(rplx_expression)
 
-   compiler3 = { version = version,
-		 parse_block = compile.make_parse_block(rplx_preparse, rplx_statements, version),
-	         expand_block = compile.expand_block,
-	         compile_block = compile.compile_block,
-	         dependencies_of = compile.dependencies_of,
-	         parse_expression = compile.make_parse_expression(rplx_expression),
-	         expand_expression = compile.expand_expression,
-	         compile_expression = compile.compile_expression,
-	   }
+   local compiler3 =
+      { version = version,
+	parse_block = compile.make_parse_block(rplx_preparse, rplx_statements, version),
+	expand_block = compile.expand_block,
+	compile_block = compile.compile_block,
+	dependencies_of = compile.dependencies_of,
+	parse_expression = compile.make_parse_expression(rplx_expression),
+	expand_expression = compile.expand_expression,
+	compile_expression = compile.compile_expression,
+     }
 
    local c3engine = engine.new("NEW RPL 1.2 engine (c3)", compiler3, ROSIE_LIBDIR)
 
-   -- Make the c3 compiler the default for new engines
-    engine_module.set_default_compiler(compiler3)
-    engine_module.set_default_searchpath(ROSIE_LIBPATH)
-   
    announce("c3 engine", c3engine)
 
-   return c3engine
+   return c3engine, compiler3
 
 end
 
@@ -264,61 +257,18 @@ end
 -- operation.
 
 function create_attribute_table()
-   local attribute =
-      recordtype.new("attribute",
-		     {name=false;
-		      value=false;
-		      set_by=false;
-		      description=false;
-		   })
-
-   local function new_attribute(name, value, set_by, description)
-      return attribute.factory{ name=tostring(name),
-				value=(value and tostring(value)) or "",
-				set_by=(set_by and tostring(set_by)) or "",
-				description=(description and tostring(description)) or ""}
-   end
-   local ROSIE_INFO = {
-      new_attribute("ROSIE_VERSION", ROSIE_VERSION, "distribution", "version of rosie API / CLI"),
-      new_attribute("ROSIE_HOME", ROSIE_HOME, "build", "location of the rosie installation directory"),
-      new_attribute("ROSIE_LIBDIR", ROSIE_LIBDIR, "build", "location of the standard rpl library"),
-      new_attribute("HOSTTYPE", os.getenv("HOSTTYPE"), "environment", "type of host on which rosie is running"),
-      new_attribute("OSTYPE", os.getenv("OSTYPE"), "environment", "type of OS on which rosie is running"),
-      new_attribute("ROSIE_COMMAND", "", "", "invocation command, if rosie invoked through the CLI"),
-   }
-   local function search_by_name(self, name)
-      if type(name) ~= "string" then return nil; end
-      for _, entry in ipairs(self) do
-	 if rawget(entry, "name") == name then return rawget(entry, "value"); end
-      end
-      error("Internal error: attribute not found: " .. tostring(name))
-   end
-   setmetatable(ROSIE_INFO, {__index = search_by_name})
-   return ROSIE_INFO
+   local new = common.new_attribute
+   return common.create_attribute_table(
+      new("ROSIE_VERSION", ROSIE_VERSION, "distribution", "version of rosie API / CLI"),
+      new("ROSIE_HOME", ROSIE_HOME, "build", "location of the rosie installation directory"),
+      new("ROSIE_LIBDIR", ROSIE_LIBDIR, "build", "location of the standard rpl library"),
+      new("HOSTTYPE", os.getenv("HOSTTYPE"), "environment", "type of host on which rosie is running"),
+      new("OSTYPE", os.getenv("OSTYPE"), "environment", "type of OS on which rosie is running"),
+      new("ROSIE_COMMAND", "", "", "invocation command, if rosie invoked through the CLI")
+   )
 end
 
 local ROSIE_ATTRIBUTES
-
-local function set_attribute(key, value, set_by)
-   assert(type(value)=="string")
-   assert(type(set_by)=="string")
-   for _,entry in ipairs(ROSIE_ATTRIBUTES) do
-      if entry.name == key then
-	 entry.value = value
-	 entry.set_by = set_by
-	 return 
-      end
-   end -- for
-   error("Internal error: attribute not found: " .. tostring(key))
-end
-
--- Per engine:
---   local rpl_version = engine_module.get_default_compiler().version
---      {name="ROSIE_LIBPATH", value=tostring(ROSIE_LIBPATH),             desc="directories to search for modules"},
---      {name="ROSIE_LIBPATH_SOURCE", value=tostring(ROSIE_LIBPATH_SOURCE), desc="how ROSIE_LIBPATH was set: lib/env/cli/api"},
---      {name="ROSIE_RCFILE",  value=tostring(ROSIE_RCFILE),              desc="initialization file"},
---      {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
-
 
 ----------------------------------------------------------------------------------------
 -- Build the rosie module as seen by the Lua client
@@ -361,33 +311,50 @@ common.add_encoder("jsonpp", common.BYTE_ENCODER,
 		   end)
 
 ROSIE_ATTRIBUTES = create_attribute_table()
-
-rosie_package.set_attribute = set_attribute
 rosie_package.attributes = ROSIE_ATTRIBUTES
+rosie_package.set_attribute = function(name, value, set_by)
+				 return common.set_attribute(ROSIE_ATTRIBUTES,
+							     name,
+							     value,
+							     set_by)
+			      end
 
-rosie_package.config = { default_rcfile = "~/.rosierc" }
-
-
--- Set the default libpath for any engines created later
-rosie_package.set_libpath =
-   function(newlibpath, bywhom)
---      set_configuration("ROSIE_LIBPATH", tostring(newlibpath))
---      set_configuration("ROSIE_LIBPATH_SOURCE", tostring(bywhom or "unknown"))
-      engine_module.set_default_searchpath(newlibpath)
+rosie_package.config =
+   function(optional_engine)
+      local tbl = {}
+      table.move(ROSIE_ATTRIBUTES, 1, #ROSIE_ATTRIBUTES, #tbl+1, tbl)
+      if optional_engine then
+	 local en_config = optional_engine:config()
+	 table.move(en_config, 1, #en_config, #tbl+1, tbl)
+      end
+      return tbl
    end
 
+CORE_ENGINE = create_core_engine()
+
+ROSIE_ENGINE, ROSIE_COMPILER = create_rpl_1_2_engine(CORE_ENGINE)
+assert(ROSIE_ENGINE)
+
+rosie_package.default = { rcfile = "~/.rosierc",
+			  libpath = ROSIE_LIBDIR,
+			  compiler = ROSIE_COMPILER,
+		       }
+
+
 rosie_package.encoders = common.encoder_table
-rosie_package.engine = engine
 rosie_package.import = import
+assert(rosie_package.default.compiler)
+rosie_package.engine =
+   { new = function(name)
+	      return engine_module.engine.new(name,
+					      rosie_package.default.compiler,
+					      rosie_package.default.libpath)
+	   end,
+     is = engine_module.engine.is }
 
 -- The magic number for setpause was determined experimentally.  The key property is that it is
 -- just less than 200, which is the default value, making the collector more aggressive.
 collectgarbage("setpause", 194)
-
-CORE_ENGINE = create_core_engine()
-
-ROSIE_ENGINE = create_rpl_1_2_engine(CORE_ENGINE)
-assert(ROSIE_ENGINE)
 
 --common.notes = true
 

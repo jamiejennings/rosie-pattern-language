@@ -47,11 +47,12 @@ function p.create(rosie)
    parser:option("--rcfile", "Initialization file to read")
    :args(1)
    :target("rcfile")				    -- args.rcfile
-   :default(assert(rosie.config.default_rcfile))
+   :default(false)
    
    parser:option("--libpath", "Directories to search for rpl modules")
    :args(1)
    :target("libpath")				    -- args.libpath
+   :default(false)
 
    parser:option("--colors", "Color/pattern assignments for color output")
    :args(1)

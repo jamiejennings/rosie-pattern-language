@@ -392,6 +392,64 @@ function common.type_is_syntax_error(t)
 end
 
 ----------------------------------------------------------------------------------------
+-- Configuration items and attributes
+----------------------------------------------------------------------------------------
+common.attribute =
+   recordtype.new("attribute",
+		  {name=false;
+		   value=false;
+		   set_by=false;
+		   description=false;
+		})
+
+function common.new_attribute(name, value, set_by, description)
+   return common.attribute.factory{ name=tostring(name),
+				    value=(value and tostring(value)) or "",
+				    set_by=(set_by and tostring(set_by)) or "",
+				    description=(description and tostring(description)) or ""}
+end
+
+function common.set_attribute(attribute_table, key, value, set_by)
+   assert(type(value)=="string")
+   assert(type(set_by)=="string")
+   for _,entry in ipairs(attribute_table) do
+      if entry.name == key then
+	 entry.value = value
+	 entry.set_by = set_by
+	 return 
+      end
+   end -- for
+   error("Internal error: attribute not found: " .. tostring(key))
+end
+
+function common.create_attribute_table(...)
+   local at = {}
+   local function search_by_name(self, name)
+      if type(name) ~= "string" then return nil; end
+      for _, entry in ipairs(self) do
+	 if rawget(entry, "name") == name then return rawget(entry, "value"); end
+      end
+      return nil				    -- not found
+   end
+   for _, entry in ipairs{...} do
+      assert(common.attribute.is(entry))
+      table.insert(at, entry)
+   end
+   setmetatable(at, {__index = search_by_name})
+   return at
+end
+
+-- return a table with attribute names as keys, and values as indices, for fast
+-- lookup.
+function common.attribute_table_to_table(at)
+   local tbl = {}
+   for _, entry in ipairs(at) do
+      tbl[entry.name] = entry.value
+   end
+   return tbl
+end
+
+----------------------------------------------------------------------------------------
 -- Output encoding functions
 ----------------------------------------------------------------------------------------
 

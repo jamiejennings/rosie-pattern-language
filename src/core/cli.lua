@@ -30,14 +30,24 @@ engine_module = assert(rosie.import("engine_module"), "failed to open engine_mod
 
 parser = argparser.create(rosie)
 
-local function print_rosie_config()
+local function print_rosie_config(en)
    local function printf(fmt, ...)
       print(string.format(fmt, ...))
    end
    local fmt1 = "%20s"
-   local fmt = fmt1 .. " = %s (set by %s)"
-   for _, attr in ipairs(rosie.attributes) do
-      printf(fmt, attr.name, attr.value, attr.set_by); end
+   local fmt = fmt1 .. " = %q (set by %s)"
+
+   for _, attr in ipairs(rosie.config(en)) do
+      if common.attribute.is(attr) then
+	 printf(fmt, attr.name, attr.value, attr.set_by)
+      elseif type(attr)=="table" then
+	 for _, attr in ipairs(attr) do
+	    printf(fmt, attr.name, attr.value, attr.set_by)
+	 end
+      else
+	 error("Unexpected item in attribute table: " .. tostring(attr))
+      end
+   end -- for
    print()
    io.write("Build log: ")
    local buildlogfile = ROSIE_HOME .. "/build.log"
@@ -54,15 +64,9 @@ local function greeting()
    io.write("Rosie " .. ROSIE_VERSION .. "\n")
 end
 
-local function make_help_epilog(args)
+local function make_help_epilog(en)
    return false
 end
---    local config = rosie.attributes
---    local libpath = config.ROSIE_LIBPATH
---    local dirs = common.parse_pathlist(libpath or "")
---    local msg = {"The RPL 'import' statement will search these directories in order (this is the libpath):"}
---    for _, dir in ipairs(dirs) do table.insert(msg, "\t" .. dir); end
---    return table.concat(msg, '\n')
 
 
 local function run(args)
@@ -70,21 +74,26 @@ local function run(args)
 
    if args.verbose then ROSIE_VERBOSE = true; end
 
+   local rcfile = rosie.default.rcfile
+   local is_default = true
    if (not args.norcfile) then
+      if args.rcfile then
+	 rcfile = args.rcfile
+	 is_default = false
+      end
       engine_module.execute_rcfile(en,
-				   args.rcfile,
+				   rcfile,
 				   rosie.engine.new,
-				   (args.rcfile==rosie.config.default_rcfile))
-      --rosie.set_configuration("ROSIE_RCFILE", args.rcfile)
+				   is_default,
+				   (is_default and "default") or "CLI")
    end
 
    if args.libpath then
-      en:set_libpath(args.libpath)
-      rosie.set_libpath(args.libpath, "cli")
+      en:set_libpath(args.libpath, "CLI")
    end
 
    if args.colors then
-      en:set_encoder_parm("colors", args.colors)
+      en:set_encoder_parm("colors", args.colors, "CLI")
    end
 
    if not args.command then
@@ -98,12 +107,12 @@ local function run(args)
    end
 
    if args.command=="config" then
-      print_rosie_config()
+      print_rosie_config(en)
       return
    end
    
    if args.command=="help" then
-      local text = make_help_epilog(args)
+      local text = make_help_epilog(en)
       if text then parser:epilog(text); end
       print(parser:get_help())
       return
