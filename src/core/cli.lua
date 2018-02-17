@@ -37,7 +37,7 @@ local function print_rosie_config(en)
    local fmt1 = "%20s"
    local fmt = fmt1 .. " = %q (set by %s)"
 
-   for _, attr_table in ipairs{rosie.config(en)} do
+   for _, attr_table in ipairs(rosie.config(en)) do
       if attr_table then
 	 for _, attr in ipairs(attr_table) do
 	    printf(fmt, attr.name, attr.value, attr.set_by)

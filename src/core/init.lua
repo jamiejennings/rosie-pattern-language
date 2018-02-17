@@ -325,7 +325,7 @@ rosie_package.config =
       if optional_engine then
 	 en_config, encoder_parms = optional_engine:config()
       end
-      return ROSIE_ATTRIBUTES, en_config, encoder_parms
+      return {ROSIE_ATTRIBUTES, en_config, encoder_parms}
    end
 
 CORE_ENGINE = create_core_engine()

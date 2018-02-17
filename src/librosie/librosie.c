@@ -392,7 +392,8 @@ int rosie_config(Engine *e, str *retval) {
   get_registry(rosie_key);
   t = lua_getfield(L, -1, "config");
   CHECK_TYPE("config", t, LUA_TFUNCTION);
-  t = lua_pcall(L, 0, 1, 0);
+  get_registry(engine_key);
+  t = lua_pcall(L, 1, 1, 0);
   if (t != LUA_OK) {
     LOG("rosie.config() failed\n");
     *retval = rosie_new_string_from_const("rosie.config() failed");
@@ -402,7 +403,7 @@ int rosie_config(Engine *e, str *retval) {
   }
   t = to_json_string(L, -1, &r);
   if (t != LUA_OK) {
-    LOG("in config(), could not convert config information to json\n");
+    LOGf("in config(), could not convert config information to json (code=%d)\n", t);
     *retval = rosie_new_string_from_const("in config(), could not convert config information to json");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
@@ -429,10 +430,13 @@ int rosie_libpath(Engine *e, str *newpath) {
     CHECK_TYPE("engine.get_libpath()", t, LUA_TFUNCTION);
   }    
   lua_pushvalue(L, -2);
-  if (newpath->ptr) lua_pushlstring(L, (const char *)newpath->ptr, newpath->len);
-  t = lua_pcall(L, (newpath->ptr) ? 2 : 1, (newpath->ptr) ? 0 : 1, 0);
+  if (newpath->ptr) {
+    lua_pushlstring(L, (const char *)newpath->ptr, newpath->len);
+    lua_pushstring(L, "API");
+  }
+  t = lua_pcall(L, (newpath->ptr) ? 3 : 1, (newpath->ptr) ? 0 : 2, 0);
   if (t != LUA_OK) {
-    if (newpath) {
+    if (newpath->ptr) {
 	LOG("engine.set_libpath() failed\n");
       } else {
 	LOG("engine.get_libpath() failed\n");
@@ -444,14 +448,15 @@ int rosie_libpath(Engine *e, str *newpath) {
 #if LOGGING
   do {
     get_registry(engine_key);
-    t = lua_getfield(L, -1, "searchpath");
-    LOGf("searchpath obtained directly from engine object is: %s\n", lua_tostring(L, -1));
-    lua_pop(L, 1);
+    t = lua_getfield(L, -1, "libpath");
+    t = lua_getfield(L, -1, "value");
+    LOGf("libpath obtained directly from engine object is: %s\n", lua_tostring(L, -1));
+    lua_pop(L, 3);
   } while (0);
 #endif
   if (!newpath->ptr) {
     size_t tmplen;
-    const char *tmpptr = lua_tolstring(L, -1, &tmplen);
+    const char *tmpptr = lua_tolstring(L, -2, &tmplen);
     str tmpstr = rosie_new_string((byte_ptr)tmpptr, tmplen);
     (*newpath).ptr = tmpstr.ptr;
     (*newpath).len = tmpstr.len;

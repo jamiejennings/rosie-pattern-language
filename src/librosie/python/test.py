@@ -98,10 +98,11 @@ class RosieConfigTest(unittest.TestCase):
         a = self.engine.config()
         self.assertTrue(a)
         cfg = json.loads(a)
-        for entry in cfg:
+        array = cfg[0]
+        for entry in array:
             self.assertTrue(type(entry) is dict)
             self.assertTrue(entry['name'])
-            self.assertTrue(entry['desc'])
+            self.assertTrue(entry['description'])
             if not entry['value']: print "NOTE: no value for config key", entry['name']
                 
 class RosieLibpathTest(unittest.TestCase):
@@ -120,6 +121,7 @@ class RosieLibpathTest(unittest.TestCase):
         newpath = "foo bar baz"
         self.engine.libpath(newpath)
         testpath = self.engine.libpath()
+        print "***", testpath
         self.assertIsInstance(testpath, basestring)
         self.assertTrue(testpath == newpath)
                 
