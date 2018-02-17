@@ -403,7 +403,7 @@ local function config(en)
 				     "distribution",
 				     "version of rpl (language) accepted by this engine"))
    table.insert(config, en.libpath)
-   return config, (#en.encoder_parms > 0) and en.encoder_parms
+   return config, ((#en.encoder_parms > 0) and en.encoder_parms) or nil
 end
 
 local function set_encoder_parm(self, parm_name, parm_value, set_by)

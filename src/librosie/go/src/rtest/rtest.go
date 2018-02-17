@@ -44,10 +44,12 @@ func main() {
 	runtime.GC()
 	fmt.Printf("Engine is %v\n", engine)
 
- 	cfg, err := engine.Config()
+ 	cfgs, err := engine.Config()
 	if err == nil {
-		for _, entry := range cfg {
-			fmt.Printf("%s = %s (%s)\n", entry["name"], entry["value"], entry["desc"])
+		for _, cfg := range cfgs {
+			for _, entry := range cfg {
+				fmt.Printf("%s = %s (%s)\n", entry["name"], entry["value"], entry["desc"])
+			}
 		}
  	} else {
  		fmt.Printf("Return value from config was: %v\n", err)
@@ -239,8 +241,7 @@ func main() {
 	ok, pkgname, msgs, err = engine.LoadString("import num")
 	fmt.Println(ok, pkgname, msgs, err)
 	assert(ok, "import failed")
-	assert(len(msgs) != 0,
-		"importing this file should have produced a message about no bindings in the loaded string")
+	assert(len(msgs) == 0, "no output was expected")
 	assert(err==nil, "err!!")
 
 

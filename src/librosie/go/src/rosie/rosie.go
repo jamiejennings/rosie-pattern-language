@@ -39,7 +39,7 @@ type Match struct {
 
 type (
 	Trace map[string]interface{}
-	Configuration [] map[string] string
+	Configuration [] [] map[string] string
 	Messages [] interface{}
 	RosieString = C.struct_rosie_string
 	RosieStringPtr = *C.struct_rosie_string
