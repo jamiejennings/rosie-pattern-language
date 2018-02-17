@@ -104,6 +104,16 @@ class RosieConfigTest(unittest.TestCase):
             self.assertTrue(entry['name'])
             self.assertTrue(entry['description'])
             if not entry['value']: print "NOTE: no value for config key", entry['name']
+        array = cfg[1]
+        rpl_version = None
+        libpath = None
+        for entry in array:
+            if entry['name']=='RPL_VERSION':
+                rpl_version = entry['value']
+            if entry['name']=='ROSIE_LIBPATH':
+                libpath = entry['value']
+        self.assertTrue(type(rpl_version) is unicode)
+        self.assertTrue(type(libpath) is unicode)
                 
 class RosieLibpathTest(unittest.TestCase):
 
@@ -121,7 +131,6 @@ class RosieLibpathTest(unittest.TestCase):
         newpath = "foo bar baz"
         self.engine.libpath(newpath)
         testpath = self.engine.libpath()
-        print "***", testpath
         self.assertIsInstance(testpath, basestring)
         self.assertTrue(testpath == newpath)
                 
