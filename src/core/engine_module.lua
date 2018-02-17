@@ -390,17 +390,11 @@ end
 
 ----------------------------------------------------------------------------------------
 -- API to read an engine's configuration all at once
--- 
--- Per engine:
---   local rpl_version = engine_module.get_default_compiler().version
---      {name="ROSIE_LIBPATH", value=tostring(ROSIE_LIBPATH),             desc="directories to search for modules"},
---      {name="ROSIE_LIBPATH_SOURCE", value=tostring(ROSIE_LIBPATH_SOURCE), desc="how ROSIE_LIBPATH was set: lib/env/cli/api"},
---      {name="ROSIE_RCFILE",  value=tostring(ROSIE_RCFILE),              desc="initialization file"},
---      {name="RPL_VERSION",   value=tostring(rpl_version),               desc="version of rpl (language) accepted"},
 
--- Gather and return an attribute table containing the engine's configuration.
--- Other relevant information about the engine is in rosie.attributes (another
--- attribute table).
+-- Gather and return an attribute table containing the engine's configuration,
+-- and another containing encoder parameters (if any are set).  Other relevant
+-- information about the engine is in rosie.attributes (another attribute
+-- table).
 local function config(en)
    local config = {}
    table.insert(config,
@@ -409,10 +403,7 @@ local function config(en)
 				     "distribution",
 				     "version of rpl (language) accepted by this engine"))
    table.insert(config, en.libpath)
-   if #en.encoder_parms > 0 then
-      table.insert(config, en.encoder_parms)
-   end
-   return config
+   return config, (#en.encoder_parms > 0) and en.encoder_parms
 end
 
 local function set_encoder_parm(self, parm_name, parm_value, set_by)
@@ -437,6 +428,8 @@ local function set_encoder_parm(self, parm_name, parm_value, set_by)
 end
 
 ----------------------------------------------------------------------------------------
+-- Engine and rplx structures
+
 local function create_engine(name, compiler, searchpath)
    assert(compiler)
    assert(type(searchpath)=="string")

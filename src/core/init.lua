@@ -321,13 +321,11 @@ rosie_package.set_attribute = function(name, value, set_by)
 
 rosie_package.config =
    function(optional_engine)
-      local tbl = {}
-      table.move(ROSIE_ATTRIBUTES, 1, #ROSIE_ATTRIBUTES, #tbl+1, tbl)
+      local en_config, encoder_parms
       if optional_engine then
-	 local en_config = optional_engine:config()
-	 table.move(en_config, 1, #en_config, #tbl+1, tbl)
+	 en_config, encoder_parms = optional_engine:config()
       end
-      return tbl
+      return ROSIE_ATTRIBUTES, en_config, encoder_parms
    end
 
 CORE_ENGINE = create_core_engine()
