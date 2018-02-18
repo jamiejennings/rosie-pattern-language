@@ -347,8 +347,8 @@ local function read_rcfile(e, filename, engine_maker)
       return false, false
    end
    local options, err = rcfile.process(contents, engine_maker)
-   -- FUTURE: make use of err?
    if not options then
+      common.warn("[", filename, "] ", err)
       return true, false
    end
    return true, options
@@ -377,18 +377,18 @@ local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, 
       local k, v = next(key_value)
       if k=="libpath" then
 	 e:set_libpath(v, "rcfile")
-	 common.note("[rcfile ", filename, "] set libpath to ", v)
+	 common.note("[", filename, "] set libpath to ", v)
       elseif k=="colors" then
 	 e:set_encoder_parm("colors", v, "rcfile")
-	 common.note("[rcfile ", filename, "] set colors parm to ", v)
+	 common.note("[", filename, "] set colors parm to ", v)
       elseif k=="loadfile" then
 	 local ok, pkgname, errs = e:loadfile(common.tilde_expand(v))
 	 if not ok then
 	    local msg = table.concat(list.map(violation.tostring, errs), '\n')
-	    common.warn("[rcfile ", filename, "] Failed to load ", v, ":\n", msg)
+	    common.warn("[", filename, "] Failed to load ", v, ":\n", msg)
 	    all_ok = false
 	 else
-	    common.note("[rcfile ", filename, "] Loaded ", v)
+	    common.note("[", filename, "] Loaded ", v)
 	 end
       end
    end -- for
@@ -405,12 +405,13 @@ end
 -- table).
 local function config(en)
    local config = {}
-   table.insert(config,
-		common.new_attribute("RPL_VERSION",
-				     en.compiler.version,
-				     "distribution",
-				     "version of rpl (language) accepted by this engine"))
-   table.insert(config, en.libpath)
+   local rpl_version = common.new_attribute("RPL_VERSION",
+					    en.compiler.version,
+					    "distribution",
+					    "version of rpl (language) accepted by this engine")
+   table.insert(config, rpl_version)
+   if en.libpath then table.insert(config, en.libpath); end
+   if en.rcfile then table.insert(config, en.rcfile); end
    return config, ((#en.encoder_parms > 0) and en.encoder_parms) or nil
 end
 

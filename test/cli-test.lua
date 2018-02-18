@@ -523,6 +523,40 @@ libpath_test("x:y:::", 252, {"cannot open file x/mod1.rpl",
 libpath_test("x:test", 0, {"\n"})
 libpath_test("test", 0, {"\n"})
 
+---------------------------------------------------------------------------------------------------
+test.heading("Rcfile")
 
+function rcfile_test(filename, exit_status, expected_results, set_no_rcfile)
+   local norcfile = ""
+   if set_no_rcfile then norcfile = " --norcfile "; end
+   cmd = rosie_cmd .. norcfile .. " --rcfile '" .. filename .. "' config 2>&1"
+   local results, status, code = util.os_execute_capture(cmd, nil)
+   check(#results>0, "command should have produced output", 1)
+   check(code == exit_status, "exit status differs from expected", 1)
+   results_txt = table.concat(results, '\n')
+   check(not results_txt:find("traceback"), "lua error???", 1)
+   for _, expectation in ipairs(expected_results) do
+      check(results_txt:find(expectation, 1, true),
+	    "results did not match this expectation: " .. expectation, 1)
+   end
+   return results_txt
+end
+
+rcfile_test("this file does not exist", 0, {"Warning", "Could not open rcfile"})
+rcfile_test("test/rcfile1", 0, {"Warning: [test/rcfile1]", "Failed to load another-file"})
+rcfile_test("test/rcfile2", 0, {"Warning: [test/rcfile2]", "Syntax errors in rcfile"})
+rcfile_test("test/rcfile3", 0, {"Warning: [test/rcfile3]", "Failed to load", "mod1.rpl"})
+results = rcfile_test("test/rcfile4", 0, {'ROSIE_LIBPATH = "foo:bar:baz"',
+					  'ROSIE_RCFILE = "test/rcfile4"',
+					  'colors = "word.any=green'})
+check(not results:find("Warning"))
+
+results = rcfile_test("this file does not exist", 0, {'ROSIE_LIBPATH'}, true)
+check(not results:find("Warning"))
+check(not results:find("error"))
+
+results = rcfile_test("test/rcfile1", 0, {}, true)
+check(not results:find("Warning"))
+check(not results:find("error"))
 
 return test.finish()

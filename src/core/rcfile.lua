@@ -82,11 +82,11 @@ function rcfile.parse(input, engine_maker)
    assert(p)
    local m, leftover, abend = p:match(input)
    if not m then
-      return nil, "error parsing rcfile input: parse failed"
+      return nil, "Syntax errors in rcfile"
    elseif (leftover ~= 0) then
-      return nil, "error parsing rcfile input: leftover = " .. tostring(leftover)
+      return nil, "Syntax errors at end of rcfile, leftover = " .. tostring(leftover)
    elseif abend then
-      return nil, "error parsing rcfile input: match was aborted"
+      return nil, "Internal error parsing rcfile input (this is a bug)"
    end
    return m
 end
