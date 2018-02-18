@@ -63,6 +63,7 @@ int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int 
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_loadfile(void *e, int *ok, str *fn, str *pkgname, str *errors);
 int rosie_import(void *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages);
+int rosie_read_rcfile(void *e, str *filename, int *file_exists, str *options);
 
 void free(void *obj);
 
@@ -271,6 +272,21 @@ class engine ():
             else:
                 raise ValueError("unknown error caused matchfile to fail")
         return Ccin[0], Ccout[0], Ccerr[0]
+
+    def read_rcfile(self, filename=None):
+        Cfile_exists = ffi.new("int *")
+        if filename is None:
+            filename_arg = new_cstr()
+        else:
+            filename_arg = new_cstr(filename)
+        options = new_cstr()
+        ok = lib.rosie_read_rcfile(self.engine, filename_arg, Cfile_exists, options)
+        if ok != 0:
+            raise RuntimeError("read_rcfile() failed (please report this as a bug)")
+        if Cfile_exists[0] == 0: return None # file did not exist
+        options = read_cstr(options)
+        if options: return json.loads(options)
+        return False   # file existed, but some problems processing it
 
     def libpath(self, libpath=None):
         if libpath is None:

@@ -77,11 +77,10 @@ local function run(args)
 	 rcfile = args.rcfile
 	 is_default = false
       end
-      engine_module.execute_rcfile(en,
-				   rcfile,
-				   rosie.engine.new,
-				   is_default,
-				   (is_default and "default") or "CLI")
+      en:execute_rcfile(rcfile,
+			rosie.engine.new,
+			is_default,
+			(is_default and "default") or "CLI")
    end
 
    if args.libpath then

@@ -357,21 +357,27 @@ class RosieMatchFileTest(unittest.TestCase):
         self.assertTrue(cout == 0)
         self.assertTrue(cerr == 1)
 
+class RosieReadRcfileTest(unittest.TestCase):
 
-# set soft memory limit also
+    engine = None
 
-# engine.setlibpath("/tmp")
-# print(engine.config())
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
 
-# ok, pkgname, errs = engine.import_pkg("fooword")
-# print "importing word while libpath is set to /tmp produced:", ok, pkgname, errs
+    def tearDown(self):
+        pass
 
-# bar, errs = engine.compile("word.bar")
-# print "Compiling word.bar produced:", bar, "holding", bar[0], "and", errs
+    def test(self):
+        if testdir:
+            options = self.engine.read_rcfile(os.path.join(testdir, "rcfile1"))
+            self.assertIsInstance(options, list)
+            options = self.engine.read_rcfile(os.path.join(testdir, "rcfile2"))
+            self.assertTrue(options is False)
+            options = self.engine.read_rcfile("This file does not exist")
+            self.assertTrue(options is None)
 
-# m, left, abend, tt, tm = engine.match(bar, "Hi", 1, "line")
-# print m, left, abend, tt, tm
-
+        
+# -----------------------------------------------------------------------------
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -379,9 +385,11 @@ if __name__ == '__main__':
     if sys.argv[1]=='local':
         librosiedir = "../local"
         print "Loading librosie from", librosiedir
+        testdir = "../rosie/test"
     elif sys.argv[1]=='system':
         librosiedir = None
         print "Loading librosie from system library path"
+        testdir = None
     else:
         sys.exit("Error: invalid command-line parameter (must be 'local' or 'system')")
     print "Running tests using", sys.argv[1], "rosie installation"

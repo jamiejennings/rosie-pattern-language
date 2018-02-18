@@ -340,24 +340,28 @@ end
 
 ----------------------------------------------------------------------------------------
 
+-- return file_existed, options_table or false
 local function read_rcfile(e, filename, engine_maker, is_default_rcfilename)
    local contents, err = util.readfile(common.tilde_expand(filename))
    if type(contents)~="string" then
-      return false, (not is_default_rcfilename) and ("Could not open rcfile " .. filename)
+      return false, false
    end
    local options, err = rcfile.process(contents, engine_maker)
+   -- FUTURE: make use of err?
    if not options then
-      return false, "Could not parse rcfile " .. filename
+      return true, false
    end
-   return options
+   return true, options
 end
 
 local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, set_by)
    common.note("Processing rcfile ", filename)
    assert(type(set_by)=="string")
-   local options, err = read_rcfile(e, filename, engine_maker, is_default_rcfilename)
-   if not options then
-      if err then common.warn(err); end
+   local file_existed, options = read_rcfile(e, filename, engine_maker, is_default_rcfilename)
+   if not file_existed then
+      if not is_default_rcfilename then
+	 common.warn("Could not open rcfile " .. filename)
+      end
       return false
    end
    e.rcfile = common.new_attribute("ROSIE_RCFILE",
@@ -485,6 +489,8 @@ engine =
 		     encoder_parms = false,
 
 		     rcfile = false, -- set to an attribute if an rcfile was processed
+		     read_rcfile = read_rcfile,
+		     execute_rcfile = execute_rcfile,
 
 		     config = config, -- return an attribute table for this engine
 		  },
@@ -519,8 +525,5 @@ rplx = recordtype.new("rplx",
 
 engine_module.engine = engine
 engine_module.rplx = rplx
-
-engine_module.read_rcfile = read_rcfile
-engine_module.execute_rcfile = execute_rcfile
 
 return engine_module
