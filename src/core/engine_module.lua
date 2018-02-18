@@ -341,7 +341,7 @@ end
 ----------------------------------------------------------------------------------------
 
 -- return file_existed, options_table or false
-local function read_rcfile(e, filename, engine_maker, is_default_rcfilename)
+local function read_rcfile(e, filename, engine_maker)
    local contents, err = util.readfile(common.tilde_expand(filename))
    if type(contents)~="string" then
       return false, false
@@ -354,6 +354,7 @@ local function read_rcfile(e, filename, engine_maker, is_default_rcfilename)
    return true, options
 end
 
+-- return file_existed, and processed_without_errors
 local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, set_by)
    common.note("Processing rcfile ", filename)
    assert(type(set_by)=="string")
@@ -362,7 +363,10 @@ local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, 
       if not is_default_rcfilename then
 	 common.warn("Could not open rcfile " .. filename)
       end
-      return false
+      return false, false
+   end
+   if not options then
+      return true, false
    end
    e.rcfile = common.new_attribute("ROSIE_RCFILE",
 				   filename,
@@ -380,7 +384,7 @@ local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, 
       elseif k=="loadfile" then
 	 local ok, pkgname, errs = e:loadfile(common.tilde_expand(v))
 	 if not ok then
-	    local msg = table.concat(map(violation.tostring, errs), '\n')
+	    local msg = table.concat(list.map(violation.tostring, errs), '\n')
 	    common.warn("[rcfile ", filename, "] Failed to load ", v, ":\n", msg)
 	    all_ok = false
 	 else
@@ -389,7 +393,7 @@ local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, 
       end
    end -- for
    common.note("Finished processing rcfile ", filename)
-   return all_ok
+   return true, all_ok
 end
 
 ----------------------------------------------------------------------------------------

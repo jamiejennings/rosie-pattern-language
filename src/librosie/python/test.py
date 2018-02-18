@@ -376,6 +376,27 @@ class RosieReadRcfileTest(unittest.TestCase):
             options = self.engine.read_rcfile("This file does not exist")
             self.assertTrue(options is None)
 
+class RosieExecuteRcfileTest(unittest.TestCase):
+
+    engine = None
+
+    def setUp(self):
+        self.engine = rosie.engine(librosiedir)
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        if testdir:
+            result = self.engine.execute_rcfile("This file does not exist")
+            self.assertTrue(result is None)
+            result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile1"))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile2"))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile3"))
+            self.assertTrue(result is True)
+
         
 # -----------------------------------------------------------------------------
 

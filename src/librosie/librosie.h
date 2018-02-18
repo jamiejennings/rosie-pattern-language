@@ -74,7 +74,7 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages);
 int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages);
 int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages);
 int rosie_read_rcfile(Engine *e, str *filename, int *file_exists, str *options);
-
+int rosie_execute_rcfile(Engine *e, str *filename, int *file_exists, int *no_errors);
 /*
 
 Administrative:
