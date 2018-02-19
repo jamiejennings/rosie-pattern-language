@@ -1,3 +1,11 @@
+"No one is actually using the vertical tab escape sequence. [...] That's because
+it doesn't do anything, except with some particular printers and terminal
+emulators, and in those cases you're better off not relying on it anyway. [...]
+Here's my simple plea: stop it. Stop mentioning vertical tabs in tutorials and
+language references. Drop the "\v" sequence in all future programming
+languages."
+James Hague, Stop the Vertical Tab Madness (http://prog21.dadgum.com/76.html)
+
 "Looking at code you wrote more than two weeks ago is like looking at code you
 are seeing for the first time."
 attributed to Dan Hurvitz (http://www.softwarequotes.com/showquotes.aspx?id=738)
