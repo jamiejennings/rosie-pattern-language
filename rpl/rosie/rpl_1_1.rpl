@@ -104,13 +104,6 @@ lookbehind = [[<]]
 alias predicate_symbol = negation / lookahead / lookbehind
 	    
 grammar
-   alias exp = {atmos { syntax_error /
-	                 choice /
-	                 sequence /
-	                 and_exp /
-	                 term
-	              }
-	       }
    syntax_error = { stmnt_prefix rest_of_line }
    application = { identifier ":" } atmos (arg / arglist / rawarglist )
    arglist = { atmos open int_or_exp { atmos "," int_or_exp }* close }
@@ -133,15 +126,24 @@ grammar
    cooked = { open exp atmos close }
    raw = { openraw exp atmos closeraw }
    predicate = { predicate_symbol ws? term }
+;in
+   alias exp = {atmos { syntax_error /
+	                 choice /
+	                 sequence /
+	                 and_exp /
+	                 term
+	              }
+	       }
 end
 
 grammar
-   alias stmnt = local_ / exported
    alias exported = alias_ / grammar_ / assignment_
    local_ = "local" atmos alias_ / grammar_ / assignment_ 
    alias_ = "alias" atmos identifier ws? "=" exp 
    grammar_ = "grammar" { atmos { alias_ / assignment_ } }+ atmos end_token
    assignment_ = identifier ws? "=" exp 
+;in
+   alias stmnt = local_ / exported
 end
 
 major = [[0-9]]{1,2}
