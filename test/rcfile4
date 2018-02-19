@@ -1,0 +1,10 @@
+-- This rcfile should process without errors when loaded from the test
+-- directory 
+libpath = "foo"
+libpath = "bar:baz"  -- line comment
+file = "~/file-to-load.rpl"	-- ignored
+colors = "word.any=green;bold:num.*=red"
+colors = "num.int=red;bold;underline"
+loadfile = "test/mod1.rpl"
+
+

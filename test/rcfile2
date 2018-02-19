@@ -1,0 +1,10 @@
+-- This rcfile has syntax errors
+libpath = "foo"
+libpath = "bar:baz"  -- line comment
+file = "~/file-to-load.rpl"
+colors = "word.any=green;bold:num.*=red"
+colors = "num.int=red;bold;underline"
+loadfile = "another 
+
+
+
