@@ -1,3 +1,32 @@
+2018-02-19  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-alpha-11
+
+	CHANGED: syntax of grammar statements, which now require an 'in'
+	clause.  This was done to accommodate future enhancements to the RPL
+	language.  The RPL version level is now 1.2.
+
+	NEW: ~/.rosierc is processed if found, unless the --norcfile option is
+	given.  And the --rcfile option can be used to load a different
+	initialization file.
+
+	NEW: --colors <str> option to define which colors to use when printing
+	colorized output.
+
+	ENHANCED: Previously, the REPL did not interpolate strings entered as
+	sample data.  Now, escape sequences like \n, \xAA, and the Unicode
+	escape sequences can be used in sample data.
+
+	ENHANCED: The "standard prelude" can be imported like any other
+	package.
+
+	CHANGED: The config() API now returns an array of JSON objects, where
+	each object is a table of configuration settings.  The first is for the
+	rosie installation, the second for the engine specifically, and the last,
+	if present, is a table of output encoder parameters.
+
+	
+
 2018-02-03  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-alpha-10
