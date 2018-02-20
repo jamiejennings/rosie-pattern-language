@@ -1,5 +1,5 @@
 .mso www.tmac
-.TH ROSIE 1 "$Date: 2018/01/30 09:00:00 $"
+.TH ROSIE 1 "$Date: 2018/02/20 09:00:00 $"
 .SH NAME
 rosie \- Rosie Pattern Engine (Rosie Pattern Language)
 .SH SYNOPSIS
@@ -48,7 +48,15 @@ option (see below).
 .I config
 Print the configuration of the Rosie installation, including build information if available.
 .TP
-.I grep
+.I expand " exp"
+Expands a
+.I pattern expression
+entered on the command line.  Output is: (1) the expression as entered (which
+will show any shell expansions or substitutions); (2) the parsed expression; (3)
+what the expression means at top level, where a bare expression is a tokenized
+expression; and (4) the result after any macro expansions.
+.TP
+.I grep " exp [file1 ...]"
 In the style of grep, match the given
 .I pattern
 against lines in the given input files (or the standard input).  In this mode,
@@ -59,12 +67,13 @@ lines that match.
 .I help
 Print help text.
 .TP
-.IR list " [filter]"
-List the available patterns from the library whose name contains the optional
-.I filter
-as a substring.
+.IR list " [name[.name]]"
+List the available patterns from the library whose name matches
+.I name.
+To list all the names in an imported package, use
+.IR "list pkgname.*" .
 .TP
-.I match
+.I match " exp [file1 ...]"
 Match the given
 .I pattern
 against lines in the given input files (or the standard input). Patterns in RPL
@@ -75,10 +84,10 @@ command for behavior that is more like that utility.
 .I repl
 Enter the read-eval-print loop for interactive development and testing of patterns
 .TP
-.I test
+.I test " file1 [...]"
 Execute the pattern tests embedded within the listed rpl files.
 .TP
-.I trace
+.I trace " exp [file1 ...]"
 Perform a match, but generate a trace listing of all the steps performed in
 the matching process.  This can be quite a lot of output.
 .TP
@@ -87,9 +96,44 @@ Print the Rosie version and exit.
 
 .SH GLOBAL OPTIONS
 .TP
+.BI "\--colors" " colorspecs"
+Specify a set of colors and font attributes, each associated with a pattern
+name.  The format of
+.I colorspecs
+is a colon-separated list of
+.I name=spec
+, where
+.I spec
+is a semi-colon separated list of ANSI (SGR) color and font attributes.  Colors
+may be specified by name or integer code.  Attributes include bold, underline,
+and others.  The format of
+.I name
+can be
+.I *
+for a global default;
+.I pkgname.*
+for a package default;
+.I localname
+to match a name exactly, without a prefix; or
+.I pkgname.localname
+to match an imported name exactly.
+.TP
 .BI "\-f, \--file" " file"
 Load a file of rpl code.  This option may be repeated.
 .TP
+.BI "\--libpath" " paths"
+Set the rosie
+.I libpath
+, which is a colon-separated list of directories to search, in order, for
+imported packages.  A
+.I libpath
+set on the command line takes precedence over one set in an initialization file
+or from an environment variable.  See
+.I ROSIE_LIBPATH
+below.
+.TP
+.BI "\--norcfile"
+Do not load any initialization file.
 .TP
 .BI "\-o, --output" " style"
 Output match data according to
@@ -111,6 +155,10 @@ and for the
 .I grep
 command, is
 .IR line .
+.TP
+.BI "\--rcfile" " file"
+Load the initialization file specified, instead of the default,
+.IR ~/.rosierc .
 .TP
 .BI "\--rpl" " source"
 Define additional patterns, import additional packages.  The argument passed to
@@ -167,8 +215,34 @@ want Rosie to include the standard library in its search.
 
 .SH FILES
 .TP
-.I ~/.rosie/
-.B Forthcoming
+.I ~/.rosierc
+.B This is the default initialization file, which is loaded before any command line options are processed.  The syntax of
+.I .rosierc
+is essentially the RPL syntax, with two dashes to start comments, and option
+values in double-quoted strings.  Options are set using an assignment-like
+syntax, e.g.
+.I libpath = "bar:baz"
+to set the rosie
+.I libpath
+to a sequence of two directories,
+.IR bar " and"
+.IR baz .
+The recognized options are:
+.RS 10
+.IP colors="..." 16
+sets
+.I colors
+to a
+.I colorspec
+(can be used multiple times; values will be concatenated)
+.IP libpath="..." 16
+sets
+.I libpath
+(can be used multiple times; values will be concatenated)
+.IP loadfile="..." 16
+loads the specified (single) file
+(can be used multiple times to load multiple rpl files)
+.RE
 
 .SH EXAMPLES
 .B Forthcoming
