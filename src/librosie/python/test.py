@@ -7,12 +7,12 @@ import unittest
 import sys, os, json
 import rosie
 
-# For unit testing:
-# (1) We use the librosie.so that is in the directory above this one, i.e. "..".
-#     Normally, no argument to rosie.engine() is needed.
-# (2) librosie will look for the rosie installation in the 'rosie' directory alongside
-#     it, so there must be a link 'rosie -> ../..' in the same directory as this
-#     test file.
+# Notes
+#
+# (1) We use the librosie.so that is in the directory above this one,
+#     i.e. "..", so we supply the librosiedir argument to
+#     rosie.engine().  Normally, no argument to rosie.engine() is
+#     needed.
 
 class RosieInitTest(unittest.TestCase):
 
@@ -395,6 +395,8 @@ class RosieExecuteRcfileTest(unittest.TestCase):
             result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile2"))
             self.assertTrue(result is False)
             result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile3"))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile5"))
             self.assertTrue(result is True)
 
         
@@ -406,7 +408,7 @@ if __name__ == '__main__':
     if sys.argv[1]=='local':
         librosiedir = "../local"
         print "Loading librosie from", librosiedir
-        testdir = "../rosie/test"
+        testdir = "../../../test"
     elif sys.argv[1]=='system':
         librosiedir = None
         print "Loading librosie from system library path"
