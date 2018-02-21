@@ -54,7 +54,7 @@ denoted_hex = { "0x" hex }
 -- test denoted_hex accepts "0xBEEF", "0x20"
 -- test denoted_hex rejects "BEEF", "0x2o"
 
-end_of_number = >{[:punct:]? [:space:] / $}
+alias end_of_number = >{{"."? [[:space:] $]} / [[:punct:] & !"."]}
 
 -- N.B. signed_number matches the JSON spec for numbers
 signed_number = (float / int)
