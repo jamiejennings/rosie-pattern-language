@@ -4,7 +4,7 @@
 <!--  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  -->
 <!--  AUTHOR: Jamie A. Jennings                                                -->
 
-# RPL 1.1 Language Reference
+# RPL 1.2 Language Reference
 
 Notes:
 1. The RPL language is versioned independently of Rosie itself.
@@ -35,7 +35,7 @@ that many classes of errors can be found at compile time, i.e. in advance of the
 deployment of an application that uses Rosie.
 
 **Block structure** means there are lexical units (imaginatively called
-"blocks") of code that we can talk about.  In RPL 1.1, there are two kinds of
+"blocks") of code that we can talk about.  In RPL 1.2, there are two kinds of
 blocks:
 * Files of RPL code
 * Grammars
@@ -48,18 +48,19 @@ expressions and context free grammars.  RPL is based on Parsing Expression
 Grammars.
 
 Blocks in RPL have **lexical scope**.  Within a file, all of the names being
-bound are visible.  (The order of bindings does not matter.)  In RPL 1.1, file
+bound are visible.  (The order of bindings does not matter.)  In RPL 1.2, file
 scope does not, however, allow mutually recursive pattern definitions.
 
 Inside a grammar block, all of the outer (file scope) names are visible, unless
-they are shadowed by a local binding (in the grammar) of the same name.
+they are shadowed by a binding of the same name in the grammar.
 Grammars allow mutually recursive pattern definitions, making them useful for
 expressing patterns to match recursively defined syntax like JSON, XML, and
 s-expressions.
 
-The first binding in a grammar block is visible in its containing scope, i.e. in
-the file scope (because grammars cannot be nested in RPL 1.1).  Any additional
-bindings are visible only within the grammar block.
+The binding between `in` and `end` in a grammar block is visible in its
+containing scope, i.e. in the file scope (because grammars cannot be nested in
+RPL 1.2).  Any bindings between `grammar` and `in` are visible only within the
+grammar block.
 
 #### Properties of the module system
 
@@ -98,29 +99,37 @@ the matching process.
 
 Neither the CLI nor the REPL are part of the RPL Language.
 
-
 ## Comments and white space
 
 Comments begin with two dashes and end at the next newline character.  White space is not significant.
 
+## Identifiers and keywords
+
+Identifiers in RPL exist in qualified and unqualified forms.  A qualified identifier is a package name, followed by a dot, followed by a local name.
+
+Both package names and local names must start with an ASCII letter; subsequent characters can be alphabetic, numeric, or underscore.  Additionally, the following are valid local names: `$`, `^`, and `~`.
+
+**Restriction:** A local name cannot be one of the RPL keywords: `local`, `alias`, `grammar`, `in`, `end`, and `let` (which is reserved for future use).  
+
+
 ## Blocks
 
-RPL 1.1 has two kinds of blocks: grammars and files.  Here we describe file blocks.
+RPL 1.2 has two kinds of blocks: grammars and files.  Here we describe file blocks.  Grammars are discussed [below](#Grammars). 
 
-A file block is defined as follows in [the RPL code for Rosie](../rpl/rosie/rpl_1_1.rpl): 
+A file block is defined in detail, as usable RPL patterns, in [the RPL code for Rosie](../rpl/rosie/rpl_1_2.rpl): 
 
 ```
-rpl_statements = { {atmos ";" / package_decl / import_decl / language_decl / stmnt / syntax_error}* atmos $}
+rpl_statements = { {atmos package_decl / import_decl / language_decl / form / syntax_error}* atmos $}
 ```
 
 The pattern `atmos` captures whitespace and comments (the "atmosphere" in which
 code lives).  A file block can contain empty statements (`;`), package
 declarations, import declarations, language declarations, and things called
-`stmnt` that should really be called _bindings_.  
+`forms` which are either bindings or expressions.
 
 | Item                 | Meaning                                                          | Example  |
 | ---------------------|------------------------------------------------------------------|----------|
-| language declaration | Declares the minimum RPL version required                        | `rpl 1.1` |
+| language declaration | Declares the minimum RPL version required                        | `rpl 1.2` |
 | package declaration  | The statements that follow define a package with the given name  | `package net` |
 | import declaration   | Load the named package(s) by searching the library path          | `import word, num, net` |
 | binding/statement    | Bind a name to a value (e.g. a pattern)                          | `d = [:digit:]` |
@@ -135,7 +144,7 @@ constraints on blocks:
 * There can be many bindings.
 * A given name may only be assigned once.
 
-In RPL 1.1, a file may contain only one file block.
+In RPL 1.2, a file may contain only one file block.
 
 ### Language declaration
 
@@ -144,7 +153,7 @@ This optional element declares that the block requires the given RPL major versi
 Example:
 
 ```
-rpl 1.1
+rpl 1.2
 ```
 
 ### Package declaration
@@ -154,7 +163,7 @@ If the block defines a package, it must contain a package declaration element gi
 * It must start with an alphabetic character
 * The remaining characters may be alphanumeric or the underscore
 
-From [the RPL code for Rosie](../rpl/rosie/rpl_1_1.rpl): 
+From [the RPL code for Rosie](../rpl/rosie/rpl_1_2.rpl): 
 
 ``` 
 alias id_char = [[:alnum:]] / [[_]]
@@ -208,7 +217,7 @@ Statements can be optionally separated with semi-colons (`;`), such as when comb
 |  RPL statement              | Meaning   |
 |  -------------------------- | ----------|
 |  `identifier = expression`  | Assign a name to a pattern expression |
-|  `grammar ... end`          | Define a proper grammar; assignments and aliases appear in place of `...` |
+|  `grammar ... in ... end`   | Define a proper grammar; assignments and aliases appear in place of `...` |
 
 
 A statement may have modifiers, which are [explained below](#modifiers).  Briefly, they are:
@@ -249,23 +258,28 @@ In the scope of a file, RPL bindings cannot be mutually recursive.  (The
 compiler will complain.)  To bind a mutually recursive set of patterns, or a single
 recursive pattern, place the statements inside a _grammar_.  
 
-Mutually recursive patterns can recognize recursive structures like nested lists (e.g. JSON, XML, s-expressions) or things like "strings that have an equal number of a's and b's".  Grammars are defined by putting a set of assignment/alias statements inside a `grammar`...`end` block, e.g.:
+Mutually recursive patterns can recognize recursive structures like nested lists (e.g. JSON, XML, s-expressions) or things like "strings that have an equal number of a's and b's".  Grammars are defined by putting a set of assignment/alias statements inside a `grammar`...`in`...`end` block, e.g.:
 
 ```
 same = S $
 grammar
-  alias S = { {"a" B} / {"b" A} / "" }
   alias A = { {"a" S} / {"b" A A} }
   alias B = { {"b" S} / {"a" B B} }
+in
+  alias S = { {"a" B} / {"b" A} / "" }
 end
 ``` 
 Scope:
 * A grammar introduces a new scope.  Bindings from the outer scope are visible, but new bindings in the grammar shadow outer bindings for the same name.  This is the usual lexical scope rule.
-* The grammar binds one new name in the outer scope, the name of its first rule.  In the example above, only `S` is visible outside the grammar block.
+* The grammar binds one new name in the outer scope, the name of the `in` rule.  In the example above, only `S` is visible outside the grammar block.
 
 Notes:
-* The `local` keyword is not allowed inside a grammar.  To make the grammar's one visible binding local to the file scope, put `local` before the `grammar` keyword.
-* Any binding in a grammar may be an `alias`, including the first bound name.
+* Only one binding is allowed after `in`, and it is visible outside the grammar.
+  To make it a local binding (local to the file), use the `local` keyword.
+* The `local` keyword cannot be used in the "private" grammar rules, which are
+  between `grammar` and `in`.
+* Any binding in a grammar may be an `alias`.
+* If there is only one grammar rule, the `in` keyword can be omitted.
 
 If the example above were saved to the file `g.rpl`, we could load that file into Rosie and match either `same` or `S`.  The only difference is that `same` ensures that the entire input is matched.  The grammar `S` matches strings that contain the same number of a's as b's (and no other characters).  The second example below does match, because the input `baabb` has 3 b's and only 2 a's.
 
@@ -285,8 +299,10 @@ Use `alias` to bind a name that is an alias (substitute) for the expression on t
 
 **Local**
 
-When writing a package of RPL patterns, there are names you want to be visible when someone imports your package.  The `local` modifier hides a definition so that it is not visible.  The scope of a `local` name is the block in which it is declared.  In RPL 1.1, the only place `local` has any meaning (and therefore, the only place it can be used) is in the file scope.
-
+When writing a package of RPL patterns, there may be patterns that are not
+intended to be used outside the package.  The `local` modifier hides a
+definition so that it is not visible to the consumers of a package.  The scope
+of a `local` name is the block in which it is declared.
 
 ## Expressions
 
