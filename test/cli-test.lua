@@ -543,7 +543,7 @@ end
 rcfile_test("this file does not exist", 0, {"Warning", "Could not open rcfile"})
 rcfile_test("test/rcfile1", 0, {"Warning: [test/rcfile1]", "Failed to load another-file"})
 rcfile_test("test/rcfile2", 0, {"Warning: [test/rcfile2]", "Syntax errors in rcfile"})
-rcfile_test("test/rcfile3", 0, {"Warning: [test/rcfile3]", "Failed to load", "mod1.rpl"})
+rcfile_test("test/rcfile3", 0, {"Warning: [test/rcfile3]", "Failed to load", "nofile_mod1.rpl"})
 results = rcfile_test("test/rcfile4", 0, {'ROSIE_LIBPATH = "foo:bar:baz"',
 					  'ROSIE_RCFILE = "test/rcfile4"',
 					  'colors = "word.any=green'})

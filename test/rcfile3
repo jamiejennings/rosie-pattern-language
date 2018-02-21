@@ -1,9 +1,11 @@
--- This rcfile should process without errors
+-- This rcfile should process without syntax errors, but will fail
+-- to load the rpl file specified
+
 libpath = "foo"
 libpath = "bar:baz"  -- line comment
 file = "~/file-to-load.rpl"	-- ignored
 colors = "word.any=green;bold:num.*=red"
 colors = "num.int=red;bold;underline"
-loadfile = "../rosie/test/mod1.rpl"
+loadfile = "nofile_mod1.rpl"
 
 
