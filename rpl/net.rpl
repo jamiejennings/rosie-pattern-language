@@ -12,6 +12,7 @@
 rpl 1.1
 
 package net
+import num
 
 -- RFC1035 Domain Names - Implementation and Specification
 --   (https://tools.ietf.org/html/rfc1035)
@@ -96,11 +97,17 @@ local alias port_spec = { ":" port }
 local alias letter = [[A-Z][a-z]]
 local alias let_dig = letter / [0-9]
 local alias let_dig_hyp = let_dig / {"-" let_dig}
-local alias subdomain = { let_dig let_dig_hyp* }		    -- Per RFC1123, can start with digit now
+local alias subdomain = { let_dig let_dig_hyp{0,62} }		    -- Per RFC1123, can start with digit now
+
+-- Note: An unsigned decimal number like "2.3" can also be a qualified domain name, but it would be
+-- an unusual one.  The pattern fqdn_strict follows the spec and will accept "2.3".  The pattern
+-- "fqdn_practical" will reject input matching an unsigned decimal like "2.3".
 
 alias fqdn_strict_alias = { subdomain {"." subdomain}+ "."?}
 fqdn_strict = fqdn_strict_alias
-fqdn = { {fqdn_strict_alias / subdomain} port_spec? }
+alias fqdn_practical_alias = !>{num.decimal num.end_of_number} fqdn_strict_alias
+fqdn_practical = fqdn_practical_alias
+fqdn = { {fqdn_practical_alias / subdomain} port_spec? }
 
 -- test fqdn accepts "a.edu", "A.BC.EDU", "X-Y.CS.CORNELL.EDU", "SRI-NIC.ARPA"
 -- test fqdn accepts "ibm.com.", "9in.nails.band", "1AAA.SRI-NIC.ARPA"
@@ -111,6 +118,8 @@ fqdn = { {fqdn_strict_alias / subdomain} port_spec? }
 -- test fqdn_strict rejects "ibm.com:443"
 -- test fqdn_strict rejects "a", "abc", "ZZZZZZ", "Z-9"
 
+-- test fqdn_strict accepts "1.2", "3.1415926536", "1.2."
+-- test fqdn_practical rejects "1.2", "3.1415926536", "1.2.", "1.2+ ", "-3.14"
 
 ---------------------------------------------------------------------------------------------------
 -- EMAIL ADDRESSES
