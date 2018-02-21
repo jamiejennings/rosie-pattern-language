@@ -14,6 +14,13 @@ import rosie
 #     rosie.engine().  Normally, no argument to rosie.engine() is
 #     needed.
 
+try:
+    HAS_UNICODE_TYPE = type(unicode) and True
+    str23 = lambda s: str(s)
+except NameError:
+    HAS_UNICODE_TYPE = False
+    str23 = lambda s: str(s, encoding='UTF-8')
+
 class RosieInitTest(unittest.TestCase):
 
     def setUp(self):
@@ -103,7 +110,7 @@ class RosieConfigTest(unittest.TestCase):
             self.assertTrue(type(entry) is dict)
             self.assertTrue(entry['name'])
             self.assertTrue(entry['description'])
-            if not entry['value']: print "NOTE: no value for config key", entry['name']
+            if not entry['value']: print("NOTE: no value for config key " + entry['name'])
         array = cfg[1]
         rpl_version = None
         libpath = None
@@ -112,9 +119,14 @@ class RosieConfigTest(unittest.TestCase):
                 rpl_version = entry['value']
             if entry['name']=='ROSIE_LIBPATH':
                 libpath = entry['value']
-        self.assertTrue(type(rpl_version) is unicode)
-        self.assertTrue(type(libpath) is unicode)
-                
+        if HAS_UNICODE_TYPE:
+            self.assertTrue(type(rpl_version) is unicode)
+            self.assertTrue(type(libpath) is unicode)
+        else:
+            self.assertTrue(type(rpl_version) is str)
+            self.assertTrue(type(libpath) is str)
+            
+            
 class RosieLibpathTest(unittest.TestCase):
 
     engine = None
@@ -127,11 +139,11 @@ class RosieLibpathTest(unittest.TestCase):
 
     def test(self):
         path = self.engine.libpath()
-        self.assertIsInstance(path, basestring)
+        self.assertIsInstance(path, str)
         newpath = "foo bar baz"
         self.engine.libpath(newpath)
         testpath = self.engine.libpath()
-        self.assertIsInstance(testpath, basestring)
+        self.assertIsInstance(testpath, str)
         self.assertTrue(testpath == newpath)
                 
 class RosieAlloclimitTest(unittest.TestCase):
@@ -280,7 +292,7 @@ class RosieMatchTest(unittest.TestCase):
 
         m, left, abend, tt, tm = self.engine.match(b, inp, 1, "line")
         self.assertTrue(m)
-        self.assertTrue(m[:] == inp)
+        self.assertTrue(str23(m) == inp)
         self.assertTrue(left == 3)
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)
@@ -290,8 +302,8 @@ class RosieMatchTest(unittest.TestCase):
         self.assertTrue(m)
         # only checking the first two chars, looking for the start of
         # ANSI color sequence
-        self.assertTrue(m[0] == '\x1B')
-        self.assertTrue(m[1] == '[')
+        self.assertTrue(str23(m)[0] == '\x1B')
+        self.assertTrue(str23(m)[1] == '[')
         self.assertTrue(left == 3)
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)
@@ -387,9 +399,9 @@ class RosieExecuteRcfileTest(unittest.TestCase):
         pass
 
     def test(self):
-        print "*****************************************************"
-        print "** Rosie errors and warnings will be printed below **"
-        print "*****************************************************"
+        print("*****************************************************")
+        print("** Rosie errors and warnings will be printed below **")
+        print("*****************************************************")
         result = self.engine.execute_rcfile("This file does not exist")
         self.assertTrue(result is None)
         result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile1"))
@@ -410,15 +422,15 @@ if __name__ == '__main__':
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
         librosiedir = "../local"
-        print "Loading librosie from", librosiedir
+        print("Loading librosie from " + librosiedir)
         testdir = "../../../test"
     elif sys.argv[1]=='system':
         librosiedir = None
-        print "Loading librosie from system library path"
+        print("Loading librosie from system library path")
         testdir = None
     else:
         sys.exit("Error: invalid command-line parameter (must be 'local' or 'system')")
-    print "Running tests using", sys.argv[1], "rosie installation"
+    print("Running tests using " + sys.argv[1] + " rosie installation")
     del sys.argv[1:]
     unittest.main()
     
