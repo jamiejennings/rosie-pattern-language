@@ -265,4 +265,4 @@ MAC = MAC_cisco / MAC_windows / MAC_common
 ---------------------------------------------------------------------------------------------------
 
 -- Match an IP, Host, Email, URL
-any = ip / MAC / fqdn_strict / email / url / path
+any = ip / MAC / fqdn_practical / email / url / path
