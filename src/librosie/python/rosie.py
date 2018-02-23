@@ -1,36 +1,23 @@
 # coding: utf-8
 #  -*- Mode: Python; -*-                                              
 # 
-#  rosie.py     An interface to librosie from Python
+#  rosie.py     An interface to librosie from Python 2.7 and 3.6
 # 
 #  © Copyright IBM Corporation 2016, 2017, 2018.
 #  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 #  AUTHOR: Jamie A. Jennings
 
-# N.B. A Rosie installation requires librosie.so AND a set of files
-# under the directory name 'rosie'.  For example, when Rosie is
-# installed in /usr/local, we expect to find these files:
-#
-#   /usr/local/lib/librosie.so
-#   /usr/local/lib/rosie             (directory)
-
 # Development environment:
 #   Mac OS X Sierra (10.12.6)
 #   Python 2.7.10 (distributed with OS X)
-#   cffi-1.11.1 pycparser-2.18 (installed with: pip install cffi)
+#   Python 3.6.4 (installed via brew on OS X)
+#   cffi-1.11.4
+
+from __future__ import unicode_literals
 
 from cffi import FFI
 import os
 import json
-
-try:
-    HAS_UNICODE_TYPE = type(unicode) and True
-    str23 = lambda s: str(s)
-    bytes23 = lambda s: bytes(s)
-except NameError:
-    HAS_UNICODE_TYPE = False
-    str23 = lambda s: str(s, encoding='UTF-8')
-    bytes23 = lambda s: bytes(s, encoding='UTF-8')
 
 ffi = FFI()
 
@@ -91,22 +78,29 @@ def new_rplx(engine):
     obj = ffi.new("int *")
     return ffi.gc(obj, free_rplx)
 
-def new_cstr(py_string=None):
-    def free_cstr_ptr(local_cstr_obj):
-        lib.rosie_free_string(local_cstr_obj[0])
-    if py_string:
-        b_string = bytes23(py_string)
-        obj = lib.rosie_string_ptr_from(b_string, len(b_string))
-        return ffi.gc(obj, lib.free), b_string
-    else:
+def free_cstr_ptr(local_cstr_obj):
+    lib.rosie_free_string(local_cstr_obj[0])
+
+# Note: bstring will be gc'd at the end of new_cstr unless we return
+# it AND it is bound to a variable by the caller.  This is ugly, but
+# seems necessary for Python3.  There must be a better way to cope
+# with the fact that Python3 has separate, incompatible types for
+# unicode strings (str) and byte arrays (bytes).
+def new_cstr(bstring=None):
+    if bstring:
+        obj = lib.rosie_string_ptr_from(bstring, len(bstring))
+        return ffi.gc(obj, lib.free)
+    elif bstring is None:
         obj = ffi.new("struct rosie_string *")
         return ffi.gc(obj, free_cstr_ptr)
+    else:
+        raise ValueError("Unsupported argument type: " + str(type(pystring)))
 
 def read_cstr(cstr_ptr):
     if cstr_ptr.ptr == ffi.NULL:
         return None
     else:
-        return str23(ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:])
+        return bytes(ffi.buffer(cstr_ptr.ptr, cstr_ptr.len)[:])
 
 # -----------------------------------------------------------------------------
 
@@ -118,7 +112,7 @@ class engine ():
     argument.
     '''
 
-    def __init__(self, custom_libpath=None):
+    def __init__(self, librosie_directory=None):
         global lib
         ostype = os.uname()[0]
         if ostype=="Darwin":
@@ -126,8 +120,8 @@ class engine ():
         else:
             libname = "librosie.so"
         if not lib:
-            if custom_libpath:
-               libpath = os.path.join(custom_libpath, libname)
+            if librosie_directory:
+               libpath = os.path.join(librosie_directory, libname)
                if not os.path.isfile(libpath):
                    raise RuntimeError("Cannot find librosie at " + libpath)
             else:
@@ -136,7 +130,7 @@ class engine ():
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)
         if self.engine == ffi.NULL:
-            raise RuntimeError("librosie: " + read_cstr(Cerrs))
+            raise RuntimeError("librosie: " + str23(read_cstr(Cerrs)))
         return
 
     def config(self):
@@ -149,7 +143,7 @@ class engine ():
 
     def compile(self, exp):
         Cerrs = new_cstr()
-        Cexp, bexp = new_cstr(exp)
+        Cexp = new_cstr(exp)
         Cpat = new_rplx(self)
         ok = lib.rosie_compile(self.engine, Cexp, Cpat, Cerrs)
         if ok != 0:
@@ -160,7 +154,7 @@ class engine ():
 
     def load(self, src):
         Cerrs = new_cstr()
-        Csrc, bsrc = new_cstr(src)
+        Csrc = new_cstr(src)
         Csuccess = ffi.new("int *")
         Cpkgname = new_cstr()
         ok = lib.rosie_load(self.engine, Csuccess, Csrc, Cpkgname, Cerrs)
@@ -172,7 +166,7 @@ class engine ():
 
     def loadfile(self, fn):
         Cerrs = new_cstr()
-        Cfn, bfn = new_cstr(fn)
+        Cfn = new_cstr(fn)
         Csuccess = ffi.new("int *")
         Cpkgname = new_cstr()
         ok = lib.rosie_loadfile(self.engine, Csuccess, Cfn, Cpkgname, Cerrs)
@@ -185,10 +179,10 @@ class engine ():
     def import_pkg(self, pkgname, as_name=None):
         Cerrs = new_cstr()
         if as_name:
-            Cas_name, bas_name = new_cstr(as_name)
+            Cas_name = new_cstr(as_name)
         else:
             Cas_name = ffi.NULL
-        Cpkgname, bpkg = new_cstr(pkgname)
+        Cpkgname = new_cstr(pkgname)
         Cactual_pkgname = new_cstr()
         Csuccess = ffi.new("int *")
         ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cactual_pkgname, Cerrs)
@@ -202,8 +196,8 @@ class engine ():
         if Cpat[0] == 0:
             raise ValueError("invalid compiled pattern")
         Cmatch = ffi.new("struct rosie_matchresult *")
-        Cinput, binput = new_cstr(input)
-        ok = lib.rosie_match(self.engine, Cpat[0], start, bytes23(encoder), Cinput, Cmatch)
+        Cinput = new_cstr(input)
+        ok = lib.rosie_match(self.engine, Cpat[0], start, encoder, Cinput, Cmatch)
         if ok != 0:
             raise RuntimeError("match() failed (please report this as a bug)")
         left = Cmatch.leftover
@@ -215,16 +209,16 @@ class engine ():
                 return None, left, abend, ttotal, tmatch
             elif Cmatch.data.len == 1:
                 raise ValueError("invalid compiled pattern (already freed?)")
-        data_buffer = ffi.buffer(Cmatch.data.ptr, Cmatch.data.len)
-        return data_buffer, left, abend, ttotal, tmatch
+        data = read_cstr(Cmatch.data)
+        return data, left, abend, ttotal, tmatch
 
     def trace(self, Cpat, input, start, style):
         if Cpat[0] == 0:
             raise ValueError("invalid compiled pattern")
         Cmatched = ffi.new("int *")
-        Cinput, binput = new_cstr(input)
+        Cinput = new_cstr(input)
         Ctrace = new_cstr()
-        ok = lib.rosie_trace(self.engine, Cpat[0], start, bytes23(style), Cinput, Cmatched, Ctrace)
+        ok = lib.rosie_trace(self.engine, Cpat[0], start, style, Cinput, Cmatched, Ctrace)
         if ok != 0:
             raise RuntimeError("trace() failed (please report this as a bug)")
         if Ctrace.ptr == ffi.NULL:
@@ -250,14 +244,14 @@ class engine ():
         Cerrmsg = new_cstr()
         ok = lib.rosie_matchfile(self.engine,
                                  Cpat[0],
-                                 bytes23(encoder),
+                                 encoder,
                                  wff,
-                                 bytes23(infile or ""),
-                                 bytes23(outfile or ""),
-                                 bytes23(errfile or ""),
+                                 infile or b"",
+                                 outfile or b"",
+                                 errfile or b"",
                                  Ccin, Ccout, Ccerr, Cerrmsg)
         if ok != 0:
-            raise RuntimeError("matchfile() failed: " + read_cstr(Cerrmsg))
+            raise RuntimeError("matchfile() failed: " + str(read_cstr(Cerrmsg)))
 
         if Ccin[0] == -1:       # Error occurred
             if Ccout[0] == 1:
@@ -265,7 +259,7 @@ class engine ():
             elif Ccout[0] == 2:
                 raise ValueError("invalid encoder")
             elif Ccout[0] == 3:
-                raise ValueError(read_cstr(Cerrmsg)) # file i/o error
+                raise ValueError(str(read_cstr(Cerrmsg))) # file i/o error
             else:
                 raise ValueError("unknown error caused matchfile to fail")
         return Ccin[0], Ccout[0], Ccerr[0]
@@ -275,7 +269,7 @@ class engine ():
         if filename is None:
             filename_arg = new_cstr()
         else:
-            filename_arg, bfilename = new_cstr(filename)
+            filename_arg = new_cstr(filename)
         options = new_cstr()
         ok = lib.rosie_read_rcfile(self.engine, filename_arg, Cfile_exists, options)
         if ok != 0:
@@ -291,7 +285,7 @@ class engine ():
         if filename is None:
             filename_arg = new_cstr()
         else:
-            filename_arg, bstr = new_cstr(filename)
+            filename_arg = new_cstr(filename)
         ok = lib.rosie_execute_rcfile(self.engine, filename_arg, Cfile_exists, Cno_errors)
         if ok != 0:
             raise RuntimeError("execute_rcfile() failed (please report this as a bug)")
@@ -300,10 +294,10 @@ class engine ():
         return False   # file existed, but some problems processing it
 
     def libpath(self, libpath=None):
-        if libpath is None:
-            libpath_arg = new_cstr()
+        if libpath:
+            libpath_arg = new_cstr(libpath)
         else:
-            libpath_arg, blibpath = new_cstr(libpath)
+            libpath_arg = new_cstr()
         ok = lib.rosie_libpath(self.engine, libpath_arg)
         if ok != 0:
             raise RuntimeError("libpath() failed (please report this as a bug)")

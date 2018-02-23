@@ -3,6 +3,8 @@
 #
 # python test.py [local | system]
 #
+from __future__ import unicode_literals
+
 import unittest
 import sys, os, json
 import rosie
@@ -17,9 +19,11 @@ import rosie
 try:
     HAS_UNICODE_TYPE = type(unicode) and True
     str23 = lambda s: str(s)
+    bytes23 = lambda s: bytes(s)
 except NameError:
     HAS_UNICODE_TYPE = False
     str23 = lambda s: str(s, encoding='UTF-8')
+    bytes23 = lambda s: bytes(s, encoding='UTF-8')
 
 class RosieInitTest(unittest.TestCase):
 
@@ -44,22 +48,22 @@ class RosieLoadTest(unittest.TestCase):
         pass
 
     def test(self):
-        ok, pkgname, errs = self.engine.load('package x; foo = "foo"')
+        ok, pkgname, errs = self.engine.load(b'package x; foo = "foo"')
 
         self.assertTrue(ok)
-        self.assertTrue(pkgname == "x")
+        self.assertTrue(pkgname == b"x")
         self.assertTrue(errs == None)
 
-        b, errs = self.engine.compile("x.foo")
+        b, errs = self.engine.compile(b"x.foo")
         self.assertTrue(b[0] > 0)
         self.assertTrue(errs == None)
 
-        bb, errs = self.engine.compile("[:digit:]+")
+        bb, errs = self.engine.compile(b"[:digit:]+")
         self.assertTrue(bb[0] > 0)
         self.assertTrue(errs == None)
         self.assertTrue(b[0] != bb[0])
 
-        b2, errs = self.engine.compile("[:foobar:]+")
+        b2, errs = self.engine.compile(b"[:foobar:]+")
         self.assertTrue(not b2)
         errlist = json.loads(errs)
         self.assertTrue(len(errlist) > 0)
@@ -68,18 +72,18 @@ class RosieLoadTest(unittest.TestCase):
         self.assertTrue(err['who'] == 'compiler')
 
         b = None                       # trigger call to librosie to gc the compiled pattern
-        b, errs = self.engine.compile("[:digit:]+")
+        b, errs = self.engine.compile(b"[:digit:]+")
         self.assertTrue(b[0] != bb[0]) # distinct values for distinct patterns
         self.assertTrue(errs == None)
 
-        num_int, errs = self.engine.compile("num.int")
+        num_int, errs = self.engine.compile(b"num.int")
         self.assertTrue(not num_int)
         errlist = json.loads(errs)
         err = errlist[0]
         self.assertTrue(err['message'])
         self.assertTrue(err['who'] == 'compiler')
 
-        ok, pkgname, errs = self.engine.load('foo = "')
+        ok, pkgname, errs = self.engine.load(b'foo = "')
         self.assertTrue(not ok)
         errlist = json.loads(errs)
         err = errlist[0]
@@ -139,11 +143,11 @@ class RosieLibpathTest(unittest.TestCase):
 
     def test(self):
         path = self.engine.libpath()
-        self.assertIsInstance(path, str)
-        newpath = "foo bar baz"
+        self.assertIsInstance(path, bytes)
+        newpath = b"foo bar baz"
         self.engine.libpath(newpath)
         testpath = self.engine.libpath()
-        self.assertIsInstance(testpath, str)
+        self.assertIsInstance(testpath, bytes)
         self.assertTrue(testpath == newpath)
                 
 class RosieAlloclimitTest(unittest.TestCase):
@@ -182,30 +186,30 @@ class RosieImportTest(unittest.TestCase):
         pass
 
     def test(self):
-        ok, pkgname, errs = self.engine.import_pkg('net')
+        ok, pkgname, errs = self.engine.import_pkg(b'net')
         self.assertTrue(ok)
-        self.assertTrue(pkgname == 'net')
+        self.assertTrue(pkgname == b'net')
         self.assertTrue(errs == None)
 
-        ok, pkgname, errs = self.engine.import_pkg('net', 'foobar')
+        ok, pkgname, errs = self.engine.import_pkg(b'net', b'foobar')
         self.assertTrue(ok)
-        self.assertTrue(pkgname == 'net') # actual name inside the package
+        self.assertTrue(pkgname == b'net') # actual name inside the package
         self.assertTrue(errs == None)
 
-        net_any, errs = self.engine.compile("net.any")
+        net_any, errs = self.engine.compile(b"net.any")
         self.assertTrue(net_any)
         self.assertTrue(errs == None)
 
-        foobar_any, errs = self.engine.compile("foobar.any")
+        foobar_any, errs = self.engine.compile(b"foobar.any")
         self.assertTrue(foobar_any)
         self.assertTrue(errs == None)
         
-        m, left, abend, tt, tm = self.engine.match(net_any, "1.2.3.4", 1, "color")
+        m, left, abend, tt, tm = self.engine.match(net_any, b"1.2.3.4", 1, b"color")
         self.assertTrue(m)
-        m, left, abend, tt, tm = self.engine.match(net_any, "Hello, world!", 1, "color")
+        m, left, abend, tt, tm = self.engine.match(net_any, b"Hello, world!", 1, b"color")
         self.assertTrue(not m)
 
-        ok, pkgname, errs = self.engine.import_pkg('THISPACKAGEDOESNOTEXIST')
+        ok, pkgname, errs = self.engine.import_pkg(b'THISPACKAGEDOESNOTEXIST')
         self.assertTrue(not ok)
         self.assertTrue(errs != None)
 
@@ -222,9 +226,9 @@ class RosieLoadfileTest(unittest.TestCase):
         pass
 
     def test(self):
-        ok, pkgname, errs = self.engine.loadfile('test.rpl')
+        ok, pkgname, errs = self.engine.loadfile(b'test.rpl')
         self.assertTrue(ok)
-        self.assertTrue(pkgname == 'test')
+        self.assertTrue(pkgname == bytes(b'test'))
         self.assertTrue(errs == None)
 
 
@@ -240,13 +244,13 @@ class RosieMatchTest(unittest.TestCase):
 
     def test(self):
 
-        b, errs = self.engine.compile("[:digit:]+")
+        b, errs = self.engine.compile(b"[:digit:]+")
         self.assertTrue(b[0] > 0)
         self.assertTrue(errs == None)
 
-        m, left, abend, tt, tm = self.engine.match(b, "321", 2, "json")
+        m, left, abend, tt, tm = self.engine.match(b, b"321", 2, b"json")
         self.assertTrue(m)
-        m = json.loads(m[:])
+        m = json.loads(bytes(m))
         self.assertTrue(m['type'] == "*")
         self.assertTrue(m['s'] == 2)     # match started at char 2
         self.assertTrue(m['e'] == 4)
@@ -256,49 +260,49 @@ class RosieMatchTest(unittest.TestCase):
         self.assertTrue(tt >= 0)
         self.assertTrue(tm >= 0)
 
-        m, left, abend, tt, tm = self.engine.match(b, "xyz", 1, "json")
+        m, left, abend, tt, tm = self.engine.match(b, b"xyz", 1, b"json")
         self.assertTrue(m == None)
         self.assertTrue(left == 3)
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)
         self.assertTrue(tm >= 0)
 
-        inp = "889900112233445566778899100101102103104105106107108109110xyz"
+        inp = b"889900112233445566778899100101102103104105106107108109110xyz"
         linp = len(inp)
 
-        m, left, abend, tt, tm = self.engine.match(b, inp, 1, "json")
+        m, left, abend, tt, tm = self.engine.match(b, inp, 1, b"json")
         self.assertTrue(m)
-        m = json.loads(m[:])
+        m = json.loads(m)
         self.assertTrue(m['type'] == "*")
         self.assertTrue(m['s'] == 1)
         self.assertTrue(m['e'] == linp-3+1) # due to the "xyz" at the end
-        self.assertTrue(m['data'] == inp[0:-3])
+        self.assertTrue(m['data'] == str23(inp[0:-3]))
         self.assertTrue(left == 3)
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)
         self.assertTrue(tm >= 0)
 
-        m, left, abend, tt, tm = self.engine.match(b, inp, 10, "json")
+        m, left, abend, tt, tm = self.engine.match(b, inp, 10, b"json")
         self.assertTrue(m)
-        m = json.loads(m[:])
+        m = json.loads(m)
         self.assertTrue(m['type'] == "*")
         self.assertTrue(m['s'] == 10)
         self.assertTrue(m['e'] == linp-3+1) # due to the "xyz" at the end
-        self.assertTrue(m['data'] == inp[9:-3])
+        self.assertTrue(m['data'] == str23(inp[9:-3]))
         self.assertTrue(left == 3)
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)
         self.assertTrue(tm >= 0)
 
-        m, left, abend, tt, tm = self.engine.match(b, inp, 1, "line")
+        m, left, abend, tt, tm = self.engine.match(b, inp, 1, b"line")
         self.assertTrue(m)
-        self.assertTrue(str23(m) == inp)
+        self.assertTrue(m == inp)
         self.assertTrue(left == 3)
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)
         self.assertTrue(tm >= 0)
 
-        m, left, abend, tt, tm = self.engine.match(b, inp, 1, "color")
+        m, left, abend, tt, tm = self.engine.match(b, inp, 1, b"color")
         self.assertTrue(m)
         # only checking the first two chars, looking for the start of
         # ANSI color sequence
@@ -317,23 +321,23 @@ class RosieTraceTest(unittest.TestCase):
     def setUp(self):
         self.engine = rosie.engine(librosiedir)
         self.assertTrue(self.engine)
-        ok, pkgname, errs = self.engine.import_pkg('net')
+        ok, pkgname, errs = self.engine.import_pkg(b'net')
         self.assertTrue(ok)
-        self.net_any, errs = self.engine.compile("net.any")
+        self.net_any, errs = self.engine.compile(b'net.any')
         self.assertTrue(self.net_any)
 
     def tearDown(self):
         pass
 
     def test(self):
-        matched, trace = self.engine.trace(self.net_any, "1.2", 1, "condensed")
+        matched, trace = self.engine.trace(self.net_any, b"1.2", 1, b"condensed")
         self.assertTrue(matched == True)
         self.assertTrue(trace)
         self.assertTrue(len(trace) > 0)
 
-        net_ip, errs = self.engine.compile("net.ip")
+        net_ip, errs = self.engine.compile(b"net.ip")
         self.assertTrue(net_ip)
-        matched, trace = self.engine.trace(net_ip, "1.2", 1, "condensed")
+        matched, trace = self.engine.trace(net_ip, b"1.2", 1, b"condensed")
         self.assertTrue(matched == False)
         self.assertTrue(trace)
         self.assertTrue(len(trace) > 0)
@@ -348,23 +352,31 @@ class RosieMatchFileTest(unittest.TestCase):
     def setUp(self):
         self.engine = rosie.engine(librosiedir)
         self.assertTrue(self.engine)
-        ok, pkgname, errs = self.engine.import_pkg('net')
+        ok, pkgname, errs = self.engine.import_pkg(b'net')
         self.assertTrue(ok)
-        self.net_any, errs = self.engine.compile("net.any")
+        self.net_any, errs = self.engine.compile(b"net.any")
         self.assertTrue(self.net_any)
-        self.findall_net_any, errs = self.engine.compile("findall:net.any")
+        self.findall_net_any, errs = self.engine.compile(b"findall:net.any")
         self.assertTrue(self.findall_net_any)
 
     def tearDown(self):
         pass
 
     def test(self):
-        cin, cout, cerr = self.engine.matchfile(self.findall_net_any, "json", "../../../test/resolv.conf", "/tmp/resolv.out", "/tmp/resolv.err")
+        cin, cout, cerr = self.engine.matchfile(self.findall_net_any,
+                                                b"json",
+                                                b"../../../test/resolv.conf",
+                                                b"/tmp/resolv.out",
+                                                b"/tmp/resolv.err")
         self.assertTrue(cin == 10)
         self.assertTrue(cout == 5)
         self.assertTrue(cerr == 5)
 
-        cin, cout, cerr = self.engine.matchfile(self.net_any, "color", infile="../../../test/resolv.conf", errfile="/dev/null", wholefile=True)
+        cin, cout, cerr = self.engine.matchfile(self.net_any,
+                                                b"color",
+                                                infile=b"../../../test/resolv.conf",
+                                                errfile=b"/dev/null",
+                                                wholefile=True)
         self.assertTrue(cin == 1)
         self.assertTrue(cout == 0)
         self.assertTrue(cerr == 1)
@@ -381,11 +393,11 @@ class RosieReadRcfileTest(unittest.TestCase):
 
     def test(self):
         if testdir:
-            options = self.engine.read_rcfile(os.path.join(testdir, "rcfile1"))
+            options = self.engine.read_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
             self.assertIsInstance(options, list)
-            options = self.engine.read_rcfile(os.path.join(testdir, "rcfile2"))
+            options = self.engine.read_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
             self.assertTrue(options is False)
-            options = self.engine.read_rcfile("This file does not exist")
+            options = self.engine.read_rcfile(b"This file does not exist")
             self.assertTrue(options is None)
 
 class RosieExecuteRcfileTest(unittest.TestCase):
@@ -402,15 +414,15 @@ class RosieExecuteRcfileTest(unittest.TestCase):
         print("*****************************************************")
         print("** Rosie errors and warnings will be printed below **")
         print("*****************************************************")
-        result = self.engine.execute_rcfile("This file does not exist")
+        result = self.engine.execute_rcfile(b"This file does not exist")
         self.assertTrue(result is None)
-        result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile1"))
+        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
         self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile2"))
+        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
         self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile3"))
+        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile3")))
         self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(os.path.join(testdir, "rcfile5"))
+        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile5")))
         self.assertTrue(result is True)
 
 
