@@ -9,8 +9,8 @@
 package all
 import ts, date, time, net, num, id, word
 
--- Here are some ways of distinguishing identifiers from ordinary words.  These are ad hoc patterns,
--- and they may or may not meet your needs.
+-- Here are some ways of distinguishing identifiers from ordinary words.  These are
+-- ad hoc patterns, and they may or may not meet your needs.
 alias special_char = [_$:]
 alias id_char = [[:alnum:] special_char]
 alias has_special_chars = { special_char+ [:alpha:] id_char* } /
