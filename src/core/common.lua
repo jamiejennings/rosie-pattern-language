@@ -118,7 +118,9 @@ common.utf8_char_peg = b1_lead +
 	    
 common.dirsep = package.config:sub(1, (package.config:find("\n"))-1)
 assert(#common.dirsep==1, "directory separator should be a forward or a backward slash")
+-- Assume Unix:
 common.pathsep = ":"
+-- Unless Windows:
 if common.dirsep=="\\" then common.pathsep = ";" end
 
 -- Always return a table, possibly empty

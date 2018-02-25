@@ -86,20 +86,6 @@ end
 -- Load the entire rosie world... (which includes the "core" parser for "rpl 1.0")
 ---------------------------------------------------------------------------------------------------
 
-local function setup_paths()
-   ROSIE_LIBDIR = common.path(ROSIE_HOME, "rpl")
-   ROSIE_LIBPATH = ROSIE_LIBDIR
-   ROSIE_LIBPATH_SOURCE = "lib"
-   local ok, value = pcall(os.getenv, "ROSIE_LIBPATH")
-   if (not ok) then init_error('Internal error: call to os.getenv(ROSIE_LIBPATH)" failed'); end
-   if value then
-      ROSIE_LIBPATH = value;
-      ROSIE_LIBPATH_SOURCE = "env";
-   end
-   assert(type(ROSIE_LIBPATH)=="string")
-end
-
-
 local function load_all()
    lpeg = import("lpeg")
 
@@ -258,12 +244,11 @@ end
 
 function create_attribute_table()
    local new = common.new_attribute
+   ROSIE_LIBDIR = common.path(ROSIE_HOME, "rpl")
    return common.create_attribute_table(
       new("ROSIE_VERSION", ROSIE_VERSION, "distribution", "version of rosie API / CLI"),
       new("ROSIE_HOME", ROSIE_HOME, "build", "location of the rosie installation directory"),
       new("ROSIE_LIBDIR", ROSIE_LIBDIR, "build", "location of the standard rpl library"),
-      new("HOSTTYPE", os.getenv("HOSTTYPE"), "environment", "type of host on which rosie is running"),
-      new("OSTYPE", os.getenv("OSTYPE"), "environment", "type of OS on which rosie is running"),
       new("ROSIE_COMMAND", "", "", "invocation command, if rosie invoked through the CLI")
    )
 end
@@ -278,7 +263,6 @@ local rosie_package = {}
 
 rosie_package.env = _ENV
 load_all()
-setup_paths()
 
 common.add_encoder("color", common.BYTE_ENCODER,
 		   function(m, input, start, parms)
@@ -328,10 +312,20 @@ rosie_package.config =
       return {ROSIE_ATTRIBUTES, en_config, encoder_parms}
    end
 
+ROSIE_LIBPATH = ROSIE_LIBDIR
+
 CORE_ENGINE = create_core_engine()
+assert(CORE_ENGINE)
 
 ROSIE_ENGINE, ROSIE_COMPILER = create_rpl_1_2_engine(CORE_ENGINE)
-assert(ROSIE_ENGINE)
+assert(ROSIE_ENGINE and ROSIE_COMPILER)
+
+-- local ok, value = pcall(os.getenv, "ROSIE_LIBPATH")
+-- if (not ok) then common.warn('Internal error: call to getenv()" failed (this is a bug)'); end
+-- if value then
+--    assert(type(value)=="string")
+--    ROSIE_ENGINE:set_libpath(value, 'environment')
+-- end
 
 rosie_package.default = { rcfile = "~/.rosierc",
 			  libpath = ROSIE_LIBDIR,
