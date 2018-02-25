@@ -153,7 +153,12 @@ test:
 	exit 1; \
 	fi; \
 	here="$(shell pwd)"; \
-	for client in $(clients); do cd $${here}/$$client && $(MAKE) test; done
+	for client in $(clients); \
+	do cd $${here}/$$client && $(MAKE) test; \
+	if [ $$? -ne 0 ]; then \
+		echo "TEST FAILED: $$client"; exit -1; \
+		fi; \
+	done
 
 installtest:
 	@here="$(shell pwd)"; \
