@@ -6,6 +6,8 @@
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHORS: Jamie A. Jennings, Kevin Zander
 
+local rosie = import("rosie")
+
 local p = {}
 local cli_common = import("cli-common")
 local io = import("io")
@@ -44,16 +46,20 @@ function p.setup(en)
    local test_patterns =
       [==[
 	 includesKeyword = ("includes" / "excludes")
-	 includesClause = includesKeyword identifier
+	 includesClause = includesKeyword rpl_1_2.identifier
 	 testKeyword = "accepts" / "rejects"
-	 test_line = ("--test"/"-- test") identifier (testKeyword / includesClause) (quoted_string ("," quoted_string)*)?
+	 test_line = ("--test"/"-- test") 
+	             rpl_1_2.identifier 
+	             (testKeyword / includesClause) 
+		     (rpl_1_2.quoted_string ("," rpl_1_2.quoted_string)*)?
    ]==]
-   local ok, errs = en:import("rosie/rpl_1_2", ".")
+   local libdir = rosie.attributes.ROSIE_LIBDIR
+   local ok, errs = en:loadfile(libdir .. "/rosie/rpl_1_2.rpl")
    if not ok then
       for _,v in ipairs(errs or {}) do
 	 write_error(violation.tostring(v))
       end
-      error("Internal error!  (See above.)")
+      error("Internal error")
    end
    local ok = en:load(test_patterns)
    assert(ok, "Internal error: test_patterns failed to load")
