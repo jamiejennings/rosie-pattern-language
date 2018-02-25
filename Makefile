@@ -182,10 +182,14 @@ compile: binaries $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 
 .PHONY:
 binaries: $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	cd $(LIBROSIE_DIR) && $(MAKE) $(LIBROSIE_TARGET) CC=$(CC)
-	@$(BUILD_ROOT)/src/build_info.sh "binaries" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
+	@cd $(LIBROSIE_DIR); \
+	$(MAKE) -q $(LIBROSIE_TARGET) CC=$(CC); \
+	if [ $$? -eq 1 ]; then \
+		$(MAKE) $(LIBROSIE_TARGET) CC=$(CC); \
+		$(BUILD_ROOT)/src/build_info.sh "binaries" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log; \
+	fi
 
-$(ROSIEBIN): compile binaries
+$(ROSIEBIN): $(LIBROSIE_DIR)/local/rosie
 	cp $(LIBROSIE_DIR)/local/rosie "$(BUILD_ROOT)/bin/rosie"
 
 # -----------------------------------------------------------------------------
