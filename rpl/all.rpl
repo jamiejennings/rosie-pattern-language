@@ -2,20 +2,25 @@
 --
 -- all.rpl    Collections of things
 --
--- © Copyright IBM Corporation 2017.
+-- © Copyright IBM Corporation 2017, 2018.
 -- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 -- AUTHOR: Jamie A. Jennings
 
 package all
 import ts, date, time, net, num, id, word
 
--- Ways of distinguishing identifiers from ordinary words:
-alias starts_with_caps = { !{word.any ~} [:upper:] any_id_char* }
+-- Here are some ways of distinguishing identifiers from ordinary words.  These are ad hoc patterns,
+-- and they may or may not meet your needs.
 alias special_char = [_$:]
-alias any_id_char = [[:alnum:] special_char]
-alias has_special_chars = { special_char+ [:alpha:] any_id_char* } /
-			  { [:alpha:] [:alnum:]* special_char any_id_char* !<":"}
-identifier = starts_with_caps / has_special_chars / id.dotted / id.guid
+alias id_char = [[:alnum:] special_char]
+alias has_special_chars = { special_char+ [:alpha:] id_char* } /
+			  { [:alpha:] [:alnum:]* special_char id_char* !<":"}
+
+-- Starts with two uppercase letters, OR, 1+ uppercase and contains numbers/special
+alias starts_with_uppercase = { {[:upper:]{2,} id_char*}
+			      / {[:upper:]+ [[:digit:] special_char]+ id_char*} } ~
+
+identifier = starts_with_uppercase / has_special_chars / id.dotted / id.guid
 
 punct = [:punct:]
 unmatched = [:^space:]+
