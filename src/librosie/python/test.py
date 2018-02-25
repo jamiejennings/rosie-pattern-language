@@ -330,14 +330,14 @@ class RosieTraceTest(unittest.TestCase):
         pass
 
     def test(self):
-        matched, trace = self.engine.trace(self.net_any, b"1.2", 1, b"condensed")
+        matched, trace = self.engine.trace(self.net_any, b"1.2.3", 1, b"condensed")
         self.assertTrue(matched == True)
         self.assertTrue(trace)
         self.assertTrue(len(trace) > 0)
 
         net_ip, errs = self.engine.compile(b"net.ip")
         self.assertTrue(net_ip)
-        matched, trace = self.engine.trace(net_ip, b"1.2", 1, b"condensed")
+        matched, trace = self.engine.trace(net_ip, b"1.2.3", 1, b"condensed")
         self.assertTrue(matched == False)
         self.assertTrue(trace)
         self.assertTrue(len(trace) > 0)
