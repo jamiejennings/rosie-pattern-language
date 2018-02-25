@@ -1,6 +1,31 @@
-2018-02-19  Jamie Jennings  <jjennings@us.ibm.com>
+2018-02-25  Jamie Jennings  <jjennings@us.ibm.com>
 
-	* 1.0.0-alpha-11
+	* 1.0.0-beta
+
+	ENHANCED: The python module, rosie.py, now works with Python 2.7 and
+	Python 3.6.
+
+	CHANGED: The python module, rosie.py, now requires python 'bytes'
+	arguments, not python strings.  And it returns 'bytes' values as
+	well. Probably the rosie.py API should be enhanced to accept string
+	arguments and convert them to bytes, assuming they are UTF-8 encoded.
+
+	CHANGED: The all.things pattern has been modified such that text like
+	"C1" will be recognized as an identifier instead of a hex number.
+
+	CHANGED: The num.any pattern now looks for how the number ends, so that
+	the first 3 characters of "1.2.3.4" will not match as a float "1.2".
+	Note that num.float (and num.decimal) will match that, but num.any will
+	not.
+
+	CHANGED: In package net, introduced fqdn_practical to be an alternative
+	to fqdn_strict. (And, net.any looks for fqdn_practical now.)  The
+	difference is that fqdn_strict will match "1.2" as a partially qualified
+	domain name, but fqdn_practical will not.
+
+	CHANGED: The sample go client cannot be used with go1.9.4 due to a bug
+	in that go release.  The src/librosie/go/setup.sh script now checks for
+	that go version and produces an error.  We recommend go1.10.
 
 	CHANGED: syntax of grammar statements, which now require an 'in'
 	clause.  This was done to accommodate future enhancements to the RPL
@@ -24,8 +49,6 @@
 	each object is a table of configuration settings.  The first is for the
 	rosie installation, the second for the engine specifically, and the last,
 	if present, is a table of output encoder parameters.
-
-	
 
 2018-02-03  Jamie Jennings  <jjennings@us.ibm.com>
 
