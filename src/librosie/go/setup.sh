@@ -1,4 +1,12 @@
 #!/bin/bash
+echo "Checking go version..."
+gov=`go version`
+read -r -a items <<< $gov
+if [ "${items[2]}" == "go1.9.4" ]; then
+    echo "This go version cannot compile Rosie.  Go 1.9.3 and 1.10 are known to work."
+    exit -1
+fi
+
 echo "Creating script that sets GOPATH and ROSIE_HOME"
 echo "export GOPATH=`pwd`" >setvars
 
