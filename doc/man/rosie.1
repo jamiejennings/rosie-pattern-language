@@ -101,8 +101,8 @@ Specify a set of colors and font attributes, each associated with a pattern
 name.  The format of
 .I colorspecs
 is a colon-separated list of
-.I name=spec
-, where
+.IR "name=spec",
+where
 .I spec
 is a semi-colon separated list of ANSI (SGR) color and font attributes.  Colors
 may be specified by name or integer code.  Attributes include bold, underline,
@@ -123,14 +123,20 @@ Load a file of rpl code.  This option may be repeated.
 .TP
 .BI "\--libpath" " paths"
 Set the rosie
+.IR "libpath",
+which is a colon-separated list of directories to search, in order, for
+imported packages.  The value is a colon-separated string.  When the libapth is
+not set by the user, Rosie looks for imported packages in the installation
+directory, at
+.IR "ROSIE_LIBDIR",
+the value of which can be seen using the rosie
+.I config
+command.
+.B Important note:
+If you set the libpath, you must explicitly include the standard library if you
+want Rosie to include the standard library in its search. A
 .I libpath
-, which is a colon-separated list of directories to search, in order, for
-imported packages.  A
-.I libpath
-set on the command line takes precedence over one set in an initialization file
-or from an environment variable.  See
-.I ROSIE_LIBPATH
-below.
+set on the command line takes precedence over one set in an initialization file.  
 .TP
 .BI "\--norcfile"
 Do not load any initialization file.
@@ -192,16 +198,10 @@ double quotes around string literals).
 Stop reading from the given input files, if any, and start reading from the standard input.
 
 .SH ENVIRONMENT
-.TP
-.B ROSIE_LIBPATH
-A list of directories that Rosie will search when looking for a package of
-patterns to import.  The value is a colon-separated string on Unix, and a
-semi-colon separated string on Windows.  When ROSIE_LIBPATH is not set, Rosie looks
-for imported packages in the standard library within the installation directory.
-.B Important note:
-If you set ROSIE_LIBPATH, you must explicitly include the standard library if you
-want Rosie to include the standard library in its search.
-
+.P
+Currently, Rosie does not use any environment variables.  If this would be a
+useful addition, please open an issue on Rosie's GitHub repository.
+\" .B ROSIE_LIBPATH
 \" .TP
 \" .B ROSIE_COLORS
 \" A colon-separated list of pattern names with ANSI SGR color/attribute options to
@@ -248,10 +248,11 @@ loads the specified (single) file
 .B Forthcoming
 
 .SH BUGS
-.B Rosie
-does not normalize Unicode input.  If a pattern contains composed
+Rosie does not normalize Unicode input.  If a pattern contains composed
 characters, for example, these will not match their decomposed equivalents in
 the input (and vice versa).
+.PP
+The RPL compiler is slow (but matching is reasonably fast).
 .PP
 Issues (bugs and enhancement requests) may be found on 
 .URL https://github.com/jamiejennings/rosie-pattern-language/issues "Rosie's issue page."

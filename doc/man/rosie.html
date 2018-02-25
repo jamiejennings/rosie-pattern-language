@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Tue Jan 30 09:51:17 2018 -->
+<!-- CreationDate: Thu Feb 22 17:17:21 2018 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -104,99 +104,89 @@ below).</p>
 <p style="margin-top: 1em" valign="top">Print the
 configuration of the Rosie installation, including build
 information if available.</p></td>
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="9%">
-
-
-<p style="margin-top: 1em" valign="top"><i>grep</i></p></td>
-<td width="2%"></td>
-<td width="78%">
-
-
-<p style="margin-top: 1em" valign="top">In the style of
-grep, match the given <i>pattern</i> against lines in the
-given input files (or the standard input). In this mode, the
-pattern may match anywhere within a line, and all matches
-within a line are found. The default output form in this
-mode is to print the entire line for all lines that
-match.</p> </td>
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="9%">
-
-
-<p style="margin-top: 1em" valign="top"><i>help</i></p></td>
-<td width="2%"></td>
-<td width="78%">
-
-
-<p style="margin-top: 1em" valign="top">Print help
-text.</p> </td>
 </table>
 
-<p style="margin-left:11%;"><i>list</i> [filter]</p>
+<p style="margin-left:11%;"><i>expand exp</i></p>
 
-<p style="margin-left:22%;">List the available patterns
-from the library whose name contains the optional
-<i>filter</i> as a substring.</p>
+<p style="margin-left:22%;">Expands a <i>pattern
+expression</i> entered on the command line. Output is: (1)
+the expression as entered (which will show any shell
+expansions or substitutions); (2) the parsed expression; (3)
+what the expression means at top level, where a bare
+expression is a tokenized expression; and (4) the result
+after any macro expansions.</p>
+
+<p style="margin-left:11%;"><i>grep exp [file1 ...]</i></p>
+
+<p style="margin-left:22%;">In the style of grep, match the
+given <i>pattern</i> against lines in the given input files
+(or the standard input). In this mode, the pattern may match
+anywhere within a line, and all matches within a line are
+found. The default output form in this mode is to print the
+entire line for all lines that match.</p>
 
 <table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
-<td width="7%">
+<td width="6%">
 
 
-<p style="margin-top: 1em" valign="top"><i>match</i></p></td>
-<td width="4%"></td>
-<td width="78%">
+<p style="margin-top: 1em" valign="top"><i>help</i></p></td>
+<td width="5%"></td>
+<td width="24%">
 
 
-<p style="margin-top: 1em" valign="top">Match the given
-<i>pattern</i> against lines in the given input files (or
-the standard input). Patterns in RPL begin at the start of
-the input line. See the <i>grep</i> command for behavior
-that is more like that utility.</p></td>
+<p style="margin-top: 1em" valign="top">Print help
+text.</p> </td>
+<td width="54%">
+</td>
+</table>
+
+<p style="margin-left:11%;"><i>list</i> [name[.name]]</p>
+
+<p style="margin-left:22%;">List the available patterns
+from the library whose name matches <i>name.</i> To list all
+the names in an imported package, use <i>list
+pkgname.*</i>.</p>
+
+<p style="margin-left:11%;"><i>match exp [file1
+...]</i></p>
+
+<p style="margin-left:22%;">Match the given <i>pattern</i>
+against lines in the given input files (or the standard
+input). Patterns in RPL begin at the start of the input
+line. See the <i>grep</i> command for behavior that is more
+like that utility.</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
-<td width="7%">
+<td width="6%">
 
 
 <p style="margin-top: 1em" valign="top"><i>repl</i></p></td>
-<td width="4%"></td>
+<td width="5%"></td>
 <td width="78%">
 
 
 <p style="margin-top: 1em" valign="top">Enter the
 read-eval-print loop for interactive development and testing
 of patterns</p></td>
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="7%">
-
-
-<p style="margin-top: 1em" valign="top"><i>test</i></p></td>
-<td width="4%"></td>
-<td width="78%">
-
-
-<p style="margin-top: 1em" valign="top">Execute the pattern
-tests embedded within the listed rpl files.</p></td>
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="7%">
-
-
-<p style="margin-top: 1em" valign="top"><i>trace</i></p></td>
-<td width="4%"></td>
-<td width="78%">
-
-
-<p style="margin-top: 1em" valign="top">Perform a match,
-but generate a trace listing of all the steps performed in
-the matching process. This can be quite a lot of output.</p></td>
 </table>
+
+<p style="margin-left:11%;"><i>test file1 [...]</i></p>
+
+<p style="margin-left:22%;">Execute the pattern tests
+embedded within the listed rpl files.</p>
+
+<p style="margin-left:11%;"><i>trace exp [file1
+...]</i></p>
+
+<p style="margin-left:22%;">Perform a match, but generate a
+trace listing of all the steps performed in the matching
+process. This can be quite a lot of output.</p>
 
 <p style="margin-left:11%;"><i>version</i></p>
 
@@ -207,14 +197,52 @@ exit.</p>
 <h2>GLOBAL OPTIONS</h2>
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>&minus;f,
-&minus;-file</b> <i>file</i></p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>&minus;-colors</b>
+<i>colorspecs</i></p>
+
+<p style="margin-left:22%;">Specify a set of colors and
+font attributes, each associated with a pattern name. The
+format of <i>colorspecs</i> is a colon-separated list of
+<i>name=spec</i>, where <i>spec</i> is a semi-colon
+separated list of ANSI (SGR) color and font attributes.
+Colors may be specified by name or integer code. Attributes
+include bold, underline, and others. The format of
+<i>name</i> can be <i>*</i> for a global default;
+<i>pkgname.*</i> for a package default; <i>localname</i> to
+match a name exactly, without a prefix; or
+<i>pkgname.localname</i> to match an imported name
+exactly.</p>
+
+<p style="margin-left:11%;"><b>&minus;f, &minus;-file</b>
+<i>file</i></p>
 
 <p style="margin-left:22%;">Load a file of rpl code. This
 option may be repeated.</p>
 
-<p style="margin-left:11%; margin-top: 1em"><b>&minus;o,
---output</b> <i>style</i></p>
+<p style="margin-left:11%;"><b>&minus;-libpath</b>
+<i>paths</i></p>
+
+<p style="margin-left:22%;">Set the rosie <i>libpath</i>,
+which is a colon-separated list of directories to search, in
+order, for imported packages. The value is a colon-separated
+string. When the libapth is not set by the user, Rosie looks
+for imported packages in the installation directory, at
+<i>ROSIE_LIBDIR</i>, the value of which can be seen using
+the rosie <i>config</i> command. <b>Important note:</b> If
+you set the libpath, you must explicitly include the
+standard library if you want Rosie to include the standard
+library in its search. A <i>libpath</i> set on the command
+line takes precedence over one set in an initialization
+file.</p>
+
+<p style="margin-left:11%;"><b>&minus;-norcfile</b></p>
+
+<p style="margin-left:22%;">Do not load any initialization
+file.</p>
+
+<p style="margin-left:11%;"><b>&minus;o, --output</b>
+<i>style</i></p>
 
 <p style="margin-left:22%;">Output match data according to
 <i>style</i>, which may be <i>color</i>, <i>subs</i>,
@@ -224,6 +252,12 @@ discover what is available in your installation. Note the
 default output style for the <i>match</i> command is
 <i>color</i>, and for the <i>grep</i> command, is
 <i>line</i>.</p>
+
+<p style="margin-left:11%;"><b>&minus;-rcfile</b>
+<i>file</i></p>
+
+<p style="margin-left:22%;">Load the initialization file
+specified, instead of the default, <i>~/.rosierc</i>.</p>
 
 <p style="margin-left:11%;"><b>&minus;-rpl</b>
 <i>source</i></p>
@@ -291,27 +325,73 @@ standard input.</p></td>
 <h2>ENVIRONMENT</h2>
 
 
-
-<p style="margin-left:11%; margin-top: 1em"><b>ROSIE_LIBPATH</b></p>
-
-<p style="margin-left:22%;">A list of directories that
-Rosie will search when looking for a package of patterns to
-import. The value is a colon-separated string on Unix, and a
-semi-colon separated string on Windows. When ROSIE_LIBPATH
-is not set, Rosie looks for imported packages in the
-standard library within the installation directory.
-<b>Important note:</b> If you set ROSIE_LIBPATH, you must
-explicitly include the standard library if you want Rosie to
-include the standard library in its search.</p>
+<p style="margin-left:11%; margin-top: 1em">Currently,
+Rosie does not use any environment variables. If this would
+be a useful addition, please open an issue on Rosie&rsquo;s
+GitHub repository.</p>
 
 <a name="FILES"></a>
 <h2>FILES</h2>
 
 
 
-<p style="margin-left:11%; margin-top: 1em"><i>~/.rosie/</i></p>
+<p style="margin-left:11%; margin-top: 1em"><i>~/.rosierc</i></p>
 
-<p style="margin-left:22%;"><b>Forthcoming</b></p>
+<p style="margin-left:22%;"><b>This is the default
+initialization file, which is loaded before any command line
+options are processed. The syntax of</b> <i>.rosierc</i> is
+essentially the RPL syntax, with two dashes to start
+comments, and option values in double-quoted strings.
+Options are set using an assignment-like syntax, e.g.
+<i>libpath = bar:baz</i> to set the rosie <i>libpath</i> to
+a sequence of two directories, <i>bar</i> and <i>baz</i>.
+The recognized options are:</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="26%"></td>
+<td width="22%">
+
+
+
+<p style="margin-top: 1em" valign="top">colors=&quot;...&quot;</p> </td>
+<td width="3%"></td>
+<td width="49%">
+
+
+<p style="margin-top: 1em" valign="top">sets <i>colors</i>
+to a <i>colorspec</i> (can be used multiple times; values
+will be concatenated)</p></td>
+<tr valign="top" align="left">
+<td width="26%"></td>
+<td width="22%">
+
+
+
+<p style="margin-top: 1em" valign="top">libpath=&quot;...&quot;</p> </td>
+<td width="3%"></td>
+<td width="49%">
+
+
+<p style="margin-top: 1em" valign="top">sets <i>libpath</i>
+(can be used multiple times; values will be
+concatenated)</p> </td>
+<tr valign="top" align="left">
+<td width="26%"></td>
+<td width="22%">
+
+
+
+<p style="margin-top: 1em" valign="top">loadfile=&quot;...&quot;</p> </td>
+<td width="3%"></td>
+<td width="49%">
+
+
+<p style="margin-top: 1em" valign="top">loads the specified
+(single) file (can be used multiple times to load multiple
+rpl files)</p></td>
+</table>
 
 <a name="EXAMPLES"></a>
 <h2>EXAMPLES</h2>
@@ -324,10 +404,13 @@ include the standard library in its search.</p>
 <h2>BUGS</h2>
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>Rosie</b>
-does not normalize Unicode input. If a pattern contains
-composed characters, for example, these will not match their
+<p style="margin-left:11%; margin-top: 1em">Rosie does not
+normalize Unicode input. If a pattern contains composed
+characters, for example, these will not match their
 decomposed equivalents in the input (and vice versa).</p>
+
+<p style="margin-left:11%; margin-top: 1em">The RPL
+compiler is slow (but matching is reasonably fast).</p>
 
 <p style="margin-left:11%; margin-top: 1em">Issues (bugs
 and enhancement requests) may be found on
