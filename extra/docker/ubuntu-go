@@ -15,8 +15,8 @@ RUN pip install --upgrade pip
 RUN pip install cffi
 
 WORKDIR /opt
-RUN wget -q https://storage.googleapis.com/golang/go1.9.1.linux-amd64.tar.gz
-RUN tar -xzf go1.9.1.linux-amd64.tar.gz
+RUN wget -q https://storage.googleapis.com/golang/go1.10.linux-amd64.tar.gz
+RUN tar -xzf go1.10.linux-amd64.tar.gz
 
 # This COPY is designed to trigger re-running the git clone when the repo changes.
 COPY githead-$branch /opt/githead-$branch
