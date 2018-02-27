@@ -1,4 +1,4 @@
-![./CHANGELOG](https://img.shields.io/badge/version-1.0.0--alpha-ff79b4.svg)
+![./CHANGELOG](https://img.shields.io/badge/version-1.0.0--beta-df20ff.svg)
 [![Build Status](https://travis-ci.org/jamiejennings/rosie-pattern-language.svg?branch=master)](https://travis-ci.org/jamiejennings/rosie-pattern-language)
 
 # Rosie Pattern Language (RPL)
