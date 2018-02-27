@@ -118,7 +118,7 @@ high-level notes [in this section](#api-help) below.
 ### Releases forthcoming
 - [x] Change to semantic versioning
 - [x] v1.0.0-alpha release
-- [ ] v1.0.0-beta release
+- [x] v1.0.0-beta release
 - [ ] v1.0.0 release
 
 ### Installation
@@ -143,8 +143,8 @@ it easy to upload/download those dependencies.
 ### Features forthcoming
 - [x] Unicode character predicates
 - [ ] Support JSON output for trace, config, list, and other commands
-- [ ] Customize color assignments
-- [ ] Customize initial environment
+- [x] Customize color assignments
+- [x] Customize initial environment
 - [ ] Generate patterns automatically from locale data
 - [ ] Linter
 - [ ] Toolkit for user-developed macros
@@ -231,6 +231,9 @@ In addition to the people listed in the CONTRIBUTORS file, we wish to thank:
    [argparse](https://github.com/mpeterv/argparse) (MIT License);
 
 ## Other sources
+
+Rosie's home page, with the newest blog posts and info:
+* [Rosie home page](http:tiny.cc/rosie)
 
 Rosie on IBM developerWorks Open:
 * [Rosie blogs and talks](https://developer.ibm.com/open/category/rosie-pattern-language/)
