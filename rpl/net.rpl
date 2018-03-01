@@ -105,7 +105,7 @@ local alias subdomain = { let_dig let_dig_hyp{0,62} }		    -- Per RFC1123, can s
 
 alias fqdn_strict_alias = { subdomain {"." subdomain}+ "."?}
 fqdn_strict = fqdn_strict_alias
-alias fqdn_practical_alias = !>{num.decimal num.end_of_number} fqdn_strict_alias
+alias fqdn_practical_alias = { !>{num.decimal num.end_of_number} fqdn_strict_alias }
 fqdn_practical = fqdn_practical_alias
 fqdn = { {fqdn_practical_alias / subdomain} port_spec? }
 
