@@ -29,18 +29,20 @@ def is_source(line):
     match, leftover, abend, t0, t1 = engine.match(source_line, bytes(line), 1, b"line")
     return match and True or False
 
-def count(f, filename=None):
+def count(f):
     count = 0
     for line in f:
         if is_source(line): count += 1
-    label = (filename + ": " if filename else "").rjust(44)
-    print(label + str(count).rjust(4) + " non-comment, non-blank lines")
+    return count
+
+description = " non-comment, non-blank lines"
 
 if len(sys.argv) == 2:
-    count(sys.stdin)
+    print(str(count(sys.stdin)) + description)
 else:
     for f in sys.argv[2:]:
-        count(open(f, 'r'), f)
+        label = (f + ": " if f else "").rjust(44)
+        print(label + str(count(open(f, 'r'))).rjust(4) + description)
 
 
 
