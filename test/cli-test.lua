@@ -85,39 +85,17 @@ end
 test.heading("Match and grep commands")
 ---------------------------------------------------------------------------------------------------
 
--- results_basic_matchall = 
---    {"\27[30m#\27[0m ",
---     "\27[30m#\27[0m \27[33mThis\27[0m \27[33mfile\27[0m \27[33mis\27[0m \27[33mautomatically\27[0m \27[33mgenerated\27[0m \27[33mon\27[0m \27[36mOSX\27[0m \27[30m.\27[0m ",
---     "\27[30m#\27[0m ",
---     "\27[33msearch\27[0m \27[31mnc.rr.com\27[0m ",
---     "\27[33mnameserver\27[0m \27[31m10.0.1.1\27[0m ",
---     "\27[33mnameserver\27[0m \27[4m2606\27[0m \27[30m:\27[0m \27[4ma000\27[0m \27[30m:\27[0m \27[4m1120\27[0m \27[30m:\27[0m \27[4m8152\27[0m \27[30m:\27[0m \27[4m2f7\27[0m \27[30m:\27[0m \27[4m6fff\27[0m \27[30m:\27[0m \27[4mfed4\27[0m \27[30m:\27[0m \27[4mdc1f\27[0m ",
---     "\27[32m/usr/share/bin/foo\27[0m ",
---     "\27[31mjjennings@us.ibm.com\27[0m "}
-
 results_all_things = 
    { "[39;1m#[0m",
      "[39;1m#[0m [33mThis[0m [33mis[0m [33man[0m [33mexample[0m [33mfile[0m[39;1m,[0m [33mhand[0m[39;1m-[0m[33mgenerated[0m [33mfor[0m [33mtesting[0m [33mrosie[0m[39;1m.[0m",
      "[39;1m#[0m [33mLast[0m [33mupdate[0m[39;1m:[0m [34mWed[0m [34mJun[0m [34m28[0m [1;34m16[0m:[1;34m58[0m:[1;34m22[0m [1;34mEDT[0m [34m2017[0m",
      "[39;1m#[0m ",
-     "[33mdomain[0m[31m abc.aus.example.com[0m",
-     "[33msearch[0m[31m ibm.com[0m[31m mylocaldomain.myisp.net[0m[31m example.com[0m",
-     "[33mnameserver[0m[31m 192.9.201.1[0m",
-     "[33mnameserver[0m[31m 192.9.201.2[0m",
+     "[33mdomain[0m [31mabc.aus.example.com[0m",
+     "[33msearch[0m [31mibm.com[0m [31mmylocaldomain.myisp.net[0m [31mexample.com[0m",
+     "[33mnameserver[0m [31m192.9.201.1[0m",
+     "[33mnameserver[0m [31m192.9.201.2[0m",
      "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m",
-}
-
-
- --   {"[39;1m#[0m",
- --    "[39;1m#[0m [33mThis[0m [33mis[0m [33man[0m [33mexample[0m [33mfile[0m[39;1m,[0m [33mhand[0m[39;1m-[0m[33mgenerated[0m [33mfor[0m [33mtesting[0m [33mrosie[0m[39;1m.[0m",
- --    "[39;1m#[0m [33mLast[0m [33mupdate[0m[39;1m:[0m [34mWed[0m [34mJun[0m [34m28[0m [1;34m16[0m:[1;34m58[0m:[1;34m22[0m [1;34mEDT[0m [34m2017[0m",
- --    "[39;1m#[0m ",
- --    "[33mdomain[0m [31mabc.aus.example.com[0m",
- --    "[33msearch[0m [31mibm.com[0m [31mmylocaldomain.myisp.net[0m [31mexample.com[0m",
- --    "[33mnameserver[0m [31m192.9.201.1[0m",
- --    "[33mnameserver[0m [31m192.9.201.2[0m",
- --    "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m"
- -- }
+  }
 
 results_common_word =
    {"[33mdomain[0m abc.aus.example.com",
