@@ -1,0 +1,220 @@
+rosie(1) -- Rosie Pattern Engine (Rosie Pattern Language)
+=========================================================
+
+## SYNOPSIS
+
+`rosie` [global-options] command [command-options] pattern-expression [file1 [file2 ...]]
+
+## DESCRIPTION
+
+`Rosie`
+searches all given input files for lines that match a pattern.  The pattern
+language is similar to regular expressions, but more powerful.  Also, a set of
+predefined (named) patterns are provided.  The pattern library is extensible.
+Rosie patterns are written in `Rosie Pattern Language (RPL)`.
+
+A shared library, `librosie`, provides a programmatic interface to rosie in C,
+Go, Python, and other languages that support `libffi`. `Rosie` can be used for
+data mining on large data sets, or for the kind of smaller tasks that Unix
+`grep` and other regex tools are used for.  The output can be plain text, like
+`grep` produces, or can be structured JSON, in the form of a parse tree.  A
+number of other output options are available (see below).
+
+## LANGUAGE REFERENCE
+
+The RPL Language Reference may be found via the
+[Rosie home page](http://rosie-lang.org) (news, docs, and more).
+
+## COMMANDS
+
+The primary commands are `match` and `grep`.  Help for a command is obtained using the
+`-h` option (see below).  General help is available with the `help` command.
+
+  * `config`:
+    Print the configuration of the Rosie installation, including build information if available.
+
+  * `expand` <exp>: 
+    Expands a **pattern expression** entered on the command line.  Output is:
+	(1) the expression as entered (which will show any shell expansions or
+	substitutions); (2) the parsed expression; (3) what the expression means at
+	top level, where a bare expression is a tokenized expression; and (4) the
+	result after any macro expansions.
+
+  * `grep` <exp> [file1 ...]:
+	In the style of grep, match the given **pattern** against lines in the given
+	input files (or the standard input).  In this mode, the pattern may match
+	anywhere within a line, and all matches within a line are found.  The
+	default output form in this mode is to print the entire line for all lines
+	that match.
+
+  * `help`:
+	Print help text.
+
+  * `list` [name[.name]]:
+	List the available patterns from the library whose name matches **name**. To
+	list all the names in an imported package, use `list pkgname.*`.
+
+  * `match` <exp> [file1 ...]:
+	Match the given **pattern** against lines in the given input files (or the
+	standard input). Patterns in RPL begin at the start of the input line. See
+	the `grep` command for behavior that is more like that utility.
+
+  * `repl`:
+	Enter the read-eval-print loop for interactive development and testing of patterns
+
+  * `test` <file1> [file2...]:
+	Execute the unit tests embedded within the listed rpl files.
+
+  * `trace` <exp> [file1 ...]:
+	Perform a match, but generate a trace listing of all the steps performed in
+	the matching process.  This can be quite a lot of output. 
+
+  * `version`: 
+	Print the Rosie version and exit.
+
+## GLOBAL OPTIONS
+
+  * `--colors` <colorspecs>:
+	Specify a set of colors and font attributes, each associated with a pattern
+	name.  The format of **colorspecs** is a colon-separated list of
+	`name=spec`, where:
+    
+    `spec` is a semi-colon separated list of ANSI (SGR) color and font
+	attributes.  Colors may be specified by name or integer code.  Attributes
+	include bold, underline, and others.  
+
+	`name` can be `*` for a global default; `pkgname.*` for a package default;
+    `localname` to match a name exactly, without a prefix; or
+    `pkgname.localname` to match an imported name exactly.
+
+  * `-f, --file` <file>:
+	Load a file of rpl code.  This option may be repeated.
+
+  * `--libpath` <paths>:
+	Set the rosie **libpath**, which is a colon-separated list of directories to
+	search, in order, for imported packages.  The value is a colon-separated
+	string.  When the **libpath** is not set by the user, Rosie looks for
+	imported packages in the installation directory, at **ROSIE_LIBDIR** (the
+	value of which can be seen using the `rosie config` command).
+
+	**Important note:**  If you set the libpath, you must explicitly include the
+	standard library if you want Rosie to include the standard library in its
+	search. A **libpath** set on the command line takes precedence over one set
+	in an initialization file.   
+
+  * `--norcfile`:
+	Do not load any initialization file.
+
+  * `-o, --output` <format>:
+	Output match data according to **format**, which may be one of:
+
+	color, subs, matches, json, line
+	
+	or possibly other (installation-dependent) values.  Use **rosie help** to
+	discover what is available in your installation.  
+	
+	Note the default output style for the  `match` command is `color`, and for
+	the `grep` command, is `line`.
+
+  * `--rcfile` <file>:
+	Load the initialization file specified, instead of the default, `~/.rosierc`.
+
+  * `--rpl` <source>:
+	Define additional patterns, import additional packages.  The argument passed
+	to **--rpl** is typically enclosed in single quotes so that Rosie will see
+	it as a single string with no shell expansions performed.
+
+  * `--verbose`:
+	When appropriate, output additional information.
+
+
+## COMMAND OPTIONS
+
+  * `-h, --help`:
+	Display help for a command.  This option must be given after the command
+	name, e.g. `rosie match -h`.
+
+  * `-a, --all`:
+	Generate output for all input lines.  Lines that do not match the
+	pattern are written to stderr, while matched output is written to stdout.
+
+  * `-w, --wholefile`:
+	Match against the whole input file as if it were a single string.
+
+  * `-F, --fixed-strings`:
+	Interpret <pattern> as a set of fixed (literal) strings, instead of an RPL
+	pattern (which reqires double quotes around string literals).
+
+  * `-`:
+	Stop reading from the given input files, if any, and start reading from the standard input.
+
+
+## ENVIRONMENT
+
+Currently, Rosie does not use any environment variables.  If this would be a
+useful addition, please open an issue on Rosie's GitHub repository to request
+this enhancement.
+
+
+## FILES
+
+  * `~/.rosierc`:
+	This is the default initialization file, which is loaded before any command
+	line options are processed.  The syntax of a Rosie rcfile is essentially the
+	RPL syntax, with two dashes to start comments, and option values in
+	double-quoted strings.
+   
+    Options are set using an assignment-like syntax, e.g.  
+
+	```libpath = "bar:baz"```
+   
+    to set the rosie `libpath` to a sequence of two directories, `bar` and `baz`.
+
+    The recognized options are:
+
+    `colors`=<colorspec> 
+	to set `colors` to a _colorspec_ (can be used multiple times; values will be concatenated)
+
+    `libpath`=<paths> 
+	to set `libpath` (can be used multiple times; values will be concatenated)
+  
+    `loadfile`=<file> 
+	to load the specified file (can be used multiple times to load multiple rpl files)
+
+## EXAMPLES
+
+Forthcoming
+
+## BUGS
+
+Rosie does not normalize Unicode input.  If a pattern contains composed
+characters, for example, these will not match their decomposed equivalents in
+the input (and vice versa).
+
+The RPL compiler is slow (but matching is reasonably fast).
+
+Issues (bugs and enhancement requests) may be found on the
+[Rosie issue page](https://github.com/jamiejennings/rosie-pattern-language/issues). 
+
+## SEE ALSO
+
+See [Rosie's home](http://rosie-lang.org) for news, docs, etc.
+
+## AUTHOR
+
+Jamie A. Jennings
+
+With contributions from the people listed in the
+[CONTRIBUTORS](https://github.com/jamiejennings/rosie-pattern-language/blob/master/CONTRIBUTORS)
+file.
+
+Email the Rosie Project at [info@rosie-lang.org](mailto:info@rosie-lang.org).
+
+Follow [@jamietheriveter](https://twitter.com/jamietheriveter) on Twitter.
+
+
+
+
+
+
+
