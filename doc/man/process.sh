@@ -1,3 +1,3 @@
 #!/bin/bash
-today=`date "+%Y-%m-%d"`
+# gem install --user-install ronn
 ronn --style="./man.css" --organization="The Rosie Project" "$@"
