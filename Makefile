@@ -206,13 +206,16 @@ install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl insta
 # because DESTDIR may have changed.
 
 $(INSTALL_ROSIEBIN): compile binaries
-	mv $(LIBROSIE_DIR)/system/rosie "$(INSTALL_ROSIEBIN)"
+	cp $(LIBROSIE_DIR)/system/rosie "$(INSTALL_ROSIEBIN)"
+	rm $(LIBROSIE_DIR)/system/rosie
 
 # Install librosie
 .PHONY: install_librosie
 install_librosie: compile binaries
-	mv "$(LIBROSIE_DIR)/system/$(LIBROSIE_DYLIB)" "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
-	mv "$(LIBROSIE_DIR)/system/$(LIBROSIE_A)" "$(LIBROSIED)/$(LIBROSIE_A)"
+	cp "$(LIBROSIE_DIR)/system/$(LIBROSIE_DYLIB)" "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
+	rm "$(LIBROSIE_DIR)/system/$(LIBROSIE_DYLIB)"
+	cp "$(LIBROSIE_DIR)/system/$(LIBROSIE_A)" "$(LIBROSIED)/$(LIBROSIE_A)"
+	rm "$(LIBROSIE_DIR)/system/$(LIBROSIE_A)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata
