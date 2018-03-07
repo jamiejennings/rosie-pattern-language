@@ -82,6 +82,8 @@ ROSIED = $(DESTDIR)/lib/rosie
 
 INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_RPL_DIR = $(ROSIED)/rpl
+INSTALL_DOC_DIR = $(ROSIED)/doc
+INSTALL_EXTRA_DIR = $(ROSIED)/extra
 INSTALL_BIN_DIR = $(DESTDIR)/bin
 INSTALL_ROSIEBIN = $(INSTALL_BIN_DIR)/rosie
 
@@ -199,7 +201,7 @@ $(ROSIEBIN): $(LIBROSIE_DIR)/local/rosie
 # Main install rule
 .PHONY: install
 install: LIBROSIE_TARGET=system
-install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie
+install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie install_doc install_extras
 
 # We use mv instead of cp for all the binaries, so that
 # ROSIE_CLI_SYSTEM will be rebuilt every time "make install" is run,
@@ -243,6 +245,16 @@ install_rpl:
 	cp rpl/builtin/*.rpl "$(INSTALL_RPL_DIR)"/builtin/
 	mkdir -p "$(INSTALL_RPL_DIR)"/Unicode
 	cp rpl/Unicode/*.rpl "$(INSTALL_RPL_DIR)"/Unicode/
+
+.PHONY: install_doc
+install_doc:
+	mkdir -p "$(INSTALL_DOC_DIR)"
+	cp -R doc/ "$(INSTALL_DOC_DIR)"
+
+.PHONY: install_extras
+install_extras:
+	mkdir -p "$(INSTALL_EXTRA_DIR)"
+	cp -R extra/ "$(INSTALL_EXTRA_DIR)"
 
 # -----------------------------------------------------------------------------
 # Uninstall
