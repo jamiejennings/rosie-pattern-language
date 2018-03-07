@@ -481,6 +481,7 @@ function common.encoder_returns_userdata(encoder)
 end
 
 function common.add_encoder(name, rmatch_arg, fn)
+   assert(rmatch_arg and fn, "bad arg to add_encoder")
    common.encoder_table[name] = {rmatch_arg, fn}
 end
 

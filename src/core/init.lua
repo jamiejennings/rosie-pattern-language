@@ -264,16 +264,16 @@ local rosie_package = {}
 rosie_package.env = _ENV
 load_all()
 
-common.add_encoder("color", common.BYTE_ENCODER,
+common.add_encoder("color", common.BYTE_ENCODING,
 		   function(m, input, start, parms)
 		      return color.match(common.byte_to_lua(m, input), input, parms.colors)
 		   end)
-common.add_encoder("matches", common.BYTE_ENCODER,
+common.add_encoder("matches", common.BYTE_ENCODING,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      return m.data
 		   end)
-common.add_encoder("subs", common.BYTE_ENCODER,
+common.add_encoder("subs", common.BYTE_ENCODING,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      if m.subs then
@@ -286,7 +286,7 @@ common.add_encoder("subs", common.BYTE_ENCODER,
 			 return nil
 		      end
 		   end)
-common.add_encoder("jsonpp", common.BYTE_ENCODER,
+common.add_encoder("jsonpp", common.BYTE_ENCODING,
 		   function(m, input, start)
 		      local max_length = false
 		      local json_style = true
