@@ -114,8 +114,8 @@ submodules = submodules/lua/src/Makefile submodules/lua-cjson/Makefile submodule
 $(submodules): $(submodule_sentinel)
 
 $(submodule_sentinel): 
-	git submodule init
-	git submodule update --checkout
+	if [ -z $$BREW ]; then git submodule init; fi
+	if [ -z $$BREW ]; then git submodule update --checkout; fi
 	cd $(LUA_DIR) && rm -f include && ln -sf src include
 	cp -p $(LUA_DIR)/README $(submodule_sentinel)
 	@$(BUILD_ROOT)/src/build_info.sh "git_submodules" $(BUILD_ROOT) "git" >> $(BUILD_ROOT)/build.log
