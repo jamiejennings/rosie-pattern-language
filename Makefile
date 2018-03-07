@@ -206,8 +206,9 @@ install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl insta
 # because DESTDIR may have changed.
 
 $(INSTALL_ROSIEBIN): compile binaries
-	cp $(LIBROSIE_DIR)/system/rosie "$(INSTALL_ROSIEBIN)"
-	rm $(LIBROSIE_DIR)/system/rosie
+	mkdir -p "$(INSTALL_BIN_DIR)"
+	cp "$(LIBROSIE_DIR)/system/rosie" "$(INSTALL_ROSIEBIN)"
+	rm "$(LIBROSIE_DIR)/system/rosie"
 
 # Install librosie
 .PHONY: install_librosie
