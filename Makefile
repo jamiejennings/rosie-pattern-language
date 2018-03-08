@@ -84,6 +84,7 @@ INSTALL_LIB_DIR = $(ROSIED)/lib
 INSTALL_RPL_DIR = $(ROSIED)/rpl
 INSTALL_DOC_DIR = $(ROSIED)/doc
 INSTALL_EXTRA_DIR = $(ROSIED)/extra
+INSTALL_MAN_DIR = $(DESTDIR)/share/man/man1
 INSTALL_BIN_DIR = $(DESTDIR)/bin
 INSTALL_ROSIEBIN = $(INSTALL_BIN_DIR)/rosie
 
@@ -201,7 +202,7 @@ $(ROSIEBIN): $(LIBROSIE_DIR)/local/rosie
 # Main install rule
 .PHONY: install
 install: LIBROSIE_TARGET=system
-install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie install_doc install_extras
+install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie install_doc install_extras install_man
 
 # We use mv instead of cp for all the binaries, so that
 # ROSIE_CLI_SYSTEM will be rebuilt every time "make install" is run,
@@ -256,6 +257,11 @@ install_extras:
 	mkdir -p "$(INSTALL_EXTRA_DIR)"
 	cp -R extra/ "$(INSTALL_EXTRA_DIR)"
 
+.PHONY: install_man
+install_man:
+	mkdir -p "$(INSTALL_MAN_DIR)"
+	cp doc/man/rosie.1 "$(INSTALL_MAN_DIR)"
+
 # -----------------------------------------------------------------------------
 # Uninstall
 # -----------------------------------------------------------------------------
@@ -269,6 +275,8 @@ uninstall:
 	@echo "Removing librosie.a/.so/.dylib from $(LIBROSIED)"
 	@-rm -vf "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
 	@-rm -vf "$(LIBROSIED)/$(LIBROSIE_A)"
+	@echo "Removing rosie man page $(INSTALL_MAN_DIR)"
+	@-rm -vf "$(INSTALL_MAN_DIR)/rosie.1"
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)
