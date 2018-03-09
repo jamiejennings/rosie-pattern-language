@@ -312,7 +312,10 @@ class RosieMatchTest(unittest.TestCase):
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)
         self.assertTrue(tm >= 0)
-        
+
+        self.assertRaises(ValueError, self.engine.match, b, inp, 1, b"this_is_not_a_valid_encoder_name")
+
+            
 class RosieTraceTest(unittest.TestCase):
 
     engine = None
@@ -411,23 +414,41 @@ class RosieExecuteRcfileTest(unittest.TestCase):
         pass
 
     def test(self):
-        print("*****************************************************")
-        print("** Rosie errors and warnings will be printed below **")
-        print("*****************************************************")
-        result = self.engine.execute_rcfile(b"This file does not exist")
-        self.assertTrue(result is None)
-        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
-        self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
-        self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile3")))
-        self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile5")))
-        self.assertTrue(result is True)
+        # print("*****************************************************")
+        # print("** Rosie errors and warnings will be printed below **")
+        # print("*****************************************************")
+        with redirection(stderr=devnull, stdout=devnull):
+            result = self.engine.execute_rcfile(b"This file does not exist")
+            self.assertTrue(result is None)
+            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile3")))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile5")))
+            self.assertTrue(result is True)
 
 
         
 # -----------------------------------------------------------------------------
+
+class redirection(object):
+    def __init__(self, stdout=None, stderr=None):
+        self._stdout = stdout or sys.stdout
+        self._stderr = stderr or sys.stderr
+
+    def __enter__(self):
+        self.old_stdout, self.old_stderr = sys.stdout, sys.stderr
+        self.old_stdout.flush(); self.old_stderr.flush()
+        sys.stdout, sys.stderr = self._stdout, self._stderr
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._stdout.flush(); self._stderr.flush()
+        sys.stdout = self.old_stdout
+        sys.stderr = self.old_stderr
+
+devnull = open(os.devnull, 'w')
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
