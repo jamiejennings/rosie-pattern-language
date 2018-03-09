@@ -13,6 +13,10 @@
 #   Python 3.6.4 (installed via brew on OS X)
 #   cffi-1.11.4
 
+# TODO:
+# - replace magic error code numbers with constants
+# - suppress the stderr output (librosie writes some error messages to stderr)
+
 from __future__ import unicode_literals
 
 from cffi import FFI
@@ -209,6 +213,8 @@ class engine ():
                 return None, left, abend, ttotal, tmatch
             elif Cmatch.data.len == 1:
                 raise ValueError("invalid compiled pattern (already freed?)")
+            elif Cmatch.data.len == 2:
+                raise ValueError("invalid output encoder")
         data = read_cstr(Cmatch.data)
         return data, left, abend, ttotal, tmatch
 
@@ -223,7 +229,7 @@ class engine ():
             raise RuntimeError("trace() failed (please report this as a bug)")
         if Ctrace.ptr == ffi.NULL:
             if Ctrace.len == 2:
-                return ValueError("invalid trace style")
+                raise ValueError("invalid trace style")
             elif Ctrace.len == 1:
                 raise ValueError("invalid compiled pattern (already freed?)")
         matched = False if Cmatched[0]==0 else True
