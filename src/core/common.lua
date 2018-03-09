@@ -467,9 +467,11 @@ common.LINE_ENCODING = 2
 common.JSON_ENCODING = 1
 
 -- These constants are interpreted in the librosie C code and must match what is in librosie.h:
-common.ERR_NO_PATTERN = 1       -- Not a valid rplx 
+local match_without_data = 1
+common.MATCH_WITHOUT_DATA = match_without_data
 common.ERR_NO_ENCODER = 2	-- /* also used for "no trace style" */
 common.ERR_NO_FILE = 3		-- /* no such file or directory */
+common.ERR_NO_PATTERN = 4       -- Not a valid rplx 
 
 local error_encoder =
    { common.BYTE_ENCODING,
@@ -482,7 +484,7 @@ common.encoder_table =
    setmetatable({ line = {common.LINE_ENCODING, identity_fn},
 		  json = {common.JSON_ENCODING, identity_fn},
 		  byte = {common.BYTE_ENCODING, identity_fn},
-		  none = {common.BYTE_ENCODING, function(...) return nil end},
+		  bool = {common.LINE_ENCODING, function(...) return match_without_data end},
 		  default = {common.BYTE_ENCODING, common.byte_to_lua},
 	       },
 	     {__index = function(...) return error_encoder end})

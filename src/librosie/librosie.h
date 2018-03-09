@@ -24,9 +24,11 @@
  * occurred.  Zero is reserved for the "no match" situation (not an
  * error, just an indication that a match did not succeed).
  */
-#define ERR_NO_PATTERN 1
+#define MATCH_WITHOUT_DATA 1	/* for the 'bool' output encoder */
 #define ERR_NO_ENCODER 2	/* also used for "no trace style" */
 #define ERR_NO_FILE 3		/* no such file or directory */
+#define ERR_NO_PATTERN 4
+
 
 #include <stdint.h>
 #include <sys/param.h>		/* MAXPATHLEN */

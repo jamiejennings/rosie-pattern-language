@@ -212,9 +212,11 @@ class engine ():
             if Cmatch.data.len == 0:
                 return None, left, abend, ttotal, tmatch
             elif Cmatch.data.len == 1:
-                raise ValueError("invalid compiled pattern (already freed?)")
+                return True, left, abend, ttotal, tmatch
             elif Cmatch.data.len == 2:
                 raise ValueError("invalid output encoder")
+            elif Cmatch.data.len == 4:
+                raise ValueError("invalid compiled pattern (already freed?)")
         data = read_cstr(Cmatch.data)
         return data, left, abend, ttotal, tmatch
 
@@ -260,12 +262,12 @@ class engine ():
             raise RuntimeError("matchfile() failed: " + str(read_cstr(Cerrmsg)))
 
         if Ccin[0] == -1:       # Error occurred
-            if Ccout[0] == 1:
-                raise ValueError("invalid compiled pattern (already freed?)")
-            elif Ccout[0] == 2:
+            if Ccout[0] == 2:
                 raise ValueError("invalid encoder")
             elif Ccout[0] == 3:
                 raise ValueError(str(read_cstr(Cerrmsg))) # file i/o error
+            elif Ccout[0] == 4:
+                raise ValueError("invalid compiled pattern (already freed?)")
             else:
                 raise ValueError("unknown error caused matchfile to fail")
         return Ccin[0], Ccout[0], Ccerr[0]

@@ -302,6 +302,13 @@ class RosieMatchTest(unittest.TestCase):
         self.assertTrue(tt >= 0)
         self.assertTrue(tm >= 0)
 
+        m, left, abend, tt, tm = self.engine.match(b, inp, 1, b"bool")
+        self.assertIs(m, True)
+        self.assertTrue(left == 3)
+        self.assertTrue(abend == False)
+        self.assertTrue(tt >= 0)
+        self.assertTrue(tm >= 0)
+
         m, left, abend, tt, tm = self.engine.match(b, inp, 1, b"color")
         self.assertTrue(m)
         # only checking the first two chars, looking for the start of
