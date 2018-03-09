@@ -284,7 +284,7 @@ sniff: $(ROSIEBIN)
 	EXPECTED="$(shell head -1 $(BUILD_ROOT)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
-            echo "Rosie Pattern Engine built successfully!"; \
+            echo "Rosie Pattern Engine $$RESULT built successfully!"; \
 	    if [ -z "$$BREW" ]; then \
 	      	    echo "    Use 'make install' to install into DESTDIR=$(DESTDIR)"; \
 	      	    echo "    Use 'make uninstall' to uninstall from DESTDIR=$(DESTDIR)"; \
