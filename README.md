@@ -60,14 +60,16 @@ See also:
 ## Building
 
 Platforms: (most of these were tested with docker)
-- [x] OS X (macOS Sierra, 10.12.6)
-- [x] [Arch Linux](https://www.archlinux.org/) Tested at 2017-09-18T17:29:31
+- [x] [Arch Linux](https://www.archlinux.org/) Tested at Fri Mar 9 12:33:25 EST 2018
+- [x] [CentOS Linux release 7.4.1708 (Core)](https://www.centos.org)
 - [x] [Fedora release 25 (Twenty Five)](https://getfedora.org)
-- [x] [CentOS Linux release 7.4.1708 (Core)](https://www.centos.org) 
-- [x] [Ubuntu 16.04.1 LTS (Xenial Xerus)](https://www.ubuntu.com/)
+- [x] OS X (macOS Sierra, 10.13.3)
+- [x] Python 2.7.12 docker image
+- [x] Python 3.6.4 docker image
 - [x] [RedHat Enterprise Linux 7](https://www.redhat.com/en/technologies/linux-platforms)
 - [ ] [SUSE Linux Enterprise Server 12 SP2](https://www.suse.com/solutions/enterprise-linux/)
-- [ ] That Ubuntu-on-Windows thing
+- [x] [Ubuntu 16.04.1 LTS (Xenial Xerus)](https://www.ubuntu.com/)
+- [x] Ubuntu subsystem on Windows (reportedly works; we have not verified it)
 
 Prerequisites: git, make, gcc, readline (readline-common), readline-devel (libreadline-dev)
 

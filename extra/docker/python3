@@ -1,4 +1,4 @@
-FROM python:2.7.12
+FROM python
 ARG branch
 
 RUN apt-get update -y

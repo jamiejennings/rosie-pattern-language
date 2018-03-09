@@ -21,6 +21,5 @@ WORKDIR /opt/rosie
 RUN make LUADEBUG=1
 RUN make test CLIENTS=all
 RUN make install
-
-
-
+RUN uname -a
+RUN cat /etc/os-release
