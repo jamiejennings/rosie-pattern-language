@@ -25,6 +25,10 @@ identifier; Yellow: word
 </table>
 </blockquote>
 
+## NEWS
+* [Brew installer for Mac OS X](https://github.com/jamiejennings/homebrew-rosie)
+* Rosie is in Beta testing now.  Version 1.0.0 is planned for April/May, 2018.
+
 
 ## Contents
 
