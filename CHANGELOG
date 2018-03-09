@@ -1,6 +1,30 @@
+2018-03-09  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-2:
+
+	CHANGED: The (undocumented) output encoder "none" has been removed.
+
+	NEW: An output encoder called "bool" was added.  It is not useful from
+	the command line, but when using librosie's match() function, it will
+	return a code 0/1 indicating a match or no match.
+
+	NEW: Python example program extra/examples/generic_sloc.py.
+
+	ENHANCED: When the user specifies an output encoder name that is not
+	supported, a proper error is returned.  Previously, the error that was
+	returned could be confused with a bug in librosie.
+
+	ENHANCED: `make install` now installs the rosie man page as well.
+
+	ENHANCED: Makefile was tweaked so that it works with the new brew
+	(http://brew.sh) formula for install Rosie on OS X.
+
+	FIXED: a bug in pattern net.fqdn_practical that caused it to include a
+	leading space in the capture.
+
 2018-02-25  Jamie Jennings  <jjennings@us.ibm.com>
 
-	* 1.0.0-beta
+	* 1.0.0-beta-1
 
 	ENHANCED: The python module, rosie.py, now works with Python 2.7 and
 	Python 3.6.

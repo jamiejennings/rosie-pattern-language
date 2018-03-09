@@ -26,7 +26,7 @@ if errs:
 
 def is_source(line):
     if not line: return False
-    match, leftover, abend, t0, t1 = engine.match(source_line, bytes(line), 1, b"line")
+    match, leftover, abend, t0, t1 = engine.match(source_line, bytes(line), 1, b"bool")
     return match and True or False
 
 def count(f):
@@ -41,7 +41,7 @@ if len(sys.argv) == 2:
     print(str(count(sys.stdin)) + description)
 else:
     for f in sys.argv[2:]:
-        label = (f + ": " if f else "").rjust(44)
+        label = f + ": " if f else ""
         print(label + str(count(open(f, 'r'))).rjust(4) + description)
 
 
