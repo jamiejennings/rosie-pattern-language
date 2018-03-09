@@ -251,7 +251,7 @@ end
 
 function common.match(peg, input, start, rmatch_encoder, fn_encoder, parms, total_time, lpegvm_time)
    local m, leftover, abend, t1, t2 = peg:rmatch(input, start, rmatch_encoder, total_time, lpegvm_time)
-   if not m then return false, start, abend, t1, t2; end
+   if m==0 then return false, start, abend, t1, t2; end
    return fn_encoder(m, input, start, parms), leftover, abend, t1, t2
 end
 
@@ -461,10 +461,22 @@ end
 
 local identity_fn = function(...) return ... end
 
--- These constants are interpreted in the rpeg C code:
+-- These constants are interpreted in the rpeg C code and must match what is in rpeg.h:
 common.BYTE_ENCODING = 3
 common.LINE_ENCODING = 2
 common.JSON_ENCODING = 1
+
+-- These constants are interpreted in the librosie C code and must match what is in librosie.h:
+common.ERR_NO_PATTERN = 1       -- Not a valid rplx 
+common.ERR_NO_ENCODER = 2	-- /* also used for "no trace style" */
+common.ERR_NO_FILE = 3		-- /* no such file or directory */
+
+local error_encoder =
+   { common.BYTE_ENCODING,
+     function(...) return
+	common.ERR_NO_ENCODER
+     end
+}
 
 common.encoder_table = 
    setmetatable({ line = {common.LINE_ENCODING, identity_fn},
@@ -473,7 +485,7 @@ common.encoder_table =
 		  none = {common.BYTE_ENCODING, function(...) return nil end},
 		  default = {common.BYTE_ENCODING, common.byte_to_lua},
 	       },
-		{__index = function(...) return {} end})
+	     {__index = function(...) return error_encoder end})
 
 function common.encoder_returns_userdata(encoder)
    local fn = common.encoder_table[encoder]

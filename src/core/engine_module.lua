@@ -236,6 +236,28 @@ local function engine_trace(e, expression, input, start, style)
    return engine_match_trace(e, _trace, expression, input, start, style)
 end
 
+-- Cmatch optimizes the engine's 'match' function for the case where:
+-- (1) We are calling from C code (librosie); and
+-- (2) We want Lua to handle the output encoding.
+-- Note that the output encoder has NOT been checked for validity here,
+-- because librosie is not aware of which output encoders may have been
+-- defined in Lua.  (This information hiding is deliberate, because we
+-- expect users to define their own output encoders in Lua in the future.)
+local function Cmatch(compiled_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
+   assert(rplx.is(compiled_exp))
+   assert(type(input) == "userdata")
+   assert(type(start) == "number")
+   assert(type(encoder) == "string")
+--   assert(type(total_time_accum) == "number")
+--   assert(type(lpegvm_time_accum) == "number")
+   local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
+   local m, leftover, abend, t1, t2 =
+      (compiled_exp.pattern.peg):rmatch(input, start, rmatch_encoder, total_time_accum, lpegvm_time_accum)
+   if m==0 then return m, start, abend, t1, t2; end
+   local parms = compiled_exp.engine.encoder_parms
+   return fn_encoder(m, input, start, parms), leftover, abend, t1, t2
+end
+
 ----------------------------------------------------------------------------------------
 
 local process_input_file = {}
@@ -513,6 +535,7 @@ local create_rplx = function(en, pattern)
 							engine_match(en, self, input, start, encoder, t0, t1)
 						     return m, left, abend, t0, t1
 						  end,
+					    Cmatch=Cmatch,
 					 };
 		    end
 
@@ -522,6 +545,7 @@ rplx = recordtype.new("rplx",
 			--
 			match=false;
 			trace=false;
+			Cmatch=false;
 		      },
 		      create_rplx
 		   )

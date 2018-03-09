@@ -525,7 +525,7 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
     return ERR_ENGINE_CALL_FAILED;
   }
 
-  if ( lua_isboolean(L, -2) ) {
+  if ( !lua_toboolean(L, -2) ) {
     *pat = 0;
     CHECK_TYPE("compile messages", lua_type(L, -1), LUA_TTABLE);
     t = to_json_string(L, -1, &temp_rs);
@@ -546,9 +546,13 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   lua_pushvalue(L, -2);
   CHECK_TYPE("new rplx object", lua_type(L, -1), LUA_TTABLE);
   *pat = luaL_ref(L, 1);
-#if LOGGING
-  if (*pat == LUA_REFNIL) LOG("error storing rplx object\n");
-#endif
+  if (*pat == LUA_REFNIL) {
+    LOG("error storing rplx object\n");
+    LOGstack(L);
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+    return ERR_ENGINE_CALL_FAILED;
+  }
   LOGf("storing rplx object at index %d\n", *pat);
 
   t = to_json_string(L, -1, &temp_rs);
@@ -592,7 +596,7 @@ static inline void collect_if_needed(lua_State *L) {
 
 EXPORT
 int rosie_match(Engine *e, int pat, int start, char *encoder_name, str *input, match *match) {
-  int t, encoder;
+  int t, encoder, result_type, match_code;
   size_t temp_len;
   unsigned char *temp_str;
   rBuffer *buf;
@@ -614,21 +618,26 @@ int rosie_match(Engine *e, int pat, int start, char *encoder_name, str *input, m
 
 have_pattern:
 
-  /* The encoder values that do not require Lua processing
-   * take a different code path from the ones that do.  When no
-   * Lua processing is needed, we can (1) use a lightuserdata to hold
-   * a ptr to the rosie_string holding the input, and (2) call into a
-   * refactored rmatch such that it allows this. 
+  /* The encoder values that do not require Lua processing have
+   * non-zero codes, and take a different code path from the ones that
+   * do.  When no Lua processing is needed, we can (1) use a
+   * lightuserdata to hold a ptr to the rosie_string holding the
+   * input, and (2) call into a refactored rmatch that expects this.
    *
-   * Otherwise, we call the lua function rplx.match().
+   * Otherwise, we call the lua function rplx.Cmatch().
    */
 
   encoder = encoder_name_to_code(encoder_name);
   LOGf("in rosie_match, encoder value is %d\n", encoder);
   if (!encoder) {
     /* Path through Lua */
-    t = lua_getfield(L, -1, "match");
-    CHECK_TYPE("rplx.match()", t, LUA_TFUNCTION);
+    t = lua_getfield(L, -1, "Cmatch");
+    CHECK_TYPE("rplx.Cmatch()", t, LUA_TFUNCTION);
+    /* FUTURE: Cache Cmatch, because it is constant across all rplx
+     * objects created by this engine.  Should move it out of rplx
+     * object and into engine module, then create a registry key for
+     * it, which we can retrieve here.
+     */
     lua_replace(L, 1);
     lua_settop(L, 2);
     /* Don't make a copy of the input.  Wrap it in an rbuf, which will
@@ -640,6 +649,10 @@ have_pattern:
   }
   else {
     /* Path through C */
+
+    /* FUTURE: Store two arrays, one for the rplx object (like now)
+     * and one for the peg.  Retrieve only the peg here.
+     */
     t = lua_getfield(L, -1, "pattern");
     CHECK_TYPE("rplx pattern slot", t, LUA_TTABLE);
     t = lua_getfield(L, -1, "peg");
@@ -668,19 +681,22 @@ have_pattern:
   (*match).leftover = lua_tointeger(L, -4);
   lua_pop(L, 4);
 
-  buf = lua_touserdata(L, -1);
-  if (buf) {
+  result_type = lua_type(L, -1);
+  switch (result_type) {
+  case LUA_TUSERDATA: {
+    buf = lua_touserdata(L, -1);
     LOG("in rosie_match, match succeeded\n");
     (*match).data.ptr = (unsigned char *)buf->data;
     (*match).data.len = buf->n;
+    break;
   }
-  else if (lua_isboolean(L, -1)) {
-    LOG("in rosie_match, match failed\n");
-    set_match_error(match, ERR_NO_MATCH);
-    (*match).data.ptr = NULL;
-    (*match).data.len = 0;
+  case LUA_TNUMBER: {
+    match_code = lua_tointeger(L, -1);
+    LOGf("in rosie_match, match returned the integer code %d\n", match_code);
+    set_match_error(match, match_code);
+    break;
   }
-  else if (lua_isstring(L, -1)) {
+  case LUA_TSTRING: {
     if (encoder) {
       LOG("Invalid return type from rmatch (string)\n");
       match = NULL;
@@ -696,26 +712,25 @@ have_pattern:
      * the next time around.
     */
     get_registry(prev_string_result_key);
-    if (lua_isuserdata(L, -1)) {
-      str *rs = lua_touserdata(L, -1);
-      rosie_free_string_ptr(rs);
-    }
+    str *rs = lua_touserdata(L, -1);
+    if (rs) rosie_free_string_ptr(rs);
     lua_pop(L, 1);
     temp_str = (unsigned char *)lua_tolstring(L, -1, &temp_len);
-    str *rs = rosie_new_string_ptr(temp_str, temp_len);
+    rs = rosie_new_string_ptr(temp_str, temp_len);
     lua_pushlightuserdata(L, (void *) rs);
     set_registry(prev_string_result_key);
     (*match).data.ptr = rs->ptr;
     (*match).data.len = rs->len;
+    break;
   }
-  else {
+  default: {
     t = lua_type(L, -1);
     LOGf("Invalid return type from rmatch (%d)\n", t);
     match = NULL;
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
-  }
+  } }
 
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
