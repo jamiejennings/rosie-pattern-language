@@ -55,13 +55,13 @@ class RosieLoadTest(unittest.TestCase):
         self.assertTrue(errs == None)
 
         b, errs = self.engine.compile(b"x.foo")
-        self.assertTrue(b[0] > 0)
+        self.assertTrue(b.valid())
         self.assertTrue(errs == None)
 
         bb, errs = self.engine.compile(b"[:digit:]+")
-        self.assertTrue(bb[0] > 0)
+        self.assertTrue(bb.valid())
         self.assertTrue(errs == None)
-        self.assertTrue(b[0] != bb[0])
+        self.assertTrue(b.id[0] != bb.id[0])
 
         b2, errs = self.engine.compile(b"[:foobar:]+")
         self.assertTrue(not b2)
@@ -73,7 +73,7 @@ class RosieLoadTest(unittest.TestCase):
 
         b = None                       # trigger call to librosie to gc the compiled pattern
         b, errs = self.engine.compile(b"[:digit:]+")
-        self.assertTrue(b[0] != bb[0]) # distinct values for distinct patterns
+        self.assertTrue(b.id[0] != bb.id[0]) # distinct values for distinct patterns
         self.assertTrue(errs == None)
 
         num_int, errs = self.engine.compile(b"num.int")
@@ -245,7 +245,7 @@ class RosieMatchTest(unittest.TestCase):
     def test(self):
 
         b, errs = self.engine.compile(b"[:digit:]+")
-        self.assertTrue(b[0] > 0)
+        self.assertTrue(b.valid())
         self.assertTrue(errs == None)
 
         m, left, abend, tt, tm = self.engine.match(b, b"321", 2, b"json")
@@ -325,9 +325,6 @@ class RosieMatchTest(unittest.TestCase):
             
 class RosieTraceTest(unittest.TestCase):
 
-    engine = None
-    net_any = None
-    
     def setUp(self):
         self.engine = rosie.engine(librosiedir)
         self.assertTrue(self.engine)

@@ -75,13 +75,6 @@ lib = None                # single instance of dynamic library
 # -----------------------------------------------------------------------------
 # ffi utilities
 
-def new_rplx(engine):
-    def free_rplx(obj):
-        if obj[0] and engine.engine:
-            lib.rosie_free_rplx(engine.engine, obj[0])
-    obj = ffi.new("int *")
-    return ffi.gc(obj, free_rplx)
-
 def free_cstr_ptr(local_cstr_obj):
     lib.rosie_free_string(local_cstr_obj[0])
 
@@ -148,13 +141,13 @@ class engine ():
     def compile(self, exp):
         Cerrs = new_cstr()
         Cexp = new_cstr(exp)
-        Cpat = new_rplx(self)
-        ok = lib.rosie_compile(self.engine, Cexp, Cpat, Cerrs)
+        pat = rplx(self)
+        ok = lib.rosie_compile(self.engine, Cexp, pat.id, Cerrs)
         if ok != 0:
             raise RuntimeError("compile() failed (please report this as a bug)")
-        if Cpat[0] == 0:
-            Cpat = None
-        return Cpat, read_cstr(Cerrs)
+        if pat.id[0] == 0:
+            pat = None
+        return pat, read_cstr(Cerrs)
 
     def load(self, src):
         Cerrs = new_cstr()
@@ -196,12 +189,12 @@ class engine ():
         errs = read_cstr(Cerrs)
         return Csuccess[0], actual_pkgname, errs
 
-    def match(self, Cpat, input, start, encoder):
-        if Cpat[0] == 0:
+    def match(self, pat, input, start, encoder):
+        if pat.id[0] == 0:
             raise ValueError("invalid compiled pattern")
         Cmatch = ffi.new("struct rosie_matchresult *")
         Cinput = new_cstr(input)
-        ok = lib.rosie_match(self.engine, Cpat[0], start, encoder, Cinput, Cmatch)
+        ok = lib.rosie_match(self.engine, pat.id[0], start, encoder, Cinput, Cmatch)
         if ok != 0:
             raise RuntimeError("match() failed (please report this as a bug)")
         left = Cmatch.leftover
@@ -220,13 +213,13 @@ class engine ():
         data = read_cstr(Cmatch.data)
         return data, left, abend, ttotal, tmatch
 
-    def trace(self, Cpat, input, start, style):
-        if Cpat[0] == 0:
+    def trace(self, pat, input, start, style):
+        if pat.id[0] == 0:
             raise ValueError("invalid compiled pattern")
         Cmatched = ffi.new("int *")
         Cinput = new_cstr(input)
         Ctrace = new_cstr()
-        ok = lib.rosie_trace(self.engine, Cpat[0], start, style, Cinput, Cmatched, Ctrace)
+        ok = lib.rosie_trace(self.engine, pat.id[0], start, style, Cinput, Cmatched, Ctrace)
         if ok != 0:
             raise RuntimeError("trace() failed (please report this as a bug)")
         if Ctrace.ptr == ffi.NULL:
@@ -238,12 +231,12 @@ class engine ():
         trace = read_cstr(Ctrace)
         return matched, trace
 
-    def matchfile(self, Cpat, encoder,
+    def matchfile(self, pat, encoder,
                   infile=None,  # stdin
                   outfile=None, # stdout
                   errfile=None, # stderr
                   wholefile=False):
-        if Cpat[0] == 0:
+        if pat.id[0] == 0:
             raise ValueError("invalid compiled pattern")
         Ccin = ffi.new("int *")
         Ccout = ffi.new("int *")
@@ -251,7 +244,7 @@ class engine ():
         wff = 1 if wholefile else 0
         Cerrmsg = new_cstr()
         ok = lib.rosie_matchfile(self.engine,
-                                 Cpat[0],
+                                 pat.id[0],
                                  encoder,
                                  wff,
                                  infile or b"",
@@ -328,8 +321,27 @@ class engine ():
 
     def __del__(self):
         if hasattr(self, 'engine') and (self.engine != ffi.NULL):
-            lib.rosie_finalize(self.engine)
+            e = self.engine
+            self.engine = ffi.NULL
+            lib.rosie_finalize(e)
 
 
+
+class rplx(object):    
+    def __init__(self, engine):
+        self.id = ffi.new("int *")
+        self.engine = engine
+        
+    def __del__(self):
+        if self.id[0] and self.engine.engine:
+            lib.rosie_free_rplx(self.engine.engine, self.id[0])
+
+    def maybe_valid(self):
+        return self.id[0] != 0
+
+    def valid(self):
+        return self.maybe_valid() and \
+            self.engine.engine and \
+            isinstance(self.engine, engine)
 
     
