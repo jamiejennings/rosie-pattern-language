@@ -80,7 +80,8 @@ static char bootscript[MAXPATHLEN];
 #define ACQUIRE_ENGINE_LOCK(e) do {				    \
     int r = pthread_mutex_lock(&((e)->lock));			    \
     if (r) {                                                        \
-        fprintf(stderr, "pthread_mutex_lock failed with %d\n", r);  \
+        fprintf(stderr, "%s:%d:%s(): pthread_mutex_lock failed with %d\n", \
+		__FILE__, __LINE__, __func__, r);\
         abort();                                                    \
     }                                                               \
 } while (0)
@@ -88,7 +89,8 @@ static char bootscript[MAXPATHLEN];
 #define RELEASE_ENGINE_LOCK(e) do {				    \
     int r = pthread_mutex_unlock(&((e)->lock));			    \
     if (r) {                                                        \
-        fprintf(stderr, "pthread_mutex_unlock failed with %d\n", r);\
+        fprintf(stderr, "%s:%d:%s(): pthread_mutex_unlock failed with %d\n", \
+		__FILE__, __LINE__, __func__, r);\
         abort();                                                    \
     }                                                               \
 } while (0)
@@ -466,15 +468,23 @@ int rosie_libpath(Engine *e, str *newpath) {
   return SUCCESS;
 }
 
+/* GC in languages like Python 3 may collect the engine before the
+   rplx objects, so if we cannot obtain the engine lock due to an
+   error (as opposed to the lock being held), then we assume the
+   engine has been collected and there is nothing that free_rplx needs
+   to do.
+ */
 EXPORT
 int rosie_free_rplx (Engine *e, int pat) {
   lua_State *L = e->L;
   LOGf("freeing rplx object with index %d\n", pat);
-  ACQUIRE_ENGINE_LOCK(e);
-  get_registry(rplx_table_key);
-  luaL_unref(L, -1, pat);
-  lua_settop(L, 0);
-  RELEASE_ENGINE_LOCK(e);
+  int r = pthread_mutex_lock(&((e)->lock));
+  if (!r) {
+    get_registry(rplx_table_key);
+    luaL_unref(L, -1, pat);
+    lua_settop(L, 0);
+    RELEASE_ENGINE_LOCK(e);
+  }
   return SUCCESS;
 }
 
