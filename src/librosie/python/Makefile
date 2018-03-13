@@ -20,9 +20,15 @@ else
 PLATFORM=none
 endif
 
-PLATFORMS = linux macosx windows
+default: test
 
-default: $(PLATFORM)
+true=$(shell which true)
+python2=$(shell which python2 || which python || which true)
+python3=$(shell which python3 || which python || which true)
+
+ifeq ($(python2),$(python3))
+python3=$(true)
+endif
 
 ROSIE_DYLIB_NAME=rosie
 ifeq ($(PLATFORM), macosx)
@@ -33,11 +39,18 @@ CC= gcc
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
+test: ../local/$(ROSIE_DYLIB)
+	@if [ "$(python2)" != "$(true)" ]; then \
+		echo Testing with $(shell $(python2) --version 2>&1); \
+		LD_LIBRARY_PATH=../local $(python2) test.py local; \
+	fi
+	@if [ "$(python3)" != "$(true)" ]; then \
+		echo Testing with $(shell $(python3) --version 2>&1); \
+		LD_LIBRARY_PATH=../local $(python3) test.py local; \
+	fi
+
 clean:
 	$(RM) rosie.pyc 
-
-test: ../local/$(ROSIE_DYLIB)
-	LD_LIBRARY_PATH=../local python test.py local
 
 # Some linux distros may not have DESTDIR on their search path by
 # default, like when running as root in a docker image.  (This can be
@@ -55,15 +68,6 @@ echo:
 	@echo "LIBS= $(LIBS)"
 	@echo "RM= $(RM)"
 
-none:
-	@echo "Your platform was not recognized.  Please do 'make PLATFORM', where PLATFORM is one of these: $(PLATFORMS)"
-
-linux:
-
-macosx:
-
-windows:
-	@echo Windows installation not yet supported.
 
 ## Targets that do not create files
-.PHONY: default clean echo none test installtest
+.PHONY: default clean echo test installtest
