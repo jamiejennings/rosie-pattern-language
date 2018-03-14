@@ -325,7 +325,7 @@ class engine ():
             self.engine = ffi.NULL
             lib.rosie_finalize(e)
 
-
+# -----------------------------------------------------------------------------
 
 class rplx(object):    
     def __init__(self, engine):
