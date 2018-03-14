@@ -83,7 +83,7 @@ CFLAGS= -O2 -Wall -Wextra -pthread -DMULTIPLE_THREADS -DLUA_COMPAT_5_2 $(SYSCFLA
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 
-AR= ar rcu
+AR= ar rc
 RANLIB= ranlib
 RM= rm -f
 
