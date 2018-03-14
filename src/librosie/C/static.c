@@ -60,7 +60,6 @@ under the name 'rosie'.  Testing that now...\
     LOGf("errors were: %.*s\n", errors.len, errors.ptr);
     return -1;
   }
-  LOG("obtained rosie matching engine\n");
 
   int err;
   int ok;
