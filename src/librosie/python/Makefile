@@ -22,9 +22,9 @@ endif
 
 default: test
 
-true=$(shell which true)
-python2=$(shell which python2 || which python || which true)
-python3=$(shell which python3 || which python || which true)
+true=$(shell command -v true)
+python2=$(shell command -v python2 || command -v python || command -v true)
+python3=$(shell command -v python3 || command -v python || command -v true)
 
 ifeq ($(python2),$(python3))
 python3=$(true)
