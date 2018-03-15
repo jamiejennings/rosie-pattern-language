@@ -1,20 +1,16 @@
 FROM centos
 ARG branch
 
+# NOTE: The centos gcc version is older than 7, and will produce
+# warnings about the fallthrough attribute.
+
 RUN yum -y update && yum install -y epel-release
-RUN yum install -y \
-  gcc \
-  git \
-  make \
-  python \
-  python-pip \
-  readline \
-  readline-devel 
+RUN yum install -y gcc git python-pip make readline readline-devel
 
 RUN pip install --upgrade pip
 RUN pip install cffi
 
-# This COPY is designed to trigger re-running the git clone when the repo changes.
+# This COPY is designed to trigger re-running the git clone when the repo changes:
 COPY githead-$branch /opt/githead-$branch
 RUN git clone --recursive --branch $branch https://github.com/jamiejennings/rosie-pattern-language.git /opt/rosie
 
