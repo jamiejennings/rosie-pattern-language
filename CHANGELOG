@@ -1,3 +1,22 @@
+2018-03-15  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-3:
+
+	ENHANCED: The sample docker files in extra/docker now includes python 3
+	and the official arch distro.
+
+	ENHANCED: There should be NO compile warnings from gcc as long as it is
+	gcc version 7 or higher.  Older versions will warn about the fallthrough
+	attribute, because they don't understand it.
+
+	FIXED: In rosie.py, a compiled pattern is now a proper python object,
+	and it contains an engine reference so that the engine cannot be GC'd
+	before its compiled patterns.  (This does not happen in Python 2.7, but
+	it does in Python 3.6.)
+
+	FIXED: Rosie is once again easy to install on OS X!  See
+	https://github.com/jamiejennings/homebrew-rosie
+
 2018-03-09  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-2:
