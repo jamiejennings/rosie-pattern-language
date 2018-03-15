@@ -23,8 +23,8 @@ endif
 default: test
 
 true=$(shell command -v true)
-python2=$(shell command -v python2 || command -v python || command -v true)
-python3=$(shell command -v python3 || command -v python || command -v true)
+python2=$(shell command -v python2 || command -v python || command -v true 2>/dev/null)
+python3=$(shell command -v python3 || command -v python || command -v true 2>/dev/null)
 
 ifeq ($(python2),$(python3))
 python3=$(true)
@@ -42,10 +42,17 @@ endif
 test: ../local/$(ROSIE_DYLIB)
 	@if [ "$(python2)" != "$(true)" ]; then \
 		echo Testing with $(shell $(python2) --version 2>&1); \
-		LD_LIBRARY_PATH=../local $(python2) test.py local; \
+		$(python2) -c 'import cffi'; \
+		if [ $$? -eq 0 ]; then LD_LIBRARY_PATH=../local $(python2) test.py local; \
+		else echo "cffi not found -- skipping test"; \
+		fi; \
 	fi
 	@if [ "$(python3)" != "$(true)" ]; then \
 		echo Testing with $(shell $(python3) --version 2>&1); \
+		$(python3) -c 'import cffi'; \
+		if [ $$? -eq 0 ]; then LD_LIBRARY_PATH=../local $(python3) test.py local; \
+		else echo "cffi not found -- skipping test"; \
+		fi; \
 		LD_LIBRARY_PATH=../local $(python3) test.py local; \
 	fi
 
