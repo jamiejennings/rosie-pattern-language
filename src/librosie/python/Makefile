@@ -53,7 +53,6 @@ test: ../local/$(ROSIE_DYLIB)
 		if [ $$? -eq 0 ]; then LD_LIBRARY_PATH=../local $(python3) test.py local; \
 		else echo "cffi not found -- skipping test"; \
 		fi; \
-		LD_LIBRARY_PATH=../local $(python3) test.py local; \
 	fi
 
 clean:
