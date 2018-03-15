@@ -1,6 +1,8 @@
-FROM binhex/arch-base
+FROM base/archlinux
 ARG branch
 
+RUN pacman -Syy --noconfirm
+RUN pacman -Syu --noconfirm
 RUN pacman -S --noconfirm make
 RUN pacman -S --noconfirm gcc
 RUN pacman -S --noconfirm readline
