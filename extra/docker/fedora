@@ -1,6 +1,9 @@
 FROM fedora
 ARG branch
 
+# NOTE: The fedora gcc version is older than 7, and will produce
+# innocuous warnings about the fallthrough attribute.
+
 RUN dnf -y update && dnf install -y \
   gcc \
   git \
