@@ -1,9 +1,6 @@
 FROM centos
 ARG branch
 
-# NOTE: The centos gcc version is older than 7, and will produce
-# warnings about the fallthrough attribute.
-
 RUN yum -y update && yum install -y epel-release
 RUN yum install -y gcc git python-pip make readline readline-devel
 
