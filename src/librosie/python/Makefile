@@ -22,7 +22,8 @@ endif
 
 default: test
 
-true=$(shell command -v true)
+# Some Linux distros will fail on $(shell command -v true)
+true=$(shell /bin/sh -c 'command -v true')
 python2=$(shell command -v python2 || command -v python || command -v true 2>/dev/null)
 python3=$(shell command -v python3 || command -v python || command -v true 2>/dev/null)
 
