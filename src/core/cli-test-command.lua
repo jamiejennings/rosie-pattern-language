@@ -81,7 +81,7 @@ function p.run(rosie, en, args, filename)
    -- fresh engine for testing this file
    local test_engine = rosie.engine.new()
    -- set it up using whatever rpl strings or files were given on the command line
-   cli_common.setup_engine(test_engine, args)
+   cli_common.setup_engine(rosie, test_engine, args)
    io.stdout:write(filename, '\n')
    -- load the rpl code we are going to test (second arg true means "do not search")
    local ok, pkgname, errs, actual_path = test_engine:loadfile(filename, true)

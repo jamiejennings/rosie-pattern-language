@@ -56,10 +56,32 @@ local function import_dependencies(en, a, msgs)
    return all_ok
 end
 
-function p.setup_engine(en, args)
-   -- (1a) Load whatever is specified in ~/.rosierc ???
+function p.setup_engine(rosie, en, args)
+   -- Load whatever is specified in ~/.rosierc, which may include setting the libpath
+   local rcfile = rosie.default.rcfile
+   local is_default = true
+   if (not args.norcfile) then
+      if args.rcfile then
+	 rcfile = args.rcfile
+	 is_default = false
+      end
+      en:execute_rcfile(rcfile,
+			rosie.engine.new,
+			is_default,
+			(is_default and "default") or "CLI")
+   end
 
-   -- (1b) Load an rpl file
+   -- Override the libpath if there is one on the command line
+   if args.libpath then
+      en:set_libpath(args.libpath, "CLI")
+   end
+
+   -- Override the colors if there is one on the command line
+   if args.colors then
+      en:set_encoder_parm("colors", args.colors, "CLI")
+   end
+
+   -- Load all rpl files given on the command line, if any
    if args.rpls then
       for _,filename in pairs(args.rpls) do
 	 if args.verbose then
@@ -74,7 +96,7 @@ function p.setup_engine(en, args)
       end
    end
 
-   -- (1c) Load an rpl string from the command line
+   -- Load an rpl string given on the command line, if any
    if args.statements then
       for _,stm in pairs(args.statements) do
 	 if args.verbose then
@@ -99,7 +121,8 @@ function p.setup_engine(en, args)
 	 end
       end
    end
-   -- (2) Compile the expression
+
+   -- Compile the expression given on the command line, if any
    local compiled_pattern
    if args.pattern then
       local expression
@@ -134,7 +157,7 @@ function p.setup_engine(en, args)
 	 write_error(table.concat(map(violation.tostring, errs), "\n"), "\n")
 	 return p.ERROR_RESULT
       end
-   end
+   end -- if args.pattern
    return compiled_pattern
 end
 

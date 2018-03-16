@@ -70,26 +70,28 @@ local function run(args)
 
    if args.verbose then ROSIE_VERBOSE = true; end
 
-   local rcfile = rosie.default.rcfile
-   local is_default = true
-   if (not args.norcfile) then
-      if args.rcfile then
-	 rcfile = args.rcfile
-	 is_default = false
-      end
-      en:execute_rcfile(rcfile,
-			rosie.engine.new,
-			is_default,
-			(is_default and "default") or "CLI")
-   end
+   -- local rcfile = rosie.default.rcfile
+   -- local is_default = true
+   -- if (not args.norcfile) then
+   --    if args.rcfile then
+   -- 	 rcfile = args.rcfile
+   -- 	 is_default = false
+   --    end
+   --    en:execute_rcfile(rcfile,
+   -- 			rosie.engine.new,
+   -- 			is_default,
+   -- 			(is_default and "default") or "CLI")
+   -- end
 
-   if args.libpath then
-      en:set_libpath(args.libpath, "CLI")
-   end
+   -- if args.libpath then
+   --    en:set_libpath(args.libpath, "CLI")
+   -- end
 
-   if args.colors then
-      en:set_encoder_parm("colors", args.colors, "CLI")
-   end
+   -- if args.colors then
+   --    en:set_encoder_parm("colors", args.colors, "CLI")
+   -- end
+
+   if args.verbose then greeting(); end
 
    if not args.command then
       print("Usage: rosie command [options] pattern file [...]")
@@ -101,11 +103,6 @@ local function run(args)
       return
    end
 
-   if args.command=="config" then
-      print_rosie_config(en)
-      return
-   end
-   
    if args.command=="help" then
       local text = make_help_epilog(en)
       if text then parser:epilog(text); end
@@ -113,8 +110,16 @@ local function run(args)
       return
    end
    
-   if args.verbose then greeting(); end
+   local compiled_pattern = cli_common.setup_engine(rosie, en, args);
+   if type(compiled_pattern)=="number" then -- return the error
+      return compiled_pattern
+   end
 
+   if args.command=="config" then
+      print_rosie_config(en)
+      return
+   end
+   
    -- FUTURE:
    -- (1) expose plain parser (with/without ambient cooking) at engine/compiler level
    -- (2) expose macro expander at engine/comiler level
@@ -189,11 +194,6 @@ local function run(args)
       end
    end
    
-   local compiled_pattern = cli_common.setup_engine(en, args);
-   if type(compiled_pattern)=="number" then -- return the error
-      return compiled_pattern
-   end
-
    if args.command == "list" then
       if not args.verbose then greeting(); end
       local props_table, msg = ui.to_property_table(en.env, args.filter)
