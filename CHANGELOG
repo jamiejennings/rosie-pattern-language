@@ -1,3 +1,15 @@
+2018-03-16  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-4:
+
+	FIXED: Some commands entered at the CLI did not respect some of the
+	command line options, e.g. "test" did not adopt the "--libpath"
+	setting.
+
+	FIXED: Some loader/compiler/parser messages, which are called
+	"violations", did not convert properly to JSON in librosie for return to
+	the calling program.
+
 2018-03-15  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-3:
