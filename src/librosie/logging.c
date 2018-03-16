@@ -74,6 +74,40 @@ static void stackDump (lua_State *L) {
   fprintf(stderr, "\n");
 }
 
+#if 0
+static void itemDump (lua_State *L, int pos) {
+  int t = lua_type(L, pos);
+  switch (t) {
+  case LUA_TSTRING:  /* strings */
+    fprintf(stderr, "'%s'", lua_tostring(L, pos));
+    break;
+  case LUA_TBOOLEAN:  /* booleans */
+    fprintf(stderr, "%s", (lua_toboolean(L, pos) ? "true" : "false"));
+    break;
+  case LUA_TNUMBER:  /* numbers */
+    fprintf(stderr, "%g", lua_tonumber(L, pos));
+    break;
+  default:  /* other values */
+    fprintf(stderr, "%s", lua_typename(L, t));
+    break;
+  }
+}
+
+static void tableDump (lua_State *L, int pos) {
+  lua_pushnil(L);
+  pos -= 1;
+  while (lua_next(L, pos) != 0) {
+    itemDump(L, -2);		/* key */
+    fprintf(stderr, " (%s) -> ", lua_typename(L, lua_type(L, -2)));
+    itemDump(L, -1);		/* value */
+    fprintf(stderr, " (%s); ", lua_typename(L, lua_type(L, -1)));
+    /*  keep 'key' for next() */
+    lua_pop(L, 1);
+  }
+  fprintf(stderr, "\n");
+}
+#endif
+
 #ifdef DEBUG
 static void check_type(const char *thing, int t, int expected) {
   if (t != expected)

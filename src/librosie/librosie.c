@@ -186,7 +186,6 @@ static int boot(lua_State *L, str *messages) {
   return TRUE;
 }
 
-/* FUTURE: Return any errors from the json encoder to the client? */
 static int to_json_string(lua_State *L, int pos, str *json_string) {
      size_t len;
      byte_ptr str;
@@ -229,24 +228,48 @@ static int to_json_string(lua_State *L, int pos, str *json_string) {
      return LUA_OK;
 }
 
-static int strip_violation_messages(lua_State *L) {
+static int format_violation_messages(lua_State *L) {
   int t;
 
-  get_registry(violation_strip_key);
+  get_registry(violation_format_key);
 
-  /* Now have this stack: strip_each(), messages[], ...
-     And violation.strip_each() mutates its argument.
+  /* Now have this stack: format_each(), messages[], ...
+     And violation.format_each() mutates its argument.
   */
   lua_pushvalue(L, -2);		/* push copy of messages table */
-  t = lua_pcall(L, 1, 1, 0);	/* violation.strip_each() */
+  t = lua_pcall(L, 1, 1, 0);	/* violation.format_each() */
   if (t != LUA_OK) { 
-    LOG("violation.strip_each() failed\n"); 
+    LOG("violation.format_each() failed\n"); 
     LOGstack(L);
     return ERR_ENGINE_CALL_FAILED; 
   } 
   return LUA_OK;
 }
 
+static int violations_to_json_string(lua_State *L, str *json_string) {
+  CHECK_TYPE("violation messages", lua_type(L, -1), LUA_TTABLE);
+  int t = format_violation_messages(L);
+  if (t != LUA_OK) LOGstack(L);
+  else {
+    LOGstack(L);
+    /* tableDump(L, -1); */
+    /* lua_geti(L, -1, 1); */
+    /* tableDump(L, -1); */
+
+    /* lua_getfield(L, -1, "sourceref"); */
+    /* tableDump(L, -1); */
+    /* lua_pop(L, 1); */
+
+    /* lua_pop(L, 1); */
+    /* lua_geti(L, -1, 2); */
+    /* tableDump(L, -1); */
+    /* lua_pop(L, 1); */
+    /* LOGstack(L); */
+    t = to_json_string(L, -1, json_string);
+    if (t != LUA_OK) LOG("could not convert violations to json\n");
+  }
+  return t;
+} 
 
 int luaopen_lpeg (lua_State *L);
 int luaopen_cjson_safe(lua_State *l);
@@ -329,9 +352,9 @@ Engine *rosie_new(str *messages) {
   CHECK_TYPE("rosie.env", t, LUA_TTABLE);
   t = lua_getfield(L, -1, "violation");
   CHECK_TYPE("rosie.env.violation", t, LUA_TTABLE);
-  t = lua_getfield(L, -1, "strip_each");
-  CHECK_TYPE("rosie.env.violation.strip_each", t, LUA_TFUNCTION);
-  set_registry(violation_strip_key);
+  t = lua_getfield(L, -1, "format_each");
+  CHECK_TYPE("rosie.env.violation.format_each", t, LUA_TFUNCTION);
+  set_registry(violation_format_key);
 
   lua_pushinteger(L, 0);
   set_registry(alloc_set_limit_key);
@@ -495,7 +518,13 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   str temp_rs;
   lua_State *L = e->L;
   
-  LOGf("compile(): L = %p\n", L);
+  *pat = 0;
+  if (!expression) {
+    LOG("null pointer passed to compile for expression argument\n");
+    return ERR_ENGINE_CALL_FAILED;
+  }  
+
+  LOGf("compile(): L = %p, expression = %*s\n", L, expression->len, expression->ptr);
   ACQUIRE_ENGINE_LOCK(e);
   if (!pat) {
     LOG("null pointer passed to compile for pattern argument\n");
@@ -503,13 +532,6 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
-  *pat = 0;
-  if (!expression) {
-    LOG("null pointer passed to compile for expression argument\n");
-    lua_settop(L, 0);
-    RELEASE_ENGINE_LOCK(e);
-    return ERR_ENGINE_CALL_FAILED;
-  }  
 
 #if LOGGING
   if (lua_gettop(L)) LOG("Entering compile(), stack is NOT EMPTY!\n");
@@ -537,10 +559,8 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
 
   if ( !lua_toboolean(L, -2) ) {
     *pat = 0;
-    CHECK_TYPE("compile messages", lua_type(L, -1), LUA_TTABLE);
-    t = to_json_string(L, -1, &temp_rs);
+    t = violations_to_json_string(L, &temp_rs);
     if (t != LUA_OK) {
-      LOG("in compile() could not convert compile messages to json\n");
       lua_settop(L, 0);
       RELEASE_ENGINE_LOCK(e);
       *messages = rosie_new_string_from_const("could not convert compile messages to json");
@@ -565,7 +585,7 @@ int rosie_compile(Engine *e, str *expression, int *pat, str *messages) {
   }
   LOGf("storing rplx object at index %d\n", *pat);
 
-  t = to_json_string(L, -1, &temp_rs);
+  t = violations_to_json_string(L, &temp_rs);
   if (t != LUA_OK) {
     LOG("in compile(), could not convert warning information to json\n");
     lua_settop(L, 0);
@@ -874,7 +894,7 @@ int rosie_load(Engine *e, int *ok, str *src, str *pkgname, str *messages) {
     pkgname->len = 0;
   }
   
-  t = to_json_string(L, -1, &temp_rs);
+  t = violations_to_json_string(L, &temp_rs);
   if (t != LUA_OK) {
     LOG("in load(), could not convert error information to json\n");
     temp_rs = rosie_new_string_from_const("in load(), could not convert error information to json");
@@ -931,15 +951,7 @@ int rosie_loadfile(Engine *e, int *ok, str *fn, str *pkgname, str *messages) {
     (*pkgname).len = 0;
   }
   
-  t = strip_violation_messages(L);
-  if (t != LUA_OK) { 
-    LOG("violation.strip_each() failed\n"); 
-    LOGstack(L);
-    lua_settop(L, 0);
-    RELEASE_ENGINE_LOCK(e);
-    return ERR_ENGINE_CALL_FAILED; 
-  } 
-  t = to_json_string(L, -1, &temp_rs);
+  t = violations_to_json_string(L, &temp_rs);
   if (t != LUA_OK) {
     LOG("in load(), could not convert error information to json\n");
     lua_settop(L, 0);
@@ -986,7 +998,7 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname,
   } 
 
   *ok = lua_toboolean(L, -3);
-  LOGf("engine.import() %s\n", *ok ? "succeeded" : "failed");
+  LOGf("import %*s %s\n", pkgname->len, pkgname->ptr, *ok ? "succeeded" : "failed");
   
   if (lua_isstring(L, -2)) {
     temp_str = (unsigned char *)lua_tolstring(L, -2, &temp_len);
@@ -998,18 +1010,9 @@ int rosie_import(Engine *e, int *ok, str *pkgname, str *as, str *actual_pkgname,
     (*actual_pkgname).len = 0;
   }
   
-  t = strip_violation_messages(L);
-  if (t != LUA_OK) { 
-    LOG("violation.strip_each() failed\n"); 
-    LOGstack(L);
-    lua_settop(L, 0);
-    RELEASE_ENGINE_LOCK(e);
-    return ERR_ENGINE_CALL_FAILED; 
-  } 
-
-  t = to_json_string(L, -1, &temp_rs);
+  t = violations_to_json_string(L, &temp_rs);
   if (t != LUA_OK) {
-    LOG("in import(), could not convert error information to json\n");
+    LOG("could not convert error information to json\n");
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;

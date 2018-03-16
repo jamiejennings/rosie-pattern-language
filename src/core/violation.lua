@@ -123,18 +123,32 @@ function violation.tostring(err)
 end
 
 function violation.strip(v)
-   if rawget(v, "ast") then v.ast=nil; end
-   return v
+   if rawget(v, "ast") then rawset(v, "ast", nil); end
 end
 
 function violation.strip_each(vs)
    for _, v in ipairs(vs) do
       violation.strip(v)
    end
-   return vs
 end
 
+function violation.format(v)
+   local result = {}
+   result.who = v.who or "unknown"
+   result.message = v.message or ""
+   result.formatted = violation.tostring(v)
+   return result
+end
    
+function violation.format_each(vs)
+   local results = {}
+   for i,v in ipairs(vs) do
+      results[i] = violation.format(v)
+   end
+   return results
+end
+
+
 ---------------------------------------------------------------------------------------------------
 -- Catch / throw
 ---------------------------------------------------------------------------------------------------

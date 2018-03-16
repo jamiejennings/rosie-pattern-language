@@ -20,7 +20,7 @@ enum KEYS {
   alloc_set_limit_key,
   alloc_actual_limit_key,
   prev_string_result_key,
-  violation_strip_key,
+  violation_format_key,
   KEY_ARRAY_SIZE
 };
 
