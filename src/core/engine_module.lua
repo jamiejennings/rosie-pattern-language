@@ -98,6 +98,57 @@ local engine_error				    -- forward reference
 
 ----------------------------------------------------------------------------------------
 
+local function expression_dependencies(en, expression)
+   local messages = {}
+   local a = en.compiler.parse_expression(common.source.new{text=expression}, messages)
+   if not a then
+      return false, messages
+   end
+   return en.compiler.dependencies_of(a), messages
+end
+
+local function block_dependencies(en, expression)
+   local messages = {}
+   local a = en.compiler.parse_block(common.source.new{text=expression}, messages)
+   if not a then
+      return false, messages
+   end
+   local implicit = en.compiler.dependencies_of(a), messages
+   local ok = loadpkg.validate_block(a, messages)
+   if not ok then
+      return false, messages
+   end
+   local explicit = {}
+   assert(a.block_ideclists==nil or (type(a.block_ideclists)=="table"),
+	  "a.block_ideclists is: "..tostring(a.block_ideclists))
+   for _, ideclist in ipairs(a.block_ideclists or {}) do
+      assert(ast.ideclist.is(ideclist))
+      local idecls = ideclist.idecls
+      for _, decl in ipairs(idecls) do
+	 table.insert(explicit, {importpath = decl.importpath,
+				 as_name = decl.prefix})
+      end
+   end
+   return {implicit = implicit, explicit = explicit}, messages
+end
+
+local function macro_expand(en, expression)
+   local messages = {}
+   local a = en.compiler.parse_expression(common.source.new{text=expression}, messages)
+   if not a then
+      return false, messages
+   end
+   local raw_parse = ast.tostring(a, true)
+   a = ast.ambient_cook_exp(a)
+   local top_level = ast.tostring(a, true)
+   local aa = en.compiler.expand_expression(a, en.env, messages)
+   if not aa then
+      return false, messages
+   end
+   local expansion = ast.tostring(aa, false)
+   return {expansion, top_level, raw_parse}, messages
+end
+
 local function compile_expression(e, input)
    local messages = {}
    local ast = input
@@ -511,6 +562,10 @@ engine =
 		     matchfile = process_input_file.match,
 		     tracefile = process_input_file.trace,
 
+		     block_dependencies = block_dependencies,
+		     expression_dependencies = expression_dependencies,
+		     macro_expand = macro_expand,
+		     
 		     set_encoder_parm = set_encoder_parm,
 		     get_encoder_parms = function(self) return self.encoder_parms; end,
 		     encoder_parms = false,
