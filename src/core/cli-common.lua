@@ -39,6 +39,7 @@ function p.load_file(en, filename)
    return ok, messages
 end
 
+-- FUTURE: Change this to use en:block_dependencies(...)
 local function import_dependencies(en, a, msgs)
    local deps = en.compiler.dependencies_of(a)
    local all_ok = true
