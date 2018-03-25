@@ -125,6 +125,22 @@ local function macro_case_insensitive(...)
    return ast.visit_expressions(exp, ast.literal.is, xform_literal)
 end
 
+-- Using dash as the separator:
+--   rosie match --rpl 'rest=.*' -o jsonpp '{{keepto:"-"}* rest}'
+-- And using percent as the terminator:
+--   rosie match --rpl 'term="%"; rest=[^[]term]*' -o jsonpp '{{keepto:>{term / "-"} "-"}* rest}'
+--   rosie match --rpl 'term="%"; rest={!term .}*' -o jsonpp '{{keepto:>{term / "-"} "-"}* rest}'
+local function macro_split(...)
+   local args = {...}
+   if #args~=1 and #args~=2 then
+      error("split takes one or two arguments, " .. tostring(#args) .. " given")
+   end
+   local separator = args[1]
+   local terminator = args[2]
+   local sref = separator.sourceref
+-- ...
+end
+
 ----------------------------------------------------------------------------------------
 -- Boundary for tokenization... this is going to be customizable, but hard-coded for now
 ----------------------------------------------------------------------------------------
