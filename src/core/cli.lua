@@ -122,36 +122,21 @@ local function run(args)
    
    -- FUTURE:
    -- (1) expose plain parser (with/without ambient cooking) at engine/compiler level
-   -- (2) expose macro expander at engine/comiler level
+   -- (x) expose macro expander at engine/comiler level
    -- (3) expose a print routine for violations
    
    if args.command == "expand" then
+      local cl_engine = assert(cli_engine)
+      local violation = assert(rosie.env.violation)
+      local expansions, messages = cli_engine:macro_expand(args.expression)
       print("Expression: ", args.expression)
-      local common = assert(rosie.env.common)			    -- TODO: MOVE THIS!
-      local ast = assert(rosie.env.ast)				    -- TODO: MOVE THIS!
-      local expand = assert(rosie.env.expand)			    -- TODO: MOVE THIS!
-      local violation = assert(rosie.env.violation)		    -- TODO: MOVE THIS!
-      local errs = {}
-      local cl_engine = assert(cli_engine) --create_cl_engine()
-      local a = cl_engine.compiler.parse_expression(common.source.new{text=args.expression}, errs)
-      if not a then
-	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
+      if not expansions then
+	 for _,e in ipairs(messages) do print(violation.tostring(e)) end
 	 return cli_common.ERROR_RESULT
       end
-      print("Parses as: ", ast.tostring(a, true))
-      a = ast.ambient_cook_exp(a)
-      print("At top level: ", ast.tostring(a, true))
-      local aa = expand.expression(a, cl_engine.env, errs)
-      if not aa then
-	 for _,e in ipairs(errs) do print(violation.tostring(e)) end
-	 return cli_common.ERROR_RESULT
-      end
-      local representation = ast.tostring(aa, true)
-      if ast.sequence.is(aa) then
-	 print(string.format("Expands to:     {%s}", representation))
-      else
-	 print(string.format("Expands to:     %s", representation))
-      end
+      print("Parses as: ", expansions[3])
+      print("At top level: ", expansions[2])
+      print("Expands to: ", expansions[1])
       return
    end
    
