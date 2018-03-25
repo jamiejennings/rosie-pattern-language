@@ -42,7 +42,7 @@ local loadpkg = {}
 -- We could parse a module using that pattern, but we can give more detailed error messages this way.
 -- Returns: success, table of messages
 -- Side effects: fills in block.block_pdecl, block.block_ideclists; removes ALL decls from block.stmts
-local function validate_block(a, messages)
+function loadpkg.validate_block(a, messages)
    assert(ast.block.is(a))
    local stmts = a.stmts
    if not stmts[1] then
@@ -120,7 +120,6 @@ end
 local load_dependencies;
 
 local function parse_block(compiler, source_record, messages)
-
    local t0
    if PROFILE then
       t0 = os.clock()
@@ -133,7 +132,7 @@ local function parse_block(compiler, source_record, messages)
       t0 = os.clock()
       profile_println("importing (parsing / validate_block) ", tostring(source_record.origin and source_record.origin.filename))
    end
-   if not validate_block(a, messages) then return false; end
+   if not loadpkg.validate_block(a, messages) then return false; end
    if PROFILE then profile_println("parsing / validate_block time = ", time(t0), "ms"); end
    -- Via side effects, a.block_pdecl and a.block_ideclists are now filled in.
    return a
