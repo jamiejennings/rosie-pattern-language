@@ -423,14 +423,15 @@ class RosieExecuteRcfileTest(unittest.TestCase):
         print("*****************************************************")
         result = self.engine.execute_rcfile(b"This file does not exist")
         self.assertTrue(result is None)
-        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
-        self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
-        self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile3")))
-        self.assertTrue(result is False)
-        result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile5")))
-        self.assertTrue(result is True)
+        if testdir:
+            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile3")))
+            self.assertTrue(result is False)
+            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile5")))
+            self.assertTrue(result is True)
 
 
         

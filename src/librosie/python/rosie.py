@@ -121,6 +121,10 @@ class engine ():
                libpath = os.path.join(librosie_directory, libname)
                if not os.path.isfile(libpath):
                    raise RuntimeError("Cannot find librosie at " + libpath)
+            elif use_local_librosie:
+                libpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), libname)
+                if not os.path.isfile(libpath):
+                    raise RuntimeError("Cannot find librosie at " + libpath)
             else:
                 libpath = libname
             lib = ffi.dlopen(libpath, ffi.RTLD_LAZY | ffi.RTLD_GLOBAL)
@@ -345,3 +349,14 @@ class rplx(object):
             isinstance(self.engine, engine)
 
     
+# -----------------------------------------------------------------------------
+
+# When this file is installed as a python module using pip, it comes
+# with its own librosie.so/dylib, and that should be the default.  The
+# setup.py for rosie ensures that by adding a line below that sets
+# use_local_librosie to True.
+use_local_librosie = False
+
+
+
+
