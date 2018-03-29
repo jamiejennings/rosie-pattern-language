@@ -1,8 +1,8 @@
 /*  -*- Mode: C; -*-                                                         */
 /*                                                                           */
-/*  dtest.c      Statically linking librosie.o                               */
+/*  static.c     Statically linking librosie.o                               */
 /*                                                                           */
-/*  © Copyright IBM Corporation 2017.                                        */
+/*  © Copyright IBM Corporation 2017, 2018.                                  */
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
 /*  AUTHOR: Jamie A. Jennings                                                */
 
@@ -34,21 +34,7 @@
 
 
 int main() {
-     int exitStatus = 0;
-
-  printf("Important note: This sample program will only work if it can find\n\
-the rosie installation in the same directory as this executable,\n\
-under the name 'rosie'.  Testing that now...\
-");
-
-  FILE *fp = fopen("rosie/Makefile", "r");
-  if (!fp) {
-    printf(" FAILED to find rosie/Makefile.\n");
-    printf("Exiting...\n");
-    return -1;
-  }
-  printf(" ok.\n");
-
+  int exitStatus = 0;
   str errors;
 
   printf("Calling rosie_new\n"); fflush(NULL);
