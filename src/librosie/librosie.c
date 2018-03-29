@@ -27,20 +27,20 @@
 
 /* FUTURE: 
  * 
- * - Add a function that unloads all the dynamic libs, erases the
- *   global information about the libs, and reinitializes the
+ * - MAYBE add a function that unloads all the dynamic libs, erases
+ *   the global information about the libs, and reinitializes the
  *   ready_to_boot lock.
  * 
- *   - Probably need a list of engines so we can destroy those before
- *     unloading and resetting?  This could be tricky to get right,
- *     since a client could hold an engine pointer.  However, if we
- *     keep an array of extant engines, we can validate the engine
- *     passed into librosie by the client on each call.  
+ *   - If a client unloads rosie, then the client's engines will
+ *     become invalid.  Calling an engine function, even finalize(),
+ *     will likely cause a crash.
  *
- *   - Maybe we give the client a small integer to identify an engine,
- *     instead of a pointer.  The cost would be one array index
- *     operation per call to librosie, to ensure the engine is live.
- *     Yes, this is a good idea.
+ *   - The responsibility to finalize all engines before unloading
+ *     rosie will be left to the librosie client. 
+ *
+ *   - If the need to load/unload rosie at the dynamic library level
+ *     arises, then someone can wrap librosie in a library that
+ *     manages a pool of engines.
  */
 
 #ifndef ROSIE_HOME
