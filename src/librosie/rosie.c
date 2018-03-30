@@ -1,6 +1,6 @@
-/*  -*- Mode: C/l; -*-                                                       */
+/*  -*- Mode: C; -*-                                                         */
 /*                                                                           */
-/*  librosiecli.c                                                            */
+/*  rosie.c                                                                  */
 /*                                                                           */
 /*  © Copyright IBM 2018.                                                    */
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
@@ -9,8 +9,7 @@
 
 #define CLI_LUAC "/lib/cli.luac"
 
-
-#include "librosie.c"		/* This may be problematic */
+#include "librosie.c"		/* Bah. */
 #include "lua_repl.h"
 
 
@@ -113,7 +112,7 @@ int main (int argc, char **argv) {
 
   Engine *e = rosie_new(&messages);
   if (!e) {
-    fprintf(stderr, "Error: %.*s\n", messages.len, messages.ptr);
+    fprintf(stderr, "%s: %.*s\n", progname, messages.len, messages.ptr);
     exit(1);
   }
 
