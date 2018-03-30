@@ -1,3 +1,30 @@
+# -*- Mode: BSDmakefile; -*-                                          
+#
+# Makefile for Rosie Pattern Language
+#
+# © Copyright IBM Corporation 2018.
+# LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
+# AUTHOR: Jamie A. Jennings
+#
+#
+# 'make' builds rosie within the current directory.
+#    bin/rosie is the rosie command line program.
+#    src/librosie/binaries contains librosie.so/dylib and librosie.a.
+#    src/librosie/python, src/librosie/go, etc. contain sample librosie clients.
+#
+# 'make install' builds rosie within the current directory, but
+# configures librosie and the CLI to look for rosie files in DESTDIR
+# (see default value below).  Then the installation files are copied to:
+#    $DESTDIR/lib/librosie.a
+#    $DESTDIR/lib/librosie.so (or .dylib on OS X)
+#    $DESTDIR/lib/rosie/      (rosie files needed at runtime)
+#    $DESTDIR/bin/rosie       (cli)
+#
+# 'make test CLIENTS=all' runs all of the blackbox and whitebox tests.
+# For the tests to execute, rosie must have been built with as follows:
+#    'make LUADEBUG=1'
+#
+
 # -----------------------------------------------------------------------------
 # Customizable options
 # -----------------------------------------------------------------------------
@@ -201,9 +228,9 @@ $(ROSIEBIN): $(LIBROSIE_DIR)/binaries/rosie
 install: ROSIE_HOME = "$(DESTDIR)/lib/rosie"
 install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie install_doc install_extras install_man
 
-# We use mv instead of cp for all the binaries, so that
-# ROSIE_CLI_SYSTEM will be rebuilt every time "make install" is run,
-# because DESTDIR may have changed.
+# We use mv instead of cp for all the binaries, so that the binaries
+# will be rebuilt every time "make install" is run, in case DESTDIR
+# has changed.
 
 $(INSTALL_ROSIEBIN): compile binaries
 	mkdir -p "$(INSTALL_BIN_DIR)"
@@ -297,7 +324,7 @@ sniff: $(ROSIEBIN)
 	    if [ -n "$$RESULT" ]; then \
 		echo "    But received this output: $$RESULT"; \
 	    else \
-		echo "    But received no output."; \
+		echo "    But received no output to stdout."; \
 	    fi; \
 	    false; \
         fi

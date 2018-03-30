@@ -16,10 +16,10 @@
 ## parameter.  This feature is needed for the white-box testing
 ## invoked by "make test".
 ##
-## The executables/libraries in librosie/local look for the rosie home
-## directory in the BUILD directory, and the ones in librosie/system
-## look for the rosie home directory in $(DESTDIR), which is the
-## install directory.
+## After compilation, the resulting files are placed in the "binaries"
+## subdirectory.  The contents of $(CONFIG_FILE) will tell you what
+## ROSIE_HOME path was compiled into the binaries, which will there
+## look for rosie files at runtime.
 ##
 ## -----------------------------------------------------------------------------
 
@@ -30,11 +30,6 @@ ifeq ($(CLIENTS),all)
 else
   clients=$(CLIENTS)
 endif
-
-# We must use the same default as in top-level makefile, so that we
-# can run "make installtest" locally from the librosie directory
-# without having to specify DESTDIR.
-DESTDIR=/usr/local
 
 HOME = $(shell cd ../..; pwd)
 CONFIG_FILE = rosie_home.cfg
@@ -147,7 +142,7 @@ lua_repl.o: lua_repl.c lua_repl.h
 	$(CC) -o $@ $< lua_repl.o -lreadline $(HOME)/submodules/lua-readline/src/*.o $(dependent_objs) $(LIBS)
 
 # Note: 'clean' also cleans the client directories because those are
-# "known" here, and not known by the top level Makefile.
+# known here in $(ALLCLIENTS), and not known by the top level Makefile.
 clean:
 	$(RM) *.o *.dylib *.so *.a
 	$(RM) -rf liblua binaries
@@ -169,7 +164,7 @@ test:
 
 installtest:
 	@here="$(shell pwd)"; \
-	for client in $(clients); do cd $${here}/$$client && $(MAKE) DESTDIR=$(DESTDIR) installtest; done
+	for client in $(clients); do cd $${here}/$$client && $(MAKE) installtest $(MAKEFILEFLAGS); done
 
 echo:
 	@echo "HOME= $(HOME)"
