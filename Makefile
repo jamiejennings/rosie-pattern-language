@@ -119,6 +119,10 @@ INSTALL_ROSIEBIN = $(INSTALL_BIN_DIR)/rosie
 # Targets
 # -----------------------------------------------------------------------------
 
+ifndef ROSIE_HOME
+ROSIE_HOME_GIVEN_ON_COMMAND_LINE = true
+endif
+
 .PHONY:
 .NOTPARALLEL:
 default: ROSIE_HOME ?= "$(shell pwd)"
@@ -304,7 +308,11 @@ uninstall:
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)
-	@RESULT="$(shell $(ROSIEBIN) version 2> /dev/null)"; \
+	@if [ -z "$(ROSIE_HOME_GIVEN_ON_COMMAND_LINE)" ]; then \
+	    echo "Rosie Pattern Engine was built with a custom ROSIE_HOME path.  Skipping sniff test of CLI."; \
+	    true; \
+	else \
+	RESULT="$(shell $(ROSIEBIN) version 2> /dev/null)"; \
 	EXPECTED="$(shell head -1 $(BUILD_ROOT)/VERSION)"; \
 	if [ -n "$$RESULT" -a "$$RESULT" = "$$EXPECTED" ]; then \
 	    echo "";\
@@ -327,7 +335,8 @@ sniff: $(ROSIEBIN)
 		echo "    But received no output to stdout."; \
 	    fi; \
 	    false; \
-        fi
+        fi; \
+	fi
 
 # -----------------------------------------------------------------------------
 # Tests need to be done with dumb terminal type because the cli and
