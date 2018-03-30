@@ -101,7 +101,7 @@ default:
 	    echo "Prior configuration of ROSIE_HOME is different; must rebuild"; \
 	    echo "$(ROSIE_HOME)" >$(CONFIG_FILE); \
 	fi; \
-	$(MAKE) all $(MAKEFLAGS)
+	$(MAKE) all
 
 .PHONY:
 all: binaries/$(ROSIE_DYLIB) binaries/librosie.a binaries/rosie

@@ -217,8 +217,8 @@ compile: binaries $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 .PHONY:
 binaries: $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
 	@cd $(LIBROSIE_DIR); \
-	$(MAKE) ROSIE_HOME="$(ROSIE_HOME)" $(MAKEFLAGS); \
-	$(BUILD_ROOT)/src/build_info.sh "binaries" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log; \
+	$(MAKE) ROSIE_HOME="$(ROSIE_HOME)"; \
+	$(BUILD_ROOT)/src/build_info.sh "binaries" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 $(ROSIEBIN): $(LIBROSIE_DIR)/binaries/rosie
 	cp $(LIBROSIE_DIR)/binaries/rosie "$(BUILD_ROOT)/bin/rosie"
