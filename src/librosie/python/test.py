@@ -370,23 +370,24 @@ class RosieMatchFileTest(unittest.TestCase):
         pass
 
     def test(self):
-        cin, cout, cerr = self.engine.matchfile(self.findall_net_any,
-                                                b"json",
-                                                b"../../../test/resolv.conf",
-                                                b"/tmp/resolv.out",
-                                                b"/tmp/resolv.err")
-        self.assertTrue(cin == 10)
-        self.assertTrue(cout == 5)
-        self.assertTrue(cerr == 5)
+        if testdir:
+            cin, cout, cerr = self.engine.matchfile(self.findall_net_any,
+                                                    b"json",
+                                                    bytes23(os.path.join(testdir, "resolv.conf")),
+                                                    b"/tmp/resolv.out",
+                                                    b"/tmp/resolv.err")
+            self.assertTrue(cin == 10)
+            self.assertTrue(cout == 5)
+            self.assertTrue(cerr == 5)
 
-        cin, cout, cerr = self.engine.matchfile(self.net_any,
-                                                b"color",
-                                                infile=b"../../../test/resolv.conf",
-                                                errfile=b"/dev/null",
-                                                wholefile=True)
-        self.assertTrue(cin == 1)
-        self.assertTrue(cout == 0)
-        self.assertTrue(cerr == 1)
+            cin, cout, cerr = self.engine.matchfile(self.net_any,
+                                                    b"color",
+                                                    infile=bytes23(os.path.join(testdir, "resolv.conf")),
+                                                    errfile=b"/dev/null",
+                                                    wholefile=True)
+            self.assertTrue(cin == 1)
+            self.assertTrue(cout == 0)
+            self.assertTrue(cerr == 1)
 
 class RosieReadRcfileTest(unittest.TestCase):
 
@@ -441,9 +442,9 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
-        librosiedir = "../local"
+        librosiedir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../local')
         print("Loading librosie from " + librosiedir)
-        testdir = "../../../test"
+        testdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../test')
     elif sys.argv[1]=='system':
         librosiedir = None
         print("Loading librosie from system library path")
