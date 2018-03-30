@@ -44,7 +44,7 @@
  */
 
 #ifndef ROSIE_HOME
-#error "ROSIE_HOME not defined"
+#error "ROSIE_HOME not defined (see Makefile for how it is typically set)"
 #endif
 
 #include <assert.h>
@@ -59,10 +59,9 @@
 #include <dlfcn.h>
 #include <libgen.h>
 
-#define ROSIEDIRNAME "/rosie"
 #define BOOTSCRIPT "/lib/boot.luac"
 
-static char rosiehome[MAXPATHLEN];
+static char rosie_home[MAXPATHLEN];
 static char bootscript[MAXPATHLEN];
 
 #include "logging.c"
@@ -101,18 +100,37 @@ static char bootscript[MAXPATHLEN];
  */
 
 static void set_bootscript() {
-  size_t len;
-  static char *last;
-  /* set rosiehome to ROSIE_HOME */
-  len = strnlen(ROSIE_HOME, MAXPATHLEN);
-  last = stpncpy(rosiehome, ROSIE_HOME, (MAXPATHLEN - len - 1));
+  size_t remaining;
+  static char *last, *install_dir;
+  static char *compile_time_path = (char *)ROSIE_HOME;
+  static Dl_info info;
+  /* 
+   * Set rosie_home to ROSIE_HOME. A prefix of "//" means that it
+   * should be relative to where librosie was found.
+   */
+  last = rosie_home;
+  remaining = MAXPATHLEN;
+  if (strncmp(compile_time_path, "//", (size_t) 2) == 0) {
+    if (dladdr(&set_bootscript, &info) != 0) {
+      install_dir = dirname(strndup(info.dli_fname, MAXPATHLEN));
+      LOGf("install_dir = %s\n", install_dir);
+      /* install_dir is where librosie.so is installed. */
+      last = stpncpy(rosie_home, install_dir, remaining);
+      *last = '\0';
+      remaining = MAXPATHLEN - strnlen(rosie_home, MAXPATHLEN);
+      compile_time_path++;		/* skip the first slash */
+    }
+  }
+  last = stpncpy(last, compile_time_path, remaining);
   *last = '\0';
+  remaining = MAXPATHLEN - strnlen(rosie_home, MAXPATHLEN);
   /* set absolute path to boot script */
-  len = strnlen(BOOTSCRIPT, MAXPATHLEN);
-  last = stpncpy(bootscript, rosiehome, (MAXPATHLEN - len - 1));
-  last = stpncpy(last, BOOTSCRIPT, len);
+  last = stpncpy(bootscript, rosie_home, remaining);
+  remaining = MAXPATHLEN - strnlen(rosie_home, MAXPATHLEN);
+  last = stpncpy(last, BOOTSCRIPT, remaining);
   *last = '\0';
-  assert((last-bootscript) < MAXPATHLEN);
+  remaining = MAXPATHLEN - strnlen(rosie_home, MAXPATHLEN);
+  assert(remaining > 0);
   LOGf("Bootscript filename set to %s\n", bootscript);
 }
 
@@ -149,7 +167,7 @@ static int boot(lua_State *L, str *messages) {
   int status = luaL_loadfile(L, bootscript);
   if (status != LUA_OK) {
     LOG("Failed to read rosie boot code (using loadfile)\n");
-    if (asprintf(&msg, "no rosie installation at %s", rosiehome)) {
+    if (asprintf(&msg, "no rosie installation in directory %s", rosie_home)) {
       *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
     } else {
       *messages = rosie_new_string_from_const(NO_INSTALLATION_MSG);
@@ -168,7 +186,7 @@ static int boot(lua_State *L, str *messages) {
     return FALSE;
   }
   LOG("Loading of boot code succeeded\n");
-  lua_pushlstring(L, (const char *)rosiehome, strnlen(rosiehome, MAXPATHLEN));
+  lua_pushlstring(L, (const char *)rosie_home, strnlen(rosie_home, MAXPATHLEN));
   status = lua_pcall(L, 1, LUA_MULTRET, 0);
   if (status!=LUA_OK) {
     LOG("Boot function failed.  Lua stack is: \n");
@@ -249,22 +267,8 @@ static int format_violation_messages(lua_State *L) {
 static int violations_to_json_string(lua_State *L, str *json_string) {
   CHECK_TYPE("violation messages", lua_type(L, -1), LUA_TTABLE);
   int t = format_violation_messages(L);
-  if (t != LUA_OK) LOGstack(L);
-  else {
-    LOGstack(L);
-    /* tableDump(L, -1); */
-    /* lua_geti(L, -1, 1); */
-    /* tableDump(L, -1); */
-
-    /* lua_getfield(L, -1, "sourceref"); */
-    /* tableDump(L, -1); */
-    /* lua_pop(L, 1); */
-
-    /* lua_pop(L, 1); */
-    /* lua_geti(L, -1, 2); */
-    /* tableDump(L, -1); */
-    /* lua_pop(L, 1); */
-    /* LOGstack(L); */
+  LOGstack(L);
+  if (t == LUA_OK) {
     t = to_json_string(L, -1, json_string);
     if (t != LUA_OK) LOG("could not convert violations to json\n");
   }

@@ -31,8 +31,8 @@ int luaopen_readline (lua_State *L); /* will dynamically load the system libread
 
 static int rosie_exec_cli(Engine *e, int argc, char **argv, char **err) {
   char fname[MAXPATHLEN];
-  size_t len = strnlen(rosiehome, MAXPATHLEN);
-  char *last = stpncpy(fname, rosiehome, (MAXPATHLEN - len - 1));
+  size_t len = strnlen(rosie_home, MAXPATHLEN);
+  char *last = stpncpy(fname, rosie_home, (MAXPATHLEN - len - 1));
   last = stpncpy(last, CLI_LUAC, MAXPATHLEN - len - 1 - strlen(CLI_LUAC));
   *last = '\0';
 
