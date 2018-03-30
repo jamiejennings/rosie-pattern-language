@@ -94,7 +94,7 @@ INSTALL_ROSIEBIN = $(INSTALL_BIN_DIR)/rosie
 
 .PHONY:
 .NOTPARALLEL:
-default: LIBROSIE_TARGET=local
+default: ROSIE_HOME ?= "$(shell pwd)"
 default: binaries compile sniff
 
 # <sigh> Once we support packages (like RPM), we won't need this test.
@@ -186,14 +186,11 @@ compile: binaries $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 .PHONY:
 binaries: $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
 	@cd $(LIBROSIE_DIR); \
-	$(MAKE) -q $(LIBROSIE_TARGET) CC=$(CC); \
-	if [ $$? -eq 1 ]; then \
-		$(MAKE) $(LIBROSIE_TARGET) CC=$(CC); \
-		$(BUILD_ROOT)/src/build_info.sh "binaries" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log; \
-	fi
+	$(MAKE) ROSIE_HOME="$(ROSIE_HOME)" $(MAKEFLAGS); \
+	$(BUILD_ROOT)/src/build_info.sh "binaries" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log; \
 
-$(ROSIEBIN): $(LIBROSIE_DIR)/local/rosie
-	cp $(LIBROSIE_DIR)/local/rosie "$(BUILD_ROOT)/bin/rosie"
+$(ROSIEBIN): $(LIBROSIE_DIR)/binaries/rosie
+	cp $(LIBROSIE_DIR)/binaries/rosie "$(BUILD_ROOT)/bin/rosie"
 
 # -----------------------------------------------------------------------------
 # Install
@@ -201,7 +198,7 @@ $(ROSIEBIN): $(LIBROSIE_DIR)/local/rosie
 
 # Main install rule
 .PHONY: install
-install: LIBROSIE_TARGET=system
+install: ROSIE_HOME = "$(DESTDIR)/lib/rosie"
 install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie install_doc install_extras install_man
 
 # We use mv instead of cp for all the binaries, so that
@@ -210,16 +207,16 @@ install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl insta
 
 $(INSTALL_ROSIEBIN): compile binaries
 	mkdir -p "$(INSTALL_BIN_DIR)"
-	cp "$(LIBROSIE_DIR)/system/rosie" "$(INSTALL_ROSIEBIN)"
-	rm "$(LIBROSIE_DIR)/system/rosie"
+	cp "$(LIBROSIE_DIR)/binaries/rosie" "$(INSTALL_ROSIEBIN)"
+	rm "$(LIBROSIE_DIR)/binaries/rosie"
 
 # Install librosie
 .PHONY: install_librosie
 install_librosie: compile binaries
-	cp "$(LIBROSIE_DIR)/system/$(LIBROSIE_DYLIB)" "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
-	rm "$(LIBROSIE_DIR)/system/$(LIBROSIE_DYLIB)"
-	cp "$(LIBROSIE_DIR)/system/$(LIBROSIE_A)" "$(LIBROSIED)/$(LIBROSIE_A)"
-	rm "$(LIBROSIE_DIR)/system/$(LIBROSIE_A)"
+	cp "$(LIBROSIE_DIR)/binaries/$(LIBROSIE_DYLIB)" "$(LIBROSIED)/$(LIBROSIE_DYLIB)"
+	rm "$(LIBROSIE_DIR)/binaries/$(LIBROSIE_DYLIB)"
+	cp "$(LIBROSIE_DIR)/binaries/$(LIBROSIE_A)" "$(LIBROSIED)/$(LIBROSIE_A)"
+	rm "$(LIBROSIE_DIR)/binaries/$(LIBROSIE_A)"
 
 # Install any metadata needed by rosie
 .PHONY: install_metadata

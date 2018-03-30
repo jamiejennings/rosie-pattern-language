@@ -11,14 +11,15 @@
 ## Use "DEBUG=1" on the command line to cause librosie to log
 ## informational and error messages to stderr.
 ## 
-## Use 'LUADEBUG=1' to build into rosie_local/rosie_system a lua repl
-## that can be accessed by passing '-D' as the first command line
+## Use 'LUADEBUG=1' to include into the build a lua repl that can be
+## accessed by passing '-D' to the rosie CLI as the first command line
 ## parameter.  This feature is needed for the white-box testing
 ## invoked by "make test".
 ##
-## The executable rosie_local looks for the rosie home directory in
-## the BUILD directory, while rosie_system looks for the rosie home
-## directory in $(DESTDIR), which is the install directory.  
+## The executables/libraries in librosie/local look for the rosie home
+## directory in the BUILD directory, and the ones in librosie/system
+## look for the rosie home directory in $(DESTDIR), which is the
+## install directory.
 ##
 ## -----------------------------------------------------------------------------
 
@@ -36,6 +37,7 @@ endif
 DESTDIR=/usr/local
 
 HOME = $(shell cd ../..; pwd)
+CONFIG_FILE = rosie_home.cfg
 
 ifdef LUADEBUG
 lua_debug="-DLUADEBUG"
@@ -93,19 +95,24 @@ dependent_objs=liblua/*.o \
 
 .PHONY:
 default:
-	@echo Use "make local" or "make system"
-	@exit -1
+	@if [ -z "$(ROSIE_HOME)" ]; then \
+	echo "ROSIE_HOME undefined. Please supply a value on the command line."; \
+	false; \
+	fi; \
+	PREV_CONFIGURATION="$(shell head -1 $(CONFIG_FILE))"; \
+	if [ "$(ROSIE_HOME)" = "$$PREV_CONFIGURATION" ]; then \
+            echo "Configuration of ROSIE_HOME has not changed"; \
+	else \
+	    echo "Prior configuration of ROSIE_HOME is different; must rebuild"; \
+	    echo "$(ROSIE_HOME)" >$(CONFIG_FILE); \
+	fi; \
+	$(MAKE) all $(MAKEFLAGS)
 
 .PHONY:
-local: rosie_home=-DROSIE_HOME="\"$(HOME)\""
-local: local/$(ROSIE_DYLIB) local/librosie.a local/rosie
-
-.PHONY:
-system: rosie_home=-DROSIE_HOME="\"$(DESTDIR)/lib/rosie\""
-system: system/$(ROSIE_DYLIB) system/librosie.a system/rosie
+all: binaries/$(ROSIE_DYLIB) binaries/librosie.a binaries/rosie
 
 $(LUA_A):
-	@echo "Missing Rosie object files.  Need to build rosie first."
+	@echo "Missing Rosie object files.  Need to build the other rosie components first."
 	@false
 
 liblua: $(LUA_A)
@@ -115,9 +122,9 @@ liblua: $(LUA_A)
 lua_repl.o: lua_repl.c lua_repl.h
 	$(CC) -o $@ -c lua_repl.c $(CFLAGS) -I$(HOME)/submodules/lua/src -fvisibility=hidden
 
-%/librosie.o: librosie.c librosie.h logging.c registry.c rosiestring.c
+%/librosie.o: $(CONFIG_FILE) librosie.c librosie.h logging.c registry.c rosiestring.c
 	mkdir -p $(dir $@)
-	$(CC) -fvisibility=hidden -o $@ -c librosie.c $(CFLAGS) $(debug_flag) $(lua_debug) $(rosie_home)
+	$(CC) -fvisibility=hidden -o $@ -c librosie.c $(CFLAGS) $(debug_flag) $(lua_debug) -DROSIE_HOME="\"$(ROSIE_HOME)\""
 
 %/librosie.so: %/librosie.o liblua
 	mkdir -p $(dir $@)
@@ -131,9 +138,9 @@ lua_repl.o: lua_repl.c lua_repl.h
 	$(AR) $@ $< $(dependent_objs)
 	$(RANLIB) $@
 
-%/rosie.o: rosie.c librosie.c librosie.h logging.c registry.c rosiestring.c 
+%/rosie.o: $(CONFIG_FILE) rosie.c librosie.c librosie.h logging.c registry.c rosiestring.c 
 	mkdir -p $(dir $@)
-	$(CC) -o $@ -c rosie.c $(CFLAGS) $(debug_flag) $(lua_debug) $(rosie_home)
+	$(CC) -o $@ -c rosie.c $(CFLAGS) $(debug_flag) $(lua_debug) -DROSIE_HOME="\"$(ROSIE_HOME)\""
 
 %/rosie: %/rosie.o lua_repl.o liblua
 	mkdir -p $(dir $@)
@@ -143,7 +150,7 @@ lua_repl.o: lua_repl.c lua_repl.h
 # "known" here, and not known by the top level Makefile.
 clean:
 	$(RM) *.o *.dylib *.so *.a
-	$(RM) -rf liblua local system
+	$(RM) -rf liblua binaries
 	@here="$(shell pwd)"; \
 	for client in $(ALLCLIENTS); do cd $${here}/$$client && $(MAKE) clean; done
 
