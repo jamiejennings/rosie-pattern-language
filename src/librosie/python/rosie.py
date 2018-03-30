@@ -131,7 +131,7 @@ class engine ():
         Cerrs = new_cstr()
         self.engine = lib.rosie_new(Cerrs)
         if self.engine == ffi.NULL:
-            raise RuntimeError("librosie: " + str23(read_cstr(Cerrs)))
+            raise RuntimeError("librosie: " + str(read_cstr(Cerrs)))
         return
 
     def config(self):
