@@ -58,21 +58,21 @@ MYLDFLAGS=
 MYLIBS= 
 MYOBJS=
 
-ROSIE_A=../local/librosie.a
+ROSIE_A=../binaries/librosie.a
 ROSIE_DYLIB_NAME=rosie
 
 ifeq ($(PLATFORM), macosx)
-ROSIE_DYLIB=../local/lib$(ROSIE_DYLIB_NAME).dylib
+ROSIE_DYLIB=../binaries/lib$(ROSIE_DYLIB_NAME).dylib
 SYSTEM_DYNAMIC_TEST_COMMAND=./dynamic system librosie.dylib
-LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=../local ./dynamic local librosie.dylib
+LOCAL_DYNAMIC_TEST_COMMAND=DYLD_LIBRARY_PATH=../binaries ./dynamic local librosie.dylib
 else
-ROSIE_DYLIB=../local/lib$(ROSIE_DYLIB_NAME).so
+ROSIE_DYLIB=../binaries/lib$(ROSIE_DYLIB_NAME).so
 # Some linux distros may not have DESTDIR on their search path by
 # default, like when running as root in a docker image.  (This can be
 # checked with `/sbin/ldconfig -v`.) So we explicitly set
 # LD_LIBRARY_PATH in the SYSTEM test of the dynamically linked client.
 SYSTEM_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=$(DESTDIR)/lib ./dynamic system librosie.so
-LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=../local ./dynamic local librosie.so
+LOCAL_DYNAMIC_TEST_COMMAND=LD_LIBRARY_PATH=../binaries ./dynamic local librosie.so
 endif
 
 

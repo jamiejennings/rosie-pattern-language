@@ -3,7 +3,7 @@
 #
 # python test.py [local | system]
 #
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 
 import unittest
 import sys, os, json
@@ -442,8 +442,9 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
-        librosiedir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../local')
-        print("Loading librosie from " + librosiedir)
+        relativedir = '../binaries'
+        librosiedir = os.path.join(os.path.dirname(os.path.abspath(__file__)), relativedir)
+        print("Loading librosie from ", relativedir)
         testdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../test')
     elif sys.argv[1]=='system':
         librosiedir = None

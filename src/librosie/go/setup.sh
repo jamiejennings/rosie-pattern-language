@@ -24,8 +24,8 @@ ln -fs $LUALIB/lua.h src/rosie/include/
 ln -fs $LUALIB/luaconf.h src/rosie/include/
 ln -fs $LUALIB/lualib.h src/rosie/include/
 
-echo "Linking librosie.a from librosie/local directory"
-ln -fs $LIB/local/librosie.a src/rosie/librosie.a
+echo "Linking librosie.a from librosie/binaries directory"
+ln -fs $LIB/binaries/librosie.a src/rosie/librosie.a
 
 if [ -z $ROSIE_HOME ]; then
     ROSIE_HOME=`cd ../../.. && pwd`

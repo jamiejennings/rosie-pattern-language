@@ -40,18 +40,18 @@ CC= gcc
 ROSIE_DYLIB=lib$(ROSIE_DYLIB_NAME).so
 endif
 
-test: ../local/$(ROSIE_DYLIB)
+test: ../binaries/$(ROSIE_DYLIB)
 	@if [ "$(python2)" != "$(true)" ]; then \
 		echo Testing with $(shell $(python2) --version 2>&1); \
 		$(python2) -c 'import cffi'; \
-		if [ $$? -eq 0 ]; then LD_LIBRARY_PATH=../local $(python2) test.py local; \
+		if [ $$? -eq 0 ]; then LD_LIBRARY_PATH=../binaries $(python2) test.py local; \
 		else echo "cffi not found -- skipping test"; \
 		fi; \
 	fi
 	@if [ "$(python3)" != "$(true)" ]; then \
 		echo Testing with $(shell $(python3) --version 2>&1); \
 		$(python3) -c 'import cffi'; \
-		if [ $$? -eq 0 ]; then LD_LIBRARY_PATH=../local $(python3) test.py local; \
+		if [ $$? -eq 0 ]; then LD_LIBRARY_PATH=../binaries $(python3) test.py local; \
 		else echo "cffi not found -- skipping test"; \
 		fi; \
 	fi
