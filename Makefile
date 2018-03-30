@@ -309,7 +309,8 @@ uninstall:
 .PHONY: sniff
 sniff: $(ROSIEBIN)
 	@if [ -z "$(ROSIE_HOME_GIVEN_ON_COMMAND_LINE)" ]; then \
-	    echo "Rosie Pattern Engine was built with a custom ROSIE_HOME path.  Skipping sniff test of CLI."; \
+	    echo "Rosie Pattern Engine was built with a custom ROSIE_HOME path: $(ROSIE_HOME)"; \
+	    echo "Skipping sniff test of CLI due to custom path."; \
 	    true; \
 	else \
 	RESULT="$(shell $(ROSIEBIN) version 2> /dev/null)"; \
