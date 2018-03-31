@@ -21,6 +21,8 @@ liblua.5.3.so
 librosie.dylib
 liblua.5.3.dylib
 
+# F'ing python
+Library
 
 # Places where object files and executables are kept while building librosie
 src/librosie/C/dynamic
