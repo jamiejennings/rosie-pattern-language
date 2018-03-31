@@ -413,33 +413,32 @@ end
 
 ----------------------------------------------------------------------------------------
 
--- return file_existed, options_table or false
-local function read_rcfile(e, filename, engine_maker)
+-- return file_existed (bool), options_table or false, messages (strings)
+local function read_rcfile(e, filename, engine_maker, is_default_rcfilename)
+   local messages
    local contents, err = util.readfile(common.tilde_expand(filename))
    if type(contents)~="string" then
-      return false, false
+      if not is_default_rcfilename then
+	 messages = {"Could not open rcfile " .. tostring(filename)}
+      end
+      return false, false, messages
    end
    local options, err = rcfile.process(contents, engine_maker)
-   if not options then
-      common.warn("[", filename, "] ", err)
-      return true, false
-   end
-   return true, options
+   messages = err and { table.concat({"[", filename, "] ", err}, "") }
+   return true, options, messages
 end
 
--- return file_existed, and processed_without_errors
+-- return file_existed (bool), processed_without_errors (bool), messages (strings)
 local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, set_by)
    common.note("Processing rcfile ", filename)
    assert(type(set_by)=="string")
-   local file_existed, options = read_rcfile(e, filename, engine_maker, is_default_rcfilename)
+   local file_existed, options, messages =
+      read_rcfile(e, filename, engine_maker, is_default_rcfilename)
    if not file_existed then
-      if not is_default_rcfilename then
-	 common.warn("Could not open rcfile " .. filename)
-      end
-      return false, false
+      return false, false, messages
    end
    if not options then
-      return true, false
+      return true, false, messages
    end
    e.rcfile = common.new_attribute("ROSIE_RCFILE",
 				   filename,
@@ -458,7 +457,10 @@ local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, 
 	 local ok, pkgname, errs = e:loadfile(common.tilde_expand(v))
 	 if not ok then
 	    local msg = table.concat(list.map(violation.tostring, errs), '\n')
-	    common.warn("[", filename, "] Failed to load ", v, ":\n", msg)
+	    messages = messages or {}
+	    table.insert(messages,
+			 table.concat({"[", filename, "] Failed to load ", v, ":\n", msg},
+				      ""))
 	    all_ok = false
 	 else
 	    common.note("[", filename, "] Loaded ", v)
@@ -466,7 +468,7 @@ local function execute_rcfile(e, filename, engine_maker, is_default_rcfilename, 
       end
    end -- for
    common.note("Finished processing rcfile ", filename)
-   return true, all_ok
+   return true, all_ok, messages
 end
 
 ----------------------------------------------------------------------------------------

@@ -66,10 +66,16 @@ function p.setup_engine(rosie, en, args)
 	 rcfile = args.rcfile
 	 is_default = false
       end
-      en:execute_rcfile(rcfile,
-			rosie.engine.new,
-			is_default,
-			(is_default and "default") or "CLI")
+      local rc_exists, no_errors, messages =
+	 en:execute_rcfile(rcfile,
+			   rosie.engine.new,
+			   is_default,
+			   (is_default and "default") or "CLI")
+      if messages then
+	 for _, msg in ipairs(messages) do
+	    common.warn(msg)
+	 end
+      end
    end
 
    -- Override the libpath if there is one on the command line

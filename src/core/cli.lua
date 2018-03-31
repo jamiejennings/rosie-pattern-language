@@ -68,30 +68,10 @@ end
 local function run(args)
    en = assert(cli_engine)			    -- created by rosie.c
 
-   if args.verbose then ROSIE_VERBOSE = true; end
-
-   -- local rcfile = rosie.default.rcfile
-   -- local is_default = true
-   -- if (not args.norcfile) then
-   --    if args.rcfile then
-   -- 	 rcfile = args.rcfile
-   -- 	 is_default = false
-   --    end
-   --    en:execute_rcfile(rcfile,
-   -- 			rosie.engine.new,
-   -- 			is_default,
-   -- 			(is_default and "default") or "CLI")
-   -- end
-
-   -- if args.libpath then
-   --    en:set_libpath(args.libpath, "CLI")
-   -- end
-
-   -- if args.colors then
-   --    en:set_encoder_parm("colors", args.colors, "CLI")
-   -- end
-
-   if args.verbose then greeting(); end
+   if args.verbose then
+      ROSIE_VERBOSE = true
+      greeting()
+   end
 
    if not args.command then
       print("Usage: rosie command [options] pattern file [...]")
