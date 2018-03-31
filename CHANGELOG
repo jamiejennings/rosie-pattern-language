@@ -1,3 +1,23 @@
+2018-03-31  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-5:
+
+	ENHANCED: The build process (Makefile) now allows librosie/rosie to be
+	built using a relative path to find the rosie installation.  That path
+	is relative to the librosie install directory when it starts with a
+	double slash ('//'), and relative to the current directory otherwise.
+	We recommend AGAINST building with a path that is relative to the
+	current directory, for security reasons.
+
+	FIXED: a bug in rosie.py that occured when printing some kinds of
+	errors.
+
+	CHANGED: warnings printed by execute_rcfile() are now returned to the
+	librosie client instead.
+
+***	ADDED: macro_expand(), block_dependencies(), and
+	expression_dependencies() to librosie.
+
 2018-03-16  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-4:
