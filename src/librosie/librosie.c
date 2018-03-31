@@ -211,8 +211,8 @@ static int to_json_string(lua_State *L, int pos, str *json_string) {
      int top = lua_gettop(L);
      get_registry(json_encoder_key);
      lua_pushvalue(L, pos-1);                /* offset because we pushed json_encoder */
+     if (!lua_istable(L, -1)) return ERR_SYSCALL_FAILED;
      *json_string = rosie_string_from(NULL, 0);
-     if (!lua_istable(L, pos)) return ERR_SYSCALL_FAILED;
      /* When the messages table is empty, be sure to return a null rosie_string */
      lua_pushnil(L);
      if (!lua_next(L, pos-1)) {
@@ -1113,99 +1113,15 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
   return SUCCESS;
 }
 
-/* N.B. Client must free options */
-EXPORT
-int rosie_read_rcfile(Engine *e, str *filename, int *file_exists, str *options) {
-  str r;
-  int t;
-  ACQUIRE_ENGINE_LOCK(e);
-  lua_State *L = e->L;
-  get_registry(engine_key);
-  t = lua_getfield(L, -1, "read_rcfile");
-  CHECK_TYPE("read_rcfile", t, LUA_TFUNCTION);
-  /* push engine (first arg) */
-  get_registry(engine_key);
-  /* push filename (second arg) */
-  if (!filename->ptr) {
-    /* use default rc filename */
-    LOG("using default rc filename\n");
-    get_registry(rosie_key);	/* stack: rosie, engine, read_rcfile, rosie */
-    t = lua_getfield(L, -1, "default");	/* stack: default, rosie, engine, read_rcfile, rosie */
-    CHECK_TYPE("default", t, LUA_TTABLE);
-    lua_remove(L, -2); /* stack: default, engine, read_rcfile, rosie */
-    t = lua_getfield(L, -1, "rcfile"); /* stack: rcfile, default, engine, read_rcfile, rosie */
-    CHECK_TYPE("rcfile", t, LUA_TSTRING);
-    lua_remove(L, -2); /* stack: rcfile, engine, read_rcfile, rosie */
-    /* stack: rcfile, engine, read_rcfile, rosie */
-  } else {
-    LOGf("using supplied rc filename: %*s\n",
-	 filename->len, filename->ptr);
-    lua_pushlstring(L, (const char *)filename->ptr, filename->len);
-    /* stack: filename, rcfile, engine, read_rcfile, rosie */
-  }
-  /* push engine maker */
-  get_registry(rosie_key);
-  t = lua_getfield(L, -1, "engine");
-  CHECK_TYPE("engine", t, LUA_TTABLE);
-  /* stack: engine, rosie, rcfile, engine, read_rcfile, rosie */
-  lua_remove(L, -2); /* stack: engine, rcfile, engine, read_rcfile, rosie */
-  t = lua_getfield(L, -1, "new");
-  CHECK_TYPE("engine.new", t, LUA_TFUNCTION);
-  /* stack: engine_maker, engine, rcfile, engine, read_rcfile, rosie */
-  lua_remove(L, -2); /* stack: engine_maker, rcfile, engine, read_rcfile, rosie */
-  t = lua_pcall(L, 3, 2, 0);
-  if (t != LUA_OK) {
-    LOG("read_rcfile() failed\n");
-    LOGstack(L);
-    *options = rosie_new_string_from_const("read_rcfile() failed");
-    lua_settop(L, 0);
-    RELEASE_ENGINE_LOCK(e);
-    return ERR_ENGINE_CALL_FAILED;
-  }
-  /* return values are file_existed (bool) and options table (or false) */
-  *file_exists = lua_toboolean(L, -2);
-  if (*file_exists) {
-    LOG("rc file exists\n");
-    if (lua_istable(L, -1)) {
-      LOG("file processed successfully\n");
-      t = to_json_string(L, -1, &r);
-      if (t == LUA_OK) {
-	options->len = r.len;
-	options->ptr = r.ptr;
-      } else {
-	LOGf("could not convert options to json (code=%d)\n", t);
-	*options = rosie_new_string_from_const("in read_rcfile(), could not convert options to json");
-	lua_settop(L, 0);
-	RELEASE_ENGINE_LOCK(e);
-	return ERR_ENGINE_CALL_FAILED;
-      }
-    }
-    else {
-      LOG("file FAILED to process without errors\n");
-    }
-  } else {
-    LOG("rc file does not exist\n");
-  }    
-  lua_settop(L, 0);
-  RELEASE_ENGINE_LOCK(e);
-  return SUCCESS;
-}
-
-/* N.B. Client must free options */
-EXPORT
-int rosie_execute_rcfile(Engine *e, str *filename, int *file_exists, int *no_errors) {
+static int push_rcfile_args(Engine *e, str *filename) {
+  lua_State *L = e->L;		/* for the CHECK_TYPE macro */
   int t;
   int is_default_rcfile = (filename->ptr == NULL);
-  ACQUIRE_ENGINE_LOCK(e);
-  lua_State *L = e->L;
+  /* Push engine */
   get_registry(engine_key);
-  t = lua_getfield(L, -1, "execute_rcfile");
-  CHECK_TYPE("execute_rcfile", t, LUA_TFUNCTION);
-  /* push engine (first arg) */
-  get_registry(engine_key);
-  /* push filename (second arg) */
+  /* Push filename */
   if (!filename->ptr) {
-    /* use default rc filename */
+    /* Use default rc filename */
     LOG("using default rc filename\n");
     get_registry(rosie_key);	/* stack: rosie, engine, read_rcfile, rosie */
     t = lua_getfield(L, -1, "default");	/* stack: default, rosie, engine, read_rcfile, rosie */
@@ -1222,7 +1138,7 @@ int rosie_execute_rcfile(Engine *e, str *filename, int *file_exists, int *no_err
     lua_pushlstring(L, (const char *)filename->ptr, filename->len);
     /* stack: filename, rcfile, engine, read_rcfile, rosie */
   }
-  /* push engine maker */
+  /* Push engine maker */
   get_registry(rosie_key);
   t = lua_getfield(L, -1, "engine");
   CHECK_TYPE("engine", t, LUA_TTABLE);
@@ -1232,32 +1148,128 @@ int rosie_execute_rcfile(Engine *e, str *filename, int *file_exists, int *no_err
   CHECK_TYPE("engine.new", t, LUA_TFUNCTION);
   /* stack: engine_maker, engine, rcfile, engine, read_rcfile, rosie */
   lua_remove(L, -2); /* stack: engine_maker, rcfile, engine, read_rcfile, rosie */
-  /* push is_default_rcfile */
+  /* Push is_default_rcfile */
   lua_pushboolean(L, is_default_rcfile);
-  /* push set_by */
-  lua_pushstring(L, "API");
-  t = lua_pcall(L, 5, 2, 0);
+  return LUA_OK;
+}
+
+/* N.B. Client must free options */
+EXPORT
+int rosie_read_rcfile(Engine *e, str *filename, int *file_exists, str *options, str *messages) {
+  str r;
+  int t;
+  ACQUIRE_ENGINE_LOCK(e);
+  lua_State *L = e->L;
+  get_registry(engine_key);
+  t = lua_getfield(L, -1, "read_rcfile");
+  CHECK_TYPE("read_rcfile", t, LUA_TFUNCTION);
+  /* Push all the args */
+  t = push_rcfile_args(e, filename);
+  if (t != LUA_OK) goto read_rcfile_failed;
+  t = lua_pcall(L, 4, 3, 0);
   if (t != LUA_OK) {
+    LOG("read_rcfile() failed\n");
+    LOGstack(L);
+    *options = rosie_new_string_from_const("read_rcfile() failed");
+    goto read_rcfile_failed;
+  }
+  /* return values are file_existed (bool), options_table (or false), messages (or nil) */
+  *file_exists = lua_toboolean(L, -3);
+  if (*file_exists) {
+    LOG("rc file exists\n");
+  } else {
+    LOG("rc file does not exist\n");
+  }
+  if (lua_istable(L, -2)) {
+    LOG("file processed successfully\n");
+    t = to_json_string(L, -2, &r);
+    if (t == LUA_OK) {
+      options->len = r.len;
+      options->ptr = r.ptr;
+    } else {
+      LOGf("could not convert options to json (code=%d)\n", t);
+      LOGstack(L);
+      *options = rosie_new_string_from_const("in read_rcfile(), could not convert options to json");
+      goto read_rcfile_failed;
+    }
+  } else {
+    LOG("file FAILED to process without errors\n");
+  }
+  if (lua_istable(L, -1)) {
+    LOG("there are messages\n");
+    t = to_json_string(L, -1, &r);
+    if (t == LUA_OK) {
+      messages->len = r.len;
+      messages->ptr = r.ptr;
+    } else {
+      LOG("could not convert messages to json\n");
+      *messages = rosie_new_string_from_const("error: could not convert messages to json");      
+    }
+  } else {
+    LOG("there were no messages\n");
+  }
+  lua_settop(L, 0);
+  RELEASE_ENGINE_LOCK(e);
+  return SUCCESS;
+
+ read_rcfile_failed:
+  lua_settop(L, 0);
+  RELEASE_ENGINE_LOCK(e);
+  return ERR_ENGINE_CALL_FAILED;
+}
+
+/* N.B. Client must free options */
+EXPORT
+int rosie_execute_rcfile(Engine *e, str *filename, int *file_exists, int *no_errors, str *messages) {
+  int t;
+  str r;
+  ACQUIRE_ENGINE_LOCK(e);
+  lua_State *L = e->L;
+  get_registry(engine_key);
+  t = lua_getfield(L, -1, "execute_rcfile");
+  CHECK_TYPE("execute_rcfile", t, LUA_TFUNCTION);
+  /* Push all but the last arg */
+  t = push_rcfile_args(e, filename);
+  if (t != LUA_OK) goto execute_rcfile_failed;
+  /* Push the set_by arg */
+  lua_pushstring(L, "API");
+  t = lua_pcall(L, 5, 3, 0);
+  if (t != LUA_OK) {
+  execute_rcfile_failed:
     LOG("execute_rcfile() failed\n");
     LOGstack(L);
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
-  /* return values are file_existed and processed_without_error */
-  *file_exists = lua_toboolean(L, -2);
+  /* return values are file_existed, processed_without_error, messages */
+  *file_exists = lua_toboolean(L, -3);
   *no_errors = FALSE;
   if (*file_exists) {
     LOG("rc file exists\n");
-    if (lua_toboolean(L, -1)) {
-      LOG("rc file processed successfully\n");
-      *no_errors = TRUE;
-    }
-    else {
-      LOG("file FAILED to process without errors\n");
-    }
   } else {
     LOG("rc file does not exist\n");
+  }
+  if (lua_toboolean(L, -2)) {
+    LOG("rc file processed successfully\n");
+    *no_errors = TRUE;
+  }
+  else {
+    LOG("file FAILED to process without errors\n");
+  }
+  if (lua_istable(L, -1)) {
+    LOG("there are messages\n");
+    t = to_json_string(L, -1, &r);
+    if (t == LUA_OK) {
+      messages->len = r.len;
+      messages->ptr = r.ptr;
+    } else {
+      LOG("could not convert messages to json\n");
+      *messages = rosie_new_string_from_const("error: could not convert messages to json");      
+      goto execute_rcfile_failed;
+    }
+  } else {
+    LOG("there were no messages\n");
   }
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
