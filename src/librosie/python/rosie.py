@@ -63,8 +63,8 @@ int rosie_trace(void *L, int pat, int start, char *trace_style, str *input, int 
 int rosie_load(void *L, int *ok, str *src, str *pkgname, str *errors);
 int rosie_loadfile(void *e, int *ok, str *fn, str *pkgname, str *errors);
 int rosie_import(void *e, int *ok, str *pkgname, str *as, str *actual_pkgname, str *messages);
-int rosie_read_rcfile(void *e, str *filename, int *file_exists, str *options);
-int rosie_execute_rcfile(void *e, str *filename, int *file_exists, int *no_errors);
+int rosie_read_rcfile(void *e, str *filename, int *file_exists, str *options, str *messages);
+int rosie_execute_rcfile(void *e, str *filename, int *file_exists, int *no_errors, str *messages);
 
 void free(void *obj);
 
@@ -275,14 +275,21 @@ class engine ():
             filename_arg = new_cstr()
         else:
             filename_arg = new_cstr(filename)
-        options = new_cstr()
-        ok = lib.rosie_read_rcfile(self.engine, filename_arg, Cfile_exists, options)
+        Coptions = new_cstr()
+        Cmessages = new_cstr()
+        ok = lib.rosie_read_rcfile(self.engine, filename_arg, Cfile_exists, Coptions, Cmessages)
         if ok != 0:
             raise RuntimeError("read_rcfile() failed (please report this as a bug)")
-        if Cfile_exists[0] == 0: return None # file did not exist
-        options = read_cstr(options)
-        if options: return json.loads(options)
-        return False   # file existed, but some problems processing it
+        messages = read_cstr(Cmessages)
+        messages = messages and json.loads(messages)
+        if Cfile_exists[0] == 0:
+            return None, messages
+        # else file existed and was read
+        options = read_cstr(Coptions)
+        if options:
+            return json.loads(options), messages
+        # else: file existed, but some problems processing it
+        return False, messages
 
     def execute_rcfile(self, filename=None):
         Cfile_exists = ffi.new("int *")
@@ -291,12 +298,19 @@ class engine ():
             filename_arg = new_cstr()
         else:
             filename_arg = new_cstr(filename)
-        ok = lib.rosie_execute_rcfile(self.engine, filename_arg, Cfile_exists, Cno_errors)
+        Cmessages = new_cstr()
+        ok = lib.rosie_execute_rcfile(self.engine, filename_arg, Cfile_exists, Cno_errors, Cmessages)
         if ok != 0:
             raise RuntimeError("execute_rcfile() failed (please report this as a bug)")
-        if Cfile_exists[0] == 0: return None # file did not exist
-        if Cno_errors[0] == 1: return True
-        return False   # file existed, but some problems processing it
+        messages = read_cstr(Cmessages)
+        messages = messages and json.loads(messages)
+        if Cfile_exists[0] == 0:
+            return None, messages
+        # else: file existed
+        if Cno_errors[0] == 1:
+            return True, messages
+        # else: some problems processing it
+        return False, messages
 
     def libpath(self, libpath=None):
         if libpath:

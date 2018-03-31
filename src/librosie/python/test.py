@@ -401,12 +401,15 @@ class RosieReadRcfileTest(unittest.TestCase):
 
     def test(self):
         if testdir:
-            options = self.engine.read_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
+            options, messages = self.engine.read_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
             self.assertIsInstance(options, list)
-            options = self.engine.read_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
+            self.assertTrue(messages is None)
+            options, messages = self.engine.read_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
+            self.assertTrue(messages[0].find("Syntax errors in rcfile") != -1)
             self.assertTrue(options is False)
-            options = self.engine.read_rcfile(b"This file does not exist")
+            options, messages = self.engine.read_rcfile(b"This file does not exist")
             self.assertTrue(options is None)
+            self.assertTrue(messages[0].find("Could not open rcfile") != -1)
 
 class RosieExecuteRcfileTest(unittest.TestCase):
 
@@ -419,22 +422,21 @@ class RosieExecuteRcfileTest(unittest.TestCase):
         pass
 
     def test(self):
-        print("*****************************************************")
-        print("** Rosie errors and warnings will be printed below **")
-        print("*****************************************************")
-        result = self.engine.execute_rcfile(b"This file does not exist")
+        result, messages = self.engine.execute_rcfile(b"This file does not exist")
         self.assertTrue(result is None)
         if testdir:
-            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
+            result, messages = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile1")))
             self.assertTrue(result is False)
-            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
+            self.assertTrue(messages[0].find("Failed to load another-file") != -1)
+            result, messages = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile2")))
             self.assertTrue(result is False)
-            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile3")))
+            self.assertTrue(messages[0].find("Syntax errors in rcfile") != -1)
+            result, messages = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile3")))
             self.assertTrue(result is False)
-            result = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile5")))
+            self.assertTrue(messages[0].find("Failed to load nofile_mod1.rpl") != -1)
+            result, messages = self.engine.execute_rcfile(bytes23(os.path.join(testdir, "rcfile5")))
             self.assertTrue(result is True)
-
-
+            self.assertTrue(messages is None)
         
 # -----------------------------------------------------------------------------
 
