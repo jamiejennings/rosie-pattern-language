@@ -15,9 +15,6 @@
 	CHANGED: warnings printed by execute_rcfile() are now returned to the
 	librosie client instead.
 
-***	ADDED: macro_expand(), block_dependencies(), and
-	expression_dependencies() to librosie.
-
 2018-03-16  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-4:
