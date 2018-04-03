@@ -8,14 +8,13 @@
 #  AUTHOR: Jamie A. Jennings
 
 # Development environment:
-#   Mac OS X Sierra (10.12.6)
+#   Mac OS X Sierra (10.13.3)
 #   Python 2.7.10 (distributed with OS X)
-#   Python 3.6.4 (installed via brew on OS X)
+#   Python 3.6.5 (installed via brew on OS X)
 #   cffi-1.11.4
 
 # TODO:
 # - replace magic error code numbers with constants
-# - suppress the stderr output (librosie writes some error messages to stderr)
 
 from __future__ import unicode_literals
 
@@ -70,7 +69,17 @@ void free(void *obj);
 
 """)
 
-lib = None                # single instance of dynamic library
+# Single instance of dynamic library
+lib = None
+
+# Values of librosie_directory:
+#   None --> system-dependent location for shared libraries (e.g. /usr/local/lib)
+#   string --> path to directory containing librosie.so/librosie.dylib
+# If the path starts with '//' it is interpreted as relative to where this file
+# is installed. 
+
+librosie_directory = None       
+
 
 # -----------------------------------------------------------------------------
 # ffi utilities
@@ -101,28 +110,42 @@ def read_cstr(cstr_ptr):
 
 # -----------------------------------------------------------------------------
 
+def set_librosie_dir(path, **kwargs):
+    global librosie_directory
+    quiet = False
+    if 'quiet' in kwargs:
+        if kwargs['quiet']:
+            quiet = True
+    if lib and not quiet:
+        raise RuntimeError(
+            'librosie has already been loaded (via engine creation), so its location cannot be reset from '
+            + librosie_directory)
+    librosie_directory = path
+
+def get_librosie_dir():
+    return librosie_directory
+
 class engine ():
     '''
-    Create a Rosie pattern matching engine.  The first call to engine()
-    will load librosie from one of the standard shared library
-    directories for your system, or from a custom path provided as an
-    argument.
+    A Rosie pattern matching engine is used to load/import RPL code
+    (patterns) and to do matching.  Create as many engines as you need.
     '''
-
-    def __init__(self, librosie_directory=None):
+    def __init__(self):
         global lib
-        ostype = os.uname()[0]
-        if ostype=="Darwin":
-            libname = "librosie.dylib"
-        else:
-            libname = "librosie.so"
+        global librosie_directory
         if not lib:
+            ostype = os.uname()[0]
+            if ostype=="Darwin":
+                libname = "librosie.dylib"
+            else:
+                libname = "librosie.so"
             if librosie_directory:
-               libpath = os.path.join(librosie_directory, libname)
-               if not os.path.isfile(libpath):
-                   raise RuntimeError("Cannot find librosie at " + libpath)
-            elif use_local_librosie:
-                libpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), libname)
+                if librosie_directory[0:2]=='//':
+                    libpath = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                           librosie_directory[2:],
+                                           libname)
+                else:
+                    libpath = os.path.join(librosie_directory, libname)
                 if not os.path.isfile(libpath):
                     raise RuntimeError("Cannot find librosie at " + libpath)
             else:
@@ -133,7 +156,7 @@ class engine ():
         if self.engine == ffi.NULL:
             raise RuntimeError("librosie: " + str(read_cstr(Cerrs)))
         return
-
+    
     def config(self):
         Cresp = new_cstr()
         ok = lib.rosie_config(self.engine, Cresp)
@@ -364,12 +387,6 @@ class rplx(object):
 
     
 # -----------------------------------------------------------------------------
-
-# When this file is installed as a python module using pip, it comes
-# with its own librosie.so/dylib, and that should be the default.  The
-# setup.py for rosie ensures that by adding a line below that sets
-# use_local_librosie to True.
-use_local_librosie = False
 
 
 
