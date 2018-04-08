@@ -38,7 +38,6 @@ static void *make_engine() {
 the rosie installation in the same directory as this executable,\n	\
 under the name 'rosie'.\n\
 ");
-    fflush(NULL);
     exit(E_ENGINE_CREATE);
   }
   str pkgname = STR("all");
@@ -101,8 +100,10 @@ static int compile(void *engine, str expression) {
 static int r=0;
 static char *infile;
 
-static void *do_work(void *engine) {
-  printf("Thread running with engine %p\n", engine); fflush(NULL);
+static void *do_work(void *args) {
+  Engine *engine = make_engine();
+
+  printf("Thread running with engine %p\n", engine);
   int cin, cout, cerr;
   int pat;
   str exp = STR("all.things");
@@ -113,22 +114,24 @@ static void *do_work(void *engine) {
 
   char outfile[40];
   sprintf(&outfile[0], "/tmp/%p.out", engine);
-  for (int i=0; i<r; i++) {
-    printf("Engine %p iteration %d writing file %s\n", engine, i, outfile);
-    int err = rosie_matchfile(engine,
-			      pat,
-			      "json",
-			      0,	/* not whole file at once */
-			      infile, outfile, "",
-			      &cin, &cout, &cerr,
-			      &errors);
-    if (err) printf("*** Error calling matchfile\n");
-    if (errors.ptr) {
-      printf("matchfile() returned: %.*s\n", errors.len, errors.ptr);
-      rosie_free_string(errors);
-    }
-    printf("Engine %p matchfile() returned: %d, %d, %d\n", engine, cin, cout, cerr);
-  }
+  for (int i=0; i<r; i++) { 
+    printf("Engine %p iteration %d writing file %s\n", engine, i, outfile); 
+    int err = rosie_matchfile(engine, 
+			      pat, 
+			      "json", 
+			      0,	/* not whole file at once */ 
+			      infile, outfile, "", 
+			      &cin, &cout, &cerr, 
+			      &errors); 
+    if (err) printf("*** Error calling matchfile\n"); 
+    if (errors.ptr) { 
+      printf("matchfile() returned: %.*s\n", errors.len, errors.ptr); 
+      rosie_free_string(errors); 
+    } 
+    printf("Engine %p matchfile() returned: %d, %d, %d\n", engine, cin, cout, cerr); 
+  } 
+  printf("Finalizing engine %p\n", engine);
+  rosie_finalize(engine);
   pthread_exit(do_work);		/* any non-null pointer */
 }
 
@@ -158,25 +161,19 @@ int main(int argc, char **argv) {
     printf("Argument (text file to process) is empty\n");
     exit(E_BAD_ARG);
   }
-
   printf("Input file is %s\n", infile);
 
-  void **engine = calloc(n, sizeof(void *));
   pthread_t *thread = calloc(n, sizeof(pthread_t));
 
-  printf("Making engines for %d threads\n", n); fflush(NULL);
-  for (int i=0; i<n; i++) engine[i] = make_engine();
-
-  printf("Creating %d threads\n", n); fflush(NULL);
+  printf("Creating %d threads\n", n); 
   for (int i=0; i<n; i++) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, ROSIE_STACK_SIZE);
-    int err = pthread_create(&thread[i], &attr, do_work, engine[i]);
-    printf("thread[%d] = %p\n", i, &thread[i]); fflush(NULL);
+    int err = pthread_create(&thread[i], &attr, do_work, NULL);
+    printf("thread[%d] = %p\n", i, &thread[i]); 
     if (err) {
       printf("Error in pthread_create(), thread #%d\n", i);
-      fflush(NULL);
       thread[i] = (pthread_t)NULL;
     }
   }
@@ -185,22 +182,18 @@ int main(int argc, char **argv) {
   for (int i=0; i<n; i++) {
     void *status;
     if (thread[i]) {
-      printf("Waiting on thread %d (%p)\n", i, &thread[i]); fflush(NULL);
+      printf("Waiting on thread %d (%p)\n", i, &thread[i]);
       pthread_join(thread[i], &status);
       if (status != &do_work) {
 	printf("*** Wrong status returned from thread %d (%p)\n", i, &thread[i]);
-	fflush(NULL);
       }
     }
   }
     
-  printf("Finalizing engines\n");
-  for (int i=0; i<n; i++) rosie_finalize(engine[i]);
   printf("Freeing thread-related data\n");
-  free(engine);
   free(thread);
 
-  printf("Exiting\n"); fflush(NULL);
+  printf("Exiting\n"); 
   exit(0);
   
 }
