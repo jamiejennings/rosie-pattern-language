@@ -1115,7 +1115,6 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
 
 static int push_rcfile_args(Engine *e, str *filename) {
   lua_State *L = e->L;		/* for the CHECK_TYPE macro */
-  int t;
   int is_default_rcfile = (filename->ptr == NULL);
   /* Push engine */
   get_registry(engine_key);
@@ -1124,10 +1123,10 @@ static int push_rcfile_args(Engine *e, str *filename) {
     /* Use default rc filename */
     LOG("using default rc filename\n");
     get_registry(rosie_key);	/* stack: rosie, engine, read_rcfile, rosie */
-    t = lua_getfield(L, -1, "default");	/* stack: default, rosie, engine, read_rcfile, rosie */
+    lua_getfield(L, -1, "default");	/* stack: default, rosie, engine, read_rcfile, rosie */
     CHECK_TYPE("default", t, LUA_TTABLE);
     lua_remove(L, -2); /* stack: default, engine, read_rcfile, rosie */
-    t = lua_getfield(L, -1, "rcfile"); /* stack: rcfile, default, engine, read_rcfile, rosie */
+    lua_getfield(L, -1, "rcfile"); /* stack: rcfile, default, engine, read_rcfile, rosie */
     CHECK_TYPE("rcfile", t, LUA_TSTRING);
     lua_remove(L, -2); /* stack: rcfile, engine, read_rcfile, rosie */
     /* stack: rcfile, engine, read_rcfile, rosie */
@@ -1140,11 +1139,11 @@ static int push_rcfile_args(Engine *e, str *filename) {
   }
   /* Push engine maker */
   get_registry(rosie_key);
-  t = lua_getfield(L, -1, "engine");
+  lua_getfield(L, -1, "engine");
   CHECK_TYPE("engine", t, LUA_TTABLE);
   /* stack: engine, rosie, rcfile, engine, read_rcfile, rosie */
   lua_remove(L, -2); /* stack: engine, rcfile, engine, read_rcfile, rosie */
-  t = lua_getfield(L, -1, "new");
+  lua_getfield(L, -1, "new");
   CHECK_TYPE("engine.new", t, LUA_TFUNCTION);
   /* stack: engine_maker, engine, rcfile, engine, read_rcfile, rosie */
   lua_remove(L, -2); /* stack: engine_maker, rcfile, engine, read_rcfile, rosie */

@@ -119,13 +119,14 @@ INSTALL_ROSIEBIN = $(INSTALL_BIN_DIR)/rosie
 # Targets
 # -----------------------------------------------------------------------------
 
-ifndef ROSIE_HOME
+ifdef ROSIE_HOME
 ROSIE_HOME_GIVEN_ON_COMMAND_LINE = true
+else
+ROSIE_HOME="$(shell pwd)"
 endif
 
 .PHONY:
 .NOTPARALLEL:
-default: ROSIE_HOME ?= "$(shell pwd)"
 default: binaries compile sniff
 
 # <sigh> Once we support packages (like RPM), we won't need this test.
@@ -159,7 +160,7 @@ bin/luac: $(LUA_DIR)/src/lua
 	cp $(LUA_DIR)/src/luac bin
 
 $(LUA_DIR)/src/lua: $(submodules)
-	cd $(LUA_DIR) && $(MAKE) CC=$(CC) $(PLATFORM) $(LINUX_CFLAGS) $(LINUX_LDFLAGS)
+	$(MAKE) -C "$(LUA_DIR)" CC=$(CC) $(PLATFORM) $(LINUX_CFLAGS) $(LINUX_LDFLAGS)
 	@$(BUILD_ROOT)/src/build_info.sh "lua" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 lpeg_lib=$(LPEG_DIR)/src/lpeg.so
@@ -167,14 +168,14 @@ lib/lpeg.so: $(lpeg_lib)
 	mkdir -p lib
 
 $(lpeg_lib): $(submodules) 
-	cd $(LPEG_DIR)/src && $(MAKE) CC=$(CC) LUADIR=../../$(LUA)
+	$(MAKE) -C "$(LPEG_DIR)/src" CC=$(CC) LUADIR=../../$(LUA)
 	@$(BUILD_ROOT)/src/build_info.sh "lpeg" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 json_lib=$(JSON_DIR)/cjson.so
 lib/cjson.so: $(json_lib) 
 
 $(json_lib): $(submodules) 
-	cd $(JSON_DIR) && $(MAKE) CC=$(CC)
+	$(MAKE) -C "$(JSON_DIR)" CC=$(CC)
 	@$(BUILD_ROOT)/src/build_info.sh "json" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 lib/argparse.luac: $(submodules) submodules/argparse/src/argparse.lua bin/luac
@@ -185,7 +186,7 @@ readline_lib = $(READLINE_DIR)/readline.so
 lib/readline.so: $(readline_lib) 
 
 $(READLINE_DIR)/readline.so: $(submodules)
-	cd $(READLINE_DIR) && $(MAKE) CC=$(CC) LUADIR=../$(LUA)
+	$(MAKE) -C "$(READLINE_DIR)" CC=$(CC) LUADIR=../$(LUA)
 	@$(BUILD_ROOT)/src/build_info.sh "readline_stub" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
 lib/strict.luac: $(LUAMOD_DIR)/strict.lua bin/luac
@@ -216,11 +217,10 @@ compile: binaries $(luaobjects) bin/luac $(lpeg_lib) $(json_lib) $(readline_lib)
 
 .PHONY:
 binaries: $(luaobjects) $(lpeg_lib) $(json_lib) $(readline_lib)
-	@cd $(LIBROSIE_DIR); \
-	$(MAKE) ROSIE_HOME="$(ROSIE_HOME)"; \
+	@$(MAKE) -C $(LIBROSIE_DIR) ROSIE_HOME="$(ROSIE_HOME)"; \
 	$(BUILD_ROOT)/src/build_info.sh "binaries" $(BUILD_ROOT) $(CC) >> $(BUILD_ROOT)/build.log
 
-$(ROSIEBIN): $(LIBROSIE_DIR)/binaries/rosie
+$(ROSIEBIN): binaries $(LIBROSIE_DIR)/binaries/rosie
 	cp $(LIBROSIE_DIR)/binaries/rosie "$(BUILD_ROOT)/bin/rosie"
 
 # -----------------------------------------------------------------------------
@@ -230,7 +230,7 @@ $(ROSIEBIN): $(LIBROSIE_DIR)/binaries/rosie
 # Main install rule
 .PHONY: install
 install: ROSIE_HOME = "$(DESTDIR)/lib/rosie"
-install: $(INSTALL_ROSIEBIN) install_metadata install_luac_bin install_rpl install_librosie install_doc install_extras install_man
+install: $(INSTALL_ROSIEBIN) binaries install_metadata install_luac_bin install_rpl install_librosie install_doc install_extras install_man
 
 # We use mv instead of cp for all the binaries, so that the binaries
 # will be rebuilt every time "make install" is run, in case DESTDIR
@@ -308,7 +308,7 @@ uninstall:
 
 .PHONY: sniff
 sniff: $(ROSIEBIN)
-	@if [ -z "$(ROSIE_HOME_GIVEN_ON_COMMAND_LINE)" ]; then \
+	@if [ -n "$(ROSIE_HOME_GIVEN_ON_COMMAND_LINE)" ]; then \
 	    echo "Rosie Pattern Engine was built with a custom ROSIE_HOME path: $(ROSIE_HOME)"; \
 	    echo "Skipping sniff test of CLI due to custom path."; \
 	    true; \
@@ -357,7 +357,7 @@ test:
 	@(TERM="dumb"; echo "dofile \"$(BUILD_ROOT)/test/all.lua\"" | $(ROSIEBIN) -D)
 	@if [ -n "$(CLIENTS)" ]; then \
 		echo "** Running librosie client tests **"; \
-		cd $(LIBROSIE_DIR) && $(MAKE) test; \
+		$(MAKE) -C "$(LIBROSIE_DIR)" test; \
 	else \
 		echo "Skipping librosie client tests."; \
 		echo "To enable, set CLIENTS=all or CLIENTS=\"C python\" or such (space separated list in quotes)."; \

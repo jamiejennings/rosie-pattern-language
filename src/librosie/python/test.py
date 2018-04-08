@@ -34,7 +34,8 @@ class RosieInitTest(unittest.TestCase):
         pass
 
     def test(self):
-        engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        engine = rosie.engine()
         assert(engine)
 
 class RosieLoadTest(unittest.TestCase):
@@ -42,7 +43,8 @@ class RosieLoadTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
 
     def tearDown(self):
         pass
@@ -90,7 +92,7 @@ class RosieLoadTest(unittest.TestCase):
         self.assertTrue(err['message'])
         self.assertTrue(err['who'] == 'parser')
 
-        engine2 = rosie.engine(librosiedir)
+        engine2 = rosie.engine()
         self.assertTrue(engine2)
         self.assertTrue(engine2 != self.engine)
         engine2 = None          # triggers call to librosie to gc the engine
@@ -100,7 +102,8 @@ class RosieConfigTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
 
     def tearDown(self):
         pass
@@ -136,7 +139,8 @@ class RosieLibpathTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
 
     def tearDown(self):
         pass
@@ -155,7 +159,8 @@ class RosieAlloclimitTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
 
     def tearDown(self):
         pass
@@ -179,7 +184,8 @@ class RosieImportTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
         self.assertTrue(self.engine)
 
     def tearDown(self):
@@ -219,7 +225,8 @@ class RosieLoadfileTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
         self.assertTrue(self.engine)
 
     def tearDown(self):
@@ -237,7 +244,8 @@ class RosieMatchTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
 
     def tearDown(self):
         pass
@@ -326,7 +334,8 @@ class RosieMatchTest(unittest.TestCase):
 class RosieTraceTest(unittest.TestCase):
 
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
         self.assertTrue(self.engine)
         ok, pkgname, errs = self.engine.import_pkg(b'net')
         self.assertTrue(ok)
@@ -357,7 +366,8 @@ class RosieMatchFileTest(unittest.TestCase):
     findall_net_any = None
     
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
         self.assertTrue(self.engine)
         ok, pkgname, errs = self.engine.import_pkg(b'net')
         self.assertTrue(ok)
@@ -394,7 +404,8 @@ class RosieReadRcfileTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
 
     def tearDown(self):
         pass
@@ -416,7 +427,8 @@ class RosieExecuteRcfileTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        self.engine = rosie.engine(librosiedir)
+        rosie.set_librosie_dir(librosiedir, quiet=True)
+        self.engine = rosie.engine()
 
     def tearDown(self):
         pass

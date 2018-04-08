@@ -14,7 +14,7 @@
 */
 static void display (const char *msg) {
   fprintf(stderr, "librosie: %s\n", msg);
-  fflush(NULL);
+  fflush(stderr);
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -31,13 +31,13 @@ static void display (const char *msg) {
 #define LOG(msg) \
      do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): %s", __FILE__, \
 			       __LINE__, __func__, msg);	   \
-	  fflush(NULL);						   \
+	  fflush(stderr);						   \
      } while (0)
 
 #define LOGf(fmt, ...) \
      do { if (LOGGING) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
 			       __LINE__, __func__, __VA_ARGS__);     \
-	  fflush(NULL);						     \
+	  fflush(stderr);						     \
      } while (0)
 
 #define LOGstack(L)		      \
@@ -45,7 +45,7 @@ static void display (const char *msg) {
     fprintf(stderr, "%s:%d:%s(): lua stack dump: ", __FILE__,	     \
 	    __LINE__, __func__);			     \
     stackDump(L);						     \
-    fflush(NULL);						     \
+    fflush(stderr);						     \
   } \
 } while (0)
 

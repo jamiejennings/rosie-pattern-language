@@ -1,3 +1,24 @@
+2018-04-08  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-6:
+
+	FIXED: The liblua library now uses a non-locking feof to avoid a
+	deadlock that was observed due to a race condition when many threads
+	were using rosie.  Related: librosie no longer calls fflush() with a
+	NULL argument, which was triggering a walk over all open files.
+
+	FIXED: A build issue related to the (dreaded) use of recursive MAKE.
+
+	CHANGED: A breaking change was made to the Python librosie API in
+	rosie.py.  The rosie.engine() function no longer accepts any arguments,
+	whereas before it took the path to librosie.  Since the path to find
+	librosie can only be set before any engines are created, and will apply
+	to all engines, it has its own API: rosie.set_librosie_dir().
+
+	ENHANCED: The multi-threaded test program, src/librosie/C/mt.c, is now
+	structured more like a typical use case, in which each thread makes a
+	rosie engine, uses it, and then finalizes it.
+
 2018-03-31  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-5:
