@@ -3,12 +3,12 @@ Rosie and the Rosie Pattern Language (RPL)
 RPL expressions are patterns for matching text, similar to regex but
 more powerful.  You can use RPL for text pattern matching the way you
 might use PCRE or regex in Perl, Python, or Java.  Unlike regex, RPL
-is readable and maintainable, and packages of rpl are easily shared.
+is readable and maintainable, and packages of RPL are easily shared.
 
 The Rosie project provides a library so you can use RPL from a variety
-of programming languages.  We also provide an interactive
-read-eval-print loop for pattern development and debugging, and an RPL
-compiler.  The Rosie matching engine is very small and reasonably fast.
+of programming languages.  We also provide an interactive read-eval-
+print loop for pattern development and debugging, and an RPL compiler.
+The Rosie matching engine is very small and reasonably fast.
 
 Rosie's home page:
   http://rosie-lang.org
