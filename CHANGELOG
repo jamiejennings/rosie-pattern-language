@@ -1,3 +1,12 @@
+2018-04-10  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-7:
+
+	CHANGED: The rosie.py module for using Rosie with Python now supports a
+	load() function.  It is OPTIONAL to use load() in general, but is
+	necessary if you have multiple Rosie installations and you want to load
+	a specific librosie.so|dylib.
+
 2018-04-08  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-6:
