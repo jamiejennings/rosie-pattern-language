@@ -141,11 +141,10 @@ def load(path = None, **kwargs):
         try:
             _load_from('//')   # local
         except RuntimeError:
-            pass
-        try:
-            _load_from('')     # system
-        except RuntimeError:
-            raise RuntimeError('Cannot find librosie in local or system locations')
+            try:
+                _load_from('')     # system
+            except RuntimeError:
+                raise RuntimeError('Cannot find librosie in local or system locations')
     elif path == librosie_system:
         _load_from('')
     elif path == librosie_local:
