@@ -70,39 +70,57 @@ void free(void *obj);
 """)
 
 # Single instance of dynamic library
-lib = None
+_lib = None
 
-# Values of librosie_directory:
-#   None --> system-dependent location for shared libraries (e.g. /usr/local/lib)
-#   string --> path to directory containing librosie.so/librosie.dylib
-# If the path starts with '//' it is interpreted as relative to where this file
-# is installed. 
+# Values of _librosie_path:
+#
+#   librosie_system --> Search for librosie in system-dependent directories,
+#       (e.g. /usr/local/lib), which can be affected LD_LIBRARY_PATH and related
+#       environment variables. 
+#
+#   librosie_local --> Load librosie from the same directory as this file,
+#       rosie.py.  Equivalent to using '//' as the argument.
+#
+#   path (string) --> Load librosie from the given path.  If the path
+#       starts with '//' it is interpreted as relative to where this
+#       file is installed.  A path starting with './' is relative to
+#       the current directory of the process, and is discouraged.
+#
+#   None --> First try librosie_local, and if that fails, try librosie_system.
 
-librosie_directory = None       
+_librosie_path = None       
+class _librosie_config():
+    def __init__(self, name):
+        self.name = name
+    def __str__(self):
+        return name
+librosie_system = _librosie_config('*system*')
+librosie_local = _librosie_config('*local*')
 
+_librosie_name = None
 
 # -----------------------------------------------------------------------------
 # ffi utilities
 
 def free_cstr_ptr(local_cstr_obj):
-    lib.rosie_free_string(local_cstr_obj[0])
+    _lib.rosie_free_string(local_cstr_obj[0])
 
 # Note: bstring will be gc'd at the end of new_cstr unless we return
 # it AND it is bound to a variable by the caller.  This is ugly, but
 # seems necessary for Python3.  There must be a better way to cope
 # with the fact that Python3 has separate, incompatible types for
 # unicode strings (str) and byte arrays (bytes).
-def new_cstr(bstring=None):
+def _new_cstr(bstring=None):
     if bstring:
-        obj = lib.rosie_string_ptr_from(bstring, len(bstring))
-        return ffi.gc(obj, lib.free)
+        obj = _lib.rosie_string_ptr_from(bstring, len(bstring))
+        return ffi.gc(obj, _lib.free)
     elif bstring is None:
         obj = ffi.new("struct rosie_string *")
         return ffi.gc(obj, free_cstr_ptr)
     else:
         raise ValueError("Unsupported argument type: " + str(type(pystring)))
 
-def read_cstr(cstr_ptr):
+def _read_cstr(cstr_ptr):
     if cstr_ptr.ptr == ffi.NULL:
         return None
     else:
@@ -110,20 +128,51 @@ def read_cstr(cstr_ptr):
 
 # -----------------------------------------------------------------------------
 
-def set_librosie_dir(path, **kwargs):
-    global librosie_directory
+def load(path = None, **kwargs):
+    global _lib, _librosie_path
     quiet = False
     if 'quiet' in kwargs:
         if kwargs['quiet']:
             quiet = True
-    if lib and not quiet:
-        raise RuntimeError(
-            'librosie has already been loaded (via engine creation), so its location cannot be reset from '
-            + librosie_directory)
-    librosie_directory = path
+    if _lib:
+        if quiet: return
+        else: raise RuntimeError('librosie has already been loaded from ' + _librosie_path)
+    if path == None:
+        try:
+            _load_from('//')   # local
+        except RuntimeError:
+            pass
+        try:
+            _load_from('')     # system
+        except RuntimeError:
+            raise RuntimeError('Cannot find librosie in local or system locations')
+    elif path == librosie_system:
+        _load_from('')
+    elif path == librosie_local:
+        _load_from('//')
+    else:
+        _load_from(path)
+    return
 
-def get_librosie_dir():
-    return librosie_directory
+def _load_from(path_string):
+    global _librosie_name, _librosie_path, _lib
+    if not _librosie_name:
+        ostype = os.uname()[0]
+        if ostype=="Darwin":
+            _librosie_name = "librosie.dylib"
+        else:
+            _librosie_name = "librosie.so"
+    if path_string[0:2]=='//':
+        libpath = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               path_string[2:],
+                               _librosie_name)
+    else:
+        libpath = os.path.join(path_string, _librosie_name)
+    _lib = ffi.dlopen(libpath, ffi.RTLD_LAZY | ffi.RTLD_GLOBAL)
+    _librosie_path = libpath
+
+def librosie_path():
+    return _librosie_path
 
 class engine ():
     '''
@@ -131,97 +180,79 @@ class engine ():
     (patterns) and to do matching.  Create as many engines as you need.
     '''
     def __init__(self):
-        global lib
-        global librosie_directory
-        if not lib:
-            ostype = os.uname()[0]
-            if ostype=="Darwin":
-                libname = "librosie.dylib"
-            else:
-                libname = "librosie.so"
-            if librosie_directory:
-                if librosie_directory[0:2]=='//':
-                    libpath = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                           librosie_directory[2:],
-                                           libname)
-                else:
-                    libpath = os.path.join(librosie_directory, libname)
-                if not os.path.isfile(libpath):
-                    raise RuntimeError("Cannot find librosie at " + libpath)
-            else:
-                libpath = libname
-            lib = ffi.dlopen(libpath, ffi.RTLD_LAZY | ffi.RTLD_GLOBAL)
-        Cerrs = new_cstr()
-        self.engine = lib.rosie_new(Cerrs)
+        global _lib
+        if not _lib: load()
+        Cerrs = _new_cstr()
+        self.engine = _lib.rosie_new(Cerrs)
         if self.engine == ffi.NULL:
-            raise RuntimeError("librosie: " + str(read_cstr(Cerrs)))
+            raise RuntimeError("librosie: " + str(_read_cstr(Cerrs)))
         return
     
     def config(self):
-        Cresp = new_cstr()
-        ok = lib.rosie_config(self.engine, Cresp)
+        Cresp = _new_cstr()
+        ok = _lib.rosie_config(self.engine, Cresp)
         if ok != 0:
             raise RuntimeError("config() failed (please report this as a bug)")
-        resp = read_cstr(Cresp)
+        resp = _read_cstr(Cresp)
         return resp
 
     def compile(self, exp):
-        Cerrs = new_cstr()
-        Cexp = new_cstr(exp)
+        Cerrs = _new_cstr()
+        Cexp = _new_cstr(exp)
         pat = rplx(self)
-        ok = lib.rosie_compile(self.engine, Cexp, pat.id, Cerrs)
+        ok = _lib.rosie_compile(self.engine, Cexp, pat.id, Cerrs)
         if ok != 0:
             raise RuntimeError("compile() failed (please report this as a bug)")
         if pat.id[0] == 0:
             pat = None
-        return pat, read_cstr(Cerrs)
+        return pat, _read_cstr(Cerrs)
 
     def load(self, src):
-        Cerrs = new_cstr()
-        Csrc = new_cstr(src)
+        Cerrs = _new_cstr()
+        Csrc = _new_cstr(src)
         Csuccess = ffi.new("int *")
-        Cpkgname = new_cstr()
-        ok = lib.rosie_load(self.engine, Csuccess, Csrc, Cpkgname, Cerrs)
+        Cpkgname = _new_cstr()
+        ok = _lib.rosie_load(self.engine, Csuccess, Csrc, Cpkgname, Cerrs)
         if ok != 0:
             raise RuntimeError("load() failed (please report this as a bug)")
-        errs = read_cstr(Cerrs)
-        pkgname = read_cstr(Cpkgname)
+        errs = _read_cstr(Cerrs)
+        pkgname = _read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
     def loadfile(self, fn):
-        Cerrs = new_cstr()
-        Cfn = new_cstr(fn)
+        Cerrs = _new_cstr()
+        Cfn = _new_cstr(fn)
         Csuccess = ffi.new("int *")
-        Cpkgname = new_cstr()
-        ok = lib.rosie_loadfile(self.engine, Csuccess, Cfn, Cpkgname, Cerrs)
+        Cpkgname = _new_cstr()
+        ok = _lib.rosie_loadfile(self.engine, Csuccess, Cfn, Cpkgname, Cerrs)
         if ok != 0:
             raise RuntimeError("loadfile() failed (please report this as a bug)")
-        errs = read_cstr(Cerrs)
-        pkgname = read_cstr(Cpkgname)
+        errs = _read_cstr(Cerrs)
+        pkgname = _read_cstr(Cpkgname)
         return Csuccess[0], pkgname, errs
 
     def import_pkg(self, pkgname, as_name=None):
-        Cerrs = new_cstr()
+        Cerrs = _new_cstr()
         if as_name:
-            Cas_name = new_cstr(as_name)
+            Cas_name = _new_cstr(as_name)
         else:
             Cas_name = ffi.NULL
-        Cpkgname = new_cstr(pkgname)
-        Cactual_pkgname = new_cstr()
+        Cpkgname = _new_cstr(pkgname)
+        Cactual_pkgname = _new_cstr()
         Csuccess = ffi.new("int *")
-        ok = lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cactual_pkgname, Cerrs)
+        ok = _lib.rosie_import(self.engine, Csuccess, Cpkgname, Cas_name, Cactual_pkgname, Cerrs)
         if ok != 0:
             raise RuntimeError("import() failed (please report this as a bug)")
-        actual_pkgname = read_cstr(Cactual_pkgname) #if Cactual_pkgname.ptr != ffi.NULL else None
-        errs = read_cstr(Cerrs)
+        actual_pkgname = _read_cstr(Cactual_pkgname) #if Cactual_pkgname.ptr != ffi.NULL else None
+        errs = _read_cstr(Cerrs)
         return Csuccess[0], actual_pkgname, errs
 
     def match(self, pat, input, start, encoder):
         if pat.id[0] == 0:
             raise ValueError("invalid compiled pattern")
         Cmatch = ffi.new("struct rosie_matchresult *")
-        Cinput = new_cstr(input)
-        ok = lib.rosie_match(self.engine, pat.id[0], start, encoder, Cinput, Cmatch)
+        Cinput = _new_cstr(input)
+        ok = _lib.rosie_match(self.engine, pat.id[0], start, encoder, Cinput, Cmatch)
         if ok != 0:
             raise RuntimeError("match() failed (please report this as a bug)")
         left = Cmatch.leftover
@@ -237,16 +268,16 @@ class engine ():
                 raise ValueError("invalid output encoder")
             elif Cmatch.data.len == 4:
                 raise ValueError("invalid compiled pattern (already freed?)")
-        data = read_cstr(Cmatch.data)
+        data = _read_cstr(Cmatch.data)
         return data, left, abend, ttotal, tmatch
 
     def trace(self, pat, input, start, style):
         if pat.id[0] == 0:
             raise ValueError("invalid compiled pattern")
         Cmatched = ffi.new("int *")
-        Cinput = new_cstr(input)
-        Ctrace = new_cstr()
-        ok = lib.rosie_trace(self.engine, pat.id[0], start, style, Cinput, Cmatched, Ctrace)
+        Cinput = _new_cstr(input)
+        Ctrace = _new_cstr()
+        ok = _lib.rosie_trace(self.engine, pat.id[0], start, style, Cinput, Cmatched, Ctrace)
         if ok != 0:
             raise RuntimeError("trace() failed (please report this as a bug)")
         if Ctrace.ptr == ffi.NULL:
@@ -255,7 +286,7 @@ class engine ():
             elif Ctrace.len == 1:
                 raise ValueError("invalid compiled pattern (already freed?)")
         matched = False if Cmatched[0]==0 else True
-        trace = read_cstr(Ctrace)
+        trace = _read_cstr(Ctrace)
         return matched, trace
 
     def matchfile(self, pat, encoder,
@@ -269,8 +300,8 @@ class engine ():
         Ccout = ffi.new("int *")
         Ccerr = ffi.new("int *")
         wff = 1 if wholefile else 0
-        Cerrmsg = new_cstr()
-        ok = lib.rosie_matchfile(self.engine,
+        Cerrmsg = _new_cstr()
+        ok = _lib.rosie_matchfile(self.engine,
                                  pat.id[0],
                                  encoder,
                                  wff,
@@ -279,13 +310,13 @@ class engine ():
                                  errfile or b"",
                                  Ccin, Ccout, Ccerr, Cerrmsg)
         if ok != 0:
-            raise RuntimeError("matchfile() failed: " + str(read_cstr(Cerrmsg)))
+            raise RuntimeError("matchfile() failed: " + str(_read_cstr(Cerrmsg)))
 
         if Ccin[0] == -1:       # Error occurred
             if Ccout[0] == 2:
                 raise ValueError("invalid encoder")
             elif Ccout[0] == 3:
-                raise ValueError(str(read_cstr(Cerrmsg))) # file i/o error
+                raise ValueError(str(_read_cstr(Cerrmsg))) # file i/o error
             elif Ccout[0] == 4:
                 raise ValueError("invalid compiled pattern (already freed?)")
             else:
@@ -295,20 +326,20 @@ class engine ():
     def read_rcfile(self, filename=None):
         Cfile_exists = ffi.new("int *")
         if filename is None:
-            filename_arg = new_cstr()
+            filename_arg = _new_cstr()
         else:
-            filename_arg = new_cstr(filename)
-        Coptions = new_cstr()
-        Cmessages = new_cstr()
-        ok = lib.rosie_read_rcfile(self.engine, filename_arg, Cfile_exists, Coptions, Cmessages)
+            filename_arg = _new_cstr(filename)
+        Coptions = _new_cstr()
+        Cmessages = _new_cstr()
+        ok = _lib.rosie_read_rcfile(self.engine, filename_arg, Cfile_exists, Coptions, Cmessages)
         if ok != 0:
             raise RuntimeError("read_rcfile() failed (please report this as a bug)")
-        messages = read_cstr(Cmessages)
+        messages = _read_cstr(Cmessages)
         messages = messages and json.loads(messages)
         if Cfile_exists[0] == 0:
             return None, messages
         # else file existed and was read
-        options = read_cstr(Coptions)
+        options = _read_cstr(Coptions)
         if options:
             return json.loads(options), messages
         # else: file existed, but some problems processing it
@@ -318,14 +349,14 @@ class engine ():
         Cfile_exists = ffi.new("int *")
         Cno_errors = ffi.new("int *")
         if filename is None:
-            filename_arg = new_cstr()
+            filename_arg = _new_cstr()
         else:
-            filename_arg = new_cstr(filename)
-        Cmessages = new_cstr()
-        ok = lib.rosie_execute_rcfile(self.engine, filename_arg, Cfile_exists, Cno_errors, Cmessages)
+            filename_arg = _new_cstr(filename)
+        Cmessages = _new_cstr()
+        ok = _lib.rosie_execute_rcfile(self.engine, filename_arg, Cfile_exists, Cno_errors, Cmessages)
         if ok != 0:
             raise RuntimeError("execute_rcfile() failed (please report this as a bug)")
-        messages = read_cstr(Cmessages)
+        messages = _read_cstr(Cmessages)
         messages = messages and json.loads(messages)
         if Cfile_exists[0] == 0:
             return None, messages
@@ -337,13 +368,13 @@ class engine ():
 
     def libpath(self, libpath=None):
         if libpath:
-            libpath_arg = new_cstr(libpath)
+            libpath_arg = _new_cstr(libpath)
         else:
-            libpath_arg = new_cstr()
-        ok = lib.rosie_libpath(self.engine, libpath_arg)
+            libpath_arg = _new_cstr()
+        ok = _lib.rosie_libpath(self.engine, libpath_arg)
         if ok != 0:
             raise RuntimeError("libpath() failed (please report this as a bug)")
-        return read_cstr(libpath_arg) if libpath is None else None
+        return _read_cstr(libpath_arg) if libpath is None else None
 
     def alloc_limit(self, newlimit=None):
         limit_arg = ffi.new("int *")
@@ -355,7 +386,7 @@ class engine ():
                 raise ValueError("new allocation limit must be 8192 KB or higher (or zero for unlimited)")
             limit_arg = ffi.new("int *")
             limit_arg[0] = newlimit
-        ok = lib.rosie_alloc_limit(self.engine, limit_arg, usage_arg)
+        ok = _lib.rosie_alloc_limit(self.engine, limit_arg, usage_arg)
         if ok != 0:
             raise RuntimeError("alloc_limit() failed (please report this as a bug)")
         return limit_arg[0], usage_arg[0]
@@ -364,7 +395,7 @@ class engine ():
         if hasattr(self, 'engine') and (self.engine != ffi.NULL):
             e = self.engine
             self.engine = ffi.NULL
-            lib.rosie_finalize(e)
+            _lib.rosie_finalize(e)
 
 # -----------------------------------------------------------------------------
 
@@ -375,7 +406,7 @@ class rplx(object):
         
     def __del__(self):
         if self.id[0] and self.engine.engine:
-            lib.rosie_free_rplx(self.engine.engine, self.id[0])
+            _lib.rosie_free_rplx(self.engine.engine, self.id[0])
 
     def maybe_valid(self):
         return self.id[0] != 0

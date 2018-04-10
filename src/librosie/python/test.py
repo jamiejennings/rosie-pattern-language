@@ -34,16 +34,18 @@ class RosieInitTest(unittest.TestCase):
         pass
 
     def test(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         engine = rosie.engine()
         assert(engine)
+        path = rosie.librosie_path()
+        assert(path)
 
 class RosieLoadTest(unittest.TestCase):
 
     engine = None
     
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
 
     def tearDown(self):
@@ -102,7 +104,7 @@ class RosieConfigTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
 
     def tearDown(self):
@@ -117,7 +119,8 @@ class RosieConfigTest(unittest.TestCase):
             self.assertTrue(type(entry) is dict)
             self.assertTrue(entry['name'])
             self.assertTrue(entry['description'])
-            if not entry['value']: print("NOTE: no value for config key " + entry['name'])
+            if not entry['value']:
+                self.assertTrue(entry['name'] == 'ROSIE_COMMAND')
         array = cfg[1]
         rpl_version = None
         libpath = None
@@ -139,7 +142,7 @@ class RosieLibpathTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
 
     def tearDown(self):
@@ -159,7 +162,7 @@ class RosieAlloclimitTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
 
     def tearDown(self):
@@ -184,7 +187,7 @@ class RosieImportTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
         self.assertTrue(self.engine)
 
@@ -225,7 +228,7 @@ class RosieLoadfileTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
         self.assertTrue(self.engine)
 
@@ -244,7 +247,7 @@ class RosieMatchTest(unittest.TestCase):
     engine = None
     
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
 
     def tearDown(self):
@@ -334,7 +337,7 @@ class RosieMatchTest(unittest.TestCase):
 class RosieTraceTest(unittest.TestCase):
 
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
         self.assertTrue(self.engine)
         ok, pkgname, errs = self.engine.import_pkg(b'net')
@@ -366,7 +369,7 @@ class RosieMatchFileTest(unittest.TestCase):
     findall_net_any = None
     
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
         self.assertTrue(self.engine)
         ok, pkgname, errs = self.engine.import_pkg(b'net')
@@ -404,7 +407,7 @@ class RosieReadRcfileTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
 
     def tearDown(self):
@@ -427,7 +430,7 @@ class RosieExecuteRcfileTest(unittest.TestCase):
     engine = None
 
     def setUp(self):
-        rosie.set_librosie_dir(librosiedir, quiet=True)
+        rosie.load(librosiedir, quiet=True)
         self.engine = rosie.engine()
 
     def tearDown(self):
@@ -456,12 +459,11 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit("Error: missing command-line parameter specifying 'local' or 'system' test")
     if sys.argv[1]=='local':
-        relativedir = '../binaries'
-        librosiedir = os.path.join(os.path.dirname(os.path.abspath(__file__)), relativedir)
-        print("Loading librosie from ", relativedir)
+        librosiedir = '//../binaries'
+        print("Loading librosie from ", librosiedir[2:])
         testdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../test')
     elif sys.argv[1]=='system':
-        librosiedir = None
+        librosiedir = rosie.librosie_system
         print("Loading librosie from system library path")
         testdir = None
     else:
