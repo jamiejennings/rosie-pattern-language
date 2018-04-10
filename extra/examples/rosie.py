@@ -1,1 +1,0 @@
-/Users/jjennings/Work/Dev/public/rosie-pattern-language/src/librosie/python/rosie.py
