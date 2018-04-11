@@ -53,6 +53,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
+#include <unistd.h>
 
 #include "librosie.h"
 
@@ -107,9 +109,29 @@ static char bootscript[MAXPATHLEN];
  * ----------------------------------------------------------------------------------------
  */
 
+static errno_t actual_file(char *inpath, char **outpath) {
+  char *in = malloc((size_t) MAXPATHLEN);
+  char *out = alloca((size_t) MAXPATHLEN);
+  strncpy(in, inpath, MAXPATHLEN);
+  int n = 0;
+  while (n != -1) {
+    n = readlink(in, out, MAXPATHLEN);
+    if (n != -1) {
+      strncpy(in, out, n);
+      in[n] = '\0';
+    }
+  }
+  if (errno == EINVAL) {
+    *outpath = in;
+    return 0;
+  }
+  free(in); 
+  return errno; 
+}
+
 static void set_bootscript() {
   size_t remaining;
-  static char *last, *install_dir;
+  static char *last, *install_dir, *maybe_install_dir;
   static char *compile_time_path = (char *)ROSIE_HOME;
   static Dl_info info;
   /* 
@@ -120,8 +142,12 @@ static void set_bootscript() {
   remaining = MAXPATHLEN;
   if (strncmp(compile_time_path, "//", (size_t) 2) == 0) {
     if (dladdr(&set_bootscript, &info) != 0) {
-      install_dir = dirname(strndup(info.dli_fname, MAXPATHLEN));
-      LOGf("install_dir = %s\n", install_dir);
+      maybe_install_dir = dirname(strndup(info.dli_fname, MAXPATHLEN));
+      LOGf("install_dir appears to be %s\n", install_dir);
+      if (!actual_file(maybe_install_dir, &install_dir)) {
+	free(install_dir);
+	install_dir = maybe_install_dir;
+      }
       /* install_dir is where librosie.so is installed. */
       last = stpncpy(rosie_home, install_dir, remaining);
       *last = '\0';
