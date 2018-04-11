@@ -72,27 +72,35 @@ static char bootscript[MAXPATHLEN];
 #define EXPORT __attribute__ ((visibility("default")))
 
 /* ----------------------------------------------------------------------------------------
+ * Locks
+ * ----------------------------------------------------------------------------------------
+ */
+
+#define ACQUIRE_LOCK(lock) do {				                \
+  int r = pthread_mutex_lock(&(lock));					\
+  if (r) {								\
+    fprintf(stderr, "%s:%d:%s(): pthread_mutex_lock failed with %d\n",	\
+	    __FILE__, __LINE__, __func__, r);				\
+    abort();								\
+  }									\
+} while (0)
+
+#define RELEASE_LOCK(lock) do {				                \
+  int r = pthread_mutex_unlock(&(lock));				\
+  if (r) {								\
+    fprintf(stderr, "%s:%d:%s(): pthread_mutex_unlock failed with %d\n", \
+	    __FILE__, __LINE__, __func__, r);				\
+    abort();								\
+  }									\
+} while (0)
+
+/* ----------------------------------------------------------------------------------------
  * Engine locks
  * ----------------------------------------------------------------------------------------
  */
 
-#define ACQUIRE_ENGINE_LOCK(e) do {				    \
-    int r = pthread_mutex_lock(&((e)->lock));			    \
-    if (r) {                                                        \
-        fprintf(stderr, "%s:%d:%s(): pthread_mutex_lock failed with %d\n", \
-		__FILE__, __LINE__, __func__, r);\
-        abort();                                                    \
-    }                                                               \
-} while (0)
-
-#define RELEASE_ENGINE_LOCK(e) do {				    \
-    int r = pthread_mutex_unlock(&((e)->lock));			    \
-    if (r) {                                                        \
-        fprintf(stderr, "%s:%d:%s(): pthread_mutex_unlock failed with %d\n", \
-		__FILE__, __LINE__, __func__, r);\
-        abort();                                                    \
-    }                                                               \
-} while (0)
+#define ACQUIRE_ENGINE_LOCK(e) ACQUIRE_LOCK((e)->lock)
+#define RELEASE_ENGINE_LOCK(e) RELEASE_LOCK((e)->lock)
 
 /* ----------------------------------------------------------------------------------------
  * Start-up / boot functions
@@ -156,6 +164,8 @@ static void initialize() {
 
 #define NO_INSTALLATION_MSG "unable to find rosie installation files"
 
+static pthread_mutex_t booting = PTHREAD_MUTEX_INITIALIZER;
+
 static int boot(lua_State *L, str *messages) {
   char *msg = NULL;
   if (!*bootscript) {
@@ -163,9 +173,11 @@ static int boot(lua_State *L, str *messages) {
     return FALSE;
   }
   LOGf("Booting rosie from %s\n", bootscript);
+  ACQUIRE_LOCK(booting);
 
   int status = luaL_loadfile(L, bootscript);
   if (status != LUA_OK) {
+    RELEASE_LOCK(booting);
     LOG("Failed to read rosie boot code (using loadfile)\n");
     if (asprintf(&msg, "no rosie installation in directory %s", rosie_home)) {
       *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
@@ -177,6 +189,7 @@ static int boot(lua_State *L, str *messages) {
   LOG("Reading of boot code succeeded (using loadfile)\n");
   status = lua_pcall(L, 0, LUA_MULTRET, 0);
   if (status != LUA_OK) {
+    RELEASE_LOCK(booting);
     LOG("Loading of boot code failed\n");
     if (asprintf(&msg, "failed to load %s -- corrupt installation?", bootscript)) {
       *messages = rosie_string_from((byte_ptr) msg, strlen(msg));
@@ -189,6 +202,7 @@ static int boot(lua_State *L, str *messages) {
   lua_pushlstring(L, (const char *)rosie_home, strnlen(rosie_home, MAXPATHLEN));
   status = lua_pcall(L, 1, LUA_MULTRET, 0);
   if (status!=LUA_OK) {
+    RELEASE_LOCK(booting);
     LOG("Boot function failed.  Lua stack is: \n");
     LOGstack(L);
     size_t len;
@@ -200,6 +214,7 @@ static int boot(lua_State *L, str *messages) {
     *messages = rosie_string_from((unsigned char *)msg, len+strlen(intro));
     return FALSE;
   }
+  RELEASE_LOCK(booting);
   LOG("Boot function succeeded\n");
   return TRUE;
 }
