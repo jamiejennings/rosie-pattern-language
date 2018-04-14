@@ -272,7 +272,7 @@ class RosieMatchTest(unittest.TestCase):
         self.assertTrue(tm >= 0)
 
         m, left, abend, tt, tm = self.engine.match(b, b"xyz", 1, b"json")
-        self.assertTrue(m == None)
+        self.assertTrue(m == False)
         self.assertTrue(left == 3)
         self.assertTrue(abend == False)
         self.assertTrue(tt >= 0)

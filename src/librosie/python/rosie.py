@@ -247,7 +247,7 @@ class engine ():
         return Csuccess[0], actual_pkgname, errs
 
     def match(self, pat, input, start, encoder):
-        if pat.id[0] == 0:
+        if (pat is None) or (pat.id[0] == 0):
             raise ValueError("invalid compiled pattern")
         Cmatch = ffi.new("struct rosie_matchresult *")
         Cinput = _new_cstr(input)
@@ -260,7 +260,7 @@ class engine ():
         tmatch = Cmatch.tmatch
         if Cmatch.data.ptr == ffi.NULL:
             if Cmatch.data.len == 0:
-                return None, left, abend, ttotal, tmatch
+                return False, left, abend, ttotal, tmatch
             elif Cmatch.data.len == 1:
                 return True, left, abend, ttotal, tmatch
             elif Cmatch.data.len == 2:
