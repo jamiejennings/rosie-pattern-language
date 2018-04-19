@@ -65,6 +65,8 @@ int rosie_import(void *e, int *ok, str *pkgname, str *as, str *actual_pkgname, s
 int rosie_read_rcfile(void *e, str *filename, int *file_exists, str *options, str *messages);
 int rosie_execute_rcfile(void *e, str *filename, int *file_exists, int *no_errors, str *messages);
 
+int rosie_expression_refs(void *e, str *input, str *refs, str *messages);
+
 void free(void *obj);
 
 """)
@@ -364,6 +366,50 @@ class engine ():
             return True, messages
         # else: some problems processing it
         return False, messages
+
+    # -----------------------------------------------------------------------------
+    # Functions that return a parse tree or fragments of one
+    # -----------------------------------------------------------------------------
+
+    def expression_refs(self, exp):
+        Cexp = _new_cstr(exp)
+        Crefs = _new_cstr()
+        Cmessages = _new_cstr()
+        ok = _lib.rosie_expression_refs(self.engine, Cexp, Crefs, Cmessages)
+        if ok != 0:
+            raise RuntimeError("expression_refs failed (please report this as a bug)")
+        return _read_cstr(Crefs), _read_cstr(Cmessages)
+        
+    def block_refs(self, block):
+        Cexp = _new_cstr(block)
+        Crefs = _new_cstr()
+        Cmessages = _new_cstr()
+        ok = _lib.rosie_block_refs(self.engine, Cexp, Crefs, Cmessages)
+        if ok != 0:
+            raise RuntimeError("block_refs failed (please report this as a bug)")
+        return _read_cstr(Crefs), _read_cstr(Cmessages)
+        
+    def expression_deps(self, exp):
+        Cexp = _new_cstr(exp)
+        Cdeps = _new_cstr()
+        Cmessages = _new_cstr()
+        ok = _lib.rosie_expression_deps(self.engine, Cexp, Cdeps, Cmessages)
+        if ok != 0:
+            raise RuntimeError("expression_deps failed (please report this as a bug)")
+        return _read_cstr(Cdeps), _read_cstr(Cmessages)
+        
+    def block_deps(self, block):
+        Cexp = _new_cstr(block)
+        Cdeps = _new_cstr()
+        Cmessages = _new_cstr()
+        ok = _lib.rosie_block_deps(self.engine, Cexp, Cdeps, Cmessages)
+        if ok != 0:
+            raise RuntimeError("block_deps failed (please report this as a bug)")
+        return _read_cstr(Cdeps), _read_cstr(Cmessages)
+
+    # -----------------------------------------------------------------------------
+    # Functions for reading and modifying various engine settings
+    # -----------------------------------------------------------------------------
 
     def libpath(self, libpath=None):
         if libpath:
