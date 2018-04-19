@@ -1154,7 +1154,62 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
   return SUCCESS;
 }
 
+EXPORT
+int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages) {
+  int t;
+  str r;
+  lua_State *L = e->L;
+  LOG("rosie_expression_refs called\n");
+  ACQUIRE_ENGINE_LOCK(e);
+  lua_pushnil(L);			      /* stack: nil */
+  get_registry(engine_key);		      /* stack: engine, nil */
+  t = lua_getfield(L, -1, "expression_refs"); /* stack: expression_refs, engine, nil */
+  CHECK_TYPE("expression_refs", t, LUA_TFUNCTION);
+  lua_replace(L, 1);		/* stack: engine, expression_refs */
+  lua_pushlstring(L, (const char *)input->ptr, input->len);
+  /* stack: input, engine, expression_refs */
+  assert(lua_gettop(L) == 3);
+  t = lua_pcall(L, 2, 2, 0); 
+  if (t != LUA_OK) {  
+  expression_refs_failed:
+    LOG("expression_refs() failed\n");  
+    LOGstack(L); 
+    lua_settop(L, 0); 
+    RELEASE_ENGINE_LOCK(e);
+    return ERR_ENGINE_CALL_FAILED;  
+  }  
+  if (lua_istable(L, -1)) {
+    LOG("there are messages\n");
+    t = to_json_string(L, -1, &r);
+    if (t == LUA_OK) {
+      messages->len = r.len;
+      messages->ptr = r.ptr;
+      lua_pop(L, 2);		/* pop json string and function */
+    } else {
+      LOG("could not convert messages to json\n");
+      *messages = rosie_new_string_from_const("error: could not convert messages to json");      
+      goto expression_refs_failed;
+    }
+  }
+  if (lua_istable(L, -2)) {
+    LOG("there are refs\n");
+    t = to_json_string(L, -2, &r);
+    if (t == LUA_OK) {
+      refs->len = r.len;
+      refs->ptr = r.ptr;
+    } else {
+      LOG("could not convert refs table to json\n");
+      *messages = rosie_new_string_from_const("error: could not convert refs table to json");      
+      goto expression_refs_failed;
+    }
+  }
+  lua_settop(L, 0);
+  RELEASE_ENGINE_LOCK(e);
+  return SUCCESS;
+}
+
 static int push_rcfile_args(Engine *e, str *filename) {
+  int t;
   lua_State *L = e->L;		/* for the CHECK_TYPE macro */
   int is_default_rcfile = (filename->ptr == NULL);
   /* Push engine */
@@ -1164,10 +1219,10 @@ static int push_rcfile_args(Engine *e, str *filename) {
     /* Use default rc filename */
     LOG("using default rc filename\n");
     get_registry(rosie_key);	/* stack: rosie, engine, read_rcfile, rosie */
-    lua_getfield(L, -1, "default");	/* stack: default, rosie, engine, read_rcfile, rosie */
+    t = lua_getfield(L, -1, "default");	/* stack: default, rosie, engine, read_rcfile, rosie */
     CHECK_TYPE("default", t, LUA_TTABLE);
     lua_remove(L, -2); /* stack: default, engine, read_rcfile, rosie */
-    lua_getfield(L, -1, "rcfile"); /* stack: rcfile, default, engine, read_rcfile, rosie */
+    t = lua_getfield(L, -1, "rcfile"); /* stack: rcfile, default, engine, read_rcfile, rosie */
     CHECK_TYPE("rcfile", t, LUA_TSTRING);
     lua_remove(L, -2); /* stack: rcfile, engine, read_rcfile, rosie */
     /* stack: rcfile, engine, read_rcfile, rosie */
@@ -1180,11 +1235,11 @@ static int push_rcfile_args(Engine *e, str *filename) {
   }
   /* Push engine maker */
   get_registry(rosie_key);
-  lua_getfield(L, -1, "engine");
+  t = lua_getfield(L, -1, "engine");
   CHECK_TYPE("engine", t, LUA_TTABLE);
   /* stack: engine, rosie, rcfile, engine, read_rcfile, rosie */
   lua_remove(L, -2); /* stack: engine, rcfile, engine, read_rcfile, rosie */
-  lua_getfield(L, -1, "new");
+  t = lua_getfield(L, -1, "new");
   CHECK_TYPE("engine.new", t, LUA_TFUNCTION);
   /* stack: engine_maker, engine, rcfile, engine, read_rcfile, rosie */
   lua_remove(L, -2); /* stack: engine_maker, rcfile, engine, read_rcfile, rosie */
