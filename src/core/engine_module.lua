@@ -97,6 +97,83 @@ local engine, rplx				    -- forward reference
 local engine_error				    -- forward reference
 
 ----------------------------------------------------------------------------------------
+local function add_explicit_recordtypes(obj)
+   if recordtype.parent(obj) then
+      local copy = {}
+      local typename = recordtype.typename(obj)
+      local new_slots = {}
+      for k,v in pairs(obj) do
+	 new_slots[k] = add_explicit_recordtypes(v)
+      end
+      copy[typename] = new_slots
+      return copy
+   elseif type(obj)=="table" then
+      local new = {}
+      for k,v in pairs(obj) do
+	 new[k] = add_explicit_recordtypes(v)
+      end
+      return new
+   else
+      return obj
+   end
+end
+      
+local function extract_refs(en, obj, results)
+   results = results or {}
+   if ast.ref.is(obj) then
+      table.insert(results, obj)
+   elseif ast.block.is(obj) then
+      for _,stmt in ipairs(obj.stmts) do
+	 extract_refs(en, stmt, results)
+      end
+   elseif ast.grammar.is(obj) then
+      for _,rule in ipairs(obj.private_rules) do
+	 extract_refs(en, rule, results)
+      end
+      for _,rule in ipairs(obj.public_rules) do
+	 extract_refs(en, rule, results)
+      end
+   elseif ast.binding.is(obj) then
+      extract_refs(en, obj.exp, results)
+   elseif type(obj)=="table" then
+      for k,v in pairs(obj) do
+	 extract_refs(en, v, results)
+      end
+   end
+   return results
+end
+
+----------------------------------------------------------------------------------------
+
+local function parse_expression(en, expression)
+   local messages = {}
+   local a = en.compiler.parse_expression(common.source.new{text=expression}, messages)
+   return add_explicit_recordtypes(a), messages
+end
+
+local function parse_block(en, block)
+   local messages = {}
+   local a = en.compiler.parse_block(common.source.new{text=block}, messages)
+   return add_explicit_recordtypes(a), messages
+end
+
+local function expression_refs(en, expression)
+   local messages = {}
+   local a = en.compiler.parse_expression(common.source.new{text=expression}, messages)
+   if not a then
+      return false, messages
+   end
+   return add_explicit_recordtypes(extract_refs(en, a)), messages
+end
+
+local function block_refs(en, block)
+   local messages = {}
+   local a = en.compiler.parse_block(common.source.new{text=block}, messages)
+   if not a then
+      return false, messages
+   end
+   return add_explicit_recordtypes(extract_refs(en, a)), messages
+end
 
 local function expression_dependencies(en, expression)
    local messages = {}
@@ -107,13 +184,13 @@ local function expression_dependencies(en, expression)
    return en.compiler.dependencies_of(a), messages
 end
 
-local function block_dependencies(en, expression)
+local function block_dependencies(en, block)
    local messages = {}
-   local a = en.compiler.parse_block(common.source.new{text=expression}, messages)
+   local a = en.compiler.parse_block(common.source.new{text=block}, messages)
    if not a then
       return false, messages
    end
-   local implicit = en.compiler.dependencies_of(a), messages
+   local implicit = en.compiler.dependencies_of(a)
    local ok = loadpkg.validate_block(a, messages)
    if not ok then
       return false, messages
@@ -564,6 +641,10 @@ engine =
 		     matchfile = process_input_file.match,
 		     tracefile = process_input_file.trace,
 
+		     parse_expression = parse_expression,
+		     parse_block = parse_block,
+		     block_refs = block_refs,
+		     expression_refs = expression_refs,
 		     block_dependencies = block_dependencies,
 		     expression_dependencies = expression_dependencies,
 		     macro_expand = macro_expand,
