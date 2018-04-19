@@ -119,6 +119,13 @@ local function make_parser_from(parse_something, expected_pt_node)
 		t0 = os.clock()
 	     end
 	     
+	     if src == '' then
+		enqueue_syntax_error({data=src, type="rpl_block"},
+				  "cannot parse empty string", source_record, messages)
+		return false
+	     end
+
+
 	     local pt, syntax_errors, leftover = parse_something(src)
 	     if PROFILE then
 		profile_println("compile.parse_block time = ", time(t0), "ms")
