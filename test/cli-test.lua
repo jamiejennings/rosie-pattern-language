@@ -95,7 +95,7 @@ results_all_things =
      "[33mnameserver[0m [31m192.9.201.1[0m",
      "[33mnameserver[0m [31m192.9.201.2[0m",
      "[33mnameserver[0m [31;4mfde9:4789:96dd:03bd::1[0m",
-  }
+   }
 
 results_common_word =
    {"[33mdomain[0m abc.aus.example.com",
@@ -173,7 +173,7 @@ results_number_grep =
     "1",
     }
 
-run("", "all.things", false, results_all_things)
+run(false, "all.things", false, results_all_things)
 
 run("import word", "word.any", false, results_common_word)
 run("import word", "word.any", true, results_common_word_grep)
