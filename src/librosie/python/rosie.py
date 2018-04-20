@@ -67,6 +67,10 @@ int rosie_execute_rcfile(void *e, str *filename, int *file_exists, int *no_error
 
 int rosie_expression_refs(void *e, str *input, str *refs, str *messages);
 int rosie_block_refs(void *e, str *input, str *refs, str *messages);
+int rosie_expression_deps(void *e, str *input, str *deps, str *messages);
+int rosie_block_deps(void *e, str *input, str *deps, str *messages);
+int rosie_parse_expression(void *e, str *input, str *parsetree, str *messages);
+int rosie_parse_block(void *e, str *input, str *parsetree, str *messages);
 
 void free(void *obj);
 
@@ -372,6 +376,24 @@ class engine ():
     # Functions that return a parse tree or fragments of one
     # -----------------------------------------------------------------------------
 
+    def parse_expression(self, exp):
+        Cexp = _new_cstr(exp)
+        Cparsetree = _new_cstr()
+        Cmessages = _new_cstr()
+        ok = _lib.rosie_parse_expression(self.engine, Cexp, Cparsetree, Cmessages)
+        if ok != 0:
+            raise RuntimeError("parse_expression failed (please report this as a bug)")
+        return _read_cstr(Cparsetree), _read_cstr(Cmessages)
+        
+    def parse_block(self, block):
+        Cexp = _new_cstr(block)
+        Cparsetree = _new_cstr()
+        Cmessages = _new_cstr()
+        ok = _lib.rosie_parse_block(self.engine, Cexp, Cparsetree, Cmessages)
+        if ok != 0:
+            raise RuntimeError("parse_block failed (please report this as a bug)")
+        return _read_cstr(Cparsetree), _read_cstr(Cmessages)
+        
     def expression_refs(self, exp):
         Cexp = _new_cstr(exp)
         Crefs = _new_cstr()

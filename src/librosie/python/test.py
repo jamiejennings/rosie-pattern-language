@@ -454,6 +454,45 @@ class RosieExecuteRcfileTest(unittest.TestCase):
             self.assertTrue(messages is None)
         
 # -----------------------------------------------------------------------------
+class RosieParseTest(unittest.TestCase):
+
+    engine = None
+
+    def setUp(self):
+        rosie.load(librosiedir, quiet=True)
+        self.engine = rosie.engine()
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        # Parse expression
+        result, messages = self.engine.parse_expression(b"A")
+        self.assertFalse(result is None)
+        self.assertTrue(messages is None)
+        pt = json.loads(result)
+        self.assertTrue('ref' in pt)
+        self.assertTrue('localname' in pt['ref'])
+        self.assertTrue(pt['ref']['localname'] == "A")
+        result, messages = self.engine.parse_expression(b"A / B.c")
+        self.assertFalse(result is None)
+        self.assertTrue(messages is None)
+        pt = json.loads(result)
+        self.assertTrue('choice' in pt)
+        self.assertTrue('exps' in pt['choice'])
+        second_exp = pt['choice']['exps'][1]
+        self.assertTrue('ref' in second_exp)
+        self.assertTrue(second_exp['ref']['packagename'] == "B")
+        self.assertTrue(second_exp['ref']['localname'] == "c")
+        # Parse block
+
+# Refs
+
+# Deps
+
+
+
+# -----------------------------------------------------------------------------
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
