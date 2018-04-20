@@ -1154,7 +1154,7 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
   return SUCCESS;
 }
 
-static int rosie_refs(const char *fname, Engine *e, str *input, str *refs, str *messages) {
+static int rosie_syntax_op(const char *fname, Engine *e, str *input, str *refs, str *messages) {
   int t;
   str r;
   lua_State *L = e->L;
@@ -1170,7 +1170,7 @@ static int rosie_refs(const char *fname, Engine *e, str *input, str *refs, str *
   assert(lua_gettop(L) == 3);
   t = lua_pcall(L, 2, 2, 0); 
   if (t != LUA_OK) {  
-  rosie_refs_failed:
+  rosie_syntax_op_failed:
     LOGf("%s failed\n", fname);
     LOGstack(L); 
     lua_settop(L, 0); 
@@ -1187,7 +1187,7 @@ static int rosie_refs(const char *fname, Engine *e, str *input, str *refs, str *
     } else {
       LOG("could not convert messages to json\n");
       *messages = rosie_new_string_from_const("error: could not convert messages to json");      
-      goto rosie_refs_failed;
+      goto rosie_syntax_op_failed;
     }
   }
   if (lua_istable(L, -2)) {
@@ -1199,7 +1199,7 @@ static int rosie_refs(const char *fname, Engine *e, str *input, str *refs, str *
     } else {
       LOG("could not convert refs table to json\n");
       *messages = rosie_new_string_from_const("error: could not convert refs table to json");      
-      goto rosie_refs_failed;
+      goto rosie_syntax_op_failed;
     }
   }
   lua_settop(L, 0);
@@ -1209,12 +1209,32 @@ static int rosie_refs(const char *fname, Engine *e, str *input, str *refs, str *
 
 EXPORT
 int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages) {
-  return rosie_refs("expression_refs", e, input, refs, messages);
+  return rosie_syntax_op("expression_refs", e, input, refs, messages);
 }
 
 EXPORT
 int rosie_block_refs(Engine *e, str *input, str *refs, str *messages) {
-  return rosie_refs("block_refs", e, input, refs, messages);
+  return rosie_syntax_op("block_refs", e, input, refs, messages);
+}
+
+EXPORT
+int rosie_expression_deps(Engine *e, str *input, str *deps, str *messages) {
+  return rosie_syntax_op("expression_deps", e, input, deps, messages);
+}
+
+EXPORT
+int rosie_block_deps(Engine *e, str *input, str *deps, str *messages) {
+  return rosie_syntax_op("block_deps", e, input, deps, messages);
+}
+
+EXPORT
+int rosie_parse_expression(Engine *e, str *input, str *parsetree, str *messages) {
+  return rosie_syntax_op("parse_expression", e, input, parsetree, messages);
+}
+
+EXPORT
+int rosie_parse_block(Engine *e, str *input, str *parsetree, str *messages) {
+  return rosie_syntax_op("parse_block", e, input, parsetree, messages);
 }
 
 static int push_rcfile_args(Engine *e, str *filename) {

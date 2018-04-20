@@ -80,6 +80,10 @@ int rosie_execute_rcfile(Engine *e, str *filename, int *file_exists, int *no_err
 
 int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages);
 int rosie_block_refs(Engine *e, str *input, str *refs, str *messages);
+int rosie_expression_deps(Engine *e, str *input, str *deps, str *messages);
+int rosie_block_deps(Engine *e, str *input, str *deps, str *messages);
+int rosie_parse_expression(Engine *e, str *input, str *parsetree, str *messages);
+int rosie_parse_block(Engine *e, str *input, str *parsetree, str *messages);
 
 /*
 
