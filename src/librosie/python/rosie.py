@@ -66,6 +66,7 @@ int rosie_read_rcfile(void *e, str *filename, int *file_exists, str *options, st
 int rosie_execute_rcfile(void *e, str *filename, int *file_exists, int *no_errors, str *messages);
 
 int rosie_expression_refs(void *e, str *input, str *refs, str *messages);
+int rosie_block_refs(void *e, str *input, str *refs, str *messages);
 
 void free(void *obj);
 
