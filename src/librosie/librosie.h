@@ -79,6 +79,8 @@ int rosie_read_rcfile(Engine *e, str *filename, int *file_exists, str *options, 
 int rosie_execute_rcfile(Engine *e, str *filename, int *file_exists, int *no_errors, str *messages);
 
 int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages);
+int rosie_block_refs(Engine *e, str *input, str *refs, str *messages);
+
 /*
 
 Administrative:

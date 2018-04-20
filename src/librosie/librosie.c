@@ -1154,16 +1154,15 @@ int rosie_matchfile(Engine *e, int pat, char *encoder, int wholefileflag,
   return SUCCESS;
 }
 
-EXPORT
-int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages) {
+static int rosie_refs(const char *fname, Engine *e, str *input, str *refs, str *messages) {
   int t;
   str r;
   lua_State *L = e->L;
-  LOG("rosie_expression_refs called\n");
+  LOGf("%s called\n", fname);
   ACQUIRE_ENGINE_LOCK(e);
   lua_pushnil(L);			      /* stack: nil */
   get_registry(engine_key);		      /* stack: engine, nil */
-  t = lua_getfield(L, -1, "expression_refs"); /* stack: expression_refs, engine, nil */
+  t = lua_getfield(L, -1, fname); /* stack: expression_refs, engine, nil */
   CHECK_TYPE("expression_refs", t, LUA_TFUNCTION);
   lua_replace(L, 1);		/* stack: engine, expression_refs */
   lua_pushlstring(L, (const char *)input->ptr, input->len);
@@ -1171,8 +1170,8 @@ int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages) {
   assert(lua_gettop(L) == 3);
   t = lua_pcall(L, 2, 2, 0); 
   if (t != LUA_OK) {  
-  expression_refs_failed:
-    LOG("expression_refs() failed\n");  
+  rosie_refs_failed:
+    LOGf("%s failed\n", fname);
     LOGstack(L); 
     lua_settop(L, 0); 
     RELEASE_ENGINE_LOCK(e);
@@ -1188,7 +1187,7 @@ int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages) {
     } else {
       LOG("could not convert messages to json\n");
       *messages = rosie_new_string_from_const("error: could not convert messages to json");      
-      goto expression_refs_failed;
+      goto rosie_refs_failed;
     }
   }
   if (lua_istable(L, -2)) {
@@ -1200,12 +1199,22 @@ int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages) {
     } else {
       LOG("could not convert refs table to json\n");
       *messages = rosie_new_string_from_const("error: could not convert refs table to json");      
-      goto expression_refs_failed;
+      goto rosie_refs_failed;
     }
   }
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;
+}
+
+EXPORT
+int rosie_expression_refs(Engine *e, str *input, str *refs, str *messages) {
+  return rosie_refs("expression_refs", e, input, refs, messages);
+}
+
+EXPORT
+int rosie_block_refs(Engine *e, str *input, str *refs, str *messages) {
+  return rosie_refs("block_refs", e, input, refs, messages);
 }
 
 static int push_rcfile_args(Engine *e, str *filename) {
