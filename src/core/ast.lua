@@ -871,7 +871,7 @@ function ast.dependencies_of(a)
    elseif ast.sequence.is(a) or ast.choice.is(a) or ast.and_exp.is(a) then
       return apply(append, map(ast.dependencies_of, a.exps))
    elseif ast.application.is(a) then
-      return apply(append, map(ast.dependencies_of, a.arglist))
+      return apply(append, map(ast.dependencies_of, list.cons(a.ref, a.arglist)))
    elseif (ast.predicate.is(a) or
 	   ast.atleast.is(a) or
 	   ast.atmost.is(a) or
