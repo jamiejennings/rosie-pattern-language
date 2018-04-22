@@ -194,14 +194,6 @@ class engine ():
             raise RuntimeError("librosie: " + str(_read_cstr(Cerrs)))
         return
     
-    def config(self):
-        Cresp = _new_cstr()
-        ok = _lib.rosie_config(self.engine, Cresp)
-        if ok != 0:
-            raise RuntimeError("config() failed (please report this as a bug)")
-        resp = _read_cstr(Cresp)
-        return resp
-
     def compile(self, exp):
         Cerrs = _new_cstr()
         Cexp = _new_cstr(exp)
@@ -212,6 +204,10 @@ class engine ():
         if pat.id[0] == 0:
             pat = None
         return pat, _read_cstr(Cerrs)
+
+    # -----------------------------------------------------------------------------
+    # Functions for loading statements/blocks/packages into an engine
+    # -----------------------------------------------------------------------------
 
     def load(self, src):
         Cerrs = _new_cstr()
@@ -252,6 +248,10 @@ class engine ():
         actual_pkgname = _read_cstr(Cactual_pkgname) #if Cactual_pkgname.ptr != ffi.NULL else None
         errs = _read_cstr(Cerrs)
         return Csuccess[0], actual_pkgname, errs
+
+    # -----------------------------------------------------------------------------
+    # Functions for matching and tracing (debugging)
+    # -----------------------------------------------------------------------------
 
     def match(self, pat, input, start, encoder):
         if (pat is None) or (pat.id[0] == 0):
@@ -328,6 +328,10 @@ class engine ():
             else:
                 raise ValueError("unknown error caused matchfile to fail")
         return Ccin[0], Ccout[0], Ccerr[0]
+
+    # -----------------------------------------------------------------------------
+    # Functions for reading and processing rcfile (init file) contents
+    # -----------------------------------------------------------------------------
 
     def read_rcfile(self, filename=None):
         Cfile_exists = ffi.new("int *")
@@ -433,6 +437,14 @@ class engine ():
     # -----------------------------------------------------------------------------
     # Functions for reading and modifying various engine settings
     # -----------------------------------------------------------------------------
+
+    def config(self):
+        Cresp = _new_cstr()
+        ok = _lib.rosie_config(self.engine, Cresp)
+        if ok != 0:
+            raise RuntimeError("config() failed (please report this as a bug)")
+        resp = _read_cstr(Cresp)
+        return resp
 
     def libpath(self, libpath=None):
         if libpath:
