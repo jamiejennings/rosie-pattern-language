@@ -484,13 +484,126 @@ class RosieParseTest(unittest.TestCase):
         self.assertTrue('ref' in second_exp)
         self.assertTrue(second_exp['ref']['packagename'] == "B")
         self.assertTrue(second_exp['ref']['localname'] == "c")
+        result, messages = self.engine.parse_expression(b"A // B.c") # syntax error
+        self.assertTrue(result is None)
+        self.assertFalse(messages is None)
         # Parse block
+        result, messages = self.engine.parse_block(b"x = A / B.c; y=[:alpha:]")
+        self.assertFalse(result is None)
+        self.assertTrue(messages is None)
+        pt = json.loads(result)
+        self.assertTrue('block' in pt)
+        self.assertTrue('stmts' in pt['block'])
+        binding1 = pt['block']['stmts'][0]
+        binding2 = pt['block']['stmts'][1]
+        def check_binding(b, boundname):
+            self.assertTrue('binding' in b)
+            self.assertTrue('ref' in b['binding'])
+            self.assertTrue('ref' in b['binding']['ref'])
+            self.assertTrue('localname' in b['binding']['ref']['ref'])
+            self.assertTrue(b['binding']['ref']['ref']['localname'] == boundname)
+        check_binding(binding1, 'x')
+        check_binding(binding2, 'y')
+        result, messages = self.engine.parse_block(b" = A / B.c; y=[:alpha:]") # syntax error
+        self.assertTrue(result is None)
+        self.assertFalse(messages is None)
 
-# Refs
+# -----------------------------------------------------------------------------
+class RosieRefsTest(unittest.TestCase):
 
-# Deps
+    engine = None
 
+    def setUp(self):
+        rosie.load(librosiedir, quiet=True)
+        self.engine = rosie.engine()
 
+    def tearDown(self):
+        pass
+
+    def test(self):
+        # Expression
+        result, messages = self.engine.expression_refs(b"A")
+        self.assertFalse(result is None)
+        self.assertTrue(messages is None)
+        pt = json.loads(result)
+        self.assertTrue(len(pt) == 1)
+        self.assertTrue('ref' in pt[0])
+        self.assertTrue('localname' in pt[0]['ref'])
+        self.assertTrue(pt[0]['ref']['localname'] == "A")
+        result, messages = self.engine.expression_refs(b'A / "hello" / B.c [:digit:]+ mac:#hi')
+        def check_refs(result, messages):
+            self.assertFalse(result is None)
+            self.assertTrue(messages is None)
+            pt = json.loads(result)
+            self.assertTrue(len(pt) == 3)
+            self.assertTrue('ref' in pt[0])
+            self.assertTrue(pt[0]['ref']['localname'] == "A")
+            self.assertTrue('ref' in pt[1])
+            self.assertTrue(pt[1]['ref']['packagename'] == "B")
+            self.assertTrue(pt[1]['ref']['localname'] == "c")
+            self.assertTrue('ref' in pt[2])
+            self.assertTrue(pt[2]['ref']['localname'] == "mac")
+        check_refs(result, messages)
+        result, messages = self.engine.expression_refs(b"A // B.c") # syntax error
+        self.assertTrue(result is None)
+        self.assertFalse(messages is None)
+        # Block
+        result, messages = self.engine.block_refs(b"x = A / B.c; y=[:alpha:] mac:#tagname")
+        check_refs(result, messages)
+        result, messages = self.engine.block_refs(b" = A / B.c; y=[:alpha:]") # syntax error
+        self.assertTrue(result is None)
+        self.assertFalse(messages is None)
+
+# -----------------------------------------------------------------------------
+class RosieDepsTest(unittest.TestCase):
+
+    engine = None
+
+    def setUp(self):
+        rosie.load(librosiedir, quiet=True)
+        self.engine = rosie.engine()
+
+    def tearDown(self):
+        pass
+
+    def test(self):
+        # Expression
+        result, messages = self.engine.expression_deps(b"A")
+        self.assertFalse(result is None)
+        self.assertTrue(messages is None)
+        pt = json.loads(result)
+        self.assertTrue(len(pt) == 0)
+        result, messages = self.engine.expression_deps(b'A / "hello" / B.c [:digit:]+ p.mac:#hi')
+        def check_deps(result, messages, index=None):
+            self.assertFalse(result is None)
+            self.assertTrue(messages is None)
+            pt = json.loads(result)
+            if index: pt = pt[index]
+            self.assertTrue(len(pt) == 2)
+            self.assertTrue(pt[0] == 'B')
+            self.assertTrue(pt[1] == 'p')
+        check_deps(result, messages)
+        result, messages = self.engine.expression_deps(b"A // B.c") # syntax error
+        self.assertTrue(result is None)
+        self.assertFalse(messages is None)
+        # Block
+        result, messages = self.engine.block_deps(b"x = A / B.c; y=[:alpha:] p.mac:#tagname")
+        check_deps(result, messages, 'implicit')
+        result, messages = self.engine.block_deps(b"import F as G, H; x = A / B.c; y=[:alpha:] p.mac:#tagname")
+        check_deps(result, messages, 'implicit')
+        pt = json.loads(result)
+        pt = pt['explicit']
+        self.assertTrue(len(pt) == 2)
+        self.assertTrue('as_name' in pt[0])
+        self.assertTrue(pt[0]['as_name'] == 'G')
+        self.assertTrue('importpath' in pt[0])
+        self.assertTrue(pt[0]['importpath'] == 'F')
+        self.assertTrue(not 'as_name' in pt[1])
+        self.assertTrue('importpath' in pt[1])
+        self.assertTrue(pt[1]['importpath'] == 'H')
+        result, messages = self.engine.block_deps(b" = A / B.c; y=[:alpha:]") # syntax error
+        self.assertTrue(result is None)
+        self.assertFalse(messages is None)
 
 # -----------------------------------------------------------------------------
 

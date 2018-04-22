@@ -1219,12 +1219,12 @@ int rosie_block_refs(Engine *e, str *input, str *refs, str *messages) {
 
 EXPORT
 int rosie_expression_deps(Engine *e, str *input, str *deps, str *messages) {
-  return rosie_syntax_op("expression_deps", e, input, deps, messages);
+  return rosie_syntax_op("expression_dependencies", e, input, deps, messages);
 }
 
 EXPORT
 int rosie_block_deps(Engine *e, str *input, str *deps, str *messages) {
-  return rosie_syntax_op("block_deps", e, input, deps, messages);
+  return rosie_syntax_op("block_dependencies", e, input, deps, messages);
 }
 
 EXPORT
