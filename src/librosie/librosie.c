@@ -53,8 +53,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <errno.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "librosie.h"
 
@@ -109,7 +109,7 @@ static char bootscript[MAXPATHLEN];
  * ----------------------------------------------------------------------------------------
  */
 
-static errno_t actual_file(char *inpath, char **outpath) {
+static int actual_file(char *inpath, char **outpath) {
   char *in = malloc((size_t) MAXPATHLEN);
   char *out = alloca((size_t) MAXPATHLEN);
   strncpy(in, inpath, MAXPATHLEN);
