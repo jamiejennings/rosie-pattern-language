@@ -1,3 +1,31 @@
+2018-04-23  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-8:
+
+	ADDED: New functions in librosie for clients that want to examine how
+	RPL is parsed.  For expressions and blocks (sets of statements), you can
+	ask librosie to parse them, compute the free variables (references), and
+	compute the packages that need to be imported before the RPL can be
+	used.
+
+	CHANGED: It is no longer valid to give an empty string to the load()
+	function.  E.g. the CLI will now complain on --rpl ''.
+
+	CHANGED: The net.fqdn pattern used to accept floats like 1.2e03.  It no
+	longer does.  You can use net.fdqn_strict to accept all valid partially
+	qualified domain names, which would include 1.2e03.
+
+	CHANGED: In rosie.py, the boolean output encoder now returns True or
+	False instead of True or None.
+
+	ENHANCED: The cli and librosie now follow symlinks to find the Rosie
+	installation files (lib/*.luac, rpl/*.rpl, and others).
+
+	FIXED: The new_engine() function is now thread-safe.  There's a mutex
+	around previously unsafe part, so simultaneous engine creation in
+	multiple threads is safe, but part of it will only run in one thread at
+	a time.
+
 2018-04-10  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-7:
