@@ -58,7 +58,9 @@ denoted_hex = { "0x" hex }
 
 alias end_of_number = >{{"."? [[:space:] $]} / [[:punct:] & !"."]}
 
--- N.B. signed_number matches the JSON spec for numbers
+-- N.B.
+-- signed_number matches the JSON spec for numbers.
+-- unsigned_number matches unsigned numbers but NOT exponents.
 signed_number = (float / int)
 unsigned_number = (decimal / uint)
 
