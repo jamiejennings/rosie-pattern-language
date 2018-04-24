@@ -207,28 +207,32 @@ function repl.repl(en)
 			local tname, tpos, input_text = common.decode_match(msubs[2])
 			assert(tname=="word.dq")
 			assert(input_text:sub(1,1)=='"' and input_text:sub(-1)=='"')
-			input_text = ustring.dequote(input_text)
-			-- Compile the expression given in the command
-			local rplx, errs = en:compile(str)
-			if not rplx then
-			   local err_string = table.concat(map(violation.tostring, errs), "\n")
-			   io.write(err_string, "\n")
+			input_text, err_string = ustring.dequote(input_text)
+			if not input_text then
+			   io.write("Invalid input data: ", err_string, "\n")
 			else
-			   local m, left = rplx:match(input_text)
-			   if (debug and (not m)) or trace_command then
-			      local tracetype = (cname=="trace") and "condensed" or "full"
-			      local ok, matched, tr = en:trace(str, input_text, 1, tracetype)
-			      if not ok then
-				 io.write("Internal error: expression did not compile\n")
-			      else
-				 if (not trace_command) and tr:sub(-9)=="\nNo match" then
-				    tr = tr:sub(1,-10)
+			   -- Compile the expression given in the command
+			   local rplx, errs = en:compile(str)
+			   if not rplx then
+			      local err_string = table.concat(map(violation.tostring, errs), "\n")
+			      io.write(err_string, "\n")
+			   else
+			      local m, left = rplx:match(input_text)
+			      if (debug and (not m)) or trace_command then
+				 local tracetype = (cname=="trace") and "condensed" or "full"
+				 local ok, matched, tr = en:trace(str, input_text, 1, tracetype)
+				 if not ok then
+				    io.write("Internal error: expression did not compile\n")
+				 else
+				    if (not trace_command) and tr:sub(-9)=="\nNo match" then
+				       tr = tr:sub(1,-10)
+				    end
+				    print(tr)
 				 end
-				 print(tr)
 			      end
-			   end
-			   print_match(m, left, trace_command)
-			end -- did exp compile
+			      print_match(m, left, trace_command)
+			   end -- did exp compile
+			end -- was the input data a valid double-quoted string
 		     end -- could not parse out the expression and input string from the repl input
 		  end -- if unable to parse argtext into: stuff "," quoted_string
 	       end -- if pat
