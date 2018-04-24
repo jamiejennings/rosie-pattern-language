@@ -177,7 +177,9 @@ function loadpkg.source(compiler, pkgtable, top_level_env, searchpath, source, o
    end
    if a.block_pdecl then
       -- The code we compiled defined a module, which we have instantiated as a package (in env).
-      -- But there is no importpath, so we cannot create an entry in the package table.
+      -- But there is no importpath, so we use the packagename as the loadpath to create an entry
+      -- in the package table.
+      common.pkgtableset(pkgtable, a.block_pdecl.name, nil, a.block_pdecl.name, env)
       return true, a.block_pdecl.name, env
    else
       -- The caller must replace their top_level_env with the returned env in order to see the new
