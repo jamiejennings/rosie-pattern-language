@@ -108,7 +108,7 @@ The primary commands are `match` and `grep`.  Help for a command is obtained usi
   * `-o, --output` <format>:
 	Output match data according to **format**, which may be one of:
 
-	color, subs, matches, json, line
+	color, subs, data, json, line
 	
 	or possibly other (installation-dependent) values.  Use **rosie help** to
 	discover what is available in your installation.  
