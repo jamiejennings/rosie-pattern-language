@@ -1,3 +1,27 @@
+2018-04-24  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-9:
+
+	CHANGED: The output option named "matches" is now named "data" for
+	consistency with the others, particularly "subs", since those are both
+	components of a match.
+
+	CHANGED: Removed the output option named "default".
+
+	FIXED: Bug in REPL when user enters sample data that is not a valid RPL
+	string, e.g. one with an invalid escape sequence.
+
+	FIXED: The pattern "num.float" now accepts all valid JSON numbers.
+	Also, "frac" (for "fraction") is now an alias and will no longer appear
+	in output from the "num" patterns.
+
+	ENHANCED: When a string containing RPL is loaded into an engine, and
+	that string declares that it is a package, say "foo", then a legitimate
+	package "foo" is created.  A subsequent call to	engine.load("import foo")
+	will now succeed.  An attempt to force a re-import via
+	engine.import("foo") will fail, however, because the engine has no way
+	of loading the RPL source again (it is not on the file system).
+
 2018-04-23  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-8:
