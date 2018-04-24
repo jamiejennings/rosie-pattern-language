@@ -319,7 +319,7 @@ end
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
 local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
-   encoder = encoder or "default"
+--   encoder = encoder or "default"
    local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
    return match(rplx_exp.pattern.peg,
 		input,

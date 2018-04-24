@@ -485,9 +485,14 @@ common.encoder_table =
 		  json = {common.JSON_ENCODING, identity_fn},
 		  byte = {common.BYTE_ENCODING, identity_fn},
 		  bool = {common.LINE_ENCODING, function(...) return match_without_data end},
-		  default = {common.BYTE_ENCODING, common.byte_to_lua},
 	       },
 	     {__index = function(...) return error_encoder end})
+
+function common.lookup_encoder(name)
+   if not name then return common.BYTE_ENCODING, common.byte_to_lua; end
+   local entry = common.encoder_table[name]
+   return entry[1], entry[2]
+end
 
 function common.encoder_returns_userdata(encoder)
    local fn = common.encoder_table[encoder]
@@ -497,11 +502,6 @@ end
 function common.add_encoder(name, rmatch_arg, fn)
    assert(rmatch_arg and fn, "bad arg to add_encoder")
    common.encoder_table[name] = {rmatch_arg, fn}
-end
-
-function common.lookup_encoder(name)
-   local entry = common.encoder_table[name]
-   return entry[1], entry[2]
 end
 
 -- Do not want to depend at all on the process or thread's locale setting.  This

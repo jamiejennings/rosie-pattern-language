@@ -135,7 +135,7 @@ local any_token = (fake_package + statement + expression + top_level_syntax_erro
 function parse_without_error_check(str, pos, tokens)
    pos = pos or 1
    tokens = tokens or {}
-   local rmatch_encoder, fn_encoder = common.lookup_encoder("default")
+   local rmatch_encoder, fn_encoder = common.lookup_encoder()
    assert(type(rmatch_encoder)=="number")
    assert(type(fn_encoder)=="function")
    local nt, leftover = match(any_token, str, pos, rmatch_encoder, fn_encoder, {})
