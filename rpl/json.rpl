@@ -2,21 +2,46 @@
 ----
 ---- json.rpl    some rpl patterns for processing json input
 ----
----- © Copyright IBM Corporation 2016, 2017.
+---- © Copyright IBM Corporation 2016, 2017, 2018.
 ---- LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 ---- AUTHOR: Jamie A. Jennings
 
 
 ---------------------------------------------------------------------------------------------------
--- Note:
+-- Note 1:  Why have a JSON pattern for Rosie?
 --
--- A language-integrated parser built specifically to parse JSON is usually the best way to process
--- json-encoded documents.  Occasionally, though, there will be a json-encoded field within non-json
--- data, e.g. log files in which some entries contain json data in the message field.
+-- RATIONALE: A language-integrated parser built specifically to parse JSON is usually the best way
+-- to process json-encoded documents.  Occasionally, though, there will be a json-encoded field
+-- within non-json data, e.g. log files in which some entries contain json data in the message
+-- field.
 --
--- When using Rosie to parse such mixed input, it is useful to have a pattern in RPL that will match
--- a json-encoded value so that the structured data in this value can be extracted later, as needed.
--- 
+-- This is where having a Rosie parser for JSON is very useful.
+--
+---------------------------------------------------------------------------------------------------
+-- Note 2:  The pattern defined here, json.value, is NOT a validating parser.
+--
+-- When the pattern 'json.value ~' (which consumes whitespace after the JSON) is used in the tests
+-- at https://github.com/nst/JSONTestSuite (see main page at http://seriot.ch/parsing_json.php), the
+-- results are:
+--   * json.value accepts all valid JSON input
+--   * json.value ALSO accepts numbers that begin with + and 0 (e.g. +1, 02)
+--   * json.value ALSO accepts any double quoted string, without validating escape sequences
+--
+-- An example of the last category are strings like these:
+--   * "\F09F8C80" (should be "\UF09F8C80")
+--   * "\u00A" (\u requires exactly 4 hex digits)
+--   * "\a" (not a valid escape sequence in JSON)
+--
+-- RATIONALE: In actual data we have encountered in the field, numbers do sometimes start with + or
+-- have a leading 0.  Similarly, not every string of characters constitutes a valid JSON encoding.
+-- The RPL pattern json.value returns what is in the JSON input, and the consumer of the data must
+-- interpret it.
+--   * Most languages will convert numbers +1, +0, 02 to integers correctly.
+--   * Modern languages provide routines for interpreting a string as UTF-8, and it is up to the
+--     data consumer to decide how to handle an invalid UTF-8 string inside a JSON structure.
+--     E.g. json.loads(s) in python will interpret JSON escape sequences and throw an error if there
+--     is an invalid sequence.
+--
 ---------------------------------------------------------------------------------------------------
 
 package json
@@ -42,6 +67,7 @@ end
 -- test value accepts "true", "false", "null"
 -- test value rejects "ture", "f", "NULL"
 -- test value accepts "0", "123", "-1", "1.1001", "1.2e10", "1.2e-10", "+3.3"
+-- test value accepts "123e65", "0e+1", "0e1", "20e1", "1E22", "1E-2", "1E+2", "123e45", "1e-2", "1e+2"
 -- test value accepts "\"hello\"", "\"this string has \\\"embedded\\\" double quotes\""
 -- test value rejects "hello", "\"this string has no \\\"final quote\\\" "
 -- test value rejects "--2", "9.1.", "9.1.2", "++2", "2E02."
