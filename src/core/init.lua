@@ -268,7 +268,7 @@ common.add_encoder("color", common.BYTE_ENCODING,
 		   function(m, input, start, parms)
 		      return color.match(common.byte_to_lua(m, input), input, parms.colors)
 		   end)
-common.add_encoder("matches", common.BYTE_ENCODING,
+common.add_encoder("data", common.BYTE_ENCODING,
 		   function(m, input, start)
 		      m = common.byte_to_lua(m, input)
 		      return m.data
