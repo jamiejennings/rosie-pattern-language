@@ -15,33 +15,35 @@ alias digit = [:digit:]
 alias hex_letter = [[a-f][A-F]]
 alias hex_digit = digit / hex_letter
 
-int = { [+\-]? digit+ !hex_letter}	     -- at least one digit, no hex digit after
-uint = { digit+ !hex_letter}		     -- at least one digit, no hex digit after
+int = { [+\-]? digit+ !{hex_letter / frac / exp} }  -- at least one digit, no hex digit after
+uint = { digit+ !hex_letter}				   -- at least one digit, no hex digit after
 -- test int accepts "34", "+34", "-34"
 -- test int rejects "BEEF", "0x20"
 -- test uint accepts "34", "0", "0987654321"
 -- test uint rejects "+1", "-5"
 
-frac = { [.] digit+ }
+alias frac = { [.] digit+ }
 -- test frac accepts ".0", ".01", ".3210009831", ".1"
 -- test frac rejects "0.", "1.1", "-.1"
 
-decimal = { digit+ "." digit+ }			   -- float with digits on either side of radix
-mantissa = { [+\-]? digit+ "." digit+ }		   -- float with digits on either side of radix
+decimal = { digit+ "." digit+ }				-- unsigned float, no exponent
 -- test decimal accepts "1.23", "1234.56789"
 -- test decimal rejects "-1.23", "+1.23"
--- test mantissa accepts "1.23", "+1.23", "-1.23"
--- test mantissa rejects "12", "bob", "1."
 
-exp = { [eE] [+\-]? digit+ }
--- test exp accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
--- test exp rejects "e0.", "e0a", "e+-10", "Ef"
+-- the mantissa is the non-exponent part of a float
+local mantissa = { [+\-]? digit+ frac? {>exp / !hex_letter} }
+--x   test mantissa accepts "1.23", "+1.23", "-1.23", "12"
+--x   test mantissa rejects "bob", "1."
+
+local exp = { [eE] [+\-]? digit+ }
+--x   test exp accepts "e0", "e01", "e321", "e+10", "e-99", "E101", "E+1", "E+02"
+--x   test exp rejects "e0.", "e0a", "e+-10", "Ef"
 
 float = { mantissa exp? } 
 -- test float accepts "6.02e23", "3.00E08", "0.123", "-2.0", "-2.0e1", "0.456e-101"
--- test float rejects "6.02F23", "3.00E--08", "123"
--- test float accepts "-1.32", "6.02E23", "+0.314e1"
--- test float rejects "0x01", "--2", "a", "-1", "+0", "3e", "3.14e"
+-- test float rejects "6.02F23", "3.00E--08", 
+-- test float accepts "-1.32", "6.02E23", "+0.314e1", "123", "-1", "+0"
+-- test float rejects "0x01", "--2", "a", "3e", "3.14e", "1."
 -- test float includes mantissa "6.02e23"
 -- test float includes exp "6.02e23"
 -- test float excludes exp "3.1415"
@@ -60,7 +62,12 @@ alias end_of_number = >{{"."? [[:space:] $]} / [[:punct:] & !"."]}
 signed_number = (float / int)
 unsigned_number = (decimal / uint)
 
-any =  { {denoted_hex /  float / int / hex} end_of_number}
+any =  { {denoted_hex / int / float / hex} end_of_number}
 -- test any accepts "0", "01", "-1", "-1.0", "+1", "+0", "+0.0", "-0.3e+1", "+1.1E-1", "0x1a", "face"
 -- 'any' should accept these with 1 character left over: "2.7a", "2.7x", "123!"
 -- test any includes hex "83a", "0f"
+-- test any includes int "83", "-1"
+-- test any excludes float "83", "-1"
+-- test any includes float "-1.0"
+
+-- test any includes float "123e65", "0e+1", "0e1", "20e1", "1E22", "1E-2", "1E+2", "123e45", "1e-2", "1e+2"
