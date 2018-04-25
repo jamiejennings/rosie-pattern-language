@@ -30,7 +30,7 @@ thing = ts.any /					    -- complete timestamps
 	time.any / 
 	net.any /
 	identifier /					    -- will match hex like 'C1'
-	num.any /
+	{!num.hex num.any} /
 	word.any /
 	punct /
 	unmatched

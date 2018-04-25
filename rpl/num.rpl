@@ -15,8 +15,8 @@ alias digit = [:digit:]
 alias hex_letter = [[a-f][A-F]]
 alias hex_digit = digit / hex_letter
 
-int = { [+\-]? digit+ !{hex_letter / frac / exp} }  -- at least one digit, no hex digit after
-uint = { digit+ !hex_letter}				   -- at least one digit, no hex digit after
+int = { [+\-]? digit+ }
+uint = { digit+ }
 -- test int accepts "34", "+34", "-34"
 -- test int rejects "BEEF", "0x20"
 -- test uint accepts "34", "0", "0987654321"
@@ -26,7 +26,7 @@ alias frac = { [.] digit+ }
 -- test frac accepts ".0", ".01", ".3210009831", ".1"
 -- test frac rejects "0.", "1.1", "-.1"
 
-decimal = { digit+ "." digit+ }				-- unsigned float, no exponent
+decimal = { digit+ "." digit+ }				-- no sign, no exponent
 -- test decimal accepts "1.23", "1234.56789"
 -- test decimal rejects "-1.23", "+1.23"
 
@@ -64,7 +64,7 @@ alias end_of_number = >{{"."? [[:space:] $]} / [[:punct:] & !"."]}
 signed_number = (float / int)
 unsigned_number = (decimal / uint)
 
-any =  { {denoted_hex / int / float / hex} end_of_number}
+any =  { {denoted_hex / {int !hex_letter !frac} / float / hex} }
 -- test any accepts "0", "01", "-1", "-1.0", "+1", "+0", "+0.0", "-0.3e+1", "+1.1E-1", "0x1a", "face"
 -- 'any' should accept these with 1 character left over: "2.7a", "2.7x", "123!"
 -- test any includes hex "83a", "0f"
