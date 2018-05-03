@@ -24,6 +24,7 @@
  * occurred.  Zero is reserved for the "no match" situation (not an
  * error, just an indication that a match did not succeed).
  */
+#define NO_MATCH 0		/* for the 'bool' output encoder */
 #define MATCH_WITHOUT_DATA 1	/* for the 'bool' output encoder */
 #define ERR_NO_ENCODER 2	/* also used for "no trace style" */
 #define ERR_NO_FILE 3		/* no such file or directory */

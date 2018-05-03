@@ -83,6 +83,7 @@ local lpeg = require "lpeg"
 local recordtype = require "recordtype"
 local common = require "common"
 local match = common.match
+local lookup_encoder = common.lookup_encoder
 local pfunction = common.pfunction
 local macro = common.macro
 local environment = require "environment"
@@ -319,8 +320,7 @@ end
 --   Close over lpeg.match to avoid looking it up via the peg.
 --   Close over the peg itself to avoid looking it up in pat.
 local function _match(rplx_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
---   encoder = encoder or "default"
-   local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
+   local rmatch_encoder, fn_encoder = lookup_encoder(encoder)
    return match(rplx_exp.pattern.peg,
 		input,
 		start,
@@ -372,13 +372,12 @@ end
 -- defined in Lua.  (This information hiding is deliberate, because we
 -- expect users to define their own output encoders in Lua in the future.)
 local function Cmatch(compiled_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
+   -- TODO: Remove these asserts, because they are expensive.
    assert(rplx.is(compiled_exp))
    assert(type(input) == "userdata")
    assert(type(start) == "number")
    assert(type(encoder) == "string")
---   assert(type(total_time_accum) == "number")
---   assert(type(lpegvm_time_accum) == "number")
-   local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
+   local rmatch_encoder, fn_encoder = lookup_encoder(encoder)
    local m, leftover, abend, t1, t2 =
       (compiled_exp.pattern.peg):rmatch(input, start, rmatch_encoder, total_time_accum, lpegvm_time_accum)
    if m==0 then return m, start, abend, t1, t2; end
@@ -422,10 +421,10 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    end
    local trace_flag = (op == "trace")
    local trace_style = encoder
-   if trace_flag then encoder = "none"; end
-   -- This set of simple optimizations almost doubles performance of the loop through the file
-   -- (below) in cases where there are many lines to process.
-   local rmatch_encoder, fn_encoder = common.lookup_encoder(encoder)
+   if trace_flag then encoder = nil; end
+   local rmatch_encoder, fn_encoder = lookup_encoder(encoder)
+   -- The set of simple optimizations below almost doubles performance of the loop through the
+   -- file in cases where there are many lines to process.
    local parms = common.attribute_table_to_table(e.encoder_parms)
    local peg = r.pattern.peg			    -- optimization
    local matcher = function(input)

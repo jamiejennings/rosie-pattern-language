@@ -466,12 +466,16 @@ common.BYTE_ENCODING = 3
 common.LINE_ENCODING = 2
 common.JSON_ENCODING = 1
 
--- These constants are interpreted in the librosie C code and must match what is in librosie.h:
-local match_without_data = 1
-common.MATCH_WITHOUT_DATA = match_without_data
+-- These constants are interpreted in the librosie C code and must match what is in librosie.h.
+-- Zero and one are reserved, as shown, for non-error situations of match/no match, where there is
+-- no data to return
+common.NO_MATCH = 0
+common.MATCH_WITHOUT_DATA = 1   -- for 'bool' output encoder
 common.ERR_NO_ENCODER = 2	-- /* also used for "no trace style" */
 common.ERR_NO_FILE = 3		-- /* no such file or directory */
 common.ERR_NO_PATTERN = 4       -- Not a valid rplx 
+
+local match_without_data = common.MATCH_WITHOUT_DATA -- locals are faster
 
 local error_encoder =
    { common.BYTE_ENCODING,

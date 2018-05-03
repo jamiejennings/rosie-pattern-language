@@ -273,7 +273,7 @@ class engine ():
             elif Cmatch.data.len == 2:
                 raise ValueError("invalid output encoder")
             elif Cmatch.data.len == 4:
-                raise ValueError("invalid compiled pattern (already freed?)")
+                raise ValueError("invalid compiled pattern")
         data = _read_cstr(Cmatch.data)
         return data, left, abend, ttotal, tmatch
 
@@ -285,12 +285,12 @@ class engine ():
         Ctrace = _new_cstr()
         ok = _lib.rosie_trace(self.engine, pat.id[0], start, style, Cinput, Cmatched, Ctrace)
         if ok != 0:
-            raise RuntimeError("trace() failed (please report this as a bug)")
+            raise RuntimeError("trace() failed (please report this as a bug): " + str(_read_cstr(Ctrace)))
         if Ctrace.ptr == ffi.NULL:
             if Ctrace.len == 2:
                 raise ValueError("invalid trace style")
             elif Ctrace.len == 1:
-                raise ValueError("invalid compiled pattern (already freed?)")
+                raise ValueError("invalid compiled pattern")
         matched = False if Cmatched[0]==0 else True
         trace = _read_cstr(Ctrace)
         return matched, trace

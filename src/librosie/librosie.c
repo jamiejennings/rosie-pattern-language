@@ -867,14 +867,33 @@ have_pattern:
      first return value is always true. 
   */
   assert( lua_isboolean(L, -3) );
-  assert( lua_isboolean(L, -2) );
-  (*matched) = lua_toboolean(L, -2);
 
+  /* Second return value is the match indicator (boolean).  A number
+     indicates an error. 
+  */
+  int result_type = lua_type(L, -2);
+  switch (result_type) {
+  case LUA_TBOOLEAN: {
+    LOGf("in rosie_trace, trace returned the boolean %s\n", (int) lua_toboolean(L, -2) ? "true" : "false");
+    (*matched) = lua_toboolean(L, -2);
+    break;
+  }
+  case LUA_TNUMBER: {
+    int trace_code = (int) lua_tointeger(L, -2);
+    LOGf("in rosie_trace, trace returned the integer code %d\n", trace_code);
+    trace->ptr = NULL;
+    trace->len = trace_code;
+    goto succeed; /* tracing failed, but rosie_trace completed without errors */
+  } }
+
+  /* Last return value is either a table or a string, depending on encoder. */
   if (lua_istable(L, -1)) {
     t = to_json_string(L, -1, &rs);
     if (t != LUA_OK) {
       rs = rosie_new_string_from_const("error: could not convert trace data to json");      
-      goto fail_with_message;
+      (*trace).ptr = rs.ptr;
+      (*trace).len = rs.len;
+      goto fail;
     }
   }
   else if (lua_isstring(L, -1)) {
@@ -886,16 +905,14 @@ have_pattern:
   else {
     LOG("trace() failed with unexpected return value from engine.trace()\n");
     LOGstack(L);
+  fail:
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;
   }
-
- fail_with_message:
-  
   (*trace).ptr = rs.ptr;
   (*trace).len = rs.len;
-
+ succeed:
   lua_settop(L, 0);
   RELEASE_ENGINE_LOCK(e);
   return SUCCESS;

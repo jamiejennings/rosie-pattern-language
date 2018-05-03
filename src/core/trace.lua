@@ -511,12 +511,16 @@ local function prep_for_export(t)
    end
    if t.match == nil then
       t.match = false
+   elseif type(t.match) == "userdata" then
+      t.match = true
    end
    if t.subs then
-      list.map(prep_for_export, t.subs)
+      t.subs = list.map(prep_for_export, t.subs)
    end
 end
 
+-- FUTURE: Make the trace styles more extensible by having a table of them, like we do for match
+-- encoders.
 function trace.expression(r, input, start, style)
    assert(type(style)=="string")
    local tr = trace.internal(r, input, start)
@@ -531,7 +535,7 @@ function trace.expression(r, input, start, style)
    elseif style == "condensed" then
       retval = trace.path_tostring(trace.max_path(tr))
    else
-      error("invalid trace style: " .. tostring(style))
+      matched = common.ERR_NO_ENCODER
    end
    return matched, retval
 end
