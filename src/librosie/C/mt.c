@@ -100,7 +100,7 @@ static int compile(void *engine, str expression) {
 static int r=0;
 static char *infile;
 
-static void *do_work(void *args) {
+static void *do_work(void *args __attribute__((unused))) {
   Engine *engine = make_engine();
 
   printf("Thread running with engine %p\n", engine);
