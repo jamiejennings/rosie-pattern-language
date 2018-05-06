@@ -94,7 +94,7 @@ default:
 	echo "ROSIE_HOME undefined. Please supply a value on the command line."; \
 	false; \
 	fi; \
-	PREV_CONFIGURATION="$(shell head -1 $(CONFIG_FILE))"; \
+	PREV_CONFIGURATION="$(shell head -1 $(CONFIG_FILE) 2>/dev/null)"; \
 	if [ "$(ROSIE_HOME)" = "$$PREV_CONFIGURATION" ]; then \
             echo "Configuration of ROSIE_HOME has not changed"; \
 	else \
