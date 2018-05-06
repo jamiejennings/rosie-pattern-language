@@ -1255,7 +1255,7 @@ int rosie_parse_block(Engine *e, str *input, str *parsetree, str *messages) {
 }
 
 static int push_rcfile_args(Engine *e, str *filename) {
-  int t;
+  int t __attribute__((unused)); /* unused when DEBUG not set */
   lua_State *L = e->L;		/* for the CHECK_TYPE macro */
   int is_default_rcfile = (filename->ptr == NULL);
   /* Push engine */
