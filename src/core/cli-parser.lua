@@ -57,6 +57,7 @@ function p.create(rosie)
    parser:option("--colors", "Color/pattern assignments for color output")
    :args(1)
    :target("colors")				    -- args.colors
+   :default(false)
 
    parser:option("-o --output", "Output style, one of: " .. output_choices_string)
    :convert(function(a)

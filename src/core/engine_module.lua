@@ -372,11 +372,10 @@ end
 -- defined in Lua.  (This information hiding is deliberate, because we
 -- expect users to define their own output encoders in Lua in the future.)
 local function Cmatch(compiled_exp, input, start, encoder, total_time_accum, lpegvm_time_accum)
-   -- TODO: Remove these asserts, because they are expensive.
-   assert(rplx.is(compiled_exp))
-   assert(type(input) == "userdata")
-   assert(type(start) == "number")
-   assert(type(encoder) == "string")
+--    assert(rplx.is(compiled_exp))
+--    assert(type(input) == "userdata")
+--    assert(type(start) == "number")
+--    assert(type(encoder) == "string")
    local rmatch_encoder, fn_encoder = lookup_encoder(encoder)
    local m, leftover, abend, t1, t2 =
       (compiled_exp.pattern.peg):rmatch(input, start, rmatch_encoder, total_time_accum, lpegvm_time_accum)
@@ -590,11 +589,11 @@ end
 ----------------------------------------------------------------------------------------
 -- Engine and rplx structures
 
-local function create_engine(name, compiler, searchpath)
+local function create_engine(name, compiler, searchpath, colorstring)
    assert(compiler)
    assert(type(searchpath)=="string")
    local new_package_table = environment.new_package_table()
-   return engine.factory {
+   e = engine.factory {
       name=function() return name; end,
       compiler=compiler,
       libpath=common.new_attribute("ROSIE_LIBPATH",
@@ -605,6 +604,8 @@ local function create_engine(name, compiler, searchpath)
       pkgtable=new_package_table,
       encoder_parms = common.create_attribute_table(),
    }
+   e:set_encoder_parm("colors", colorstring, "default")
+   return e
 end
 
 function engine_error(e, msg)

@@ -83,9 +83,6 @@ local co = {}
 
 local list = require "list"
 local violation = require "violation"
---local throw = violation.raise
---local catch = violation.catch
---local is_exception = violation.is_exception
 
 local map = list.map; apply = list.apply; append = list.append;
 
@@ -93,22 +90,46 @@ local map = list.map; apply = list.apply; append = list.append;
 -- Build and query the color database
 ---------------------------------------------------------------------------------------------------
 
-co.colormap = {["*"] = "default;bold";		    -- global default
-	       ["net.*"] = "red";
-	       ["net.host"] = "red";		    -- show host, not its constituent parts
-	       ["net.fqdn"] = "red";		    -- show fqdn, not its constituent parts
-	       ["net.ipv6"] = "red;underline";
-	       ["net.path"] = "green";
-	       ["net.MAC"] = "underline;green";
-	       ["num.*"] = "underline";
-	       ["word.*"] = "yellow";
-	       ["all.identifier"] = "cyan";
-	       ["id.*"] = "bold;cyan";
-	       ["os.path"] = "green";
-	       ["date.*"] = "blue";
-	       ["time.*"] = "1;34";		    -- bold and blue
-	       ["ts.*"] = "underline;blue";
-	    }
+local function map_apply(fn, list_of_arglists)
+   return map(function(arglist)
+		 return apply(fn, arglist)
+	      end,
+	      list_of_arglists)
+end
+
+local DEFAULT_COLORS = "*=default;bold"
+
+local function db_from_colors1(colors)
+   colors = colors or DEFAULT_COLORS
+   local entries = util.split(colors, ":")
+   local db = {}
+   for _, entry in ipairs(entries) do
+      local key_value = util.split(entry, '=')
+      -- Cases: empty entry; invalid entry; valid entry
+      if key_value[1] and (key_value[1]~="") then
+	 -- Entry is not empty
+	 if (not key_value[2]) then
+	    common.warn("ignoring invalid color assignment: ", entry)
+	 else
+	    db[key_value[1]] = key_value[2]
+	 end
+      end
+   end -- for
+   return db
+end
+
+local function memoize(fn)
+   local answers = {}
+   return function(arg)
+	     local memo = answers[arg]
+	     if memo then return memo; end
+	     memo = fn(arg)
+	     answers[arg] = memo
+	     return memo
+	  end
+end
+
+local db_from_colors = memoize(db_from_colors1)
 
 local function query(db, key, query_type)
    if query_type=="exact" then return db[key]; end
@@ -117,13 +138,8 @@ local function query(db, key, query_type)
    error("Internal error: invalid query type: " .. tostring(query_type))
 end
 
-if not query(co.colormap, nil, "global_default") then
-   common.warn("No default color specified (using 'default', i.e. ANSI SGR 39)")
-   co.colormap["*"] = "default"
-end
-
-function co.query(pattern_type, db)
-   if not db then db = co.colormap; end
+function co.query(pattern_type, colorstring)
+   local db = db_from_colors(colorstring)
    if pattern_type=="*" then pattern_type = ""; end
    local c = query(db, pattern_type, "exact")
    if c then return c, "exact"; end
@@ -168,17 +184,6 @@ local ansi_color_table =
      ["bg_white"] = "47";
      ["bg_default"] = "49";
   }
-
-local function memoize(fn)
-   local answers = {}
-   return function(arg)
-	     local memo = answers[arg]
-	     if memo then return memo; end
-	     memo = fn(arg)
-	     answers[arg] = memo
-	     return memo
-	  end
-end
 
 local function to_ansi_code1(color_spec)
    local number = ansi_color_table[color_spec] or color_spec
@@ -267,35 +272,8 @@ local function color(match, db, pkgname, pkgcolor, global_default)
    assert(false, "could not find color")
 end
 
-local function map_apply(fn, list_of_arglists)
-   return map(function(arglist)
-		 return apply(fn, arglist)
-	      end,
-	      list_of_arglists)
-end
-
-local function db_from_colors1(colors)
-   local entries = util.split(colors, ":")
-   local db = {}
-   for _, entry in ipairs(entries) do
-      local key_value = util.split(entry, '=')
-      -- Cases: empty entry; invalid entry; valid entry
-      if key_value[1] and (key_value[1]~="") then
-	 -- Entry is not empty
-	 if (not key_value[2]) then
-	    common.warn("ignoring invalid color assignment: ", entry)
-	 else
-	    db[key_value[1]] = key_value[2]
-	 end
-      end
-   end -- for
-   return db
-end
-
-local db_from_colors = memoize(db_from_colors1)
-
 function co.match(match, input, colors)
-   local db = (colors and db_from_colors(colors)) or co.colormap
+   local db = db_from_colors(colors)
    local global_default = query(db, nil, "global_default")
    if #input==0 then return ""; end
    local last = 0

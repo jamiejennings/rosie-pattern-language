@@ -107,7 +107,7 @@ function repl.repl(en)
 	    local packagename, localname = common.split_id(text)
 	    local def = en.env:lookup(localname, packagename)
 	    if def then
-	       local props = ui.properties(text, def)
+	       local props = ui.properties(text, def, en:get_encoder_parms()['colors'])
 	       io.write(props.binding, "\n")
 	    else
 	       io.write(string.format("Repl: undefined identifier %s\n", text))

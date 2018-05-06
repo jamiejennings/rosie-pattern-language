@@ -320,16 +320,14 @@ assert(CORE_ENGINE)
 ROSIE_ENGINE, ROSIE_COMPILER = create_rpl_1_2_engine(CORE_ENGINE)
 assert(ROSIE_ENGINE and ROSIE_COMPILER)
 
--- local ok, value = pcall(os.getenv, "ROSIE_LIBPATH")
--- if (not ok) then common.warn('Internal error: call to getenv()" failed (this is a bug)'); end
--- if value then
---    assert(type(value)=="string")
---    ROSIE_ENGINE:set_libpath(value, 'environment')
--- end
-
 rosie_package.default = { rcfile = "~/.rosierc",
 			  libpath = ROSIE_LIBDIR,
 			  compiler = ROSIE_COMPILER,
+			  colors =
+			     table.concat{"*=default;bold:net.*=red:net.ipv6=red;underline:",
+					  "net.path=green:net.MAC=underline;green:num.*=underline:",
+					  "word.*=yellow:all.identifier=cyan:id.*=bold;cyan:",
+					  "os.path=green:date.*=blue:time.*=1;34:ts.*=underline;blue"}
 		       }
 
 
@@ -340,7 +338,8 @@ rosie_package.engine =
    { new = function(name)
 	      return engine_module.engine.new(name,
 					      rosie_package.default.compiler,
-					      rosie_package.default.libpath)
+					      rosie_package.default.libpath,
+					      rosie_package.default.colors)
 	   end,
      is = engine_module.engine.is }
 

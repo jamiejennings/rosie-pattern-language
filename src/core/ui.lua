@@ -13,12 +13,12 @@ local co = require "color"
 local environment = require "environment"
 
 -- FUTURE: Update this to make a general pretty printer for the contents of the environment.
-function ui.properties(name, obj)
+function ui.properties(name, obj, colorstring)
    if common.pattern.is(obj) then
       local kind = "pattern"
       local capture = (not obj.alias)
       local binding = obj.ast and ast.tostring(obj.ast) or tostring(obj)
-      local color, reason = co.query(name)
+      local color, reason = co.query(name, colorstring)
       local color_explanation = color
       local origin = obj.ast and obj.ast.sourceref and obj.ast.sourceref.origin
       return {name=name,
@@ -84,13 +84,13 @@ local function shorten(str, len)
    return str
 end
    
-function ui.to_property_table(env, filter)
+function ui.to_property_table(env, filter, colorstring)
    assert(environment.is(env))
    assert(type(filter)=="string")
    local pkgname, localname = common.split_id(filter)
    if not pkgname then
       local tbl = environment.all_bindings(env)
-      for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v); end
+      for k,v in pairs(tbl) do tbl[k] = ui.properties(k,v,colorstring); end
       return apply_filter(tbl, localname)
    end
    local pkgenv = env:lookup(pkgname)
@@ -99,7 +99,7 @@ function ui.to_property_table(env, filter)
       if props.type=="package" then
 	 local tbl = environment.exported_bindings(pkgenv)
 	 for k,v in pairs(tbl) do
-	    tbl[k] = ui.properties(common.compose_id{pkgname, k}, v)
+	    tbl[k] = ui.properties(common.compose_id{pkgname, k}, v, colorstring)
 	 end
 	 return apply_filter(tbl, localname)
       else

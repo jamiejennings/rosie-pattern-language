@@ -65,7 +65,7 @@ function run(cmd, expectations)
    end -- if expectations
    output = table.concat(results, '\n')
    local lua_error = output:find("traceback")
-   check(not lua_error)
+   check(not lua_error, "error!", 1)
    if lua_error then print(output); end
    return output
 end

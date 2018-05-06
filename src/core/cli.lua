@@ -161,7 +161,10 @@ local function run(args)
    
    if args.command == "list" then
       if not args.verbose then greeting(); end
-      local props_table, msg = ui.to_property_table(en.env, args.filter)
+      local props_table, msg = ui.to_property_table(en.env,
+						    args.filter,
+						    en:get_encoder_parms()['colors']
+						 )
       if props_table then
 	 ui.print_props(props_table)
 	 return
