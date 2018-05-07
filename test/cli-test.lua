@@ -30,6 +30,12 @@ else
 end
 print("Found rosie executable: " .. rosie_cmd)
 
+function check_lua_error(results_as_string)
+   check(not results_as_string:find("traceback"), "lua error???", 1)
+   check(not results_as_string:find("src/core"), "lua error???", 1)
+end
+
+
 infilename = TEST_HOME .. "/resolv.conf"
 
 -- N.B. grep_flag does double duty:
@@ -80,6 +86,9 @@ function run(import, expression, grep_flag, expectations)
    end -- if expectations
    return results
 end
+
+
+
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Match and grep commands")
@@ -378,28 +387,28 @@ results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have failed with output")
 check(code ~= 0, "return code should NOT be zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 
 cmd = rosie_cmd .. " grep 'net.any <\".com\"' test/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code == 0, "return should have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 
 cmd = rosie_cmd .. " grep '{net.any & num.int}' test/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code == 0, "return should have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 
 cmd = rosie_cmd .. " grep '(net.any & <\"search\")' test/resolv.conf 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code ~= 0, "return should not have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 check(results_txt:find("can match the empty string"))
 
 cmd = rosie_cmd .. " expand 'a b' 2>&1"
@@ -407,7 +416,7 @@ results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code == 0, "return should have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 check(results_txt:find("a ~ b"))
 
 cmd = rosie_cmd .. " expand 'grammar foo=\"foo\" in foo' 2>&1"
@@ -415,7 +424,7 @@ results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code ~= 0, "return should NOT have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 check(results_txt:find("[parser]"))
 check(results_txt:find("syntax error while reading expression"))
 
@@ -424,7 +433,7 @@ results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code ~= 0, "return should NOT have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 check(results_txt:find("[parser]"))
 check(results_txt:find("found statement where expression was expected"))
 
@@ -433,7 +442,7 @@ results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code ~= 0, "return should NOT have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 check(results_txt:find("[parser]"))
 check(results_txt:find("found statement where expression was expected"))
 
@@ -442,7 +451,7 @@ results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code ~= 0, "return should NOT have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 check(results_txt:find("[parser]"))
 check(results_txt:find("let expressions are not supported"))
 
@@ -451,7 +460,7 @@ results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 check(code ~= 0, "return should NOT have been zero")
 results_txt = table.concat(results, '\n')
-check(not results_txt:find("traceback"))
+check_lua_error(results_txt)
 check(results_txt:find("[parser]"))
 check(results_txt:find("grammar expressions are not supported"))
 
@@ -467,7 +476,7 @@ function colortest(colors, expected_results)
    check(#results>0, "command should have produced output", 1)
    check(code == 0, "return should have been zero", 1)
    results_txt = table.concat(results, '\n')
-   check(not results_txt:find("traceback"), "lua error???", 1)
+   check_lua_error(results_txt)
    check(results_txt:find(expected_results, 1, true), "results did not match expectations", 1)
    return results_txt
 end
@@ -498,7 +507,7 @@ function libpath_test(libpath, exit_status, expected_results)
    check(#results>0, "command should have produced output", 1)
    check(code == exit_status, "exit status differs from expected", 1)
    results_txt = table.concat(results, '\n')
-   check(not results_txt:find("traceback"), "lua error???", 1)
+   check_lua_error(results_txt)
    for _, expectation in ipairs(expected_results) do
       check(results_txt:find(expectation, 1, true),
 	    "results did not match expectations", 1)
@@ -524,7 +533,7 @@ function rcfile_test(filename, exit_status, expected_results, set_no_rcfile)
    check(#results>0, "command should have produced output", 1)
    check(code == exit_status, "exit status differs from expected", 1)
    results_txt = table.concat(results, '\n')
-   check(not results_txt:find("traceback"), "lua error???", 1)
+   check_lua_error(results_txt)
    for _, expectation in ipairs(expected_results) do
       check(results_txt:find(expectation, 1, true),
 	    "results did not match this expectation: " .. expectation, 1)
@@ -548,5 +557,19 @@ check(not results:find("error"))
 results = rcfile_test("test/rcfile1", 0, {}, true)
 check(not results:find("Warning"))
 check(not results:find("error"))
+
+
+---------------------------------------------------------------------------------------------------
+test.heading("Trace")
+
+
+cmd = 'echo "1.2.3.4" | ' .. rosie_cmd .. ' trace net.ipv4 2>&1'
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+check(code == 0, "exit status differs from expected")
+results_txt = table.concat(results, '\n')
+check_lua_error(results_txt)
+
+-- TODO: After adding trace styles to the CLI (via '-o'), add tests here.
 
 return test.finish()

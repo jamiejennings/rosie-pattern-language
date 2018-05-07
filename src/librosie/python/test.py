@@ -16,14 +16,13 @@ import rosie
 #     rosie.engine().  Normally, no argument to rosie.engine() is
 #     needed.
 
-try:
-    HAS_UNICODE_TYPE = type(unicode) and True
+if sys.version_info.major < 3:
     str23 = lambda s: str(s)
     bytes23 = lambda s: bytes(s)
-except NameError:
-    HAS_UNICODE_TYPE = False
+else:
     str23 = lambda s: str(s, encoding='UTF-8')
     bytes23 = lambda s: bytes(s, encoding='UTF-8')
+
 
 class RosieInitTest(unittest.TestCase):
 
@@ -129,7 +128,7 @@ class RosieConfigTest(unittest.TestCase):
                 rpl_version = entry['value']
             if entry['name']=='ROSIE_LIBPATH':
                 libpath = entry['value']
-        if HAS_UNICODE_TYPE:
+        if sys.version_info.major < 3:
             self.assertTrue(type(rpl_version) is unicode)
             self.assertTrue(type(libpath) is unicode)
         else:
@@ -361,6 +360,28 @@ class RosieTraceTest(unittest.TestCase):
         self.assertTrue(trace)
         self.assertTrue(len(trace) > 0)
 
+        matched, trace = self.engine.trace(self.net_any, b"1.2.3", 1, b"full")
+        self.assertTrue(matched == True)
+        self.assertTrue(trace)
+        self.assertTrue(len(trace) > 0)
+        self.assertTrue(trace.find(b'Matched 5 chars') != -1)
+
+        try:
+            matched, trace = self.engine.trace(self.net_any, b"1.2.3", 1, b"no_such_trace_style")
+            self.assertTrue(False)
+        except ValueError as e:
+            self.assertTrue(repr(e).find('invalid trace style') != -1)
+
+        matched, trace = self.engine.trace(self.net_any, b"1.2.3", 1, b"json")
+        self.assertTrue(matched == True)
+        self.assertTrue(trace)
+        self.assertTrue(len(trace) > 0)
+        tr = json.loads(trace)
+        self.assertTrue('match' in tr)
+        self.assertTrue(tr['match'])
+        self.assertTrue('nextpos' in tr)
+        self.assertTrue(tr['nextpos'] == 6)
+        
 
 class RosieMatchFileTest(unittest.TestCase):
 

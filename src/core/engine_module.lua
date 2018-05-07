@@ -460,17 +460,23 @@ local function engine_process_file(e, expression, op, infilename, outfilename, e
    local _, m, leftover, trace_string
    local m, leftover
    while l do
-      if trace_flag then _, _, trace_string = e:trace(expression, l, 1, trace_style); end
-      m, leftover = matcher(l);		  -- What to do with leftover?  User might want to see it.
-      if trace_string then o_write(outfile, trace_string, "\n"); end
-      if m then
-	 o_write(outfile, m);
-	 outlines = outlines + 1
+      if trace_flag then
+	 _, errcode, trace_string = e:trace(expression, l, 1, trace_style)
+	 if trace_string then
+	    o_write(outfile, trace_string, "\n")
+	 else
+	    e_write('Error in trace: ', tostring(errcode), '\n')
+	 end
       else
-	 e_write(errfile, l, "\n")
-	 errlines = errlines + 1
+	 m, leftover = matcher(l);	  -- User might want to see leftover?
+	 if m then
+	    o_write(outfile, m);
+	    outlines = outlines + 1
+	 else
+	    e_write(errfile, l, "\n")
+	    errlines = errlines + 1
+	 end
       end
-      if trace_string then o_write(outfile, "\n"); end
       inlines = inlines + 1
       l = nextline(); 
    end -- while
