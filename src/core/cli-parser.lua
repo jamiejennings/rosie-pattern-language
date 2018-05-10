@@ -34,9 +34,30 @@ function p.create(rosie)
    for k,v in pairs(rosie.encoders) do
       if type(k)=="string" then table.insert(output_choices, k); end
    end
-   local output_choices_string = output_choices[1]
-   for i=2,#output_choices do
-      output_choices_string = output_choices_string .. ", " .. output_choices[i]
+   local output_choices_string = table.concat(output_choices, ", ")
+
+   local function validate_output_encoder_choice(a)
+      -- validation of argument, will fail if not in choices array
+      for j=1,#output_choices do
+	 if a == output_choices[j] then
+	    return a
+	 end
+      end
+      return nil
+   end
+
+   local trace_style_choices = {"json", "full", "condensed"}
+   local trace_style_choices_string = table.concat(trace_style_choices, ", ")
+
+   local function validate_trace_style_choice(a)
+      -- validation of argument, will fail if not in choices array
+      local output_choices = trace_style_choices
+      for j=1,#output_choices do
+	 if a == output_choices[j] then
+	    return a
+	 end
+      end
+      return nil
    end
 
    parser:option("--norcfile", "Skip initialization file")
@@ -59,19 +80,6 @@ function p.create(rosie)
    :target("colors")				    -- args.colors
    :default(false)
 
-   parser:option("-o --output", "Output style, one of: " .. output_choices_string)
-   :convert(function(a)
-	       -- validation of argument, will fail if not in choices array
-	       for j=1,#output_choices do
-		  if a == output_choices[j] then
-		     return a
-		  end
-	       end
-	       return nil
-	    end)
-   :args(1) -- consume argument after option
-   :target("encoder")
-   
    -- target variable for commands
    parser:command_target("command")
 
@@ -94,9 +102,17 @@ function p.create(rosie)
    -- grep command
    local cmd_grep = parser:command("grep")
    :description("In the style of Unix grep, match the pattern anywhere in each input line")
+   cmd_grep:option("-o --output", "Output style, one of: " .. output_choices_string)
+   :convert(validate_output_encoder_choice)
+   :args(1) -- consume argument after option
+   :target("encoder")
    -- match command
    local cmd_match = parser:command("match")
    :description("Match the given RPL pattern against the input")
+   cmd_match:option("-o --output", "Output style, one of: " .. output_choices_string)
+   :convert(validate_output_encoder_choice)
+   :args(1) -- consume argument after option
+   :target("encoder")
    -- repl command
    local cmd_repl = parser:command("repl")
    :description("Start the read-eval-print loop for interactive pattern development and debugging")
@@ -113,6 +129,11 @@ function p.create(rosie)
    -- trace command
    local cmd_trace = parser:command("trace")
    :description("Match while tracing all steps (generates MUCH output)")
+   cmd_trace:option("-o --output", "Output style, one of: " .. trace_style_choices_string)
+   :convert(validate_trace_style_choice)
+   :args(1) -- consume argument after option
+   :default("condensed")
+   :target("encoder")
 
    for _, cmd in ipairs{cmd_match, cmd_trace, cmd_grep} do
       -- match/trace/grep flags (true/false)

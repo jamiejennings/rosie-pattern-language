@@ -49,8 +49,9 @@ function run(import, expression, grep_flag, expectations)
    local import_option = ""
    if import then import_option = " --rpl '" .. import .. "' "; end
    local grep_extra_options = type(grep_flag)=="string" and (" " .. grep_flag .. " ") or ""
-   local cmd = rosie_cmd .. grep_extra_options .. import_option ..
-      (grep_flag and " grep" or " match") .. " '" .. expression .. "' " .. infilename
+   local cmd = rosie_cmd .. import_option ..
+      (grep_flag and " grep" or " match") .. grep_extra_options ..
+      " '" .. expression .. "' " .. infilename
    cmd = cmd .. " 2>&1"
    local results, status, code = util.os_execute_capture(cmd, nil, "l")
    if not results then
@@ -566,10 +567,22 @@ test.heading("Trace")
 cmd = 'echo "1.2.3.4" | ' .. rosie_cmd .. ' trace net.ipv4 2>&1'
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
-check(code == 0, "exit status differs from expected")
+if not check(code == 0, "exit status differs from expected") then
+   print("Command was:", cmd)
+end
 results_txt = table.concat(results, '\n')
 check_lua_error(results_txt)
 
 -- TODO: After adding trace styles to the CLI (via '-o'), add tests here.
+
+cmd = 'echo "1.2.3.4" | ' .. rosie_cmd .. ' trace -o json net.ipv4 2>&1'
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+if not check(code == 0, "exit status differs from expected") then
+   print("Command was:", cmd)
+end
+results_txt = table.concat(results, '\n')
+check_lua_error(results_txt)
+
 
 return test.finish()

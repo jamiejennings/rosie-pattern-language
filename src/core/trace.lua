@@ -12,6 +12,7 @@ local builtins = require "builtins"
 local common = require "common"
 local pattern = common.pattern
 local match = common.match
+local json = require "cjson"
 
 local trace = {}
 
@@ -529,7 +530,7 @@ function trace.expression(r, input, start, style)
    local retval
    if style == "json" then
       prep_for_export(tr)
-      retval = tr
+      retval = json.encode(tr)
    elseif style == "full" then
       retval = trace.tostring(tr)
    elseif style == "condensed" then

@@ -886,17 +886,7 @@ have_pattern:
     goto succeed; /* tracing failed, but rosie_trace completed without errors */
   } }
 
-  /* Last return value is either a table or a string, depending on encoder. */
-  if (lua_istable(L, -1)) {
-    t = to_json_string(L, -1, &rs);
-    if (t != LUA_OK) {
-      rs = rosie_new_string_from_const("error: could not convert trace data to json");      
-      (*trace).ptr = rs.ptr;
-      (*trace).len = rs.len;
-      goto fail;
-    }
-  }
-  else if (lua_isstring(L, -1)) {
+  if (lua_isstring(L, -1)) {
     byte_ptr temp_str;
     size_t temp_len;
     temp_str = (byte_ptr) lua_tolstring(L, -1, &(temp_len));
@@ -905,7 +895,6 @@ have_pattern:
   else {
     LOG("trace() failed with unexpected return value from engine.trace()\n");
     LOGstack(L);
-  fail:
     lua_settop(L, 0);
     RELEASE_ENGINE_LOCK(e);
     return ERR_ENGINE_CALL_FAILED;

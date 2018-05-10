@@ -61,12 +61,12 @@ function match.process_pattern_against_file(rosie, en, args, compiled_pattern, i
    
    -- Iterate through the lines in the input file
    local match_function = (args.command=="trace") and en.tracefile or en.matchfile
-   local trace_style = (args.verbose and "full" or "condensed")
+--   local trace_style = (args.verbose and "full" or "condensed")
 
    local ok, cin, cout, cerr =
       pcall(match_function, en, compiled_pattern,
 	    infilename, outfilename, errfilename,
-	    (args.command=="trace") and trace_style or encoder,
+	    encoder,
 	    args.wholefile)
 
    if not ok then write_error(cin, "\n"); return; end	-- cin is error message (a string) in this case
