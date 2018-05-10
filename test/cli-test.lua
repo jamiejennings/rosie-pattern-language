@@ -573,14 +573,37 @@ end
 results_txt = table.concat(results, '\n')
 check_lua_error(results_txt)
 
--- TODO: After adding trace styles to the CLI (via '-o'), add tests here.
-
 cmd = 'echo "1.2.3.4" | ' .. rosie_cmd .. ' trace -o json net.ipv4 2>&1'
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command should have produced output")
 if not check(code == 0, "exit status differs from expected") then
    print("Command was:", cmd)
 end
+results_txt = table.concat(results, '\n')
+check_lua_error(results_txt)
+
+cmd = 'echo "1.2.3.4" | ' .. rosie_cmd .. ' trace -o full net.ipv4 2>&1'
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+if not check(code == 0, "exit status differs from expected") then
+   print("Command was:", cmd)
+end
+results_txt = table.concat(results, '\n')
+check_lua_error(results_txt)
+
+cmd = 'echo "1.2.3.4" | ' .. rosie_cmd .. ' trace -o condensed net.ipv4 2>&1'
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+if not check(code == 0, "exit status differs from expected") then
+   print("Command was:", cmd)
+end
+results_txt = table.concat(results, '\n')
+check_lua_error(results_txt)
+
+cmd = 'echo "1.2.3.4" | ' .. rosie_cmd .. ' trace -o NOT_DEFINED net.ipv4 2>&1'
+results, status, code = util.os_execute_capture(cmd, nil)
+check(#results>0, "command should have produced output")
+check(code ~= 0, "exit status differs from expected")
 results_txt = table.concat(results, '\n')
 check_lua_error(results_txt)
 
