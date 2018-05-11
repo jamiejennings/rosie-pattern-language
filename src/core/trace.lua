@@ -518,6 +518,7 @@ local function prep_for_export(t)
    if t.subs then
       t.subs = list.map(prep_for_export, t.subs)
    end
+   return t
 end
 
 -- FUTURE: Make the trace styles more extensible by having a table of them, like we do for match
