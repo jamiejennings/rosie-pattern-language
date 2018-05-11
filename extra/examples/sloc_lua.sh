@@ -1,1 +1,1 @@
-rosie -o line match '!{{[ \t]* "--"}/{[ \t]*$}}' $@ | wc -l
+rosie match -o line '!{{[ \t]* "--"}/{[ \t]*$}}' $@ | wc -l
