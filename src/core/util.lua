@@ -273,6 +273,7 @@ end -- if false
 
 function util.os_execute_capture(command, mode, readmode)
    command = "/usr/bin/env "..command
+   mode = mode or "r"
    local pcall_success, handle, errmsg = pcall(io.popen, command, mode);
    if not pcall_success then
       error("Failed call to io.popen.  Is io.popen available on this platform?")
@@ -283,7 +284,7 @@ function util.os_execute_capture(command, mode, readmode)
    readmode = readmode or "a"
    local results = {}
    local str = handle:read(readmode)
-   while (str and (str~="")) do
+   while (str and (str:len() > 0)) do
       table.insert(results, str)
       str = handle:read(readmode)
    end

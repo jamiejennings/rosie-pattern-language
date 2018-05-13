@@ -139,6 +139,7 @@ local function query(db, key, query_type)
 end
 
 function co.query(pattern_type, colorstring)
+   assert(colorstring, 'color.query() called with nil colorstring argument')
    local db = db_from_colors(colorstring)
    if pattern_type=="*" then pattern_type = ""; end
    local c = query(db, pattern_type, "exact")
