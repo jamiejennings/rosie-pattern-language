@@ -271,9 +271,8 @@ end -- if false
 -- Misc
 ---------------------------------------------------------------------------------------------------
 
-function util.os_execute_capture(command, mode, readmode)
-   command = "/usr/bin/env "..command
-   mode = mode or "r"
+-- spawn() --> handle
+local function spawn(command, mode)
    local pcall_success, handle, errmsg = pcall(io.popen, command, mode);
    if not pcall_success then
       error("Failed call to io.popen.  Is io.popen available on this platform?")
@@ -281,24 +280,27 @@ function util.os_execute_capture(command, mode, readmode)
    if not handle then
       error("Failed attempt to execute '" .. command .. "': " .. errmsg) 
    end
-   readmode = readmode or "a"
+   return handle
+end
+
+-- drain() --> list of lines read, status, code
+function drain(handle)
+   local readmode = 'l'
    local results = {}
    local str = handle:read(readmode)
-   while (str and (str:len() > 0)) do
+   while str do
       table.insert(results, str)
       str = handle:read(readmode)
    end
-   local ok, status, code = handle:close()
+   local _, status, code = handle:close()
    -- Turns out that the first return value of handle:close() simply reflects whether the value of
-   -- the error code is 0 or not.  We will pass the code back to the caller and let the user
-   -- decide which codes indicate success.
-   --
-   -- if not ok then
-   --    error("Command '" .. command .. "' failed, returning:\n" ..
-   -- 	    table.tostring{results, status, code})
-   -- end
-   --
+   -- the error code is 0 or not.  So the error code has more information, and we will pass it
+   -- back to the caller.
    return results, status, code
+end
+
+function util.os_execute_capture(command, mode, readmode)
+   return drain(spawn(command, 'r'))
 end
    
 

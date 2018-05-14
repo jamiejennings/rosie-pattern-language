@@ -117,7 +117,7 @@ function ui.print_props(tbl, skip_header)
    local count, total = tbl[1], tbl[2]		    -- ugh.
    local fmt = "%-24s %-4s %-8s %-15s %s"
    if not skip_header then
-      print(' ')				    -- simplifies testing using util.os_execute_capture
+      print()
       print(string.format(fmt, "Name", "Cap?", "Type", "Color", "Source"))
       print("------------------------ ---- -------- --------------- -------------------------")
    end
@@ -135,7 +135,7 @@ function ui.print_props(tbl, skip_header)
       print(string.format(fmt, v, cap, tbl[v].type, color, source))
    end
    if not skip_header then
-      print(' ')				    -- simplifies testing using util.os_execute_capture
+      print()
       print(count .. "/" .. total .. " names shown")
    end
 end
