@@ -283,7 +283,7 @@ common.add_encoder("subs", common.BYTE_ENCODING,
 						      m.subs),
 					     "\n")
 		      else
-			 return nil
+			 return ""
 		      end
 		   end)
 common.add_encoder("jsonpp", common.BYTE_ENCODING,
