@@ -15,8 +15,8 @@
 from __future__ import unicode_literals, print_function
 
 import json
-import internal
-from adapt23 import *
+from . import internal
+from .adapt23 import *
 
 # -----------------------------------------------------------------------------
 # Rosie-specific
@@ -24,35 +24,56 @@ from adapt23 import *
 def librosie_path():
     return internal._librosie_path
 
-
-
 # -----------------------------------------------------------------------------
 # 
 
-class engine (internal.engine):
+class engine (object):
     '''
     A Rosie pattern matching engine is used to load/import RPL code
     (patterns) and to do matching.  Create as many engines as you need.
     '''
     def __init__(self):
-        if PYTHON_VERSION == 2:
-            super(engine, self).__init__()
-        else:
-            super().__init__()
-        return
+        self._engine = internal.engine()
     
     # -----------------------------------------------------------------------------
     # Compile an expression
     # -----------------------------------------------------------------------------
 
     def compile(self, exp):
-        if PYTHON_VERSION == 2:
-            pat, errs = super(engine, self).compile(bytes23(exp))
-        else:
-            pat, errs = super().compile(bytes23(exp))
+        pat, errs = self._engine.compile(bytes23(exp))
         if not pat:
-            raise RuntimeError('RPL compilation error:\n{}'.format(errs))
+            raise_compile_error(exp, errs)
         return rplx(pat)
+
+    # -----------------------------------------------------------------------------
+    # Functions for matching and tracing (debugging)
+    # -----------------------------------------------------------------------------
+
+    def match(self, pattern, input, **kwargs):
+        errs = None
+        if isinstance(pattern, str) or isinstance(pattern, bytes):
+            pattern = self.compile(pattern)
+        else:
+            raise TypeError('pattern not a string or bytes: ' + repr(pattern))
+        return pattern.match(input, **kwargs)
+
+#     def trace(self, pat, input, start, style):
+#         if pat.id[0] == 0:
+#             raise ValueError("invalid compiled pattern")
+#         Cmatched = ffi.new("int *")
+#         Cinput = _new_cstr(input)
+#         Ctrace = _new_cstr()
+#         ok = _lib.rosie_trace(self.engine, pat.id[0], start, style, Cinput, Cmatched, Ctrace)
+#         if ok != 0:
+#             raise RuntimeError("trace() failed (please report this as a bug): " + str(_read_cstr(Ctrace)))
+#         if Ctrace.ptr == ffi.NULL:
+#             if Ctrace.len == 2:
+#                 raise ValueError("invalid trace style")
+#             elif Ctrace.len == 1:
+#                 raise ValueError("invalid compiled pattern")
+#         matched = False if Cmatched[0]==0 else True
+#         trace = _read_cstr(Ctrace)
+#         return matched, trace
 
     # -----------------------------------------------------------------------------
     # Functions for loading statements/blocks/packages into an engine
@@ -97,52 +118,6 @@ class engine (internal.engine):
 #         actual_pkgname = _read_cstr(Cactual_pkgname) #if Cactual_pkgname.ptr != ffi.NULL else None
 #         errs = _read_cstr(Cerrs)
 #         return Csuccess[0], actual_pkgname, errs
-
-#     # -----------------------------------------------------------------------------
-#     # Functions for matching and tracing (debugging)
-#     # -----------------------------------------------------------------------------
-
-#     def match(self, pat, input, start, encoder):
-#         if (pat is None) or (pat.id[0] == 0):
-#             raise ValueError("invalid compiled pattern")
-#         Cmatch = ffi.new("struct rosie_matchresult *")
-#         Cinput = _new_cstr(input)
-#         ok = _lib.rosie_match(self.engine, pat.id[0], start, encoder, Cinput, Cmatch)
-#         if ok != 0:
-#             raise RuntimeError("match() failed (please report this as a bug)")
-#         left = Cmatch.leftover
-#         abend = Cmatch.abend
-#         ttotal = Cmatch.ttotal
-#         tmatch = Cmatch.tmatch
-#         if Cmatch.data.ptr == ffi.NULL:
-#             if Cmatch.data.len == 0:
-#                 return False, left, abend, ttotal, tmatch
-#             elif Cmatch.data.len == 1:
-#                 return True, left, abend, ttotal, tmatch
-#             elif Cmatch.data.len == 2:
-#                 raise ValueError("invalid output encoder")
-#             elif Cmatch.data.len == 4:
-#                 raise ValueError("invalid compiled pattern")
-#         data = _read_cstr(Cmatch.data)
-#         return data, left, abend, ttotal, tmatch
-
-#     def trace(self, pat, input, start, style):
-#         if pat.id[0] == 0:
-#             raise ValueError("invalid compiled pattern")
-#         Cmatched = ffi.new("int *")
-#         Cinput = _new_cstr(input)
-#         Ctrace = _new_cstr()
-#         ok = _lib.rosie_trace(self.engine, pat.id[0], start, style, Cinput, Cmatched, Ctrace)
-#         if ok != 0:
-#             raise RuntimeError("trace() failed (please report this as a bug): " + str(_read_cstr(Ctrace)))
-#         if Ctrace.ptr == ffi.NULL:
-#             if Ctrace.len == 2:
-#                 raise ValueError("invalid trace style")
-#             elif Ctrace.len == 1:
-#                 raise ValueError("invalid compiled pattern")
-#         matched = False if Cmatched[0]==0 else True
-#         trace = _read_cstr(Ctrace)
-#         return matched, trace
 
 #     def matchfile(self, pat, encoder,
 #                   infile=None,  # stdin
@@ -328,6 +303,9 @@ class engine (internal.engine):
 
 # -----------------------------------------------------------------------------
 
+def raise_compile_error(expression, errs):
+    raise RuntimeError('RPL compilation error:\n{}'.format(errs))
+
 class rplx(object):    
     def __init__(self, internal_rplx):
         self._internal_rplx = internal_rplx
@@ -345,7 +323,3 @@ class rplx(object):
         return {'match': match_value, 'leftover': l, 'abend': (a == 1)}
     
 # -----------------------------------------------------------------------------
-
-
-
-

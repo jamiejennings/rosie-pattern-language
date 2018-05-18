@@ -7,6 +7,6 @@
 #  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)
 #  AUTHOR: Jamie A. Jennings
 
-import internal
+from . import internal
+from .internal import load
 from .rosie import *
-from internal import load
