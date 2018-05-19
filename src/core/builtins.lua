@@ -163,24 +163,34 @@ local function to_ci_list_charset(exp)
 		      sourceref=exp.sourceref}
 end
 
+local function to_range_or_char(r, exp)
+   if r[1] == r[2] then
+      -- list of one char (could use a literal instead)
+      return ast.cs_list.new{ complement = false,
+			      chars = { r[1] },
+			      sourceref = exp.sourceref }
+   end
+   return ast.cs_range.new{ complement = false,
+			    first = r[1],
+			    last = r[2],
+			    sourceref = exp.sourceref }
+end
+
 -- to_case_insensitive: character ranges
 local function to_ci_range_charset(exp)
-
-   print('*** in to_ci_range_charset, comp is', exp.complement)
-   print('*** and first is', exp.first)
-   print('*** and last is', exp.last)
-
-   local case_ranges, alternate_case_ranges = ustring.cased_subranges(exp.first, exp.last)
-   table.print(case_ranges)
-   table.print(alternate_case_ranges)
-   
-   return exp
---    local disjunctions = list.new()
---    for _, char in ipairs(exp.chars) do
---       table.insert(disjunctions, generate_ci_expression_for_char(char, exp.sourceref))
---    end -- for each char in the input literal
---    return ast.raw.new{exp=ast.choice.new{exps=disjunctions, sourceref=exp.sourceref},
--- 		      sourceref=exp.sourceref}
+   local _, alternate_case_ranges = ustring.cased_subranges(exp.first, exp.last)
+   local ci_ranges = list.map(function(r) return to_range_or_char(r, exp) end,
+			      alternate_case_ranges)   
+   local exps = { ast.cs_range.new{ complement = false,
+				    first = exp.first,
+				    last = exp.last,
+				    sourceref = exp.sourceref } }
+   for _, exp in ipairs(ci_ranges) do
+      table.insert(exps, exp)
+   end
+   return ast.bracket.new{ complement = exp.complement,
+			   cexp = ast.choice.new{ exps = exps, sourceref = exp.sourceref },
+			   sourceref = exp.sourceref }
 end
 
 -- The ci macro is UTF8-aware but only converts the case of ASCII letter characters.

@@ -307,7 +307,7 @@ local function intersect_intervals(interval1, interval2)
 end
 
 -- Calculate the subranges between low/high (inclusive) of codepoints that are
--- cased letters, and return the other-case versions of those ranges.
+-- cased letters, and return the other-case versions of those ranges.  ASCII only.
 function ustring.cased_subranges(first, last)
    local low_codepoint = utf8.codepoint(first)
    local high_codepoint = utf8.codepoint(last)
