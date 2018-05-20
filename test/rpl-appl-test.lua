@@ -570,10 +570,10 @@ subheading("ci named character sets (shallow test)")
 
 function check_match(exp, input)
    p, errs = e:compile(exp)
-   check(p)
+   check(p, "compilation failed", 1)
    if p then
       ok, m, leftover = e:match(p, input)
-      check(ok and m and (leftover==0), 1)
+      check(ok and m and (leftover==0), "match failed", 1)
    else
       print("compile failed: ")
       table.print(errs, false)
@@ -629,6 +629,34 @@ ok, m, leftover = e:match(p, 'abcd')
 check(ok)
 check(m)
 check(leftover == 1)
+
+check_match('ci:[[CD] [Z-a]]+', 'DCcdzZAa')
+p = e:compile('ci:[[CD] [Z-a]]+'); check(p)
+ok, m, leftover = e:match(p, 'b')
+check(ok); check(not m)
+
+check_match('[[CD] ci:[Z-a]]+', 'DCzA')
+p = e:compile('[[CD] ci:[Z-a]]+'); check(p)
+ok, m, leftover = e:match(p, 'c')
+check(ok); check(not m)
+
+
+-- Testing the shallowness, i.e. the macro does not affect identifiers
+
+ok = e:load('foobar = "foobar"'); check(ok)
+p = e:compile('ci:foobar'); check(p)
+ok, m, leftover = e:match(p, 'foobar')
+check(ok); check(m); check(leftover == 0)
+ok, m, leftover = e:match(p, 'Foobar')
+check(ok); check(not m)
+
+p = e:compile('ci:(foobar "Hi")'); check(p)
+ok, m, leftover = e:match(p, 'foobar HI')
+check(ok); check(m); check(leftover == 0)
+ok, m, leftover = e:match(p, 'foobar hi')
+check(ok); check(m); check(leftover == 0)
+ok, m, leftover = e:match(p, 'Foobar Hi')
+check(ok); check(not m)
 
 
 --[[
