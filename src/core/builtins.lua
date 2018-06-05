@@ -106,23 +106,103 @@ local function macro_findall(...)
    return ast.repetition.new{min=1, exp=find, cooked=false, sourceref=exp.sourceref}
 end
 
--- TODO: rewrite this with utf8 support (without relying on every literal being valid utf8)
+-- The argument, char, MUST be a string containing one UTF-8 encoded character
+-- or a single byte (which will be in 0x80-0xFF).
+local function generate_ci_expression_for_char(char, sref)
+   local char_literal = ast.literal.new{value=char, sourceref=sref}
+   local other_case = ustring.upper(char) or ustring.lower(char)
+   if other_case then
+      local upper_lower_choices =
+	 { char_literal,
+	   ast.literal.new{value=other_case, sourceref=sref} }
+      return ast.choice.new{exps=upper_lower_choices, sourceref=sref}
+   end
+   -- there is no other case for this char
+   return char_literal
+end
+
+-- to_case_insensitive: literals
+local function to_ci_literal(exp)
+   local input = ustring.explode(exp.value)
+   local disjunctions = list.new()
+   for _, char in ipairs(input) do
+      table.insert(disjunctions, generate_ci_expression_for_char(char, exp.sourceref))
+   end -- for each char in the input literal
+   return ast.raw.new{exp=ast.sequence.new{exps=disjunctions, sourceref=exp.sourceref},
+		      sourceref=exp.sourceref}
+end
+
+-- to_case_insensitive: named charsets
+local function to_ci_named_charset(exp)
+   local other_case
+   if exp.name == 'upper' then
+      other_case = 'lower'
+   elseif exp.name == 'lower' then
+      other_case = 'upper'
+   end
+   if other_case then
+      local upper_and_lower =
+	 {exp, 
+	  ast.cs_named.new{complement = exp.complement,
+			   name = other_case,
+			   sourceref = exp.sourceref}}
+      return ast.choice.new{exps = upper_and_lower, sourceref = exp.sourceref}
+   end
+   -- else we have a named set that has no other case
+   return exp
+end
+
+-- to_case_insensitive: character lists
+-- FUTURE: flatten the choices?
+local function to_ci_list_charset(exp)
+   local disjunctions = list.new()
+   for _, char in ipairs(exp.chars) do
+      table.insert(disjunctions, generate_ci_expression_for_char(char, exp.sourceref))
+   end -- for each char in the input literal
+   return ast.raw.new{exp=ast.choice.new{exps=disjunctions, sourceref=exp.sourceref},
+		      sourceref=exp.sourceref}
+end
+
+local function to_range_or_char(r, exp)
+   if r[1] == r[2] then
+      -- list of one char (could use a literal instead)
+      return ast.cs_list.new{ complement = false,
+			      chars = { r[1] },
+			      sourceref = exp.sourceref }
+   end
+   return ast.cs_range.new{ complement = false,
+			    first = r[1],
+			    last = r[2],
+			    sourceref = exp.sourceref }
+end
+
+-- to_case_insensitive: character ranges
+local function to_ci_range_charset(exp)
+   local _, alternate_case_ranges = ustring.cased_subranges(exp.first, exp.last)
+   local ci_ranges = list.map(function(r) return to_range_or_char(r, exp) end,
+			      alternate_case_ranges)   
+   local exps = { ast.cs_range.new{ complement = false,
+				    first = exp.first,
+				    last = exp.last,
+				    sourceref = exp.sourceref } }
+   for _, exp in ipairs(ci_ranges) do
+      table.insert(exps, exp)
+   end
+   return ast.bracket.new{ complement = exp.complement,
+			   cexp = ast.choice.new{ exps = exps, sourceref = exp.sourceref },
+			   sourceref = exp.sourceref }
+end
+
+-- The ci macro is UTF8-aware but only converts the case of ASCII letter characters.
 local function macro_case_insensitive(...)
    local args = {...}
    if #args~=1 then error("ci takes one argument, " .. tostring(#args) .. " given"); end
    local exp = args[1]
-   local function xform_literal(exp)
-      local lc, uc = string.lower(exp.value), string.upper(exp.value)
-      local chars = list.new()
-      for i = 1, #exp.value do
-	 local upper_lower_choices =
-	    { ast.literal.new{value=uc:sub(i,i), sourceref=exp.sourceref},
-	      ast.literal.new{value=lc:sub(i,i), sourceref=exp.sourceref} }
-	 table.insert(chars, ast.choice.new{exps=upper_lower_choices, sourceref=exp.sourceref})
-      end
-      return ast.raw.new{exp=ast.sequence.new{exps=chars, sourceref=exp.sourceref}, sourceref=exp.sourceref}
-   end
-   return ast.visit_expressions(exp, ast.literal.is, xform_literal)
+   local retval = ast.visit_expressions(exp, ast.literal.is, to_ci_literal)
+   retval = ast.visit_expressions(retval, ast.cs_named.is, to_ci_named_charset)
+   retval = ast.visit_expressions(retval, ast.cs_list.is, to_ci_list_charset)
+   retval = ast.visit_expressions(retval, ast.cs_range.is, to_ci_range_charset)
+   return retval
 end
 
 -- Using dash as the separator:

@@ -399,6 +399,10 @@ function apply_macros(ex, env, messages)
       return ast.grammar.new{private_rules=new_private_rules,
 			     public_rules=new_public_rules,
 			     sourceref=ex.sourceref}
+   elseif ast.bracket.is(ex) then
+      return ast.bracket.new{complement=ex.complement,
+			     cexp=apply_macros(ex.cexp, env, messages),
+			     sourceref=ex.sourceref}
    else
       -- finally, return expressions that do not have sub-expressions to process
       return ex

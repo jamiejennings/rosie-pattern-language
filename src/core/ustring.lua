@@ -11,6 +11,7 @@
 
 local ustring = {}
 local utf8 = require "utf8"
+local list = require "list"
 
 local ESC = "\\"				    -- a single backslash
 
@@ -268,6 +269,61 @@ end
 
 function ustring.requote(str)
    return '"' .. ustring.escape_string(str) .. '"'
+end
+
+-- -----------------------------------------------------------------------------
+-- Case transformation (for now, this is ASCII only)
+-- -----------------------------------------------------------------------------
+
+-- Arg is a lua string.  Only the first char in the string is examined, and it
+-- is expected to be either a valid UTF-8 encoding of a Unicode character, or a
+-- single byte (which by definition will be in the range 0x80-0xFF).
+
+function ustring.upper(char)
+   local ok, cp = pcall(utf8.codepoint, char)
+   if ok and (cp >= 97) and (cp <= 122) then
+      return string.char(cp - 32)
+   end
+   return nil
+end
+   
+function ustring.lower(char)
+   local ok, cp = pcall(utf8.codepoint, char)
+   if ok and (cp >= 65) and (cp <= 90) then
+      return string.char(cp + 32)
+   end
+   return nil
+end
+      
+local function intersect_intervals(interval1, interval2)
+   local s1, e1 = interval1[1], interval1[2]
+   local s2, e2 = interval2[1], interval2[2]
+   local low = math.max(s1, s2)
+   local high = math.min(e1, e2)
+   if low <= high then
+      return { low, high }
+   end
+   return nil
+end
+
+-- Calculate the subranges between low/high (inclusive) of codepoints that are
+-- cased letters, and return the other-case versions of those ranges.  ASCII only.
+function ustring.cased_subranges(first, last)
+   local low_codepoint = utf8.codepoint(first)
+   local high_codepoint = utf8.codepoint(last)
+   assert(low_codepoint <= high_codepoint)
+   local ASCII_uppercase = {65, 90}
+   local ASCII_lowercase = {97, 122}
+   local range1_cp = intersect_intervals({low_codepoint, high_codepoint}, ASCII_uppercase)
+   local range2_cp = intersect_intervals({low_codepoint, high_codepoint}, ASCII_lowercase)
+   local cased_subranges_cp = list.filter(function(a) return a; end, list.from{range1_cp, range2_cp})
+   local cased_subranges = list.map(function(r) return list.map(utf8.char, r) end, cased_subranges_cp)
+   local other_cased_subranges =
+      list.map(function(r) return { ustring.upper(utf8.char(r[1])) or ustring.lower(utf8.char(r[1])),
+				    ustring.upper(utf8.char(r[2])) or ustring.lower(utf8.char(r[2])) }
+	       end,
+	       cased_subranges_cp)
+   return cased_subranges, other_cased_subranges
 end
 
 
