@@ -44,6 +44,7 @@ function run(cmd, expectations)
 	 if (results[i]:sub(1,6) == "Rosie>") or (results[i]:sub(1,7)=="Exiting") then
 	    offset = offset - 1
 	 else
+	    if not expectations[i+offset] then expectations[i+offset] = ""; end
 	    if results[i]~=expectations[i+offset] then
 	       print(string.format("Mismatch:\n  Expected %q\n  Received %q",
 				   tostring(expectations[i+offset]),
@@ -123,6 +124,12 @@ output = run('all.things')
 check(output)
 check(output:find("grammar"))
 check(output:find("in\nalias find"))
+
+output = run('.list')
+check(output)
+check(output:find("keepto"))
+check(output:find("builtin/prelude"))
+
 
 
 return test.finish()

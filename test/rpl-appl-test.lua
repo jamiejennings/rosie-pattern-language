@@ -516,7 +516,7 @@ check(leftover==7)
 
 ----------------------------------------------------------------------------------------
 heading("Case sensitivity")
-subheading("ci (shallow test)")
+subheading("ci literals (shallow test)")
 
 p, errs = e:compile('ci:"ibm"')
 check(p)
@@ -564,6 +564,100 @@ test_foobar()
 ok = e:load('grammar foobar = ci:{"foo" / "bar"} end')
 assert(ok)
 test_foobar()
+
+
+subheading("ci named character sets (shallow test)")
+
+function check_match(exp, input)
+   p, errs = e:compile(exp)
+   check(p, "compilation failed", 1)
+   if p then
+      ok, m, leftover = e:match(p, input)
+      check(ok and m and (leftover==0), "match failed", 1)
+   else
+      print("compile failed: ")
+      table.print(errs, false)
+   end
+end
+
+check_match('ci:[:upper:]+', 'ABCDEF')
+check_match('ci:[:upper:]+', 'abcdef')
+check_match('ci:[:upper:]+', 'ABcdeF')
+check_match('ci:[:lower:]+', 'ABCDEF')
+check_match('ci:[:lower:]+', 'abcdef')
+check_match('ci:[:lower:]+', 'ABcdeF')
+check_match('ci:[:alpha:]+', 'ABCDEF')
+check_match('ci:[:alpha:]+', 'abcdef')
+check_match('ci:[:alpha:]+', 'ABcdeF')
+check_match('ci:[:punct:]+', '-!@#$|()')
+
+
+subheading("ci list character sets (shallow test)")
+
+check_match('ci:[A]{2}', 'Aa')
+check_match('ci:[a]{2}', 'Aa')
+check_match('ci:[ABc]+', 'aAbBcC')
+check_match('ci:[+/x]+', 'XXxX++/')
+
+
+subheading("ci range character sets (shallow test)")
+
+check_match('ci:[A-C]+', 'AaCc')
+check_match('ci:[x-z]{6}', 'XYZyzx')
+check_match('ci:[C-a]+', 'aAcC')
+check_match('ci:[C-a]+', 'CDEcdexyzAa')
+
+p = e:compile('ci:[C-a]+'); check(p)
+ok, m, leftover = e:match(p, 'Ab')
+check(ok)
+check(m)
+check(leftover == 1)
+ok, m, leftover = e:match(p, 'B')
+check(ok)
+check(not m)
+
+check_match('ci:[+-|]+', 'ABCabc+/xyzXYZ{') --}
+check_match('ci:[+-C]+', '+/ABCabc')
+check_match('ci:[x-|]+', 'XYZxyz{|') --}
+
+p = e:compile('ci:[+-C]+'); check(p)
+ok, m, leftover = e:match(p, 'abcD')
+check(ok)
+check(m)
+check(leftover == 1)
+ok, m, leftover = e:match(p, 'abcd')
+check(ok)
+check(m)
+check(leftover == 1)
+
+check_match('ci:[[CD] [Z-a]]+', 'DCcdzZAa')
+p = e:compile('ci:[[CD] [Z-a]]+'); check(p)
+ok, m, leftover = e:match(p, 'b')
+check(ok); check(not m)
+
+check_match('[[CD] ci:[Z-a]]+', 'DCzA')
+p = e:compile('[[CD] ci:[Z-a]]+'); check(p)
+ok, m, leftover = e:match(p, 'c')
+check(ok); check(not m)
+
+
+-- Testing the shallowness, i.e. the macro does not affect identifiers
+
+ok = e:load('foobar = "foobar"'); check(ok)
+p = e:compile('ci:foobar'); check(p)
+ok, m, leftover = e:match(p, 'foobar')
+check(ok); check(m); check(leftover == 0)
+ok, m, leftover = e:match(p, 'Foobar')
+check(ok); check(not m)
+
+p = e:compile('ci:(foobar "Hi")'); check(p)
+ok, m, leftover = e:match(p, 'foobar HI')
+check(ok); check(m); check(leftover == 0)
+ok, m, leftover = e:match(p, 'foobar hi')
+check(ok); check(m); check(leftover == 0)
+ok, m, leftover = e:match(p, 'Foobar Hi')
+check(ok); check(not m)
+
 
 --[[
 subheading("ci (deep test)")

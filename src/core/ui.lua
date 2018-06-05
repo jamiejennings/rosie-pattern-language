@@ -117,7 +117,7 @@ function ui.print_props(tbl, skip_header)
    local count, total = tbl[1], tbl[2]		    -- ugh.
    local fmt = "%-24s %-4s %-8s %-15s %s"
    if not skip_header then
-      print();
+      print()
       print(string.format(fmt, "Name", "Cap?", "Type", "Color", "Source"))
       print("------------------------ ---- -------- --------------- -------------------------")
    end
@@ -131,7 +131,6 @@ function ui.print_props(tbl, skip_header)
    for _,v in ipairs(names) do
       local color = tbl[v].color
       local cap = (tbl[v].capture and "Yes" or "")
---      local source = shorten(tbl[v].source or "", 36)
       local source = tbl[v].source or ""
       print(string.format(fmt, v, cap, tbl[v].type, color, source))
    end

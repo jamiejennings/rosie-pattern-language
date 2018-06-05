@@ -153,7 +153,7 @@ function repl.repl(en)
 	       if csubs and csubs[1] then
 	          filter = csubs[1].data
 	       end
-	       local tbl, msg = ui.to_property_table(en.env, filter)
+	       local tbl, msg = ui.to_property_table(en.env, filter, en:get_encoder_parms()['colors'])
 	       if tbl then ui.print_props(tbl)
 	       else io.write(msg, "\n")
 	       end

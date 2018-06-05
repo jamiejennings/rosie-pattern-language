@@ -213,6 +213,8 @@ function ast.visit_expressions(ex, predicate, fn)
    elseif ast.choice.is(ex) or ast.sequence.is(ex) then
       ex.exps = map(function(ex) return ast.visit_expressions(ex, predicate, fn); end, ex.exps)
       assert(#ex.exps > 0)
+   elseif ast.bracket.is(ex) then
+      ex.cexp = ast.visit_expressions(ex.cexp, predicate, fn)
    elseif ast.grammar.is(ex) then
       foreach(function(rule)
 		 rule.exp = ast.visit_expressions(rule.exp, predicate, fn)

@@ -247,14 +247,13 @@ local function split(s, sep)
    local p = lpeg.Ct(elem * (sep * elem)^0)
    return lpeg.match(p, s)
 end
-lines = split(results[1], "\n")
-if lines[1]=="Loading rosie from source" then
-   table.remove(lines, 1)
+if results[1]:find("Loading rosie from source") then
+   table.remove(results, 1)
 end
-check(lines[1]:find("lightweight-test-fail.rpl", 1, true))
-check(lines[2]:find("FAIL"))
-check(lines[3]:find("FAIL"))
-check(lines[4]:find("2 tests failed out of"))
+check(results[1]:find("lightweight-test-fail.rpl", 1, true))
+check(results[2]:find("FAIL"))
+check(results[3]:find("FAIL"))
+check(results[4]:find("2 tests failed out of"))
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Config command")
@@ -267,10 +266,11 @@ if (#results <=0) or (code ~= 0) then
    print(cmd)
 end
 
+txt = table.concat(results, '\n')
 -- check for a few of the items displayed by the info command
-check(results[1]:find("ROSIE_HOME"))      
-check(results[1]:find("ROSIE_VERSION"))      
-check(results[1]:find("ROSIE_COMMAND"))      
+check(txt:find("ROSIE_HOME"))      
+check(txt:find("ROSIE_VERSION"))      
+check(txt:find("ROSIE_COMMAND"))      
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Help command")
@@ -279,9 +279,10 @@ cmd = rosie_cmd .. " help 2>&1"
 results, status, code = util.os_execute_capture(cmd, nil)
 check(#results>0, "command failed")
 check(code==0, "Return code is not zero")
-check(results[1]:find("Usage:"))
-check(results[1]:find("Options:"))
-check(results[1]:find("Commands:"))
+txt = table.concat(results, '\n')
+check(txt:find("Usage:"))
+check(txt:find("Options:"))
+check(txt:find("Commands:"))
 if (#results <=0) or (code ~= 0) then
    print(cmd)
 end
@@ -296,7 +297,7 @@ check(code ~= 0, "return code should not be zero")
 if (#results <=0) or (code == 0) then
    print(cmd)
 end
-msg = results[1]
+msg = table.concat(results)
 check(msg:find('loader'))
 check(msg:find('cannot open file'))
 check(msg:find("in test/nested-test.rpl:2:1:", 1, true))
@@ -309,7 +310,7 @@ if (#results <=0) or (code == 0) then
    print(cmd)
 end
 
-msg = results[1]
+msg = table.concat(results)
 check(msg:find("Syntax error"))
 check(msg:find("parser"))
 check(msg:find("test/mod4.rpl:2:9:", 1, true))
@@ -322,7 +323,7 @@ check(code ~= 0, "return code should not be zero")
 if (#results <=0) or (code == 0) then
    print(cmd)
 end
-msg = results[1]
+msg = table.concat(results)
 check(msg:find("error"))
 check(msg:find("compiler"))
 check(msg:find("unbound identifier"))
@@ -335,7 +336,7 @@ check(code ~= 0, "return code should not be zero")
 if (#results <=0) or (code == 0) then
    print(cmd)
 end
-msg = results[1]
+msg = table.concat(results)
 check(msg:find("error"))
 check(msg:find("parser"))
 check(msg:find("in test/mod4.rpl:2:9"))
@@ -349,7 +350,7 @@ if (#results <=0) or (code == 0) then
    print(cmd)
 end
 
-msg = results[1]
+msg = table.concat(results)
 check(msg:find("error"))
 check(msg:find("loader"))
 check(msg:find("not a module"))
@@ -364,10 +365,7 @@ if (#results <=0) or (code ~= 0) then
    print(cmd)
 end
 
-msg = results[1]
-nextline = util.string_nextline(msg)
-line = nextline()
-while line do
+for _, line in ipairs(results) do
    if line:sub(1,4)=="path" then
       check(line:find("green"))
       done1 = true
@@ -378,7 +376,6 @@ while line do
       check(line:find("red;underline"))
       done3 = true
    end
-   line = nextline()
 end -- while
 check(done1 and done2 and done3)
 
@@ -478,20 +475,19 @@ function colortest(colors, expected_results)
    check(code == 0, "return should have been zero", 1)
    results_txt = table.concat(results, '\n')
    check_lua_error(results_txt)
-   check(results_txt:find(expected_results, 1, true), "results did not match expectations", 1)
+   check(results_txt:find(expected_results, 1, true),
+         "results did not match expectations", 1)
    return results_txt
 end
 
 colortest("foo=cyan", [==[[36mnameserver[0m [m192.9.201.1[0m
 [36mnameserver[0m [m192.9.201.2[0m
-[36mnameserver[0m [mfde9:4789:96dd:03bd::1[0m
-]==])
+[36mnameserver[0m [mfde9:4789:96dd:03bd::1[0m]==])
 
 colortest("foo=cyan:*=green", [==[
 [36mnameserver[0m [32m192.9.201.1[0m
 [36mnameserver[0m [32m192.9.201.2[0m
-[36mnameserver[0m [32mfde9:4789:96dd:03bd::1[0m
-]==])
+[36mnameserver[0m [32mfde9:4789:96dd:03bd::1[0m]==])
 
 colortest("foo=cyan:*=ZZZ", "Warning: ignoring invalid color/attribute: ZZZ")
 
@@ -520,8 +516,8 @@ libpath_test("x", 252, {"cannot open file x/mod1.rpl"})
 libpath_test("x:y:::", 252, {"cannot open file x/mod1.rpl",
 			     "cannot open file y/mod1.rpl",
 			     "cannot open file /mod1.rpl"})
-libpath_test("x:test", 0, {"\n"})
-libpath_test("test", 0, {"\n"})
+libpath_test("x:test", 0, {""})
+libpath_test("test", 0, {""})
 
 ---------------------------------------------------------------------------------------------------
 test.heading("Rcfile")

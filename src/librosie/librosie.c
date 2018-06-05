@@ -2,7 +2,7 @@
 /*                                                                           */
 /* librosie.c    Expose the Rosie API                                        */
 /*                                                                           */
-/*  © Copyright IBM Corporation 2016, 2017                                   */
+/*  © Copyright IBM Corporation 2016, 2017, 2018                             */
 /*  LICENSE: MIT License (https://opensource.org/licenses/mit-license.html)  */
 /*  AUTHOR: Jamie A. Jennings                                                */
 
@@ -139,7 +139,7 @@ static void set_bootscript() {
    * should be relative to where librosie was found.
    */
   last = rosie_home;
-  remaining = MAXPATHLEN;
+  remaining = MAXPATHLEN - 1;
   if (strncmp(compile_time_path, "//", (size_t) 2) == 0) {
     if (dladdr(&set_bootscript, &info) != 0) {
       maybe_install_dir = dirname(strndup(info.dli_fname, MAXPATHLEN));
@@ -151,7 +151,7 @@ static void set_bootscript() {
       /* install_dir is where librosie.so is installed. */
       last = stpncpy(rosie_home, install_dir, remaining);
       *last = '\0';
-      remaining = MAXPATHLEN - strnlen(rosie_home, MAXPATHLEN);
+      remaining = MAXPATHLEN - strnlen(rosie_home, MAXPATHLEN) - 1;
       compile_time_path++;		/* skip the first slash */
     }
   }

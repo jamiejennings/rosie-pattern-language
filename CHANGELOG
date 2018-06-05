@@ -1,26 +1,42 @@
+2018-06-05  Jamie Jennings  <jjennings@us.ibm.com>
+
+	* 1.0.0-beta-11:
+
+	FIXED: Bug in repl introduced in beta-10, when a change in color string
+	handling revealed a testing flaw whose root cause was a bug in
+	util.lua's os_execute_capture() function.
+
+	CHANGED: The 'subs' output encoder now returns an empty string when
+	there is a match but it has no submatches.  (It previously returned nil,
+	which caused a problem in librosie.c)
+
+	ENHANCED: The 'ci' macro now operates on character sets in addition to
+	literals.  It is still shallow, in the sense that it cannot change a
+	pattern bound to an identifier.  E.g. 'ci:foo' is the same as 'foo'.
+
 2018-05-11  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-10:
 
-	* FIXED: Bug in num.rpl introduced in beta-9.  Related: For better
+	FIXED: Bug in num.rpl introduced in beta-9.  Related: For better
 	separation of responsibilities, the all.rpl package now tries harder to
 	distinguish between things that look alike, e.g. "1.2" is a float, not a
 	partially qualified domain.  And 'all.things' will parse "F0" as an
 	indentifier, not a hex number, even though it could be either.
 
-	* FIXED: Issue #79.  The incorrect error message has been changed to the
+	FIXED: Issue #79.  The incorrect error message has been changed to the
 	correct one.
 
-	* ENHANCED: The default color assignments for the 'color' output encoder
+	ENHANCED: The default color assignments for the 'color' output encoder
 	is now visible via the 'rosie config' command and the 'config() API'.
 	This makes it easier to see and modify it, and is a step in the
 	direction of supporting an /etc/rosierc file in the future.
 
-	* ENHANCED: Three trace styles ("json", "full", "condensed") are now
+	ENHANCED: Three trace styles ("json", "full", "condensed") are now
 	supported in the API and CLI.  In the CLI, the '-o' option to the trace
 	command selects the trace style, which defaults to "condensed".
 
-	* CHANGED: The CLI will now accept the '-o' option only AFTER the
+	CHANGED: The CLI will now accept the '-o' option only AFTER the
 	commands match, grep, and trace.  Previously, '-o' could be put earlier
 	on the command line.
 
