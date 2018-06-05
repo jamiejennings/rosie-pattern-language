@@ -9,8 +9,8 @@ RUN pacman -S --noconfirm readline
 RUN pacman -S --noconfirm git
 RUN pacman -S --noconfirm python2
 RUN pacman -S --noconfirm python2-pip
-RUN ln -s /usr/sbin/python2.7 /usr/sbin/python
-RUN ln -s /usr/sbin/pip2.7 /usr/sbin/pip
+RUN ln -sf /usr/sbin/python2.7 /usr/sbin/python
+RUN ln -sf /usr/sbin/pip2.7 /usr/sbin/pip
 RUN pip install --upgrade pip
 RUN pip install cffi
 
