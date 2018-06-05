@@ -6,6 +6,14 @@
 	handling revealed a testing flaw whose root cause was a bug in
 	util.lua's os_execute_capture() function.
 
+	CHANGED: The 'subs' output encoder now returns an empty string when
+	there is a match but it has no submatches.  (It previously returned nil,
+	which caused a problem in librosie.c)
+
+	ENHANCED: The 'ci' macro now operates on character sets in addition to
+	literals.  It is still shallow, in the sense that it cannot change a
+	pattern bound to an identifier.  E.g. 'ci:foo' is the same as 'foo'.
+
 2018-05-11  Jamie Jennings  <jjennings@us.ibm.com>
 
 	* 1.0.0-beta-10:
