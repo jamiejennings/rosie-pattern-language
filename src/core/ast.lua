@@ -872,6 +872,8 @@ function ast.dependencies_of(a)
       end
    elseif ast.sequence.is(a) or ast.choice.is(a) or ast.and_exp.is(a) then
       return apply(append, map(ast.dependencies_of, a.exps))
+   elseif ast.bracket.is(a) then
+      return ast.dependencies_of(a.cexp)
    elseif ast.application.is(a) then
       return apply(append, map(ast.dependencies_of, list.cons(a.ref, list.from(a.arglist))))
    elseif (ast.predicate.is(a) or
@@ -885,7 +887,6 @@ function ast.dependencies_of(a)
 	   ast.hashtag.is(a) or
 	   ast.string.is(a) or
 	   ast.int.is(a) or
-	   ast.bracket.is(a) or 
 	   ast.cs_named.is(a) or
 	   ast.cs_list.is(a) or
 	   ast.cs_range.is(a) or
