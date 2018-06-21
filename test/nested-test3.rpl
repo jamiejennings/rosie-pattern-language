@@ -1,5 +1,0 @@
--- Assumes that the imported module can be found on the search path.
--- Note that the location of the offending source code in the error message should
--- be nested-test3.rpl:6:2 due to the 1 space of indentation below, on line 6.
-
- import "nested-test2"

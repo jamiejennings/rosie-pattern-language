@@ -1,2 +1,0 @@
--- assumes that 'nosuchmoduleexists' does not exist in the searchpath
-import nosuchmoduleexists

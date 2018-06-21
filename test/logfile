@@ -1,4 +1,0 @@
-Apr  8 09:42:24 Js-MacBook-Pro com.apple.xpc.launchd[1] (homebrew.mxcl.kafka[68878]): Service exited with abnormal code: 1
-Apr  8 09:42:24 Js-MacBook-Pro com.apple.xpc.launchd[1] (homebrew.mxcl.kafka): Service only ran for 8 seconds. Pushing respawn out by 2 seconds.
-Apr  8 10:10:18 Js-MacBook-Pro.local MUpdate[69707]: Endpoint at '/Applications/Meeting.app' is latest version (4732), skipping.
-Apr  8 10:10:18 Js-MacBook-Pro.local MUpdate[69707]: Next Update Check at 2016-04-09 02:22:03 +0000
